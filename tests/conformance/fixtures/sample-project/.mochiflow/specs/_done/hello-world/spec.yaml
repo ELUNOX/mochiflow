@@ -1,0 +1,11 @@
+version: 1
+slug: hello-world
+title: Hello World Feature
+type: feature
+surfaces:
+  - app
+integration: none
+risk: standard
+status: done
+created: 2026-01-15
+updated: 2026-01-20

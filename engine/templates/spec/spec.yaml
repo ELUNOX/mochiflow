@@ -1,0 +1,12 @@
+version: 1
+slug: {slug}
+title: {title}
+type: feature
+module: {module}
+surfaces:
+  - ios
+integration: none
+risk: standard
+status: draft
+created: YYYY-MM-DD
+updated: YYYY-MM-DD

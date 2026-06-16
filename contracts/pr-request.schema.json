@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mochiflow.dev/schemas/pr-request.schema.json",
+  "title": "MochiFlow PR Request",
+  "description": "Normalized, provider-neutral PR creation request. Assembled by `mochiflow pr` into the request directory and consumed by PR drivers. Contains no mochiflow-internal vocabulary (no spec slug, no AC IDs).",
+  "type": "object",
+  "required": ["title", "body", "base", "head"],
+  "properties": {
+    "title": { "type": "string", "minLength": 1 },
+    "body": { "type": "string" },
+    "base": { "type": "string", "minLength": 1 },
+    "head": { "type": "string", "minLength": 1 },
+    "draft": { "type": "boolean" },
+    "labels": { "type": "array", "items": { "type": "string" } },
+    "reviewers": { "type": "array", "items": { "type": "string" } }
+  },
+  "additionalProperties": false
+}

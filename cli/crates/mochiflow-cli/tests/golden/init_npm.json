@@ -1,0 +1,70 @@
+{
+  "blocked": {
+    "items": [],
+    "required": false
+  },
+  "created_updated": [
+    "wrote <target>/.mochiflow/.gitignore",
+    "wrote <target>/.mochiflow/config.toml",
+    "installed engine at <target>/.mochiflow/engine",
+    "generated adapters: agents"
+  ],
+  "detected": {
+    "git": {
+      "base_branch": "main",
+      "branch_confidence": "medium",
+      "detected_provider": null,
+      "provider": "none"
+    },
+    "surfaces": [
+      {
+        "confidence": "high",
+        "confirm": false,
+        "description": "Web frontend",
+        "name": "web",
+        "verify": "npm run test"
+      }
+    ],
+    "write_scope": {
+      "allow": [
+        ".mochiflow/config.toml",
+        "src/**",
+        "README.md"
+      ],
+      "confidence": "medium",
+      "confirm": true,
+      "deny": [
+        ".git/**",
+        "**/.env",
+        "**/.env.*",
+        "**/.dev.vars",
+        "**/credentials*",
+        "**/secrets*",
+        "**/*.pem",
+        "**/*.key",
+        "**/node_modules/**"
+      ]
+    }
+  },
+  "dry_run": false,
+  "exit_code": 0,
+  "language": "en",
+  "language_source": "locale",
+  "next": {
+    "kind": "ai_review",
+    "message": "Paste this into your AI agent:\n\nComplete MochiFlow setup for this repository. Read .mochiflow/config.toml, resolve every \"# mochiflow: confirm\" and TODO item with me, fill .mochiflow/context/product.md, .mochiflow/context/structure.md, and .mochiflow/context/tech.md from the code, adjust surfaces / verify / write scope / git settings if needed, regenerate adapters, and finish with mochiflow doctor."
+  },
+  "review": {
+    "items": [
+      "Confirm default branch: main",
+      "Confirm files MochiFlow may edit: .mochiflow/config.toml, src/**, README.md",
+      "Resolve confirmation markers and TODO values in .mochiflow/config.toml",
+      "Fill .mochiflow/context/product.md, structure.md, and tech.md from code"
+    ],
+    "prompt": "Paste this into your AI agent:\n\nComplete MochiFlow setup for this repository. Read .mochiflow/config.toml, resolve every \"# mochiflow: confirm\" and TODO item with me, fill .mochiflow/context/product.md, .mochiflow/context/structure.md, and .mochiflow/context/tech.md from the code, adjust surfaces / verify / write scope / git settings if needed, regenerate adapters, and finish with mochiflow doctor.",
+    "required": true
+  },
+  "schema_version": 1,
+  "status": "needs_ai_review",
+  "target": "<target>"
+}

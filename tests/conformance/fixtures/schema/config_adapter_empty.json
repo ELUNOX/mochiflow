@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "engine_version": "2.0.0",
+  "install_dir": ".sf",
+  "specs_dir": ".sf/specs",
+  "index": ".sf/INDEX.md",
+  "constitution": {
+    "project": ".sf/constitution.md",
+    "local": ".sf/constitution.local.md"
+  },
+  "context": {
+    "product": ".sf/context/product.md",
+    "structure": ".sf/context/structure.md",
+    "tech": ".sf/context/tech.md"
+  },
+  "adr": {
+    "decisions": ".sf/adr/decisions.md",
+    "pitfalls": ".sf/adr/pitfalls.md"
+  },
+  "surfaces": { "app": { "description": "app", "verify": { "default": "echo ok" } } },
+  "adapter": {}
+}

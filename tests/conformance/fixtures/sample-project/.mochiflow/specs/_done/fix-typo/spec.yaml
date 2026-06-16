@@ -1,0 +1,11 @@
+version: 1
+slug: fix-typo
+title: Fix README Typo
+type: fix
+surfaces:
+  - app
+integration: none
+risk: standard
+status: done
+created: 2026-02-01
+updated: 2026-02-01

@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.96.0
+          components: rustfmt, clippy
+      - run: cargo test --manifest-path cli/Cargo.toml
+      - run: cargo fmt --manifest-path cli/Cargo.toml --all -- --check
+      - run: cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings
+
+  cargo-deny:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          manifest-path: cli/Cargo.toml
+          command: check

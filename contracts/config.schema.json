@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mochiflow.dev/schemas/config.schema.json",
+  "title": "MochiFlow config.toml",
+  "description": "Project-owned configuration. All project paths are relative to repo root.",
+  "type": "object",
+  "required": ["schema_version", "install_dir", "specs_dir", "index", "constitution", "context", "adr"],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "engine_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Deprecated legacy field accepted for old configs; installed engine/VERSION is authoritative."
+    },
+    "language": { "type": "string", "minLength": 2 },
+    "install_dir": { "type": "string", "minLength": 1 },
+    "specs_dir": { "type": "string", "minLength": 1 },
+    "index": { "type": "string", "minLength": 1 },
+    "constitution": {
+      "type": "object",
+      "description": "Always-loaded user-authored project and local rules.",
+      "required": ["project", "local"],
+      "properties": {
+        "project": { "type": "string", "minLength": 1 },
+        "local": { "type": "string", "minLength": 1 }
+      }
+    },
+    "context": {
+      "type": "object",
+      "description": "Foundational living-spec layer (refresh targets, always-loaded).",
+      "required": ["product", "structure", "tech"],
+      "properties": {
+        "product": { "type": "string", "minLength": 1 },
+        "structure": { "type": "string", "minLength": 1 },
+        "tech": { "type": "string", "minLength": 1 }
+      }
+    },
+    "adr": {
+      "type": "object",
+      "description": "Decision records and active operational pitfalls.",
+      "required": ["decisions", "pitfalls"],
+      "properties": {
+        "decisions": { "type": "string", "minLength": 1 },
+        "pitfalls": { "type": "string", "minLength": 1 }
+      }
+    },
+    "git": {
+      "type": "object",
+      "properties": {
+        "provider": { "type": "string" },
+        "base_branch": { "type": "string" },
+        "pr_command": { "type": "string" },
+        "pr_driver": { "type": "string" }
+      }
+    },
+    "adapter": {
+      "type": "object",
+      "anyOf": [
+        { "required": ["tool"] },
+        { "required": ["tools"] }
+      ],
+      "properties": {
+        "tool": { "type": "string", "enum": ["kiro", "agents", "copilot", "claude-code"] },
+        "tools": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "enum": ["kiro", "agents", "copilot", "claude-code"] }
+        }
+      }
+    },
+    "write": {
+      "type": "object",
+      "properties": {
+        "allow": { "type": "array", "items": { "type": "string" } },
+        "deny": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "surfaces": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": ["description", "verify"],
+        "properties": {
+          "description": { "type": "string" },
+          "verify": {
+            "type": "object",
+            "required": ["default"],
+            "additionalProperties": { "type": "string" }
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}

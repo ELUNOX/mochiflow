@@ -1,0 +1,4 @@
+tool = "claude-code"
+
+[files]
+"CLAUDE.md" = "CLAUDE.md.tpl"

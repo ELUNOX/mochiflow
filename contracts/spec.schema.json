@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mochiflow.dev/schemas/spec.schema.json",
+  "title": "MochiFlow spec.yaml (flat v1)",
+  "description": "Single source of truth for spec metadata. The legacy 'documents:' form is contract-external (read-only).",
+  "type": "object",
+  "required": ["version", "slug", "title", "type", "surfaces", "integration", "risk", "status"],
+  "properties": {
+    "version": { "type": "integer", "const": 1 },
+    "slug": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "title": { "type": "string", "minLength": 1 },
+    "type": { "type": "string", "enum": ["feature", "fix", "refactor", "docs", "chore"] },
+    "module": { "type": "string" },
+    "surfaces": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "integration": { "type": "string", "enum": ["none", "contract", "workflow"] },
+    "risk": { "type": "string", "enum": ["standard", "elevated", "critical"] },
+    "status": { "type": "string", "enum": ["draft", "approved", "done"] },
+    "created": { "type": "string" },
+    "updated": { "type": "string" }
+  },
+  "additionalProperties": false
+}

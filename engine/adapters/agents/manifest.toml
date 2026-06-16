@@ -1,0 +1,4 @@
+tool = "agents"
+
+[files]
+"AGENTS.md" = "AGENTS.md.tpl"

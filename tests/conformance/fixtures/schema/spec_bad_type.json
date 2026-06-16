@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "slug": "test-spec",
+  "title": "Test",
+  "type": "INVALID",
+  "surfaces": ["app"],
+  "integration": "none",
+  "risk": "standard",
+  "status": "draft"
+}

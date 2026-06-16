@@ -1,0 +1,9 @@
+# Code owners for mochiflow.
+# Used together with branch protection on `main` (enable "Require review from
+# Code Owners") to require owner review before merge.
+#
+# NOTE: CODEOWNERS requires a user or a TEAM (an org alone is not valid). Ensure
+# the @ELUNOX/maintainers team exists and has write access to the repo, or adjust
+# the handle to the correct team/user during the public-repo setup.
+
+* @ELUNOX/maintainers

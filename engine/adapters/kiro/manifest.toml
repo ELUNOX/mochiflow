@@ -1,0 +1,12 @@
+tool = "kiro"
+
+[files]
+".kiro/steering/spec.md" = "steering/spec.md.tpl"
+".kiro/steering/spec-discuss.md" = "steering/spec-discuss.md.tpl"
+".kiro/steering/spec-plan.md" = "steering/spec-plan.md.tpl"
+".kiro/steering/spec-build.md" = "steering/spec-build.md.tpl"
+".kiro/steering/spec-ship.md" = "steering/spec-ship.md.tpl"
+".kiro/steering/spec-patch.md" = "steering/spec-patch.md.tpl"
+".kiro/agents/spec-builder.json" = "agents/spec-builder.json.tpl"
+".kiro/agents/spec-independent-reviewer.json" = "agents/spec-independent-reviewer.json.tpl"
+".kiro/hooks/generate-project-index.kiro.hook" = "hooks/generate-project-index.kiro.hook.tpl"

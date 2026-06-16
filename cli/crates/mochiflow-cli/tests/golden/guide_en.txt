@@ -1,0 +1,9 @@
+MochiFlow — how to drive it
+
+Four verbs — say it naturally to your AI, or use the explicit command:
+  • discuss — talk through the why/what   (mochiflow-discuss)
+  • plan    — turn it into a spec         (mochiflow-plan)
+  • build   — implement the approved spec (mochiflow-build)
+  • ship    — verify, then open the PR    (mochiflow-ship)
+
+Two approvals are yours: approve the spec before build, and the PR before it is created.

@@ -1,0 +1,38 @@
+schema_version = 1
+engine_version = "1.1.0"
+language = "en"
+
+install_dir = ".mochiflow"
+specs_dir = ".mochiflow/specs"
+index = ".mochiflow/INDEX.md"
+
+[constitution]
+project = ".mochiflow/constitution.md"
+local = ".mochiflow/constitution.local.md"
+
+[context]
+product = ".mochiflow/context/product.md"
+structure = ".mochiflow/context/structure.md"
+tech = ".mochiflow/context/tech.md"
+
+[adr]
+decisions = ".mochiflow/adr/decisions.md"
+pitfalls = ".mochiflow/adr/pitfalls.md"
+
+[git]
+provider = "github"
+base_branch = "main"
+pr_command = "gh pr create --fill"
+
+[adapter]
+tools = ["agents", "kiro"]
+
+[write]
+allow = ["engine/**", "contracts/**", "tests/**", "cli/**", "README*.md", "CHANGELOG.md", "SECURITY.md", "CODE_OF_CONDUCT.md", ".github/**", "dist-workspace.toml"]
+deny = [".git/**", "**/node_modules/**", "**/__pycache__/**"]
+
+[surfaces.cli]
+description = "MochiFlow CLI (Rust)"
+
+[surfaces.cli.verify]
+default = "cargo test --manifest-path cli/Cargo.toml"

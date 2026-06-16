@@ -1,0 +1,47 @@
+[workspace]
+members = ["cargo:cli"]
+
+# Config for 'dist'
+[dist]
+# The preferred dist version to use in CI (Cargo.toml SemVer syntax)
+cargo-dist-version = "0.32.0"
+# CI backends to support
+ci = "github"
+# Phase 2 (public release): publish via Homebrew tap + shell installer.
+installers = ["homebrew", "shell"]
+# Homebrew tap to publish the formula to (must exist; push token via HOMEBREW_TAP_TOKEN secret).
+tap = "ELUNOX/homebrew-tap"
+# Run the builtin homebrew publish job.
+publish-jobs = ["homebrew"]
+# Name the formula after the bin (mochiflow) rather than the package
+# (mochiflow-cli), so users run `brew install ELUNOX/tap/mochiflow`.
+formula = "mochiflow"
+# Publish prereleases (e.g. v1.0.0-alpha.1) to the tap. Homebrew has only one
+# version, so this is required for an alpha launch served via brew.
+publish-prereleases = true
+# Target platforms to build apps for (Rust target-triple syntax)
+targets = [
+    "aarch64-apple-darwin",
+    "x86_64-apple-darwin",
+    "x86_64-unknown-linux-musl",
+    "aarch64-unknown-linux-musl",
+]
+# On pull requests, only run the plan step (no full cross-build)
+pr-run-mode = "plan"
+# Where to host releases
+hosting = "github"
+# Do not ship an updater program
+install-updater = false
+# Enable GitHub build provenance attestations (SLSA). OIDC-based, no secrets.
+# Requires a public repo or GitHub Enterprise — enabled for phase 2 (public release).
+github-attestations = true
+
+# Pin every GitHub Action dist emits to an immutable commit SHA (hardening).
+# SHAs for checkout/upload-artifact/download-artifact are dist's own published
+# pins (v6.0.2 / v7.0.1 / v8.0.1); actions/attest v4 from actions/attest tags.
+[dist.github-action-commits]
+"actions/checkout" = "de0fac2e4500dabe0009e67214ff5f5447ce83dd"        # v6.0.2
+"actions/upload-artifact" = "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"  # v7.0.1
+"actions/download-artifact" = "3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c" # v8.0.1
+"actions/attest" = "59d89421af93a897026c735860bf21b6eb4f7b26"          # v4.1.0
+

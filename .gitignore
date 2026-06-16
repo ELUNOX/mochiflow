@@ -1,0 +1,26 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Python (tooling caches; project ships no Python)
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+
+# Rust (future CLI)
+/target/
+cli/target/
+*.swp
+
+# Editors
+.idea/
+*.iml
+.vscode/settings.json
+
+# Local dogfood / generated agent files
+CLAUDE.md
+docs/
+
+# Serena (AI tool config / cache)
+.serena/

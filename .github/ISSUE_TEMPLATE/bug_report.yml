@@ -1,0 +1,74 @@
+name: Bug report
+description: Report a problem with MochiFlow
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report. Please fill out the
+        sections below so we can reproduce and fix the issue quickly.
+
+        For security vulnerabilities, do **not** open a public issue — see
+        [SECURITY.md](../blob/main/SECURITY.md).
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear and concise description of the bug, including the impact.
+      placeholder: When I run `mochiflow ...`, I expected X but got Y.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Minimal, ordered steps. Include the exact commands.
+      placeholder: |
+        1. `mochiflow init --target . --adapter kiro`
+        2. `mochiflow doctor`
+        3. See error
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which part of MochiFlow is affected?
+      options:
+        - CLI (mochiflow binary)
+        - Engine (commands / reference / templates)
+        - Contracts / schemas
+        - Adapters (kiro / claude-code / copilot / agents)
+        - Docs
+        - Not sure
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      description: Output of `mochiflow --version`, and the `engine/VERSION` or commit hash.
+      placeholder: "mochiflow 1.0.0 / engine 1.6.0"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS and Rust toolchain.
+      placeholder: "macOS 15 / rustc 1.85.0"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs / output
+      description: Paste any error output. This will be rendered as code automatically.
+      render: shell

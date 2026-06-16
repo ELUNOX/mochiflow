@@ -1,0 +1,4 @@
+tool = "copilot"
+
+[files]
+".github/copilot-instructions.md" = "copilot-instructions.md.tpl"

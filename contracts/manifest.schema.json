@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mochiflow.dev/schemas/manifest.schema.json",
+  "title": "MochiFlow MANIFEST.json",
+  "description": "Engine file integrity manifest. Each file maps to its sha256 hash.",
+  "type": "object",
+  "required": ["version", "files"],
+  "properties": {
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "files": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^sha256:[a-f0-9]{64}$"
+      }
+    }
+  },
+  "additionalProperties": false
+}

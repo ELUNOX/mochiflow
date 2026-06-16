@@ -1,0 +1,46 @@
+[workspace]
+members = [
+  "crates/mochiflow-cli",
+  "crates/mochiflow-core",
+]
+resolver = "3"
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.96"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/ELUNOX/mochiflow"
+homepage = "https://github.com/ELUNOX/mochiflow"
+description = "Spec-driven development engine that drives AI coding agents through discuss, plan, build, and ship."
+version = "1.0.0-alpha.1"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+unwrap_used = "warn"
+expect_used = "warn"
+panic = "warn"
+
+# The profile that 'dist' will build with (inherits from release)
+[profile.dist]
+inherits = "release"
+lto = "thin"
+
+[workspace.dependencies]
+anstyle = "1"
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+include_dir = "0.7"
+regex = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+thiserror = "2"
+toml = { version = "0.8", features = ["preserve_order"] }
+
+# dev-only (CLI integration tests)
+assert_cmd = "2"
+predicates = "3"
+tempfile = "3"
+jsonschema = { version = "0.46", default-features = false }
