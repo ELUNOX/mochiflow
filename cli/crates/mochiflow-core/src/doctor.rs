@@ -11,6 +11,13 @@ pub struct DoctorIssue {
     pub message: String,
 }
 
+struct TargetReport {
+    name: String,
+    issues: Vec<DoctorIssue>,
+    fails: usize,
+    warns: usize,
+}
+
 pub fn validate_config(cfg: &Config) -> Vec<DoctorIssue> {
     let mut issues = Vec::new();
     if cfg.schema_version != 1 {
@@ -52,7 +59,7 @@ pub fn validate_config(cfg: &Config) -> Vec<DoctorIssue> {
                 issues.push(DoctorIssue {
                     severity: "WARN".into(),
                     message: format!(
-                        "{label} is an unfilled stub — fill it from code or run refresh-context: {}",
+                        "{label} is an unfilled stub — ask your AI agent to refresh project context from code using the refresh-context workflow: {}",
                         path.display()
                     ),
                 });
@@ -83,7 +90,14 @@ pub fn validate_config(cfg: &Config) -> Vec<DoctorIssue> {
         }
     }
     let valid_tools = ["agents", "kiro", "copilot", "claude-code"];
-    for tool in &cfg.adapter_tools() {
+    let adapter_tools = cfg.adapter_tools();
+    if adapter_tools.is_empty() {
+        issues.push(DoctorIssue {
+            severity: "FAIL".into(),
+            message: "adapter.tools must contain at least one tool".into(),
+        });
+    }
+    for tool in &adapter_tools {
         if !valid_tools.contains(&tool.as_str()) {
             issues.push(DoctorIssue {
                 severity: "FAIL".into(),
@@ -293,6 +307,19 @@ pub fn run_doctor(cfg: &Config, target: Option<&str>, log_to_stderr: bool) -> i3
     run_doctor_with_bundled(cfg, target, log_to_stderr, None)
 }
 
+pub fn run_doctor_json_with_bundled(
+    cfg: &Config,
+    target: Option<&str>,
+    bundled_version: Option<&str>,
+) -> i32 {
+    let reports = collect_reports(cfg, target, true, bundled_version);
+    let total_fail = reports.iter().map(|r| r.fails).sum();
+    let doc = doctor_json(&reports, total_fail);
+    write_doctor_state(cfg, &doc);
+    println!("{}", serde_json::to_string_pretty(&doc).unwrap_or_default());
+    if total_fail > 0 { 1 } else { 0 }
+}
+
 pub fn run_doctor_with_bundled(
     cfg: &Config,
     target: Option<&str>,
@@ -306,72 +333,107 @@ pub fn run_doctor_with_bundled(
             if log_to_stderr { eprintln!($($arg)*) } else { println!($($arg)*) }
         };
     }
+
+    let reports = collect_reports(cfg, target, log_to_stderr, bundled_version);
+    let total_fail = reports.iter().map(|r| r.fails).sum();
+    for report in &reports {
+        let name = &report.name;
+        let fails = report.fails;
+        let warns = report.warns;
+        report_ln!("\n[{name}]");
+        for issue in &report.issues {
+            report_ln!("  {}: {}", issue.severity, issue.message);
+        }
+        report_ln!("  -> {fails} fail, {warns} warn");
+    }
+
+    let doc = doctor_json(&reports, total_fail);
+    write_doctor_state(cfg, &doc);
+
+    report_ln!("\nDoctor: {total_fail} fail (state/doctor.json)");
+    if total_fail > 0 { 1 } else { 0 }
+}
+
+fn collect_reports(
+    cfg: &Config,
+    target: Option<&str>,
+    log_to_stderr: bool,
+    bundled_version: Option<&str>,
+) -> Vec<TargetReport> {
     let targets: Vec<&str> = match target {
         Some(t) => vec![t],
         None => vec!["config", "specs", "adapter", "engine"],
     };
 
-    let mut total_fail = 0;
-    let mut report = serde_json::Map::new();
-
-    for name in &targets {
-        let issues = match *name {
-            "config" => validate_config(cfg),
-            "specs" => {
-                if lint::run_lint(cfg, None, log_to_stderr) != 0 {
-                    vec![DoctorIssue {
-                        severity: "FAIL".into(),
-                        message: "spec lint failed".into(),
-                    }]
-                } else {
-                    Vec::new()
+    targets
+        .iter()
+        .map(|name| {
+            let issues = match *name {
+                "config" => validate_config(cfg),
+                "specs" => {
+                    if lint::run_lint(cfg, None, log_to_stderr) != 0 {
+                        vec![DoctorIssue {
+                            severity: "FAIL".into(),
+                            message: "spec lint failed".into(),
+                        }]
+                    } else {
+                        Vec::new()
+                    }
                 }
+                "adapter" => {
+                    let result = crate::adapter::generate(cfg, true, false);
+                    result
+                        .drift
+                        .iter()
+                        .map(|f| DoctorIssue {
+                            severity: "FAIL".into(),
+                            message: format!("adapter drift: {f}"),
+                        })
+                        .collect()
+                }
+                "engine" => check_engine_with_bundled(cfg, bundled_version),
+                other => vec![DoctorIssue {
+                    severity: "FAIL".into(),
+                    message: format!("unknown doctor target: {other}"),
+                }],
+            };
+            let fails = issues.iter().filter(|i| i.severity == "FAIL").count();
+            let warns = issues.iter().filter(|i| i.severity == "WARN").count();
+            TargetReport {
+                name: (*name).to_string(),
+                issues,
+                fails,
+                warns,
             }
-            "adapter" => {
-                let result = crate::adapter::generate(cfg, true, false);
-                result
-                    .drift
-                    .iter()
-                    .map(|f| DoctorIssue {
-                        severity: "FAIL".into(),
-                        message: format!("adapter drift: {f}"),
-                    })
-                    .collect()
-            }
-            "engine" => check_engine_with_bundled(cfg, bundled_version),
-            other => vec![DoctorIssue {
-                severity: "FAIL".into(),
-                message: format!("unknown doctor target: {other}"),
-            }],
-        };
+        })
+        .collect()
+}
 
-        let fails = issues.iter().filter(|i| i.severity == "FAIL").count();
-        let warns = issues.iter().filter(|i| i.severity == "WARN").count();
-        total_fail += fails;
+fn doctor_json(reports: &[TargetReport], total_fail: usize) -> serde_json::Value {
+    let checks = reports
+        .iter()
+        .map(|report| {
+            let issues: Vec<_> = report
+                .issues
+                .iter()
+                .map(|i| serde_json::json!({"severity": i.severity, "message": i.message}))
+                .collect();
+            (report.name.clone(), serde_json::Value::Array(issues))
+        })
+        .collect::<serde_json::Map<_, _>>();
+    serde_json::json!({
+        "total_fail": total_fail,
+        "exit_code": if total_fail > 0 { 1 } else { 0 },
+        "checks": checks,
+    })
+}
 
-        report_ln!("\n[{name}]");
-        for issue in &issues {
-            report_ln!("  {}: {}", issue.severity, issue.message);
-        }
-        report_ln!("  -> {fails} fail, {warns} warn");
-
-        let json_issues: Vec<_> = issues
-            .iter()
-            .map(|i| serde_json::json!({"severity": i.severity, "message": i.message}))
-            .collect();
-        report.insert(name.to_string(), serde_json::Value::Array(json_issues));
-    }
-
-    // Write state/doctor.json
+fn write_doctor_state(cfg: &Config, doc: &serde_json::Value) {
     let state_dir = cfg.state_dir();
     std::fs::create_dir_all(&state_dir).ok();
-    let doc = serde_json::json!({"checks": report});
     std::fs::write(
         state_dir.join("doctor.json"),
-        serde_json::to_string_pretty(&doc).unwrap_or_default(),
+        serde_json::to_string_pretty(doc).unwrap_or_default(),
     )
     .ok();
-
-    report_ln!("\nDoctor: {total_fail} fail (state/doctor.json)");
-    if total_fail > 0 { 1 } else { 0 }
 }

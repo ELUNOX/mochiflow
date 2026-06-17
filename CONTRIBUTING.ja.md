@@ -13,8 +13,8 @@ English version: [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## 開発環境の構築
 
-MochiFlow の唯一の実装は `cli/` 配下の Rust CLI です。Rust ツールチェーン
-（edition 2024、Rust 1.85 以上）が必要です。
+MochiFlow の唯一の実装は `cli/` 配下の Rust CLI です。`rust-toolchain.toml`
+で固定された Rust ツールチェーン（edition 2024、Rust 1.96.0）が必要です。
 
 ```bash
 # ビルド
@@ -22,6 +22,9 @@ cargo build --manifest-path cli/Cargo.toml
 
 # テスト + コンフォーマンス一式を実行（これが正規の検証コマンド）
 cargo test --manifest-path cli/Cargo.toml
+
+# supply-chain / license チェック
+cargo deny --manifest-path cli/Cargo.toml check --config cli/deny.toml
 ```
 
 コンフォーマンススイート（`cli/crates/mochiflow-cli/tests/conformance.rs`）が

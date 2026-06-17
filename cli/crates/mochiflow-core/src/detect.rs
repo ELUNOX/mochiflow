@@ -11,7 +11,7 @@
 
 use std::collections::BTreeMap;
 use std::path::Path;
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 /// Confidence level for confirm-marker gating (design.md decision table).
 /// Ordered: Low < Medium < High (lower = less confident). `High` writes no
@@ -93,20 +93,59 @@ pub fn detect_git(root: &Path) -> DetectedGit {
         result.provider = "azure-devops".into();
     }
 
-    if let Some(branch) = Command::new("git")
-        .args(["branch", "--show-current"])
+    if let Some(branch) = detect_default_branch(root) {
+        result.base_branch = branch;
+        result.branch_confidence = Confidence::High;
+    }
+
+    result
+}
+
+fn git_stdout(root: &Path, args: &[&str]) -> Option<String> {
+    Command::new("git")
+        .args(args)
         .current_dir(root)
         .output()
         .ok()
         .filter(|o| o.status.success())
         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
         .filter(|s| !s.is_empty())
+}
+
+fn detect_default_branch(root: &Path) -> Option<String> {
+    if let Some(symref) = git_stdout(
+        root,
+        &[
+            "symbolic-ref",
+            "--quiet",
+            "--short",
+            "refs/remotes/origin/HEAD",
+        ],
+    ) && let Some(branch) = symref.strip_prefix("origin/")
+        && !branch.is_empty()
     {
-        result.base_branch = branch;
-        result.branch_confidence = Confidence::High;
+        return Some(branch.to_string());
     }
 
-    result
+    for branch in ["main", "master"] {
+        if Command::new("git")
+            .args([
+                "show-ref",
+                "--verify",
+                "--quiet",
+                &format!("refs/heads/{branch}"),
+            ])
+            .current_dir(root)
+            .stderr(Stdio::null())
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false)
+        {
+            return Some(branch.to_string());
+        }
+    }
+
+    None
 }
 
 /// Read scripts from package.json.

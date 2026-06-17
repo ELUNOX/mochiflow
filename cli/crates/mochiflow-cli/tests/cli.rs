@@ -783,6 +783,78 @@ fn doctor_fails_on_unknown_adapter_tool() {
         .failure();
 }
 
+#[test]
+fn config_validate_fails_on_empty_adapter_tools() {
+    let dir = tempfile::tempdir().unwrap();
+    bin()
+        .args(["init", "--target", dir.path().to_str().unwrap()])
+        .write_stdin("")
+        .assert()
+        .success();
+
+    let config_path = dir.path().join(".mochiflow/config.toml");
+    let original = fs::read_to_string(&config_path).unwrap();
+    let edited = original.replace("tools = [\"agents\"]", "tools = []");
+    fs::write(&config_path, &edited).unwrap();
+
+    let result = bin()
+        .args([
+            "--config",
+            config_path.to_str().unwrap(),
+            "config",
+            "validate",
+        ])
+        .assert()
+        .failure();
+    let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
+    assert!(
+        out.contains("adapter.tools must contain at least one tool"),
+        "{out}"
+    );
+}
+
+#[test]
+fn doctor_json_outputs_single_document() {
+    let dir = tempfile::tempdir().unwrap();
+    bin()
+        .args(["init", "--target", dir.path().to_str().unwrap()])
+        .write_stdin("")
+        .assert()
+        .success();
+    let config_path = dir.path().join(".mochiflow/config.toml");
+
+    let result = bin()
+        .args([
+            "--config",
+            config_path.to_str().unwrap(),
+            "doctor",
+            "--json",
+            "config",
+        ])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
+    let json: serde_json::Value = serde_json::from_str(&stdout).unwrap();
+    assert_eq!(json["exit_code"].as_i64(), Some(0), "{stdout}");
+    assert!(json["checks"]["config"].is_array(), "{stdout}");
+    assert!(dir.path().join(".mochiflow/state/doctor.json").exists());
+}
+
+#[test]
+fn completions_bash_prints_script_without_config() {
+    let result = bin().args(["completions", "bash"]).assert().success();
+    let stdout = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
+    assert!(stdout.contains("mochiflow"), "{stdout}");
+    assert!(stdout.contains("doctor"), "{stdout}");
+}
+
+#[test]
+fn version_is_1_1_0() {
+    let result = bin().arg("--version").assert().success();
+    let stdout = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
+    assert_eq!(stdout.trim(), "mochiflow 1.1.0");
+}
+
 /// Unknown doctor targets are rejected by clap instead of silently passing.
 #[test]
 fn doctor_rejects_unknown_target() {

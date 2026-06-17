@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="#license"><img src="https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg" alt="License: MIT OR Apache-2.0"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-1.0.0--alpha.1-informational.svg" alt="Version 1.0.0-alpha.1"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-1.1.0-informational.svg" alt="Version 1.1.0"></a>
   <a href="cli/Cargo.toml"><img src="https://img.shields.io/badge/rust-2024%20edition-orange.svg" alt="Rust 2024 edition"></a>
 </p>
 
@@ -70,11 +70,11 @@ brew install ELUNOX/tap/mochiflow
 ```
 
 Shell installer (Linux / macOS) — copy the exact command from the
-[latest release](https://github.com/ELUNOX/mochiflow/releases); while we are on a
-prerelease, use the versioned URL, e.g.:
+[latest release](https://github.com/ELUNOX/mochiflow/releases). For a pinned
+install, use the versioned URL, e.g.:
 
 ```bash
-curl --proto '=https' --tlsv1.2 -LsSf https://github.com/ELUNOX/mochiflow/releases/download/v1.0.0-alpha.1/mochiflow-cli-installer.sh | sh
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/ELUNOX/mochiflow/releases/download/v1.1.0/mochiflow-cli-installer.sh | sh
 ```
 
 From source (requires a Rust toolchain):
@@ -155,8 +155,8 @@ Pick tools with `--adapter` at init time (repeatable / comma-separated). The
 
 MochiFlow drives the AI through four stages (**verbs**: discuss / plan / build /
 ship). What it learns is accumulated in a **living spec**: the *why* is appended
-at ship time (**fold**), while the project's current-state map is regenerated
-from code (**refresh**). Each change is assigned a **risk** level (`standard` /
+at ship time (**fold**), while your AI agent can regenerate the project's
+current-state map from code when it becomes stale (**refresh**). Each change is assigned a **risk** level (`standard` /
 `elevated` / `critical`) that scales review cadence and commit granularity, and
 the per-tool integration output (**adapter**) is generated from a single config.
 
@@ -170,7 +170,7 @@ Core invariants:
 CLI commands:
 
 ```
-mochiflow init | config | lint | doctor | adapter | index | ready | backlog | upgrade | pr
+mochiflow init | config | lint | doctor | adapter | index | ready | backlog | upgrade | completions | pr
 ```
 
 </details>
@@ -185,8 +185,9 @@ without touching your source tree. The project is `Ready` only when config,
 context, and adapters are all complete. When project-specific judgement is still
 required, `init` reports `Needs AI review` and prints the exact prompt to give
 your agent so it can resolve `.mochiflow/config.toml`, fill
-`.mochiflow/context/product.md` and `.mochiflow/context/structure.md` from code,
-regenerate adapters, and run `mochiflow doctor`. If adapter files need a manual
+`.mochiflow/context/product.md`, `.mochiflow/context/structure.md`, and
+`.mochiflow/context/tech.md` from code, regenerate adapters, and run
+`mochiflow doctor`. If adapter files need a manual
 candidate merge, `init` reports `Blocked` and exits `1`.
 
 For non-interactive setup:
@@ -213,7 +214,7 @@ track":
 ```
 
 Track the rest — `.mochiflow/config.toml`, `.mochiflow/specs/`,
-`.mochiflow/memory/`, and `.mochiflow/INDEX.md`.
+`.mochiflow/context/`, `.mochiflow/adr/`, and `.mochiflow/INDEX.md`.
 
 ### Upgrade the engine
 
@@ -242,11 +243,11 @@ contracts/     # Frozen schemas (config / spec.yaml v1 / MANIFEST) + semantics p
 tests/         # Conformance: golden fixtures + schema fixtures (consumed by `cargo test`)
 ```
 
-- `engine/VERSION` — source engine semver.
+- `mochiflow --version` — product / CLI version.
+- `engine/VERSION` — source engine and contract-surface semver.
 - `.mochiflow/engine/VERSION` — installed engine version used by adapters, `config show`, and `doctor engine`.
 - `.mochiflow/engine/MANIFEST.json` — installed engine integrity baseline; its `version` matches the installed `VERSION`.
-- `mochiflow --version` — product / CLI version; the CLI also carries the bundled engine used by `mochiflow upgrade`.
-- `schema_version` in `config.toml` — config file format compatibility; users do not edit it during normal upgrades.
+- `schema_version` in `config.toml` — config file-format compatibility; users do not edit it during normal upgrades.
 
 </details>
 

@@ -196,6 +196,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "clap_complete"
+version = "4.6.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e0a7a9bfdb35811f9e59832f0f05975114d2251b415fb534108e6f34060fd772"
+dependencies = [
+ "clap",
+]
+
+[[package]]
 name = "clap_derive"
 version = "4.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -672,11 +681,12 @@ checksum = "c2a86d3146ed3995b5913c414f6664344b9617457320782e64f0bb44afd49d74"
 
 [[package]]
 name = "mochiflow-cli"
-version = "1.0.0-alpha.1"
+version = "1.1.0"
 dependencies = [
  "anyhow",
  "assert_cmd",
  "clap",
+ "clap_complete",
  "include_dir",
  "jsonschema",
  "mochiflow-core",
@@ -689,7 +699,7 @@ dependencies = [
 
 [[package]]
 name = "mochiflow-core"
-version = "1.0.0-alpha.1"
+version = "1.1.0"
 dependencies = [
  "anstyle",
  "regex",
