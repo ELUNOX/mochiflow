@@ -18,6 +18,7 @@ workspace = true
 [dependencies]
 anyhow = { workspace = true }
 clap = { workspace = true }
+clap_complete = { workspace = true }
 include_dir = { workspace = true }
 mochiflow-core = { path = "../mochiflow-core" }
 

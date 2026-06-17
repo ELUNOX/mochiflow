@@ -12,7 +12,7 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/ELUNOX/mochiflow"
 homepage = "https://github.com/ELUNOX/mochiflow"
 description = "Spec-driven development engine that drives AI coding agents through discuss, plan, build, and ship."
-version = "1.0.0-alpha.1"
+version = "1.1.0"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
@@ -31,6 +31,7 @@ lto = "thin"
 anstyle = "1"
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }
+clap_complete = "4"
 include_dir = "0.7"
 regex = "1"
 serde = { version = "1", features = ["derive"] }

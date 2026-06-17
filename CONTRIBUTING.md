@@ -11,8 +11,8 @@ By participating, you agree to abide by our [Code of Conduct](CODE_OF_CONDUCT.md
 
 ## Development setup
 
-MochiFlow's only implementation is the Rust CLI under `cli/`. You need a Rust
-toolchain (edition 2024, Rust 1.85+).
+MochiFlow's only implementation is the Rust CLI under `cli/`. You need the
+Rust toolchain pinned by `rust-toolchain.toml` (edition 2024, Rust 1.96.0).
 
 ```bash
 # Build
@@ -20,6 +20,9 @@ cargo build --manifest-path cli/Cargo.toml
 
 # Run the full test + conformance suite (this is the canonical verify command)
 cargo test --manifest-path cli/Cargo.toml
+
+# Supply-chain / license checks
+cargo deny --manifest-path cli/Cargo.toml check --config cli/deny.toml
 ```
 
 The conformance suite (`cli/crates/mochiflow-cli/tests/conformance.rs`) is the

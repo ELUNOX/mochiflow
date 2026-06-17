@@ -1,5 +1,6 @@
 use anyhow::Result;
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
+use clap_complete::{Shell, generate};
 use include_dir::{Dir, include_dir};
 
 /// Embedded engine directory (compiled into the binary for AC-03 self-contained use).
@@ -32,7 +33,12 @@ enum Commands {
         spec: Option<String>,
     },
     /// Quality gate: config / specs / adapter / engine
-    Doctor { target: Option<DoctorTarget> },
+    Doctor {
+        /// Emit a single JSON document on stdout
+        #[arg(long)]
+        json: bool,
+        target: Option<DoctorTarget>,
+    },
     /// Generate tool adapters
     Adapter {
         #[command(subcommand)]
@@ -85,6 +91,8 @@ enum Commands {
     },
     /// Print the usage-vocabulary card (the four verbs + approval gates)
     Guide,
+    /// Generate shell completion scripts
+    Completions { shell: Shell },
     /// Create a PR (pre-flight + push + resolved backend, or manual handoff)
     Pr {
         /// Spec slug or request directory (holds pr-description.md / pr-request.json)
@@ -180,15 +188,23 @@ fn main() -> Result<()> {
             let cfg = load_cfg(cli.config.as_deref())?;
             mochiflow_core::lint::run_lint(&cfg, spec.as_deref(), false)
         }
-        Commands::Doctor { target } => {
+        Commands::Doctor { json, target } => {
             let cfg = load_cfg(cli.config.as_deref())?;
             let bundled = bundled_engine_version();
-            mochiflow_core::doctor::run_doctor_with_bundled(
-                &cfg,
-                target.map(DoctorTarget::as_str),
-                false,
-                Some(&bundled),
-            )
+            if json {
+                mochiflow_core::doctor::run_doctor_json_with_bundled(
+                    &cfg,
+                    target.map(DoctorTarget::as_str),
+                    Some(&bundled),
+                )
+            } else {
+                mochiflow_core::doctor::run_doctor_with_bundled(
+                    &cfg,
+                    target.map(DoctorTarget::as_str),
+                    false,
+                    Some(&bundled),
+                )
+            }
         }
         Commands::Adapter { command } => match command {
             AdapterCommand::Generate { force, check } => {
@@ -264,6 +280,11 @@ fn main() -> Result<()> {
                 .map(|c| c.language)
                 .unwrap_or_else(|_| "en".to_string());
             print!("{}", mochiflow_core::present::render_guide(&language));
+            0
+        }
+        Commands::Completions { shell } => {
+            let mut cmd = Cli::command();
+            generate(shell, &mut cmd, "mochiflow", &mut std::io::stdout());
             0
         }
         Commands::Pr {

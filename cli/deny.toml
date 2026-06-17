@@ -1,5 +1,5 @@
 # cargo-deny configuration — supply-chain gate for the mochiflow CLI workspace.
-# Run: cargo deny --manifest-path cli/Cargo.toml --config cli/deny.toml check
+# Run: cargo deny --manifest-path cli/Cargo.toml check --config cli/deny.toml
 
 [advisories]
 version = 2

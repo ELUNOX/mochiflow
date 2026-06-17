@@ -55,7 +55,7 @@ body:
     attributes:
       label: Version / commit
       description: Output of `mochiflow --version`, and the `engine/VERSION` or commit hash.
-      placeholder: "mochiflow 1.0.0 / engine 1.6.0"
+      placeholder: "mochiflow 1.1.0 / engine 1.1.0"
     validations:
       required: true
   - type: input
@@ -63,7 +63,7 @@ body:
     attributes:
       label: Environment
       description: OS and Rust toolchain.
-      placeholder: "macOS 15 / rustc 1.85.0"
+      placeholder: "macOS 15 / rustc 1.96.0"
     validations:
       required: true
   - type: textarea

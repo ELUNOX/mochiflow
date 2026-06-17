@@ -92,6 +92,39 @@ fn qa02_github_remote_keeps_provider_none() {
     );
 }
 
+#[test]
+fn init_uses_default_branch_not_current_feature_branch() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    for args in [
+        ["init", "-q", "-b", "main"].as_slice(),
+        ["config", "user.email", "t@example.com"].as_slice(),
+        ["config", "user.name", "Test"].as_slice(),
+    ] {
+        std::process::Command::new("git")
+            .args(args)
+            .current_dir(root)
+            .status()
+            .unwrap();
+    }
+    fs::write(root.join("README.md"), "hi\n").unwrap();
+    for args in [
+        ["add", "README.md"].as_slice(),
+        ["commit", "-q", "-m", "init"].as_slice(),
+        ["checkout", "-q", "-b", "feature"].as_slice(),
+    ] {
+        std::process::Command::new("git")
+            .args(args)
+            .current_dir(root)
+            .status()
+            .unwrap();
+    }
+
+    let cfg = init_force(root);
+    let parsed: toml::Value = toml::from_str(&cfg).unwrap();
+    assert_eq!(parsed["git"]["base_branch"].as_str(), Some("main"), "{cfg}");
+}
+
 /// QA-03 / AC-10 / Edge: no manifest → verify stays a TODO sentinel + confirm,
 /// and the config is still valid (never corrupted).
 #[test]

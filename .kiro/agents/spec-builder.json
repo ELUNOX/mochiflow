@@ -14,7 +14,7 @@
   ],
   "description": "Spec-flow lifecycle agent: discuss / plan / build / ship inline; build implements inline and folds durable knowledge into the living spec at ship; review uses the read-only independent-reviewer transport.",
   "includeMcpJson": true,
-  "model": "auto",
+  "model": "claude-opus-4.8",
   "name": "spec-builder",
   "prompt": "file://../../.mochiflow/engine/router.md",
   "resources": [
