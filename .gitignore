@@ -20,7 +20,6 @@ cli/target/
 
 # Local dogfood / generated agent files
 CLAUDE.md
-docs/
 
 # Serena (AI tool config / cache)
 .serena/
