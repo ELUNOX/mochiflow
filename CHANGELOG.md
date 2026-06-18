@@ -4,6 +4,22 @@ All notable changes to MochiFlow are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-06-18
+
+### Added
+
+- Shell completion script generation via `mochiflow completions`.
+- Machine-readable `mochiflow doctor --json` output.
+- The plan phase now presents a copy-paste session handoff prompt so you can
+  continue implementation cleanly in a new session.
+
+### Changed
+
+- `mochiflow init` now installs the engine through the same staged path as
+  `mochiflow upgrade`; an already-modified installed engine requires `--force`.
+- `mochiflow init` detects the repository's default branch instead of assuming
+  the current branch.
+
 ## [1.1.0] - 2026-06-15
 
 ### Changed
