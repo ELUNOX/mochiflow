@@ -7,6 +7,45 @@ use crate::config::Config;
 use crate::doctor::check_engine;
 use crate::manifest::read_engine_version;
 
+#[derive(Debug)]
+pub enum EngineInstallError {
+    Dirty { entries: Vec<String> },
+    Staging(std::io::Error),
+    Copy(std::io::Error),
+    MissingVersion { source_label: String },
+    SamePath,
+    Rename(std::io::Error),
+    Manifest(std::io::Error),
+}
+
+impl EngineInstallError {
+    pub fn report_lines(&self) -> Vec<String> {
+        match self {
+            Self::Dirty { entries } => {
+                let mut lines: Vec<String> = entries
+                    .iter()
+                    .map(|entry| format!("DIRTY: {entry}"))
+                    .collect();
+                lines.push(format!(
+                    "\nFAIL: engine has {} local change(s); re-run with --force to discard them.",
+                    entries.len()
+                ));
+                lines
+            }
+            Self::Staging(e) => vec![format!("FAIL: staging error: {e}")],
+            Self::Copy(e) => vec![format!("FAIL: copy error: {e}")],
+            Self::MissingVersion { source_label } => {
+                vec![format!(
+                    "FAIL: source is not an engine dir (no VERSION): {source_label}"
+                )]
+            }
+            Self::SamePath => vec!["FAIL: source and target engine are the same path".into()],
+            Self::Rename(e) => vec![format!("FAIL: rename error: {e}")],
+            Self::Manifest(e) => vec![format!("FAIL: could not write MANIFEST.json: {e}")],
+        }
+    }
+}
+
 /// Run upgrade command.
 pub fn run_upgrade(cfg: &Config, source: &str, force: bool) -> i32 {
     let mut src = std::path::PathBuf::from(source);
@@ -24,7 +63,7 @@ pub fn run_upgrade(cfg: &Config, source: &str, force: bool) -> i32 {
     }
     let label = src.display().to_string();
     run_upgrade_with_stager(cfg, &label, force, |staging| {
-        copy_source_engine(&src, staging)
+        stage_source_engine(&src, staging)
     })
 }
 
@@ -40,70 +79,10 @@ fn run_upgrade_with_stager<F>(cfg: &Config, source_label: &str, force: bool, sta
 where
     F: FnOnce(&Path) -> std::io::Result<()>,
 {
-    let target_engine = cfg.engine_dir();
-
-    // Check for local drift (dirty engine)
-    if target_engine.join("MANIFEST.json").exists() {
-        let drift_issues = check_engine(cfg);
-        let dirty: Vec<_> = drift_issues
-            .iter()
-            .filter(|i| i.severity == "FAIL" && i.message.contains("MANIFEST drift"))
-            .collect();
-        if !dirty.is_empty() && !force {
-            for i in &dirty {
-                println!(
-                    "DIRTY: {}",
-                    i.message
-                        .strip_prefix("engine MANIFEST drift: ")
-                        .unwrap_or(&i.message)
-                );
-            }
-            println!(
-                "\nFAIL: engine has {} local change(s); re-run with --force to discard them.",
-                dirty.len()
-            );
-            return 1;
+    if let Err(e) = install_engine_staged(cfg, source_label, force, stage_engine) {
+        for line in e.report_lines() {
+            println!("{line}");
         }
-    }
-
-    // Stage → swap
-    let staging = target_engine
-        .parent()
-        .unwrap_or(Path::new("."))
-        .join(".engine.upgrade");
-    if staging.exists() {
-        std::fs::remove_dir_all(&staging).ok();
-    }
-    if let Err(e) = std::fs::create_dir_all(&staging) {
-        println!("FAIL: staging error: {e}");
-        return 1;
-    }
-    if let Err(e) = stage_engine(&staging) {
-        println!("FAIL: copy error: {e}");
-        std::fs::remove_dir_all(&staging).ok();
-        return 1;
-    }
-    if !staging.join("VERSION").exists() {
-        println!("FAIL: source is not an engine dir (no VERSION): {source_label}");
-        std::fs::remove_dir_all(&staging).ok();
-        return 1;
-    }
-    if let (Ok(a), Ok(b)) = (staging.canonicalize(), target_engine.canonicalize())
-        && a == b
-    {
-        println!("FAIL: source and target engine are the same path");
-        std::fs::remove_dir_all(&staging).ok();
-        return 1;
-    }
-    std::fs::remove_dir_all(&target_engine).ok();
-    if let Err(e) = std::fs::rename(&staging, &target_engine) {
-        println!("FAIL: rename error: {e}");
-        return 1;
-    }
-
-    // Regenerate MANIFEST
-    if let Err(e) = write_manifest(cfg) {
-        println!("FAIL: could not write MANIFEST.json: {e}");
         return 1;
     }
     println!("upgraded engine <- {source_label}");
@@ -132,6 +111,80 @@ where
         );
         1
     }
+}
+
+/// Install an engine by staging the full source first, then swapping it into
+/// `{install_dir}/engine`. This owns engine integrity only; callers own any
+/// adapter regeneration and user-facing success output.
+pub fn install_engine_staged<F>(
+    cfg: &Config,
+    source_label: &str,
+    force: bool,
+    stage_engine: F,
+) -> Result<(), EngineInstallError>
+where
+    F: FnOnce(&Path) -> std::io::Result<()>,
+{
+    let target_engine = cfg.engine_dir();
+
+    if target_engine.join("MANIFEST.json").exists() {
+        let dirty: Vec<String> = check_engine(cfg)
+            .into_iter()
+            .filter(|i| i.severity == "FAIL" && i.message.contains("MANIFEST drift"))
+            .map(|i| {
+                i.message
+                    .strip_prefix("engine MANIFEST drift: ")
+                    .unwrap_or(&i.message)
+                    .to_string()
+            })
+            .collect();
+        if !dirty.is_empty() && !force {
+            return Err(EngineInstallError::Dirty { entries: dirty });
+        }
+    }
+
+    let parent = target_engine.parent().unwrap_or(Path::new("."));
+    let staging = parent.join(".engine.upgrade");
+    if staging.exists() {
+        std::fs::remove_dir_all(&staging).map_err(EngineInstallError::Staging)?;
+    }
+    std::fs::create_dir_all(&staging).map_err(EngineInstallError::Staging)?;
+
+    if let Err(e) = stage_engine(&staging) {
+        std::fs::remove_dir_all(&staging).ok();
+        return Err(EngineInstallError::Copy(e));
+    }
+    if !staging.join("VERSION").exists() {
+        std::fs::remove_dir_all(&staging).ok();
+        return Err(EngineInstallError::MissingVersion {
+            source_label: source_label.to_string(),
+        });
+    }
+    if let (Ok(a), Ok(b)) = (staging.canonicalize(), target_engine.canonicalize())
+        && a == b
+    {
+        std::fs::remove_dir_all(&staging).ok();
+        return Err(EngineInstallError::SamePath);
+    }
+
+    let backup = parent.join(".engine.backup");
+    if backup.exists() {
+        std::fs::remove_dir_all(&backup).map_err(EngineInstallError::Staging)?;
+    }
+    if target_engine.exists() {
+        std::fs::rename(&target_engine, &backup).map_err(EngineInstallError::Rename)?;
+    }
+    if let Err(e) = std::fs::rename(&staging, &target_engine) {
+        if backup.exists() {
+            std::fs::rename(&backup, &target_engine).ok();
+        }
+        return Err(EngineInstallError::Rename(e));
+    }
+    if backup.exists() {
+        std::fs::remove_dir_all(&backup).ok();
+    }
+
+    write_manifest(cfg).map_err(EngineInstallError::Manifest)
 }
 
 /// Write MANIFEST.json for the current engine state.
@@ -177,7 +230,7 @@ fn walkdir_files(dir: &Path) -> Vec<std::path::PathBuf> {
     result
 }
 
-fn copy_source_engine(src: &Path, staging: &Path) -> std::io::Result<()> {
+pub(crate) fn stage_source_engine(src: &Path, staging: &Path) -> std::io::Result<()> {
     let mut src = src.to_path_buf();
     if src.join("engine").is_dir() {
         src = src.join("engine");

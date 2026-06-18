@@ -181,6 +181,108 @@ fn init_is_idempotent_nondestructive() {
     );
 }
 
+#[test]
+fn init_blocks_dirty_engine_without_force() {
+    let dir = tempfile::tempdir().unwrap();
+    bin()
+        .args(["init", "--target", dir.path().to_str().unwrap()])
+        .write_stdin("")
+        .assert()
+        .success();
+
+    let router = dir.path().join(".mochiflow/engine/router.md");
+    fs::write(&router, "local engine edit\n").unwrap();
+
+    let result = bin()
+        .args(["init", "--target", dir.path().to_str().unwrap()])
+        .write_stdin("")
+        .assert()
+        .failure()
+        .code(1);
+
+    let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
+    assert!(out.contains("DIRTY:"), "{out}");
+    assert!(out.contains("--force"), "{out}");
+    assert_eq!(fs::read_to_string(&router).unwrap(), "local engine edit\n");
+}
+
+#[test]
+fn init_force_replaces_dirty_engine_and_repairs_manifest() {
+    let dir = tempfile::tempdir().unwrap();
+    bin()
+        .args(["init", "--target", dir.path().to_str().unwrap()])
+        .write_stdin("")
+        .assert()
+        .success();
+
+    let router = dir.path().join(".mochiflow/engine/router.md");
+    fs::write(&router, "local engine edit\n").unwrap();
+
+    bin()
+        .args(["init", "--force", "--target", dir.path().to_str().unwrap()])
+        .write_stdin("")
+        .assert()
+        .success();
+
+    assert_ne!(fs::read_to_string(&router).unwrap(), "local engine edit\n");
+    let config = dir.path().join(".mochiflow/config.toml");
+    bin()
+        .args(["--config", config.to_str().unwrap(), "doctor", "engine"])
+        .assert()
+        .success();
+}
+
+#[test]
+fn init_force_staged_swap_removes_stale_engine_files() {
+    let dir = tempfile::tempdir().unwrap();
+    bin()
+        .args(["init", "--target", dir.path().to_str().unwrap()])
+        .write_stdin("")
+        .assert()
+        .success();
+
+    let obsolete = dir.path().join(".mochiflow/engine/obsolete.txt");
+    fs::write(&obsolete, "old\n").unwrap();
+    assert!(obsolete.exists());
+
+    bin()
+        .args(["init", "--force", "--target", dir.path().to_str().unwrap()])
+        .write_stdin("")
+        .assert()
+        .success();
+
+    assert!(
+        !obsolete.exists(),
+        "{} should be removed",
+        obsolete.display()
+    );
+}
+
+#[test]
+fn init_staging_failure_leaves_existing_engine_intact() {
+    let dir = tempfile::tempdir().unwrap();
+    bin()
+        .args(["init", "--target", dir.path().to_str().unwrap()])
+        .write_stdin("")
+        .assert()
+        .success();
+
+    let version = dir.path().join(".mochiflow/engine/VERSION");
+    let before = fs::read_to_string(&version).unwrap();
+    fs::write(dir.path().join(".mochiflow/.engine.upgrade"), "not a dir\n").unwrap();
+
+    let result = bin()
+        .args(["init", "--force", "--target", dir.path().to_str().unwrap()])
+        .write_stdin("")
+        .assert()
+        .failure()
+        .code(1);
+
+    let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
+    assert!(out.contains("FAIL: staging error"), "{out}");
+    assert_eq!(fs::read_to_string(&version).unwrap(), before);
+}
+
 /// --adapter resolves the `codex` label to the `agents` ID, and --language is
 /// written to config.
 #[test]
