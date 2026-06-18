@@ -37,6 +37,13 @@ plain, non-internal wording. If an internal status matters, put it in a short
 `MochiFlow:` note after the user-facing summary instead of making it the main
 message.
 
+Session handoff prompts (for example, the prompt a user copies into a new
+session to continue with implementation) are user-facing generated output and
+follow the project language. Preserve command tokens, spec slugs, paths,
+metadata values, and filenames exactly. If the user is currently conversing in a
+different language, the surrounding guidance may briefly use that language, but
+the copy-paste prompt itself follows the project language.
+
 ## Engine documents
 
 mochiflow engine files (`commands/**`, `reference/**`, `agents/**`,
