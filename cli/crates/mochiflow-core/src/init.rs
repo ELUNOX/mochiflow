@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use crate::adapter;
 use crate::config::load_config;
 use crate::doctor;
-use crate::upgrade::write_manifest;
+use crate::upgrade::{install_engine_staged, stage_source_engine};
 
 const DEFAULT_INSTALL: &str = ".mochiflow";
 
@@ -376,31 +376,6 @@ fn resolve_language(
     }
 }
 
-fn copy_dir_recursive(src: &Path, dst: &Path) -> std::io::Result<()> {
-    std::fs::create_dir_all(dst)?;
-    for entry in std::fs::read_dir(src)? {
-        let entry = entry?;
-        let target = dst.join(entry.file_name());
-        if entry.path().is_dir() {
-            if entry.file_name().to_string_lossy() == "__pycache__" {
-                continue;
-            }
-            copy_dir_recursive(&entry.path(), &target)?;
-        } else {
-            std::fs::copy(entry.path(), target)?;
-        }
-    }
-    Ok(())
-}
-
-/// Copy engine from source to target.
-fn copy_engine(source: &Path, target: &Path) -> std::io::Result<()> {
-    if source == target {
-        return Ok(());
-    }
-    copy_dir_recursive(source, target)
-}
-
 /// Find the engine source directory on the filesystem (fallback).
 fn find_engine_source() -> Option<PathBuf> {
     if let Ok(exe) = std::env::current_exe() {
@@ -422,15 +397,6 @@ fn find_engine_source() -> Option<PathBuf> {
         return Some(cwd.join("engine"));
     }
     None
-}
-
-/// Extract embedded engine to target directory.
-pub fn extract_embedded_engine(target: &Path, extract_fn: Option<EngineExtractFn>) -> bool {
-    if let Some(f) = extract_fn {
-        f(target).is_ok()
-    } else {
-        false
-    }
 }
 
 /// Write `{install_dir}/.gitignore` so the vendored engine copy and runtime
@@ -599,42 +565,34 @@ pub fn run_init(
         ));
     }
 
-    // Extract embedded engine (self-contained), or fall back to filesystem copy.
-    let target_engine = install_abs.join("engine");
-    if extract_embedded_engine(&target_engine, embedded_engine_extract) {
-        log!("extracted embedded engine -> {}", target_engine.display());
-        done_items.push(done_item(
-            language,
-            &format!("installed engine at {}", target_engine.display()),
-            &format!("engine を {} に配置", target_engine.display()),
-        ));
-    } else if let Some(source_engine) = find_engine_source() {
-        if source_engine.canonicalize().ok() != target_engine.canonicalize().ok() {
-            if let Err(e) = copy_engine(&source_engine, &target_engine) {
-                log!("FAIL: engine copy failed: {e}");
-                return 1;
-            }
-            log!("copied engine -> {}", target_engine.display());
-            done_items.push(done_item(
-                language,
-                &format!("installed engine at {}", target_engine.display()),
-                &format!("engine を {} に配置", target_engine.display()),
-            ));
-        } else {
-            done_items.push(done_item(
-                language,
-                &format!("engine already available at {}", target_engine.display()),
-                &format!("engine は {} に配置済み", target_engine.display()),
-            ));
-        }
-    } else {
-        log!("FAIL: engine source not found and no embedded engine extractor was provided");
-        return 1;
-    }
-
-    // Load config and scaffold directories + living-spec stubs.
     match load_config(&config_path) {
         Ok(cfg) => {
+            // Install the vendored engine via the same staged path used by
+            // `upgrade`, so dirty installed engines require --force.
+            let engine_result = if let Some(extract_fn) = embedded_engine_extract {
+                install_engine_staged(&cfg, "bundled engine", force, extract_fn)
+            } else if let Some(source_engine) = find_engine_source() {
+                let label = source_engine.display().to_string();
+                install_engine_staged(&cfg, &label, force, |staging| {
+                    stage_source_engine(&source_engine, staging)
+                })
+            } else {
+                log!("FAIL: engine source not found and no embedded engine extractor was provided");
+                return 1;
+            };
+            if let Err(e) = engine_result {
+                for line in e.report_lines() {
+                    log!("{line}");
+                }
+                return 1;
+            }
+            done_items.push(done_item(
+                language,
+                &format!("installed engine at {}", cfg.engine_dir().display()),
+                &format!("engine を {} に配置", cfg.engine_dir().display()),
+            ));
+
+            // Scaffold directories + living-spec stubs.
             for d in &[
                 cfg.specs_dir_path(),
                 cfg.specs_dir_path().join("_done"),
@@ -675,10 +633,6 @@ pub fn run_init(
                         return 1;
                     }
                 }
-            }
-            if let Err(e) = write_manifest(&cfg) {
-                log!("FAIL: could not write MANIFEST.json: {e}");
-                return 1;
             }
             let adapter_result = adapter::generate(&cfg, false, force);
             for error in &adapter_result.errors {
