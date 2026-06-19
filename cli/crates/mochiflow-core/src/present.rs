@@ -307,8 +307,12 @@ pub fn render_init_summary(
     let status_line = match (status, ja) {
         (InitStatus::Ready, true) => "Ready — そのまま使えます",
         (InitStatus::Ready, false) => "Ready — MochiFlow is ready to use",
-        (InitStatus::NeedsAiReview, true) => "Needs AI review — config/context の確認が必要です",
-        (InitStatus::NeedsAiReview, false) => "Needs AI review — config/context needs judgement",
+        (InitStatus::NeedsAiReview, true) => {
+            "Next — 下の文を AI アシスタントに貼って初期設定を完了してください"
+        }
+        (InitStatus::NeedsAiReview, false) => {
+            "Next — paste the setup prompt below into your AI agent"
+        }
         (InitStatus::Blocked, true) => "Blocked — 構造化 adapter の手動統合が必要です",
         (InitStatus::Blocked, false) => "Blocked — structured adapter files need manual merge",
     };
@@ -347,6 +351,19 @@ pub fn render_init_summary(
     } else {
         for item in confirm_items {
             out.push_str(&line(ItemStatus::Confirm, &item, mode, color));
+            out.push('\n');
+        }
+        if status == InitStatus::NeedsAiReview {
+            out.push_str(&line(
+                ItemStatus::Confirm,
+                if ja {
+                    "`# mochiflow: confirm` と TODO は検出が不確かな値を確認するための質問で、エラーではありません"
+                } else {
+                    "`# mochiflow: confirm` markers and TODOs are setup questions for uncertain detected values, not errors"
+                },
+                mode,
+                color,
+            ));
             out.push('\n');
         }
     }
@@ -441,7 +458,8 @@ pub fn render_ai_review_prompt(language: &str) -> String {
     if language == "ja" {
         "AI アシスタントにこの文を貼ってください:\n\n\
          MochiFlow の初期設定を完成させてください。.mochiflow/config.toml を読み、\
-         \"# mochiflow: confirm\" と TODO の項目を私と確認し、\
+         \"# mochiflow: confirm\" と TODO は検出が不確かな値を確認するための質問として扱い、\
+         私と確認しながら解決してください。\
          .mochiflow/context/product.md、.mochiflow/context/structure.md、\
          .mochiflow/context/tech.md をコードから埋め、\
          必要なら surfaces / verify / write scope / git 設定を調整し、\
@@ -450,7 +468,8 @@ pub fn render_ai_review_prompt(language: &str) -> String {
     } else {
         "Paste this into your AI agent:\n\n\
          Complete MochiFlow setup for this repository. Read .mochiflow/config.toml, \
-         resolve every \"# mochiflow: confirm\" and TODO item with me, fill \
+         treat \"# mochiflow: confirm\" markers and TODOs as setup questions for uncertain \
+         detected values, resolve them with me, fill \
          .mochiflow/context/product.md, .mochiflow/context/structure.md, and \
          .mochiflow/context/tech.md from the code, \
          adjust surfaces / verify / write scope / git settings if needed, regenerate adapters, \
@@ -759,9 +778,13 @@ mod tests {
         assert!(out.contains("language: en (flag)"), "{out}");
         assert!(out.contains("Created/Updated:"), "{out}");
         assert!(out.contains("Status:"), "{out}");
-        assert!(out.contains("Needs AI review"), "{out}");
+        assert!(
+            out.contains("paste the setup prompt below into your AI agent"),
+            "{out}"
+        );
         assert!(out.contains("Needs review:"), "{out}");
         assert!(out.contains(".kiro/agents/spec-builder.json"), "{out}");
+        assert!(out.contains("not errors"), "{out}");
         assert!(out.contains("Paste this into your AI agent"), "{out}");
         assert!(out.contains(".mochiflow/config.toml"), "{out}");
     }

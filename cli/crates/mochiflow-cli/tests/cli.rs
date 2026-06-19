@@ -98,7 +98,11 @@ fn init_yes_uses_defaults_without_prompting() {
     let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
     assert!(out.contains("language: en (locale)"), "{out}");
     assert!(out.contains("Status:"), "{out}");
-    assert!(out.contains("Needs AI review"), "{out}");
+    assert!(
+        out.contains("paste the setup prompt below into your AI agent"),
+        "{out}"
+    );
+    assert!(out.contains("not errors"), "{out}");
     assert!(out.contains("Paste this into your AI agent"), "{out}");
 }
 
@@ -117,7 +121,8 @@ fn init_yes_uses_japanese_locale_without_prompting() {
     assert!(cfg.contains("language = \"ja\""), "got:\n{cfg}");
     let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
     assert!(out.contains("language: ja (locale)"), "{out}");
-    assert!(out.contains("Needs AI review"), "{out}");
+    assert!(out.contains("初期設定を完了してください"), "{out}");
+    assert!(out.contains("エラーではありません"), "{out}");
     assert!(
         out.contains("AI アシスタントにこの文を貼ってください"),
         "{out}"
@@ -540,6 +545,45 @@ fn init_existing_nested_adapter_target_writes_nested_candidate() {
     assert!(candidate_body.contains("spec-builder"), "{candidate_body}");
 }
 
+#[test]
+fn kiro_adapter_ignores_existing_custom_hooks() {
+    let dir = tempfile::tempdir().unwrap();
+    let custom_hook = dir.path().join(".kiro/hooks/custom.kiro.hook");
+    fs::create_dir_all(custom_hook.parent().unwrap()).unwrap();
+    fs::write(&custom_hook, "custom hook\n").unwrap();
+
+    bin()
+        .args([
+            "init",
+            "--adapter",
+            "kiro",
+            "--target",
+            dir.path().to_str().unwrap(),
+        ])
+        .write_stdin("")
+        .assert()
+        .success();
+
+    assert_eq!(fs::read_to_string(&custom_hook).unwrap(), "custom hook\n");
+    assert!(
+        !dir.path()
+            .join(".kiro/hooks/generate-project-index.kiro.hook")
+            .exists()
+    );
+
+    let config = dir.path().join(".mochiflow/config.toml");
+    bin()
+        .args([
+            "--config",
+            config.to_str().unwrap(),
+            "adapter",
+            "generate",
+            "--check",
+        ])
+        .assert()
+        .success();
+}
+
 /// Markdown targets are extended, while structured unmanaged targets still
 /// block with candidates.
 #[test]
@@ -949,7 +993,7 @@ fn adapter_generate_fails_when_candidate_parent_cannot_be_created() {
     assert!(out.contains("FAIL:"), "{out}");
     assert!(out.contains(".mochiflow/state/adapters"), "{out}");
     assert!(
-        out.contains("Summary: 8 written, 0 blocked, 1 failed"),
+        out.contains("Summary: 7 written, 0 blocked, 1 failed"),
         "{out}"
     );
 }
@@ -1264,7 +1308,10 @@ fn init_dry_run_writes_nothing() {
     assert!(out.contains("Detected:"), "{out}");
     assert!(out.contains("Created/Updated:"), "{out}");
     assert!(out.contains("Status:"), "{out}");
-    assert!(out.contains("Needs AI review"), "{out}");
+    assert!(
+        out.contains("paste the setup prompt below into your AI agent"),
+        "{out}"
+    );
     assert!(out.contains("(dry-run) would"), "{out}");
     assert!(!dir.path().join(".mochiflow/config.toml").exists());
     assert!(!dir.path().join(".mochiflow/.gitignore").exists());

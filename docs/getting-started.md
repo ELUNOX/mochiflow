@@ -57,14 +57,15 @@ mochiflow init --language en
 `init` reports one of three outcomes:
 
 - `Ready` — config, context, and generated adapter files are usable.
-- `Needs AI review` — setup is valid, but project-specific TODOs need an AI
-  agent and your judgment before the workflow is ready.
+- `Needs AI review` — setup is valid; paste the printed setup prompt into your
+  AI agent to confirm uncertain detected values and fill project context.
 - `Blocked` — an existing structured adapter file needs a manual candidate
   merge; existing Markdown instruction files are extended with a managed
   MochiFlow block instead of being replaced.
 
 When `Needs AI review` appears, paste the prompt printed by `init` into your AI
-coding agent. The agent should resolve `# mochiflow: confirm` and TODO items,
+coding agent. `# mochiflow: confirm` markers and TODOs are setup questions for
+uncertain detected values, not errors. The agent should resolve them with you,
 fill `.mochiflow/context/product.md`, `.mochiflow/context/structure.md`, and
 `.mochiflow/context/tech.md` from the codebase, regenerate adapters, and finish
 with:
