@@ -309,8 +309,8 @@ pub fn render_init_summary(
         (InitStatus::Ready, false) => "Ready — MochiFlow is ready to use",
         (InitStatus::NeedsAiReview, true) => "Needs AI review — config/context の確認が必要です",
         (InitStatus::NeedsAiReview, false) => "Needs AI review — config/context needs judgement",
-        (InitStatus::Blocked, true) => "Blocked — adapter の手動統合が必要です",
-        (InitStatus::Blocked, false) => "Blocked — adapter files need manual merge",
+        (InitStatus::Blocked, true) => "Blocked — 構造化 adapter の手動統合が必要です",
+        (InitStatus::Blocked, false) => "Blocked — structured adapter files need manual merge",
     };
     out.push_str(&line(
         if status == InitStatus::Ready {
@@ -469,9 +469,9 @@ pub fn render_ready_next(language: &str) -> String {
 
 pub fn render_blocked_next(language: &str) -> String {
     if language == "ja" {
-        "candidate ファイルを確認して adapter 指示を手動で統合するか、置き換える場合は --force で再実行してください。".to_string()
+        "構造化 adapter の candidate ファイルを確認して手動で統合するか、置き換える場合は --force で再実行してください。".to_string()
     } else {
-        "Review the candidate adapter files and merge them manually, or re-run with --force to replace existing files.".to_string()
+        "Review the structured adapter candidate files and merge them manually, or re-run with --force to replace existing files.".to_string()
     }
 }
 
@@ -748,7 +748,7 @@ mod tests {
         let out = render_init_summary(
             &report(),
             &["wrote .mochiflow/config.toml".into()],
-            &["AGENTS.md already exists and was not overwritten".into()],
+            &[".kiro/agents/spec-builder.json needs manual merge".into()],
             InitStatus::NeedsAiReview,
             OutputMode::Plain,
             ColorChoice::Never,
@@ -761,7 +761,7 @@ mod tests {
         assert!(out.contains("Status:"), "{out}");
         assert!(out.contains("Needs AI review"), "{out}");
         assert!(out.contains("Needs review:"), "{out}");
-        assert!(out.contains("AGENTS.md already exists"), "{out}");
+        assert!(out.contains(".kiro/agents/spec-builder.json"), "{out}");
         assert!(out.contains("Paste this into your AI agent"), "{out}");
         assert!(out.contains(".mochiflow/config.toml"), "{out}");
     }
@@ -771,7 +771,7 @@ mod tests {
         let out = render_init_summary(
             &report(),
             &[".mochiflow/config.toml を作成".into()],
-            &["AGENTS.md は既に存在するため上書きしませんでした".into()],
+            &[".kiro/agents/spec-builder.json は手動統合が必要です".into()],
             InitStatus::Blocked,
             OutputMode::Plain,
             ColorChoice::Never,
@@ -783,7 +783,7 @@ mod tests {
         assert!(out.contains("Status:"), "{out}");
         assert!(out.contains("Blocked"), "{out}");
         assert!(out.contains("確認が必要:"), "{out}");
-        assert!(out.contains("上書きしませんでした"), "{out}");
+        assert!(out.contains("手動統合が必要"), "{out}");
         assert!(out.contains("手動で統合"), "{out}");
     }
 

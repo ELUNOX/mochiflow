@@ -153,7 +153,8 @@ are messages for your AI tool, not terminal commands.
 | Generic agents | Generates `AGENTS.md` |
 
 Pick tools with `--adapter` during init. Regenerate anytime with
-`mochiflow adapter generate`.
+`mochiflow adapter generate`; existing Markdown instruction files keep their
+custom content and receive a MochiFlow-managed block.
 
 ## Learn more
 

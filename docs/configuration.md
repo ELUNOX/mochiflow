@@ -10,14 +10,14 @@ Adapters tell each AI tool how to load the MochiFlow workflow:
 | Adapter | Generated entrypoint |
 | --- | --- |
 | `agents` | `AGENTS.md` |
-| `claude` | `CLAUDE.md` |
+| `claude-code` | `CLAUDE.md` |
 | `kiro` | `.kiro/` agents and steering |
 | `copilot` | `.github/` integration |
 
 Choose adapters during setup:
 
 ```bash
-mochiflow init --adapter agents,claude
+mochiflow init --adapter agents,claude-code
 ```
 
 Regenerate adapter files after config or engine updates:
@@ -25,6 +25,10 @@ Regenerate adapter files after config or engine updates:
 ```bash
 mochiflow adapter generate
 ```
+
+Existing Markdown instruction files are preserved; MochiFlow updates only its
+managed block inside them. Structured adapter files that cannot be safely
+embedded may require a candidate merge or explicit `--force` replacement.
 
 The `codex` alias resolves to the neutral `agents` adapter.
 

@@ -47,9 +47,11 @@ cargo deny --manifest-path cli/Cargo.toml check --config cli/deny.toml
 - **ベンダリングされたエンジンの複製（編集禁止）** — `.mochiflow/engine/` は dogfood 実行が
   使う gitignore 済みのインストールスナップショットです。リポジトリルートの `engine/` から
   `mochiflow upgrade` で同期され、**ソースではありません**。
-- **生成されるアダプタ（手編集禁止）** — ツールのエントリポイント（`AGENTS.md`・`.kiro/`・
-  `CLAUDE.md`・`.github/copilot-instructions.md`）は `engine/adapters/<tool>/*.tpl` から
+- **アダプタ** — ツールのエントリポイント（`AGENTS.md`・`.kiro/`・`CLAUDE.md`・
+  `.github/copilot-instructions.md`）は `engine/adapters/<tool>/*.tpl` から
   レンダリングされます。テンプレートを編集し、`mochiflow adapter generate` を実行します。
+  Markdown の入口ファイルでは MochiFlow 管理ブロックの外にユーザー作成の内容を置けます。
+  構造化された生成ファイルは引き続きツール所有です。
 
 ## コントラクトとバージョンゲート
 

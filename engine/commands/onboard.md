@@ -96,11 +96,12 @@ defensible choices for surfaces, verification, git, and write scope.
    marker for anything still genuinely open.
 
 9. **Run adapter generate safely**: run `mochiflow adapter generate` without
-   `--force` first. If existing unmanaged adapter targets block generation,
-   inspect the candidates under `.mochiflow/state/adapters/...` and merge the
-   MochiFlow instructions into the existing files when preserving user content.
-   Use `mochiflow adapter generate --force` only after the user explicitly
-   approves replacing the existing adapter files.
+   `--force` first. Existing Markdown instruction files are preserved and
+   extended with a MochiFlow-managed block. If structured adapter targets block
+   generation, inspect the candidates under `.mochiflow/state/adapters/...` and
+   merge or replace only with the user's approval. Use `mochiflow adapter
+   generate --force` only after the user explicitly approves replacing existing
+   adapter files.
 
 10. **Generate the foundational context layer from code**: write only the
    context files from what the code/config actually show:

@@ -664,12 +664,12 @@ pub fn run_init(
                 for blocked in &adapter_result.blocked {
                     let message = if language == "ja" {
                         format!(
-                            "{} は既に存在するため上書きしませんでした。{} を確認し、MochiFlow の指示を手動で統合してください。置き換える場合は --force で再実行できます。",
+                            "{} は既に存在する構造化 adapter ファイルのため上書きしませんでした。{} を確認して手動で統合してください。置き換える場合は --force で再実行できます。",
                             blocked.target, blocked.candidate
                         )
                     } else {
                         format!(
-                            "{} already exists and was not overwritten. Review {} and merge the MochiFlow instructions manually, or re-run with --force to replace it.",
+                            "{} already exists as a structured adapter file and was not overwritten. Review {} and merge it manually, or re-run with --force to replace it.",
                             blocked.target, blocked.candidate
                         )
                     };

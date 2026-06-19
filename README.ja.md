@@ -158,7 +158,9 @@ MochiFlowは、各AIコーディングツールが読み込める入口ファイ
 | GitHub Copilot | `.github/`  | Copilot向けの指示ファイルを生成     |
 | 汎用エージェント       | `AGENTS.md` | 汎用AIエージェント向けの入口を生成      |
 
-導入時に `--adapter` で選択できます。あとから `mochiflow adapter generate` で再生成できます。
+導入時に `--adapter` で選択できます。あとから `mochiflow adapter generate`
+で再生成できます。既存の Markdown 指示ファイルはカスタム内容を残したまま、
+MochiFlow 管理ブロックだけが追加・更新されます。
 
 ## さらに詳しく
 

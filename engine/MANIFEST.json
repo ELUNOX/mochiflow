@@ -21,7 +21,7 @@
     "agents/independent-reviewer.md": "sha256:df9c46fab92037ed5bcc32fd06cc9836f5573087472117abe0c9e207727b4a48",
     "commands/build.md": "sha256:9f0f57d3f422dd3b49982e19296f009caf9bc7816582d2aedd3fd49eaf5b24d0",
     "commands/discuss.md": "sha256:83cf9f0b1e31eb0fad752761223503b2df5a4301597ef6e5b5d893e4f5d3c7d7",
-    "commands/onboard.md": "sha256:cb44a3e903e295c7dba20a8306b56a7814913e3d7dfa23a34f813b0be1df943d",
+    "commands/onboard.md": "sha256:2faa4125fa8276f355535ce094ce99cbd69f7062a4a83dd871e060056a221bb3",
     "commands/patch.md": "sha256:4fdaeb3411418cb36268e1749e1965e84e9a3f3f2479c2e2c0c7fa5ea2319953",
     "commands/plan.md": "sha256:1490ed1b92d324a252f17afd52ff0ec39465652a08d27ff7f1204185688e7c5a",
     "commands/refresh-context.md": "sha256:06d147c10508fcab6b5fa7475ca467fd185f3cd1cb1d0cab37c4adb257cca3af",

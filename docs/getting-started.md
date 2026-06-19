@@ -59,8 +59,9 @@ mochiflow init --language en
 - `Ready` — config, context, and generated adapter files are usable.
 - `Needs AI review` — setup is valid, but project-specific TODOs need an AI
   agent and your judgment before the workflow is ready.
-- `Blocked` — an existing hand-written adapter file needs a manual candidate
-  merge; `init` exits `1` so scripts can detect it.
+- `Blocked` — an existing structured adapter file needs a manual candidate
+  merge; existing Markdown instruction files are extended with a managed
+  MochiFlow block instead of being replaced.
 
 When `Needs AI review` appears, paste the prompt printed by `init` into your AI
 coding agent. The agent should resolve `# mochiflow: confirm` and TODO items,

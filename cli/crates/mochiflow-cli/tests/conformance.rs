@@ -849,21 +849,24 @@ fn behavioral_upgrade_from_bundled_engine_respects_drift_force() {
 fn behavioral_upgrade_reports_adapter_merge_required_after_engine_update() {
     let tmp = tempfile::tempdir().unwrap();
     let cfg = materialize_full(tmp.path());
-    let target = tmp.path().join(".kiro/steering/spec.md");
+    let target = tmp.path().join(".kiro/agents/spec-builder.json");
     std::fs::create_dir_all(target.parent().unwrap()).unwrap();
-    std::fs::write(&target, "hand-written steering\n").unwrap();
+    std::fs::write(&target, "{\"custom\": true}\n").unwrap();
 
     let (code, out) = run_cli(&cfg, &["upgrade"]);
     assert_eq!(code, 1, "blocked adapter merge should be non-zero");
     assert!(out.contains("upgraded engine <- bundled engine"), "{out}");
-    assert!(out.contains("BLOCKED: .kiro/steering/spec.md"), "{out}");
+    assert!(
+        out.contains("BLOCKED: .kiro/agents/spec-builder.json"),
+        "{out}"
+    );
     assert!(
         out.contains("engine upgraded; adapter merge required"),
         "{out}"
     );
     assert!(
         tmp.path()
-            .join(".mochiflow/state/adapters/.kiro/steering/spec.md")
+            .join(".mochiflow/state/adapters/.kiro/agents/spec-builder.json")
             .exists()
     );
 }
