@@ -52,7 +52,7 @@
   "language_source": "locale",
   "next": {
     "kind": "ai_review",
-    "message": "Paste this into your AI agent:\n\nComplete MochiFlow setup for this repository. Read .mochiflow/config.toml, resolve every \"# mochiflow: confirm\" and TODO item with me, fill .mochiflow/context/product.md, .mochiflow/context/structure.md, and .mochiflow/context/tech.md from the code, adjust surfaces / verify / write scope / git settings if needed, regenerate adapters, and finish with mochiflow doctor."
+    "message": "Paste this into your AI agent:\n\nComplete MochiFlow setup for this repository. Read .mochiflow/config.toml, treat \"# mochiflow: confirm\" markers and TODOs as setup questions for uncertain detected values, resolve them with me, fill .mochiflow/context/product.md, .mochiflow/context/structure.md, and .mochiflow/context/tech.md from the code, adjust surfaces / verify / write scope / git settings if needed, regenerate adapters, and finish with mochiflow doctor."
   },
   "review": {
     "items": [
@@ -61,7 +61,7 @@
       "Resolve confirmation markers and TODO values in .mochiflow/config.toml",
       "Fill .mochiflow/context/product.md, structure.md, and tech.md from code"
     ],
-    "prompt": "Paste this into your AI agent:\n\nComplete MochiFlow setup for this repository. Read .mochiflow/config.toml, resolve every \"# mochiflow: confirm\" and TODO item with me, fill .mochiflow/context/product.md, .mochiflow/context/structure.md, and .mochiflow/context/tech.md from the code, adjust surfaces / verify / write scope / git settings if needed, regenerate adapters, and finish with mochiflow doctor.",
+    "prompt": "Paste this into your AI agent:\n\nComplete MochiFlow setup for this repository. Read .mochiflow/config.toml, treat \"# mochiflow: confirm\" markers and TODOs as setup questions for uncertain detected values, resolve them with me, fill .mochiflow/context/product.md, .mochiflow/context/structure.md, and .mochiflow/context/tech.md from the code, adjust surfaces / verify / write scope / git settings if needed, regenerate adapters, and finish with mochiflow doctor.",
     "required": true
   },
   "schema_version": 1,

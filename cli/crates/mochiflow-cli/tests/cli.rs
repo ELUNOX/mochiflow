@@ -32,6 +32,24 @@ fn set_json_field(path: &Path, key: &str, value: serde_json::Value) {
     fs::write(path, serde_json::to_string_pretty(&json).unwrap() + "\n").unwrap();
 }
 
+fn copy_dir_all(src: &Path, dst: &Path) {
+    fs::create_dir_all(dst).unwrap();
+    for entry in fs::read_dir(src).unwrap() {
+        let entry = entry.unwrap();
+        let ty = entry.file_type().unwrap();
+        let target = dst.join(entry.file_name());
+        if ty.is_dir() {
+            copy_dir_all(&entry.path(), &target);
+        } else {
+            fs::copy(entry.path(), target).unwrap();
+        }
+    }
+}
+
+fn count_occurrences(haystack: &str, needle: &str) -> usize {
+    haystack.match_indices(needle).count()
+}
+
 /// Deterministic init: no flags, piped stdin (non-TTY) → exit 0, scaffolds
 /// config from machine detection. A bare temp dir detects nothing concrete, so
 /// the verify command stays a TODO sentinel and confirm markers are attached
@@ -80,7 +98,11 @@ fn init_yes_uses_defaults_without_prompting() {
     let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
     assert!(out.contains("language: en (locale)"), "{out}");
     assert!(out.contains("Status:"), "{out}");
-    assert!(out.contains("Needs AI review"), "{out}");
+    assert!(
+        out.contains("paste the setup prompt below into your AI agent"),
+        "{out}"
+    );
+    assert!(out.contains("not errors"), "{out}");
     assert!(out.contains("Paste this into your AI agent"), "{out}");
 }
 
@@ -99,7 +121,8 @@ fn init_yes_uses_japanese_locale_without_prompting() {
     assert!(cfg.contains("language = \"ja\""), "got:\n{cfg}");
     let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
     assert!(out.contains("language: ja (locale)"), "{out}");
-    assert!(out.contains("Needs AI review"), "{out}");
+    assert!(out.contains("初期設定を完了してください"), "{out}");
+    assert!(out.contains("エラーではありません"), "{out}");
     assert!(
         out.contains("AI アシスタントにこの文を貼ってください"),
         "{out}"
@@ -107,29 +130,39 @@ fn init_yes_uses_japanese_locale_without_prompting() {
 }
 
 #[test]
-fn init_reports_ready_when_existing_config_and_context_are_complete() {
+fn init_existing_config_runs_join_style_local_setup() {
     let dir = tempfile::tempdir().unwrap();
-    let install = dir.path().join(".mochiflow");
-    fs::create_dir_all(install.join("context")).unwrap();
-    fs::write(install.join("context/product.md"), "# Product\n\nP.\n").unwrap();
-    fs::write(install.join("context/structure.md"), "# Structure\n\nS.\n").unwrap();
-    fs::write(install.join("context/tech.md"), "# Tech\n\nT.\n").unwrap();
+    bin()
+        .args([
+            "init",
+            "--language",
+            "en",
+            "--target",
+            dir.path().to_str().unwrap(),
+        ])
+        .write_stdin("")
+        .assert()
+        .success();
     fs::write(
-        install.join("config.toml"),
-        "schema_version = 1\n\
-         language = \"en\"\n\
-         install_dir = \".mochiflow\"\n\
-         specs_dir = \".mochiflow/specs\"\n\
-         index = \".mochiflow/INDEX.md\"\n\n\
-         [constitution]\nproject = \".mochiflow/constitution.md\"\nlocal = \".mochiflow/constitution.local.md\"\n\n\
-         [context]\nproduct = \".mochiflow/context/product.md\"\nstructure = \".mochiflow/context/structure.md\"\ntech = \".mochiflow/context/tech.md\"\n\n\
-         [adr]\ndecisions = \".mochiflow/adr/decisions.md\"\npitfalls = \".mochiflow/adr/pitfalls.md\"\n\n\
-         [adapter]\ntools = [\"agents\"]\n\n\
-         [write]\nallow = [\"src/**\"]\ndeny = [\".git/**\"]\n\n\
-         [surfaces.app]\ndescription = \"primary surface\"\n\n\
-         [surfaces.app.verify]\ndefault = \"cargo test\"\n",
+        dir.path().join(".mochiflow/context/product.md"),
+        "# Product\n\nP.\n",
     )
     .unwrap();
+    fs::write(
+        dir.path().join(".mochiflow/context/structure.md"),
+        "# Structure\n\nS.\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.path().join(".mochiflow/context/tech.md"),
+        "# Tech\n\nT.\n",
+    )
+    .unwrap();
+    let config = dir.path().join(".mochiflow/config.toml");
+    bin()
+        .args(["--config", config.to_str().unwrap(), "index"])
+        .assert()
+        .success();
 
     let result = bin()
         .args(["init", "--yes", "--target", dir.path().to_str().unwrap()])
@@ -139,12 +172,11 @@ fn init_reports_ready_when_existing_config_and_context_are_complete() {
         .assert()
         .success();
     let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
-    assert!(out.contains("language: en (existing_config)"), "{out}");
-    assert!(out.contains("Ready"), "{out}");
     assert!(
-        out.contains("Tell your AI agent what you want to build"),
+        out.contains("MochiFlow is already initialized; running join-style local setup"),
         "{out}"
     );
+    assert!(out.contains("Join: 0 fail"), "{out}");
     assert!(!out.contains("Paste this into your AI agent"), "{out}");
 }
 
@@ -166,7 +198,7 @@ fn init_is_idempotent_nondestructive() {
     let edited = original.replace("language = \"en\"", "language = \"ja\"");
     fs::write(&config_path, &edited).unwrap();
 
-    // Second run without --force
+    // Second run without --force preserves config and follows join-style setup.
     bin()
         .args(["init", "--target", dir.path().to_str().unwrap()])
         .write_stdin("")
@@ -179,6 +211,196 @@ fn init_is_idempotent_nondestructive() {
         after.contains("language = \"ja\""),
         "hand-edited value should be preserved, got:\n{after}"
     );
+}
+
+#[test]
+fn join_requires_existing_config() {
+    let dir = tempfile::tempdir().unwrap();
+    let result = bin()
+        .args(["join", "--target", dir.path().to_str().unwrap()])
+        .assert()
+        .failure()
+        .code(1);
+    let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
+    assert!(out.contains("config.toml not found"), "{out}");
+    assert!(out.contains("mochiflow init"), "{out}");
+}
+
+fn prepare_join_project(dir: &tempfile::TempDir) -> PathBuf {
+    bin()
+        .args(["init", "--target", dir.path().to_str().unwrap()])
+        .write_stdin("")
+        .assert()
+        .success();
+    let config = dir.path().join(".mochiflow/config.toml");
+    bin()
+        .args(["--config", config.to_str().unwrap(), "index"])
+        .assert()
+        .success();
+    config
+}
+
+#[test]
+fn join_restores_local_engine_without_touching_shared_files() {
+    let dir = tempfile::tempdir().unwrap();
+    prepare_join_project(&dir);
+    let agents = dir.path().join("AGENTS.md");
+    let index = dir.path().join(".mochiflow/INDEX.md");
+    let agents_before = fs::read_to_string(&agents).unwrap();
+    let index_before = fs::read_to_string(&index).unwrap();
+    fs::remove_dir_all(dir.path().join(".mochiflow/engine")).unwrap();
+    fs::remove_dir_all(dir.path().join(".mochiflow/state")).unwrap();
+
+    bin()
+        .args(["join", "--target", dir.path().to_str().unwrap()])
+        .assert()
+        .success();
+
+    assert!(dir.path().join(".mochiflow/engine/VERSION").exists());
+    assert!(dir.path().join(".mochiflow/state/doctor.json").exists());
+    assert_eq!(fs::read_to_string(&agents).unwrap(), agents_before);
+    assert_eq!(fs::read_to_string(&index).unwrap(), index_before);
+}
+
+#[test]
+fn join_regenerates_markdown_adapters_and_index() {
+    let dir = tempfile::tempdir().unwrap();
+    prepare_join_project(&dir);
+    let agents = dir.path().join("AGENTS.md");
+    let index = dir.path().join(".mochiflow/INDEX.md");
+    fs::write(&agents, "CUSTOM AGENTS\n").unwrap();
+    fs::write(&index, "# stale\n").unwrap();
+
+    bin()
+        .args(["join", "--target", dir.path().to_str().unwrap()])
+        .assert()
+        .success();
+
+    let repaired = fs::read_to_string(&agents).unwrap();
+    assert!(repaired.starts_with("CUSTOM AGENTS\n"), "{repaired}");
+    assert!(
+        repaired.contains("<!-- mochiflow:begin adapter=agents -->"),
+        "{repaired}"
+    );
+    let regenerated_index = fs::read_to_string(&index).unwrap();
+    assert!(regenerated_index.contains("# 📋 Spec Dashboard"));
+}
+
+#[test]
+fn join_rejects_removed_repair_flag() {
+    let dir = tempfile::tempdir().unwrap();
+    prepare_join_project(&dir);
+
+    bin()
+        .args(["join", "--repair", "--target", dir.path().to_str().unwrap()])
+        .assert()
+        .failure()
+        .code(2);
+}
+
+#[test]
+fn join_blocks_handwritten_structured_adapter_and_writes_candidate() {
+    let dir = tempfile::tempdir().unwrap();
+    bin()
+        .args([
+            "init",
+            "--adapter",
+            "kiro",
+            "--target",
+            dir.path().to_str().unwrap(),
+        ])
+        .write_stdin("")
+        .assert()
+        .success();
+
+    let structured = dir.path().join(".kiro/agents/spec-builder.json");
+    fs::write(&structured, "{\"custom\": true}\n").unwrap();
+
+    let result = bin()
+        .args(["join", "--target", dir.path().to_str().unwrap()])
+        .assert()
+        .failure()
+        .code(1);
+    let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
+    assert!(out.contains("Blocked adapters"), "{out}");
+    assert!(out.contains(".kiro/agents/spec-builder.json"), "{out}");
+    assert!(
+        dir.path()
+            .join(".mochiflow/state/adapters/.kiro/agents/spec-builder.json")
+            .exists()
+    );
+    assert_eq!(
+        fs::read_to_string(&structured).unwrap(),
+        "{\"custom\": true}\n"
+    );
+}
+
+#[test]
+fn join_dry_run_does_not_write_shared_files() {
+    let dir = tempfile::tempdir().unwrap();
+    prepare_join_project(&dir);
+    let agents = dir.path().join("AGENTS.md");
+    let index = dir.path().join(".mochiflow/INDEX.md");
+    fs::write(&agents, "CUSTOM AGENTS\n").unwrap();
+    fs::write(&index, "# stale\n").unwrap();
+
+    let result = bin()
+        .args([
+            "join",
+            "--dry-run",
+            "--target",
+            dir.path().to_str().unwrap(),
+        ])
+        .assert()
+        .success();
+    let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
+    assert!(
+        out.contains("would regenerate adapter entrypoints"),
+        "{out}"
+    );
+    assert!(out.contains("would regenerate"), "{out}");
+    assert_eq!(fs::read_to_string(&agents).unwrap(), "CUSTOM AGENTS\n");
+    assert_eq!(fs::read_to_string(&index).unwrap(), "# stale\n");
+}
+
+#[test]
+fn join_json_emits_single_stdout_document() {
+    let dir = tempfile::tempdir().unwrap();
+    prepare_join_project(&dir);
+    fs::remove_dir_all(dir.path().join(".mochiflow/engine")).unwrap();
+
+    let result = bin()
+        .args(["join", "--json", "--target", dir.path().to_str().unwrap()])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
+    let json: serde_json::Value = serde_json::from_str(&stdout).unwrap();
+    assert_eq!(json["mode"].as_str(), Some("join"), "{stdout}");
+    assert_eq!(json["exit_code"].as_i64(), Some(0), "{stdout}");
+    assert!(dir.path().join(".mochiflow/engine/VERSION").exists());
+}
+
+#[test]
+fn join_blocks_dirty_engine_without_force() {
+    let dir = tempfile::tempdir().unwrap();
+    prepare_join_project(&dir);
+    let router = dir.path().join(".mochiflow/engine/router.md");
+    fs::write(&router, "local engine edit\n").unwrap();
+
+    let result = bin()
+        .args(["join", "--target", dir.path().to_str().unwrap()])
+        .assert()
+        .failure()
+        .code(1);
+    let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
+    assert!(out.contains("DIRTY:"), "{out}");
+    assert_eq!(fs::read_to_string(&router).unwrap(), "local engine edit\n");
+
+    bin()
+        .args(["join", "--force", "--target", dir.path().to_str().unwrap()])
+        .assert()
+        .success();
+    assert_ne!(fs::read_to_string(&router).unwrap(), "local engine edit\n");
 }
 
 #[test]
@@ -376,10 +598,10 @@ fn init_dedupes_comma_separated_adapters() {
     assert!(cfg.contains("tools = [\"agents\"]"), "got:\n{cfg}");
 }
 
-/// Existing adapter targets are never overwritten without --force. A rendered
-/// candidate is written under state/ so the user can merge it manually.
+/// Existing Markdown adapter targets are preserved and extended with a managed
+/// MochiFlow block.
 #[test]
-fn init_existing_adapter_target_writes_candidate_and_needs_confirmation() {
+fn init_existing_markdown_adapter_target_appends_managed_block() {
     let dir = tempfile::tempdir().unwrap();
     let agents = dir.path().join("AGENTS.md");
     fs::write(&agents, "CUSTOM AGENTS\n").unwrap();
@@ -388,40 +610,46 @@ fn init_existing_adapter_target_writes_candidate_and_needs_confirmation() {
         .args(["init", "--target", dir.path().to_str().unwrap()])
         .write_stdin("")
         .assert()
-        .failure()
-        .code(1);
-    assert_eq!(fs::read_to_string(&agents).unwrap(), "CUSTOM AGENTS\n");
-
-    let candidate = dir.path().join(".mochiflow/state/adapters/AGENTS.md");
-    let candidate_body = fs::read_to_string(&candidate).unwrap();
+        .success();
+    let body = fs::read_to_string(&agents).unwrap();
+    assert!(body.starts_with("CUSTOM AGENTS\n"), "{body}");
     assert!(
-        candidate_body.contains("generated by mochiflow"),
-        "{candidate_body}"
+        body.contains("<!-- mochiflow:begin adapter=agents -->"),
+        "{body}"
     );
     assert!(
-        candidate_body.contains("Load the router"),
-        "{candidate_body}"
+        body.contains("generated by mochiflow adapter=agents"),
+        "{body}"
+    );
+    assert!(body.contains("Load the router"), "{body}");
+    assert!(
+        !dir.path()
+            .join(".mochiflow/state/adapters/AGENTS.md")
+            .exists()
     );
 
     let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
     assert!(out.contains("Status:"), "{out}");
-    assert!(out.contains("Blocked"), "{out}");
-    assert!(out.contains("Needs review:"), "{out}");
-    assert!(
-        out.contains("AGENTS.md already exists and was not overwritten"),
-        "{out}"
-    );
-    assert!(out.contains(".mochiflow/state/adapters/AGENTS.md"), "{out}");
-    assert!(!out.contains("generated adapters: agents"), "{out}");
+    assert!(out.contains("generated adapters: agents"), "{out}");
+    assert!(!out.contains("Blocked"), "{out}");
 }
 
 #[test]
 fn init_blocked_json_exits_1_and_includes_candidate() {
     let dir = tempfile::tempdir().unwrap();
-    fs::write(dir.path().join("AGENTS.md"), "CUSTOM AGENTS\n").unwrap();
+    let existing = dir.path().join(".kiro/agents/spec-builder.json");
+    fs::create_dir_all(existing.parent().unwrap()).unwrap();
+    fs::write(&existing, "{\"custom\": true}\n").unwrap();
 
     let result = bin()
-        .args(["init", "--json", "--target", dir.path().to_str().unwrap()])
+        .args([
+            "init",
+            "--json",
+            "--adapter",
+            "kiro",
+            "--target",
+            dir.path().to_str().unwrap(),
+        ])
         .write_stdin("")
         .assert()
         .failure()
@@ -438,20 +666,24 @@ fn init_blocked_json_exits_1_and_includes_candidate() {
     );
     assert_eq!(
         json["blocked"]["items"][0]["candidate"].as_str(),
-        Some(".mochiflow/state/adapters/AGENTS.md"),
+        Some(".mochiflow/state/adapters/.kiro/agents/spec-builder.json"),
         "{stdout}"
     );
 }
 
 /// Blocked adapter guidance follows the configured language.
 #[test]
-fn init_existing_adapter_target_guidance_is_language_aware() {
+fn init_existing_structured_adapter_target_guidance_is_language_aware() {
     let dir = tempfile::tempdir().unwrap();
-    fs::write(dir.path().join("AGENTS.md"), "CUSTOM AGENTS\n").unwrap();
+    let existing = dir.path().join(".kiro/agents/spec-builder.json");
+    fs::create_dir_all(existing.parent().unwrap()).unwrap();
+    fs::write(&existing, "{\"custom\": true}\n").unwrap();
 
     let result = bin()
         .args([
             "init",
+            "--adapter",
+            "kiro",
             "--language",
             "ja",
             "--target",
@@ -466,10 +698,13 @@ fn init_existing_adapter_target_guidance_is_language_aware() {
     assert!(out.contains("確認が必要:"), "{out}");
     assert!(out.contains("Blocked"), "{out}");
     assert!(
-        out.contains("AGENTS.md は既に存在するため上書きしませんでした"),
+        out.contains(".kiro/agents/spec-builder.json は既に存在する構造化 adapter ファイルのため上書きしませんでした"),
         "{out}"
     );
-    assert!(out.contains(".mochiflow/state/adapters/AGENTS.md"), "{out}");
+    assert!(
+        out.contains(".mochiflow/state/adapters/.kiro/agents/spec-builder.json"),
+        "{out}"
+    );
 }
 
 /// The blocked/candidate behavior applies to every adapter target, including
@@ -509,14 +744,267 @@ fn init_existing_nested_adapter_target_writes_nested_candidate() {
     assert!(candidate_body.contains("spec-builder"), "{candidate_body}");
 }
 
-/// Blocking is driven by manifest targets, not by one special adapter file.
 #[test]
-fn init_existing_adapter_targets_write_candidates_for_all_manifest_paths() {
+fn kiro_adapter_ignores_existing_custom_hooks() {
+    let dir = tempfile::tempdir().unwrap();
+    let custom_hook = dir.path().join(".kiro/hooks/custom.kiro.hook");
+    fs::create_dir_all(custom_hook.parent().unwrap()).unwrap();
+    fs::write(&custom_hook, "custom hook\n").unwrap();
+
+    bin()
+        .args([
+            "init",
+            "--adapter",
+            "kiro",
+            "--target",
+            dir.path().to_str().unwrap(),
+        ])
+        .write_stdin("")
+        .assert()
+        .success();
+
+    assert_eq!(fs::read_to_string(&custom_hook).unwrap(), "custom hook\n");
+    assert!(
+        !dir.path()
+            .join(".kiro/hooks/generate-project-index.kiro.hook")
+            .exists()
+    );
+
+    let config = dir.path().join(".mochiflow/config.toml");
+    bin()
+        .args([
+            "--config",
+            config.to_str().unwrap(),
+            "adapter",
+            "generate",
+            "--check",
+        ])
+        .assert()
+        .success();
+}
+
+#[test]
+fn detach_removes_managed_block_and_runtime_but_preserves_project_data() {
+    let dir = tempfile::tempdir().unwrap();
+    let agents = dir.path().join("AGENTS.md");
+    fs::write(&agents, "CUSTOM AGENTS\n").unwrap();
+
+    bin()
+        .args(["init", "--target", dir.path().to_str().unwrap()])
+        .write_stdin("")
+        .assert()
+        .success();
+    let with_block = fs::read_to_string(&agents).unwrap();
+    assert!(
+        with_block.contains("<!-- mochiflow:begin adapter=agents -->"),
+        "{with_block}"
+    );
+
+    bin()
+        .args(["detach", "--target", dir.path().to_str().unwrap()])
+        .assert()
+        .success();
+
+    let detached = fs::read_to_string(&agents).unwrap();
+    assert_eq!(detached, "CUSTOM AGENTS\n");
+    assert!(!dir.path().join(".mochiflow/engine").exists());
+    assert!(!dir.path().join(".mochiflow/state").exists());
+    assert!(dir.path().join(".mochiflow/config.toml").exists());
+    assert!(dir.path().join(".mochiflow/specs").exists());
+    assert!(dir.path().join(".mochiflow/adr/decisions.md").exists());
+    assert!(dir.path().join(".mochiflow/context/product.md").exists());
+    assert!(dir.path().join(".mochiflow/constitution.md").exists());
+
+    bin()
+        .args(["join", "--target", dir.path().to_str().unwrap()])
+        .env("LANG", "en_US.UTF-8")
+        .env_remove("LC_ALL")
+        .env_remove("LC_MESSAGES")
+        .assert()
+        .success();
+
+    let reinit = fs::read_to_string(&agents).unwrap();
+    assert!(reinit.starts_with("CUSTOM AGENTS\n"), "{reinit}");
+    assert!(
+        reinit.contains("<!-- mochiflow:begin adapter=agents -->"),
+        "{reinit}"
+    );
+    assert!(dir.path().join(".mochiflow/engine/VERSION").exists());
+}
+
+#[test]
+fn detach_deletes_full_generated_adapter_files_for_all_tools() {
+    let dir = tempfile::tempdir().unwrap();
+    bin()
+        .args([
+            "init",
+            "--adapter",
+            "agents,claude-code,copilot,kiro",
+            "--target",
+            dir.path().to_str().unwrap(),
+        ])
+        .write_stdin("")
+        .assert()
+        .success();
+
+    for rel in [
+        "AGENTS.md",
+        "CLAUDE.md",
+        ".github/copilot-instructions.md",
+        ".kiro/steering/spec.md",
+        ".kiro/agents/spec-builder.json",
+        ".kiro/agents/spec-independent-reviewer.json",
+    ] {
+        assert!(
+            dir.path().join(rel).exists(),
+            "{rel} should exist before detach"
+        );
+    }
+
+    bin()
+        .args(["detach", "--target", dir.path().to_str().unwrap()])
+        .assert()
+        .success();
+
+    for rel in [
+        "AGENTS.md",
+        "CLAUDE.md",
+        ".github/copilot-instructions.md",
+        ".kiro/steering/spec.md",
+        ".kiro/agents/spec-builder.json",
+        ".kiro/agents/spec-independent-reviewer.json",
+    ] {
+        assert!(!dir.path().join(rel).exists(), "{rel} should be removed");
+    }
+}
+
+#[test]
+fn detach_leaves_unmanaged_adapter_and_custom_kiro_files() {
+    let dir = tempfile::tempdir().unwrap();
+    let agents = dir.path().join("AGENTS.md");
+    let custom_agent = dir.path().join(".kiro/agents/custom.json");
+    let custom_hook = dir.path().join(".kiro/hooks/custom.kiro.hook");
+    fs::write(&agents, "CUSTOM AGENTS\n").unwrap();
+    fs::create_dir_all(custom_agent.parent().unwrap()).unwrap();
+    fs::write(&custom_agent, "{\"custom\": true}\n").unwrap();
+    fs::create_dir_all(custom_hook.parent().unwrap()).unwrap();
+    fs::write(&custom_hook, "custom hook\n").unwrap();
+
+    bin()
+        .args([
+            "init",
+            "--adapter",
+            "kiro",
+            "--target",
+            dir.path().to_str().unwrap(),
+        ])
+        .write_stdin("")
+        .assert()
+        .success();
+
+    bin()
+        .args(["detach", "--target", dir.path().to_str().unwrap()])
+        .assert()
+        .success();
+
+    assert_eq!(fs::read_to_string(&agents).unwrap(), "CUSTOM AGENTS\n");
+    assert_eq!(
+        fs::read_to_string(&custom_agent).unwrap(),
+        "{\"custom\": true}\n"
+    );
+    assert_eq!(fs::read_to_string(&custom_hook).unwrap(), "custom hook\n");
+}
+
+#[test]
+fn detach_dry_run_and_json_report_without_writing() {
+    let dir = tempfile::tempdir().unwrap();
+    bin()
+        .args(["init", "--target", dir.path().to_str().unwrap()])
+        .write_stdin("")
+        .assert()
+        .success();
+
+    let result = bin()
+        .args([
+            "detach",
+            "--dry-run",
+            "--json",
+            "--target",
+            dir.path().to_str().unwrap(),
+        ])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
+    let json: serde_json::Value = serde_json::from_str(&stdout).unwrap();
+    assert_eq!(json["mode"].as_str(), Some("detach"), "{stdout}");
+    assert_eq!(json["dry_run"].as_bool(), Some(true), "{stdout}");
+    assert_eq!(json["exit_code"].as_i64(), Some(0), "{stdout}");
+    assert!(
+        json["removed"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|v| v == "AGENTS.md")
+    );
+
+    assert!(dir.path().join("AGENTS.md").exists());
+    assert!(dir.path().join(".mochiflow/engine").exists());
+}
+
+#[test]
+fn detach_purge_requires_exact_confirmation_and_deletes_all_project_data() {
+    let dir = tempfile::tempdir().unwrap();
+    let agents = dir.path().join("AGENTS.md");
+    fs::write(&agents, "CUSTOM AGENTS\n").unwrap();
+    bin()
+        .args(["init", "--target", dir.path().to_str().unwrap()])
+        .write_stdin("")
+        .assert()
+        .success();
+
+    bin()
+        .args([
+            "detach",
+            "--purge",
+            "--target",
+            dir.path().to_str().unwrap(),
+        ])
+        .assert()
+        .failure()
+        .code(1);
+    assert!(dir.path().join(".mochiflow").exists());
+    assert!(
+        fs::read_to_string(&agents)
+            .unwrap()
+            .contains("<!-- mochiflow:begin adapter=agents -->")
+    );
+
+    bin()
+        .args([
+            "detach",
+            "--purge",
+            "--confirm",
+            "delete mochiflow data",
+            "--target",
+            dir.path().to_str().unwrap(),
+        ])
+        .assert()
+        .success();
+
+    assert!(!dir.path().join(".mochiflow").exists());
+    assert_eq!(fs::read_to_string(&agents).unwrap(), "CUSTOM AGENTS\n");
+}
+
+/// Markdown targets are extended, while structured unmanaged targets still
+/// block with candidates.
+#[test]
+fn init_existing_adapter_targets_append_markdown_and_block_structured_files() {
     let dir = tempfile::tempdir().unwrap();
     for rel in [
         "AGENTS.md",
         "CLAUDE.md",
         ".github/copilot-instructions.md",
+        ".kiro/steering/spec.md",
         ".kiro/agents/spec-builder.json",
     ] {
         let target = dir.path().join(rel);
@@ -541,8 +1029,28 @@ fn init_existing_adapter_targets_write_candidates_for_all_manifest_paths() {
         "AGENTS.md",
         "CLAUDE.md",
         ".github/copilot-instructions.md",
-        ".kiro/agents/spec-builder.json",
+        ".kiro/steering/spec.md",
     ] {
+        let body = fs::read_to_string(dir.path().join(rel)).unwrap();
+        assert!(
+            body.starts_with(&format!("CUSTOM {rel}\n")),
+            "{rel}:\n{body}"
+        );
+        assert!(
+            body.contains("<!-- mochiflow:begin adapter="),
+            "{rel}:\n{body}"
+        );
+        assert!(
+            !dir.path()
+                .join(".mochiflow/state/adapters")
+                .join(rel)
+                .exists(),
+            "{rel} should not write a candidate"
+        );
+    }
+
+    {
+        let rel = ".kiro/agents/spec-builder.json";
         let target = dir.path().join(rel);
         assert_eq!(
             fs::read_to_string(&target).unwrap(),
@@ -588,9 +1096,9 @@ fn adapter_generate_check_does_not_write_candidate() {
     );
 }
 
-/// Normal adapter generation reports the candidate path when manual merge is required.
+/// Normal adapter generation appends a managed block to existing Markdown files.
 #[test]
-fn adapter_generate_blocked_output_includes_candidate_path() {
+fn adapter_generate_appends_managed_block_to_existing_markdown() {
     let dir = tempfile::tempdir().unwrap();
     bin()
         .args(["init", "--target", dir.path().to_str().unwrap()])
@@ -603,25 +1111,119 @@ fn adapter_generate_blocked_output_includes_candidate_path() {
     let result = bin()
         .args(["--config", config.to_str().unwrap(), "adapter", "generate"])
         .assert()
-        .failure();
+        .success();
 
+    let agents = fs::read_to_string(dir.path().join("AGENTS.md")).unwrap();
+    assert!(agents.starts_with("CUSTOM AGENTS\n"), "{agents}");
     assert_eq!(
-        fs::read_to_string(dir.path().join("AGENTS.md")).unwrap(),
-        "CUSTOM AGENTS\n"
+        count_occurrences(&agents, "<!-- mochiflow:begin adapter=agents -->"),
+        1,
+        "{agents}"
     );
-    let candidate = dir.path().join(".mochiflow/state/adapters/AGENTS.md");
-    assert!(candidate.exists());
+    assert!(
+        !dir.path()
+            .join(".mochiflow/state/adapters/AGENTS.md")
+            .exists()
+    );
 
     let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
-    assert!(out.contains("BLOCKED: AGENTS.md"), "{out}");
+    assert!(out.contains("wrote: AGENTS.md"), "{out}");
     assert!(
-        out.contains("candidate: .mochiflow/state/adapters/AGENTS.md"),
+        out.contains("Summary: 1 written, 0 blocked, 0 failed"),
         "{out}"
     );
-    assert!(
-        out.contains("merge manually or use --force to replace"),
-        "{out}"
+
+    bin()
+        .args(["--config", config.to_str().unwrap(), "adapter", "generate"])
+        .assert()
+        .success();
+    let agents = fs::read_to_string(dir.path().join("AGENTS.md")).unwrap();
+    assert_eq!(
+        count_occurrences(&agents, "<!-- mochiflow:begin adapter=agents -->"),
+        1,
+        "{agents}"
     );
+
+    bin()
+        .args([
+            "--config",
+            config.to_str().unwrap(),
+            "adapter",
+            "generate",
+            "--check",
+        ])
+        .assert()
+        .success();
+    bin()
+        .args(["--config", config.to_str().unwrap(), "doctor", "adapter"])
+        .assert()
+        .success();
+}
+
+#[test]
+fn adapter_generate_appends_managed_blocks_for_all_markdown_targets() {
+    let dir = tempfile::tempdir().unwrap();
+    bin()
+        .args([
+            "init",
+            "--adapter",
+            "agents,claude-code,copilot,kiro",
+            "--target",
+            dir.path().to_str().unwrap(),
+        ])
+        .write_stdin("")
+        .assert()
+        .success();
+
+    for rel in [
+        "AGENTS.md",
+        "CLAUDE.md",
+        ".github/copilot-instructions.md",
+        ".kiro/steering/spec.md",
+    ] {
+        let target = dir.path().join(rel);
+        fs::create_dir_all(target.parent().unwrap()).unwrap();
+        fs::write(&target, format!("CUSTOM {rel}\n")).unwrap();
+    }
+    let config = dir.path().join(".mochiflow/config.toml");
+
+    bin()
+        .args(["--config", config.to_str().unwrap(), "adapter", "generate"])
+        .assert()
+        .success();
+
+    for (rel, adapter) in [
+        ("AGENTS.md", "agents"),
+        ("CLAUDE.md", "claude-code"),
+        (".github/copilot-instructions.md", "copilot"),
+        (".kiro/steering/spec.md", "kiro"),
+    ] {
+        let body = fs::read_to_string(dir.path().join(rel)).unwrap();
+        assert!(
+            body.starts_with(&format!("CUSTOM {rel}\n")),
+            "{rel}:\n{body}"
+        );
+        assert_eq!(
+            count_occurrences(
+                &body,
+                &format!("<!-- mochiflow:begin adapter={adapter} -->")
+            ),
+            1,
+            "{rel}:\n{body}"
+        );
+        assert!(body.contains("generated by mochiflow"), "{rel}:\n{body}");
+    }
+
+    bin()
+        .args([
+            "--config",
+            config.to_str().unwrap(),
+            "adapter",
+            "generate",
+            "--check",
+        ])
+        .assert()
+        .success();
 }
 
 /// `--force` keeps its replacement semantics and does not produce a blocked candidate.
@@ -767,11 +1369,18 @@ fn kiro_agent_non_model_override_is_adapter_drift() {
 fn adapter_generate_fails_when_candidate_parent_cannot_be_created() {
     let dir = tempfile::tempdir().unwrap();
     bin()
-        .args(["init", "--target", dir.path().to_str().unwrap()])
+        .args([
+            "init",
+            "--adapter",
+            "kiro",
+            "--target",
+            dir.path().to_str().unwrap(),
+        ])
         .write_stdin("")
         .assert()
         .success();
-    fs::write(dir.path().join("AGENTS.md"), "CUSTOM AGENTS\n").unwrap();
+    let builder = dir.path().join(".kiro/agents/spec-builder.json");
+    fs::write(&builder, "{\"custom\": true}\n").unwrap();
     let state = dir.path().join(".mochiflow/state");
     if state.exists() {
         if state.is_dir() {
@@ -789,14 +1398,14 @@ fn adapter_generate_fails_when_candidate_parent_cannot_be_created() {
         .failure();
 
     assert_eq!(
-        fs::read_to_string(dir.path().join("AGENTS.md")).unwrap(),
-        "CUSTOM AGENTS\n"
+        fs::read_to_string(&builder).unwrap(),
+        "{\"custom\": true}\n"
     );
     let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
     assert!(out.contains("FAIL:"), "{out}");
     assert!(out.contains(".mochiflow/state/adapters"), "{out}");
     assert!(
-        out.contains("Summary: 0 written, 0 blocked, 1 failed"),
+        out.contains("Summary: 7 written, 0 blocked, 1 failed"),
         "{out}"
     );
 }
@@ -804,20 +1413,28 @@ fn adapter_generate_fails_when_candidate_parent_cannot_be_created() {
 #[test]
 fn adapter_generate_errors_make_init_fail_when_candidate_parent_cannot_be_created() {
     let dir = tempfile::tempdir().unwrap();
-    fs::write(dir.path().join("AGENTS.md"), "CUSTOM AGENTS\n").unwrap();
+    let existing = dir.path().join(".kiro/agents/spec-builder.json");
+    fs::create_dir_all(existing.parent().unwrap()).unwrap();
+    fs::write(&existing, "{\"custom\": true}\n").unwrap();
     let install = dir.path().join(".mochiflow");
     fs::create_dir_all(&install).unwrap();
     fs::write(install.join("state"), "not a directory\n").unwrap();
 
     let result = bin()
-        .args(["init", "--target", dir.path().to_str().unwrap()])
+        .args([
+            "init",
+            "--adapter",
+            "kiro",
+            "--target",
+            dir.path().to_str().unwrap(),
+        ])
         .write_stdin("")
         .assert()
         .failure();
 
     assert_eq!(
-        fs::read_to_string(dir.path().join("AGENTS.md")).unwrap(),
-        "CUSTOM AGENTS\n"
+        fs::read_to_string(&existing).unwrap(),
+        "{\"custom\": true}\n"
     );
     let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
     assert!(out.contains("FAIL:"), "{out}");
@@ -1026,6 +1643,50 @@ fn readmes_do_not_list_onboard_as_cli_command() {
     );
 }
 
+#[test]
+fn onboard_instructions_do_not_force_adapter_generation_by_default() {
+    let text = fs::read_to_string(repo_root().join("engine/commands/onboard.md")).unwrap();
+    assert!(
+        !text.contains("Run adapter generate --force"),
+        "onboard must not force-overwrite adapter files by default:\n{text}"
+    );
+    assert!(
+        text.contains("mochiflow adapter generate` without"),
+        "onboard should instruct safe adapter generation first:\n{text}"
+    );
+}
+
+#[test]
+fn engine_manifest_regenerates_manifest_for_engine_dir() {
+    let dir = tempfile::tempdir().unwrap();
+    let engine_dir = dir.path().join("engine");
+    copy_dir_all(&repo_root().join("engine"), &engine_dir);
+    fs::write(engine_dir.join("VERSION"), "9.8.7\n").unwrap();
+
+    let result = bin()
+        .args([
+            "engine",
+            "manifest",
+            "--engine-dir",
+            engine_dir.to_str().unwrap(),
+        ])
+        .assert()
+        .success();
+    let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
+    assert!(out.contains("MANIFEST.json"), "{out}");
+
+    let manifest_text = fs::read_to_string(engine_dir.join("MANIFEST.json")).unwrap();
+    let manifest: serde_json::Value = serde_json::from_str(&manifest_text).unwrap();
+    assert_eq!(manifest["version"].as_str(), Some("9.8.7"), "{manifest}");
+    assert!(
+        manifest["files"]
+            .as_object()
+            .unwrap()
+            .contains_key("VERSION"),
+        "{manifest}"
+    );
+}
+
 /// Removed flag --minimal is rejected by clap.
 #[test]
 fn init_rejects_removed_flags() {
@@ -1059,7 +1720,10 @@ fn init_dry_run_writes_nothing() {
     assert!(out.contains("Detected:"), "{out}");
     assert!(out.contains("Created/Updated:"), "{out}");
     assert!(out.contains("Status:"), "{out}");
-    assert!(out.contains("Needs AI review"), "{out}");
+    assert!(
+        out.contains("paste the setup prompt below into your AI agent"),
+        "{out}"
+    );
     assert!(out.contains("(dry-run) would"), "{out}");
     assert!(!dir.path().join(".mochiflow/config.toml").exists());
     assert!(!dir.path().join(".mochiflow/.gitignore").exists());

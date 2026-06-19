@@ -25,7 +25,11 @@ enum Commands {
         command: ConfigCommand,
     },
     /// Regenerate INDEX.md + state/index.json
-    Index,
+    Index {
+        /// Report drift without writing
+        #[arg(long)]
+        check: bool,
+    },
     /// Lint specs
     Lint {
         /// Single spec slug
@@ -89,6 +93,39 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+    /// Set up local generated state for an existing MochiFlow project
+    Join {
+        /// Target repo root
+        #[arg(long, default_value = ".")]
+        target: String,
+        /// Preview without writing
+        #[arg(long)]
+        dry_run: bool,
+        /// Emit a single JSON document on stdout
+        #[arg(long)]
+        json: bool,
+        /// Discard local engine changes
+        #[arg(long)]
+        force: bool,
+    },
+    /// Detach MochiFlow from this project while preserving project knowledge
+    Detach {
+        /// Target repo root
+        #[arg(long, default_value = ".")]
+        target: String,
+        /// Remove all MochiFlow project data, including specs/ADR/context
+        #[arg(long)]
+        purge: bool,
+        /// Preview without writing
+        #[arg(long)]
+        dry_run: bool,
+        /// Emit a single JSON document on stdout
+        #[arg(long)]
+        json: bool,
+        /// Exact confirmation phrase required for --purge in non-interactive use
+        #[arg(long)]
+        confirm: Option<String>,
+    },
     /// Print the usage-vocabulary card (the four verbs + approval gates)
     Guide,
     /// Generate shell completion scripts
@@ -110,6 +147,12 @@ enum Commands {
         /// Preview without writing/pushing/dispatching
         #[arg(long)]
         dry_run: bool,
+    },
+    /// Developer engine maintenance commands
+    #[command(hide = true)]
+    Engine {
+        #[command(subcommand)]
+        command: EngineCommand,
     },
 }
 
@@ -136,6 +179,16 @@ enum BacklogCommand {
     List,
     Show { slug: String },
     Validate { slug: String },
+}
+
+#[derive(Subcommand)]
+enum EngineCommand {
+    /// Regenerate MANIFEST.json for an engine directory
+    Manifest {
+        /// Engine directory to hash
+        #[arg(long, default_value = "engine")]
+        engine_dir: String,
+    },
 }
 
 #[derive(Clone, Copy, ValueEnum)]
@@ -179,10 +232,14 @@ fn main() -> Result<()> {
                 if fails > 0 { 1 } else { 0 }
             }
         },
-        Commands::Index => {
+        Commands::Index { check } => {
             let cfg = load_cfg(cli.config.as_deref())?;
-            mochiflow_core::index::generate_index(&cfg);
-            0
+            if check {
+                mochiflow_core::index::check_index(&cfg)
+            } else {
+                mochiflow_core::index::generate_index(&cfg);
+                0
+            }
         }
         Commands::Lint { spec } => {
             let cfg = load_cfg(cli.config.as_deref())?;
@@ -256,16 +313,70 @@ fn main() -> Result<()> {
                 std::fs::create_dir_all(target_dir)?;
                 EMBEDDED_ENGINE.extract(target_dir)
             };
-            mochiflow_core::init::run_init(
+            if !force
+                && std::path::PathBuf::from(&target)
+                    .join(".mochiflow")
+                    .join("config.toml")
+                    .exists()
+            {
+                if json {
+                    eprintln!(
+                        "MochiFlow is already initialized; running join-style local setup. Use `mochiflow join` for existing projects."
+                    );
+                } else {
+                    println!(
+                        "MochiFlow is already initialized; running join-style local setup. Use `mochiflow join` for existing projects."
+                    );
+                }
+                mochiflow_core::join::run_join(
+                    &target,
+                    dry_run,
+                    json,
+                    false,
+                    &bundled_engine_version(),
+                    Some(&extract_fn),
+                )
+            } else {
+                mochiflow_core::init::run_init(
+                    &target,
+                    &adapter,
+                    language.as_deref(),
+                    force,
+                    dry_run,
+                    json,
+                    yes,
+                    Some(&extract_fn),
+                )
+            }
+        }
+        Commands::Join {
+            target,
+            dry_run,
+            json,
+            force,
+        } => {
+            let extract_fn = |target_dir: &std::path::Path| -> std::io::Result<()> {
+                std::fs::create_dir_all(target_dir)?;
+                EMBEDDED_ENGINE.extract(target_dir)
+            };
+            mochiflow_core::join::run_join(
                 &target,
-                &adapter,
-                language.as_deref(),
-                force,
                 dry_run,
                 json,
-                yes,
+                force,
+                &bundled_engine_version(),
                 Some(&extract_fn),
             )
+        }
+        Commands::Detach {
+            target,
+            purge,
+            dry_run,
+            json,
+            confirm,
+        } => {
+            let cfg = load_detach_cfg(cli.config.as_deref(), &target, purge, dry_run, json)?;
+            mochiflow_core::detach::run_detach(&cfg, purge, dry_run, json, confirm.as_deref())
         }
         Commands::Guide => {
             // The card is usable before setup is complete; resolve the language from
@@ -304,6 +415,21 @@ fn main() -> Result<()> {
                 dry_run,
             )
         }
+        Commands::Engine { command } => match command {
+            EngineCommand::Manifest { engine_dir } => {
+                let engine_dir = std::path::PathBuf::from(engine_dir);
+                match mochiflow_core::upgrade::write_manifest_for_engine_dir(&engine_dir) {
+                    Ok(()) => {
+                        println!("wrote {}", engine_dir.join("MANIFEST.json").display());
+                        0
+                    }
+                    Err(e) => {
+                        println!("FAIL: could not write {}: {e}", engine_dir.display());
+                        1
+                    }
+                }
+            }
+        },
     };
 
     std::process::exit(exit_code);
@@ -424,6 +550,45 @@ fn load_cfg(config_path: Option<&str>) -> Result<mochiflow_core::config::Config>
         Ok(cfg) => Ok(cfg),
         Err(e) => {
             println!("FAIL: {e}");
+            std::process::exit(2);
+        }
+    }
+}
+
+fn load_detach_cfg(
+    config_path: Option<&str>,
+    target: &str,
+    purge: bool,
+    dry_run: bool,
+    json: bool,
+) -> Result<mochiflow_core::config::Config> {
+    let path = match config_path {
+        Some(p) => std::path::PathBuf::from(p),
+        None => std::path::PathBuf::from(target)
+            .join(".mochiflow")
+            .join("config.toml"),
+    };
+    match mochiflow_core::config::load_config(&path) {
+        Ok(cfg) => Ok(cfg),
+        Err(e) => {
+            if json {
+                let doc = serde_json::json!({
+                    "mode": if purge { "purge" } else { "detach" },
+                    "dry_run": dry_run,
+                    "removed": [],
+                    "updated": [],
+                    "kept": [],
+                    "skipped": [],
+                    "errors": [format!("{e}")],
+                    "exit_code": 2,
+                });
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&doc).unwrap_or_else(|_| "{}".into())
+                );
+            } else {
+                println!("FAIL: {e}");
+            }
             std::process::exit(2);
         }
     }

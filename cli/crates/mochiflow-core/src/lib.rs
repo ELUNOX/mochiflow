@@ -1,10 +1,12 @@
 pub mod adapter;
 pub mod backlog;
 pub mod config;
+pub mod detach;
 pub mod detect;
 pub mod doctor;
 pub mod index;
 pub mod init;
+pub mod join;
 pub mod lint;
 pub mod manifest;
 pub mod pr;

@@ -41,14 +41,17 @@ Knowing which tree owns a file prevents the most common mistakes:
   Engine docs are written in **English** and carry no project-specific values;
   project specifics belong in `config.toml`.
 - **Generated `MANIFEST.json`** — after editing any engine file, regenerate the
-  manifest (it is a generated hash map, not hand-edited).
+  manifest with `mochiflow engine manifest` (it is a generated hash map, not
+  hand-edited).
 - **Vendored engine copy (never edit)** — `.mochiflow/engine/` is a gitignored
   install snapshot used by the dogfood run. It is synced from repo-root `engine/`
   via `mochiflow upgrade`; it is **not** the source.
-- **Generated adapters (never hand-edit)** — tool entrypoints (`AGENTS.md`,
-  `.kiro/`, `CLAUDE.md`, `.github/copilot-instructions.md`) are rendered from
+- **Adapters** — tool entrypoints (`AGENTS.md`, `.kiro/`, `CLAUDE.md`,
+  `.github/copilot-instructions.md`) are rendered from
   `engine/adapters/<tool>/*.tpl`. Edit the templates, then run
-  `mochiflow adapter generate`.
+  `mochiflow adapter generate`. Markdown entrypoints may also contain user-authored
+  content outside MochiFlow's managed block; structured generated files remain
+  tool-owned.
 
 ## Contracts and the version gate
 

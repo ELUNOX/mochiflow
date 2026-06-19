@@ -1,5 +1,4 @@
 {
-  "version": "1.1.1",
   "files": {
     "README.md": "sha256:ebe1ad2d504b91b6ac2467e2043b5b710fe24089baff3cd6a703fb49eeebeb19",
     "VERSION": "sha256:cc52f678848b814373757b460383bf61960e4943c203735adde0a350b3e50989",
@@ -11,8 +10,7 @@
     "adapters/copilot/manifest.toml": "sha256:bcb99f5429caaa020a5736008162cb6c91b36aca788ac5e6cd2ffc2c16d5ec9e",
     "adapters/kiro/agents/spec-builder.json.tpl": "sha256:0ddbaad7f9850b074348dfc688d85124329cee91e5965d365454d976550b71ac",
     "adapters/kiro/agents/spec-independent-reviewer.json.tpl": "sha256:1d3c79e54c3e11b0a670c53cbaa43afb98f5d7381d49608a335530a3bec5e4e2",
-    "adapters/kiro/hooks/generate-project-index.kiro.hook.tpl": "sha256:ff22dd50ddcd8eceb12875ba41f91153699272aba154b35b79c497de02da4638",
-    "adapters/kiro/manifest.toml": "sha256:24ebad86a84f88d19b158e636552e5130a4456ca98e26ca1dead48e09dd239d3",
+    "adapters/kiro/manifest.toml": "sha256:8e0cb57e5f649b16bb901690e94acf9cbad39c984398b39dd8ef84ef72500325",
     "adapters/kiro/steering/spec-build.md.tpl": "sha256:e6975add749c68669e753779f85ae5be68c9b8f878f30de387357d68bc620c0d",
     "adapters/kiro/steering/spec-discuss.md.tpl": "sha256:e78a3fdc1206bcb3a83d9e33d860a9276e7fa49b88ceee0f43284f3beb8bfa26",
     "adapters/kiro/steering/spec-patch.md.tpl": "sha256:8a0e6ce70e46d171ef875f37d7ad470afc50429e6231b2302698567a69d42889",
@@ -22,7 +20,7 @@
     "agents/independent-reviewer.md": "sha256:df9c46fab92037ed5bcc32fd06cc9836f5573087472117abe0c9e207727b4a48",
     "commands/build.md": "sha256:9f0f57d3f422dd3b49982e19296f009caf9bc7816582d2aedd3fd49eaf5b24d0",
     "commands/discuss.md": "sha256:83cf9f0b1e31eb0fad752761223503b2df5a4301597ef6e5b5d893e4f5d3c7d7",
-    "commands/onboard.md": "sha256:8e152b677acee6872beec4b3531a521017dfe5c33378393b110da87d214bbd79",
+    "commands/onboard.md": "sha256:2faa4125fa8276f355535ce094ce99cbd69f7062a4a83dd871e060056a221bb3",
     "commands/patch.md": "sha256:4fdaeb3411418cb36268e1749e1965e84e9a3f3f2479c2e2c0c7fa5ea2319953",
     "commands/plan.md": "sha256:1490ed1b92d324a252f17afd52ff0ec39465652a08d27ff7f1204185688e7c5a",
     "commands/refresh-context.md": "sha256:06d147c10508fcab6b5fa7475ca467fd185f3cd1cb1d0cab37c4adb257cca3af",
@@ -43,5 +41,6 @@
     "templates/spec/spec.md": "sha256:efe7fad75b81bb8f74a8457d4fd7339e49047c7392f53fc8cc4f210329c56e15",
     "templates/spec/spec.yaml": "sha256:388628e29c18d8634652127555a5063171cc3cf9c2e81ffe200c7438f680167e",
     "templates/spec/tasks.md": "sha256:3c80aed65c47f10bc688dac594ba9202fc436bf65eac5368a5877e12d2c069cc"
-  }
+  },
+  "version": "1.1.1"
 }

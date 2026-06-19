@@ -63,6 +63,17 @@ mochiflow doctor
 When `doctor` passes, your AI tool has the project context and workflow
 instructions it needs.
 
+For a repository where MochiFlow is already tracked by the team, do not run a
+fresh setup. After cloning or pulling, run:
+
+```bash
+mochiflow join
+```
+
+`join` restores local generated state such as `.mochiflow/engine/` and
+`.mochiflow/state/`, and refreshes the AI-tool entrypoints and `INDEX.md` when
+needed.
+
 ## What `init` creates
 
 `mochiflow init` adds a `.mochiflow/` workspace and generates the entrypoint
@@ -82,6 +93,13 @@ AGENTS.md / CLAUDE.md / .kiro/ / .github/
 
 During onboarding, your AI agent resolves TODOs, fills project context from the
 codebase, regenerates adapters, and finishes by checking `mochiflow doctor`.
+
+To temporarily remove the project integration, run `mochiflow detach`. It
+removes generated adapter content plus `.mochiflow/engine/` and
+`.mochiflow/state/`, while preserving config, specs, ADR, context, and
+constitution files so `mochiflow join` can restore the integration later. Use
+`mochiflow detach --purge --confirm "delete mochiflow data"` only when you want
+to delete all MochiFlow project data.
 
 ## What working with MochiFlow feels like
 
@@ -153,7 +171,12 @@ are messages for your AI tool, not terminal commands.
 | Generic agents | Generates `AGENTS.md` |
 
 Pick tools with `--adapter` during init. Regenerate anytime with
-`mochiflow adapter generate`.
+`mochiflow adapter generate`; existing Markdown instruction files keep their
+custom content and receive a MochiFlow-managed block.
+
+Remove generated adapter content and runtime state with `mochiflow detach`.
+This preserves project knowledge by default; `--purge` requires the exact
+confirmation phrase `delete mochiflow data`.
 
 ## Learn more
 

@@ -10,14 +10,14 @@ Adapters tell each AI tool how to load the MochiFlow workflow:
 | Adapter | Generated entrypoint |
 | --- | --- |
 | `agents` | `AGENTS.md` |
-| `claude` | `CLAUDE.md` |
+| `claude-code` | `CLAUDE.md` |
 | `kiro` | `.kiro/` agents and steering |
 | `copilot` | `.github/` integration |
 
 Choose adapters during setup:
 
 ```bash
-mochiflow init --adapter agents,claude
+mochiflow init --adapter agents,claude-code
 ```
 
 Regenerate adapter files after config or engine updates:
@@ -26,7 +26,36 @@ Regenerate adapter files after config or engine updates:
 mochiflow adapter generate
 ```
 
+Existing Markdown instruction files are preserved; MochiFlow updates only its
+managed block inside them. Structured adapter files that cannot be safely
+embedded may require a candidate merge or explicit `--force` replacement.
+
 The `codex` alias resolves to the neutral `agents` adapter.
+
+## Joining an existing project
+
+`mochiflow init` creates the shared project configuration. In a team repository
+where `.mochiflow/config.toml` is already tracked, use:
+
+```bash
+mochiflow join
+```
+
+`join` restores local generated state (`.mochiflow/engine/` and
+`.mochiflow/state/`) and refreshes shared adapter files and `INDEX.md` when
+needed. Existing Markdown instructions keep their custom content; MochiFlow only
+updates its managed block.
+
+Remove adapter integration with:
+
+```bash
+mochiflow detach
+```
+
+The default detach removes only generated adapter content and runtime state, so
+the preserved config and project knowledge can be restored with `mochiflow
+init`. To delete everything under `.mochiflow/`, use `mochiflow detach --purge
+--confirm "delete mochiflow data"`.
 
 ## Language
 
@@ -67,5 +96,6 @@ Ignore regenerated or runtime-derived state:
 .mochiflow/state/
 ```
 
-The vendored engine copy is restored by `init` or `upgrade`; runtime state is
-derived from commands and should not be committed.
+The vendored engine copy is restored by `init`, `join`, or `upgrade`; runtime
+state is derived from commands and should not be committed. Team members
+normally restore these local files with `mochiflow join`.

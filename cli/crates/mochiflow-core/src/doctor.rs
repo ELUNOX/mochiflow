@@ -3,6 +3,7 @@
 use std::path::Path;
 
 use crate::config::Config;
+use crate::index;
 use crate::lint;
 use crate::manifest::{load_manifest, read_engine_version};
 
@@ -106,6 +107,12 @@ pub fn validate_config(cfg: &Config) -> Vec<DoctorIssue> {
         }
     }
     issues.extend(check_state_ignored(cfg));
+    if index::is_index_stale(cfg) {
+        issues.push(DoctorIssue {
+            severity: "WARN".into(),
+            message: "INDEX.md is stale; run `mochiflow index`".into(),
+        });
+    }
     // Note: an unconfigured PR backend (pr_command TODO / provider none) is a
     // valid default — `mochiflow pr` falls back to manual handoff — so it is NOT
     // reported as incomplete setup. Only verify TODOs gate readiness.

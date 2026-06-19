@@ -193,6 +193,37 @@ fn golden_index_matches() {
     );
 }
 
+#[test]
+fn index_check_passes_clean_and_fails_stale() {
+    let tmp = tempfile::tempdir().unwrap();
+    let project = tmp.path().join("sample-project");
+    copy_dir_all(
+        &repo_root().join("tests/conformance/fixtures/sample-project"),
+        &project,
+    );
+    let config = project.join(".mochiflow/config.toml");
+
+    assert_cmd::Command::cargo_bin("mochiflow")
+        .unwrap()
+        .args(["--config", config.to_str().unwrap(), "index"])
+        .assert()
+        .success();
+    assert_cmd::Command::cargo_bin("mochiflow")
+        .unwrap()
+        .args(["--config", config.to_str().unwrap(), "index", "--check"])
+        .assert()
+        .success();
+
+    std::fs::write(project.join(".mochiflow/INDEX.md"), "# stale\n").unwrap();
+    let out = assert_cmd::Command::cargo_bin("mochiflow")
+        .unwrap()
+        .args(["--config", config.to_str().unwrap(), "index", "--check"])
+        .assert()
+        .failure();
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
+    assert!(stdout.contains("INDEX.md is stale"), "{stdout}");
+}
+
 // --- (c) MANIFEST drift detection --------------------------------------------
 
 /// Minimal config that loads and points engine_dir at <root>/.mochiflow/engine.
@@ -760,6 +791,16 @@ fn behavioral_doctor_config_and_engine() {
 }
 
 #[test]
+fn behavioral_doctor_warns_when_index_is_stale() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg = materialize_full(tmp.path());
+
+    let (code, out) = run_cli(&cfg, &["doctor", "config"]);
+    assert_eq!(code, 0);
+    assert!(out.contains("INDEX.md is stale"), "{out}");
+}
+
+#[test]
 fn behavioral_adapter_generate_then_check_clean_and_doctor() {
     let tmp = tempfile::tempdir().unwrap();
     let cfg = materialize_full(tmp.path());
@@ -849,21 +890,24 @@ fn behavioral_upgrade_from_bundled_engine_respects_drift_force() {
 fn behavioral_upgrade_reports_adapter_merge_required_after_engine_update() {
     let tmp = tempfile::tempdir().unwrap();
     let cfg = materialize_full(tmp.path());
-    let target = tmp.path().join(".kiro/steering/spec.md");
+    let target = tmp.path().join(".kiro/agents/spec-builder.json");
     std::fs::create_dir_all(target.parent().unwrap()).unwrap();
-    std::fs::write(&target, "hand-written steering\n").unwrap();
+    std::fs::write(&target, "{\"custom\": true}\n").unwrap();
 
     let (code, out) = run_cli(&cfg, &["upgrade"]);
     assert_eq!(code, 1, "blocked adapter merge should be non-zero");
     assert!(out.contains("upgraded engine <- bundled engine"), "{out}");
-    assert!(out.contains("BLOCKED: .kiro/steering/spec.md"), "{out}");
+    assert!(
+        out.contains("BLOCKED: .kiro/agents/spec-builder.json"),
+        "{out}"
+    );
     assert!(
         out.contains("engine upgraded; adapter merge required"),
         "{out}"
     );
     assert!(
         tmp.path()
-            .join(".mochiflow/state/adapters/.kiro/steering/spec.md")
+            .join(".mochiflow/state/adapters/.kiro/agents/spec-builder.json")
             .exists()
     );
 }
