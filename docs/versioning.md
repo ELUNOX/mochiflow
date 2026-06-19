@@ -36,3 +36,7 @@ mochiflow doctor
 `upgrade` replaces the project's vendored engine with the engine bundled into
 the installed CLI, regenerates adapters, and preserves project config, specs,
 context, and ADR files.
+
+For a fresh clone of an already-initialized team project, run `mochiflow join`
+instead. `join` restores the local engine and runtime state from the shared
+config without rewriting tracked files by default.

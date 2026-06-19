@@ -32,6 +32,20 @@ embedded may require a candidate merge or explicit `--force` replacement.
 
 The `codex` alias resolves to the neutral `agents` adapter.
 
+## Joining an existing project
+
+`mochiflow init` creates the shared project configuration. In a team repository
+where `.mochiflow/config.toml` is already tracked, use:
+
+```bash
+mochiflow join
+```
+
+`join` restores local generated state (`.mochiflow/engine/` and
+`.mochiflow/state/`) and refreshes shared adapter files and `INDEX.md` when
+needed. Existing Markdown instructions keep their custom content; MochiFlow only
+updates its managed block.
+
 Remove adapter integration with:
 
 ```bash
@@ -82,5 +96,6 @@ Ignore regenerated or runtime-derived state:
 .mochiflow/state/
 ```
 
-The vendored engine copy is restored by `init` or `upgrade`; runtime state is
-derived from commands and should not be committed.
+The vendored engine copy is restored by `init`, `join`, or `upgrade`; runtime
+state is derived from commands and should not be committed. Team members
+normally restore these local files with `mochiflow join`.

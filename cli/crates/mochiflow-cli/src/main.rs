@@ -25,7 +25,11 @@ enum Commands {
         command: ConfigCommand,
     },
     /// Regenerate INDEX.md + state/index.json
-    Index,
+    Index {
+        /// Report drift without writing
+        #[arg(long)]
+        check: bool,
+    },
     /// Lint specs
     Lint {
         /// Single spec slug
@@ -88,6 +92,21 @@ enum Commands {
         /// (all progress logs go to stderr).
         #[arg(long)]
         json: bool,
+    },
+    /// Set up local generated state for an existing MochiFlow project
+    Join {
+        /// Target repo root
+        #[arg(long, default_value = ".")]
+        target: String,
+        /// Preview without writing
+        #[arg(long)]
+        dry_run: bool,
+        /// Emit a single JSON document on stdout
+        #[arg(long)]
+        json: bool,
+        /// Discard local engine changes
+        #[arg(long)]
+        force: bool,
     },
     /// Detach MochiFlow from this project while preserving project knowledge
     Detach {
@@ -213,10 +232,14 @@ fn main() -> Result<()> {
                 if fails > 0 { 1 } else { 0 }
             }
         },
-        Commands::Index => {
+        Commands::Index { check } => {
             let cfg = load_cfg(cli.config.as_deref())?;
-            mochiflow_core::index::generate_index(&cfg);
-            0
+            if check {
+                mochiflow_core::index::check_index(&cfg)
+            } else {
+                mochiflow_core::index::generate_index(&cfg);
+                0
+            }
         }
         Commands::Lint { spec } => {
             let cfg = load_cfg(cli.config.as_deref())?;
@@ -290,14 +313,58 @@ fn main() -> Result<()> {
                 std::fs::create_dir_all(target_dir)?;
                 EMBEDDED_ENGINE.extract(target_dir)
             };
-            mochiflow_core::init::run_init(
+            if !force
+                && std::path::PathBuf::from(&target)
+                    .join(".mochiflow")
+                    .join("config.toml")
+                    .exists()
+            {
+                if json {
+                    eprintln!(
+                        "MochiFlow is already initialized; running join-style local setup. Use `mochiflow join` for existing projects."
+                    );
+                } else {
+                    println!(
+                        "MochiFlow is already initialized; running join-style local setup. Use `mochiflow join` for existing projects."
+                    );
+                }
+                mochiflow_core::join::run_join(
+                    &target,
+                    dry_run,
+                    json,
+                    false,
+                    &bundled_engine_version(),
+                    Some(&extract_fn),
+                )
+            } else {
+                mochiflow_core::init::run_init(
+                    &target,
+                    &adapter,
+                    language.as_deref(),
+                    force,
+                    dry_run,
+                    json,
+                    yes,
+                    Some(&extract_fn),
+                )
+            }
+        }
+        Commands::Join {
+            target,
+            dry_run,
+            json,
+            force,
+        } => {
+            let extract_fn = |target_dir: &std::path::Path| -> std::io::Result<()> {
+                std::fs::create_dir_all(target_dir)?;
+                EMBEDDED_ENGINE.extract(target_dir)
+            };
+            mochiflow_core::join::run_join(
                 &target,
-                &adapter,
-                language.as_deref(),
-                force,
                 dry_run,
                 json,
-                yes,
+                force,
+                &bundled_engine_version(),
                 Some(&extract_fn),
             )
         }

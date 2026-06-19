@@ -6,6 +6,7 @@ pub mod detect;
 pub mod doctor;
 pub mod index;
 pub mod init;
+pub mod join;
 pub mod lint;
 pub mod manifest;
 pub mod pr;

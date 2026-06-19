@@ -228,10 +228,28 @@ fn epoch_days_to_iso(days: u64) -> String {
     format!("{y:04}-{m:02}-{d:02}")
 }
 
-/// Generate INDEX.md and state/index.json (matching Python's index.main).
-pub fn generate_index(cfg: &Config) {
+const NORMALIZED_TIMESTAMP: &str = "{{TIMESTAMP}}";
+
+fn normalize_index_timestamp(text: &str) -> String {
+    let mut out = text
+        .lines()
+        .map(|line| {
+            if line.starts_with("> updated: ") {
+                format!("> updated: {NORMALIZED_TIMESTAMP}")
+            } else {
+                line.to_string()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    if text.ends_with('\n') {
+        out.push('\n');
+    }
+    out
+}
+
+fn render_index(cfg: &Config, now: &str) -> String {
     let (active, done, seeds) = collect(cfg);
-    let now = utc_now_formatted();
 
     // Compute relative path from index file to specs_dir
     let index_path_buf = cfg.index_path();
@@ -336,12 +354,48 @@ pub fn generate_index(cfg: &Config) {
         lines.push(format!("> done total: {}", done.len()));
     }
 
+    lines.join("\n") + "\n"
+}
+
+pub fn is_index_stale(cfg: &Config) -> bool {
+    let index_path = cfg.index_path();
+    let actual = match std::fs::read_to_string(&index_path) {
+        Ok(content) => content,
+        Err(_) => return true,
+    };
+    let expected = render_index(cfg, NORMALIZED_TIMESTAMP);
+    normalize_index_timestamp(&actual) != normalize_index_timestamp(&expected)
+}
+
+pub fn check_index(cfg: &Config) -> i32 {
+    if is_index_stale(cfg) {
+        println!("FAIL: INDEX.md is stale; run `mochiflow index`");
+        1
+    } else {
+        println!("index: clean");
+        0
+    }
+}
+
+/// Generate INDEX.md and state/index.json (matching Python's index.main).
+pub fn generate_index(cfg: &Config) {
+    generate_index_inner(cfg, true);
+}
+
+pub fn generate_index_quiet(cfg: &Config) {
+    generate_index_inner(cfg, false);
+}
+
+fn generate_index_inner(cfg: &Config, print_summary: bool) {
+    let (active, done, seeds) = collect(cfg);
+    let now = utc_now_formatted();
+    let content = render_index(cfg, &now);
+
     // Write INDEX.md
     let index_path = cfg.index_path();
     if let Some(parent) = index_path.parent() {
         std::fs::create_dir_all(parent).ok();
     }
-    let content = lines.join("\n") + "\n";
     std::fs::write(&index_path, &content).ok();
 
     // Write state/index.json
@@ -350,11 +404,13 @@ pub fn generate_index(cfg: &Config) {
     let json_data = build_json(&now, &active, &done, &seeds);
     std::fs::write(state_dir.join("index.json"), json_data).ok();
 
-    println!(
-        "index: {} + {}",
-        index_path.display(),
-        state_dir.join("index.json").display()
-    );
+    if print_summary {
+        println!(
+            "index: {} + {}",
+            index_path.display(),
+            state_dir.join("index.json").display()
+        );
+    }
 }
 
 fn build_json(now: &str, active: &[ActiveEntry], done: &[DoneEntry], seeds: &[SeedInfo]) -> String {

@@ -193,6 +193,37 @@ fn golden_index_matches() {
     );
 }
 
+#[test]
+fn index_check_passes_clean_and_fails_stale() {
+    let tmp = tempfile::tempdir().unwrap();
+    let project = tmp.path().join("sample-project");
+    copy_dir_all(
+        &repo_root().join("tests/conformance/fixtures/sample-project"),
+        &project,
+    );
+    let config = project.join(".mochiflow/config.toml");
+
+    assert_cmd::Command::cargo_bin("mochiflow")
+        .unwrap()
+        .args(["--config", config.to_str().unwrap(), "index"])
+        .assert()
+        .success();
+    assert_cmd::Command::cargo_bin("mochiflow")
+        .unwrap()
+        .args(["--config", config.to_str().unwrap(), "index", "--check"])
+        .assert()
+        .success();
+
+    std::fs::write(project.join(".mochiflow/INDEX.md"), "# stale\n").unwrap();
+    let out = assert_cmd::Command::cargo_bin("mochiflow")
+        .unwrap()
+        .args(["--config", config.to_str().unwrap(), "index", "--check"])
+        .assert()
+        .failure();
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
+    assert!(stdout.contains("INDEX.md is stale"), "{stdout}");
+}
+
 // --- (c) MANIFEST drift detection --------------------------------------------
 
 /// Minimal config that loads and points engine_dir at <root>/.mochiflow/engine.
@@ -757,6 +788,16 @@ fn behavioral_doctor_config_and_engine() {
     // Engine materialized with its real MANIFEST → no drift.
     let (code, _out) = run_cli(&cfg, &["doctor", "engine"]);
     assert_eq!(code, 0);
+}
+
+#[test]
+fn behavioral_doctor_warns_when_index_is_stale() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg = materialize_full(tmp.path());
+
+    let (code, out) = run_cli(&cfg, &["doctor", "config"]);
+    assert_eq!(code, 0);
+    assert!(out.contains("INDEX.md is stale"), "{out}");
 }
 
 #[test]

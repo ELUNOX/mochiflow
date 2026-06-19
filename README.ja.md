@@ -52,23 +52,69 @@ cd mochiflow
 cargo install --path cli/crates/mochiflow-cli
 ```
 
-プロジェクトに導入します。
+## 使い始める
+
+MochiFlow の始め方は、ひとりで使う場合と、チームのリポジトリに参加する場合で少し違います。
+
+### ひとりで使う場合
+
+自分のプロジェクトに初めて MochiFlow を入れる場合は、プロジェクトのルートで `init` を実行します。
 
 ```bash
 cd /path/to/project
 mochiflow init
 ```
 
-プロジェクト固有の判断が必要な場合、`init` はAIエージェントに貼るためのオンボーディングプロンプトを表示します。
-そのプロンプトをClaude CodeやKiroなどに渡すと、AIがコードベースを読み取り、プロジェクト文脈を埋めます。
+プロジェクト固有の確認が必要な場合、`init` は AI エージェントに貼るための文を表示します。
+その文を Claude Code や Kiro などに渡すと、AI がコードベースを読み取り、MochiFlow の設定とプロジェクト文脈を整えます。
 
-最後にセットアップ状態を確認します。
+最後に状態を確認します。
 
 ```bash
 mochiflow doctor
+mochiflow index
 ```
 
-`doctor` が通れば、AIツールはMochiFlowの流れで動くためのプロジェクト文脈を持った状態になります。
+`doctor` が通れば、AI ツールは MochiFlow の流れで動くための準備ができています。
+
+### チームで使う場合
+
+チームでは、最初に1人がリポジトリへ MochiFlow を導入します。
+この人だけが `init` を実行します。
+
+```bash
+cd /path/to/project
+mochiflow init
+```
+
+オンボーディングを完了したら、次のような共有ファイルをコミットします。
+
+```text
+.mochiflow/config.toml
+.mochiflow/constitution.md
+.mochiflow/context/
+.mochiflow/specs/
+.mochiflow/adr/
+.mochiflow/INDEX.md
+AGENTS.md / CLAUDE.md / .kiro/ / .github/
+```
+
+一方で、次のローカル生成ファイルはコミットしません。
+
+```text
+.mochiflow/engine/
+.mochiflow/state/
+.mochiflow/constitution.local.md
+```
+
+ほかのメンバーは、リポジトリを clone または pull したあと、`init` ではなく `join` を実行します。
+
+```bash
+mochiflow join
+```
+
+`join` は、このPCで必要なローカルファイルを復元し、AIツールの入口ファイルと `INDEX.md` も最新にします。
+手書きの structured adapter ファイルだけは自動で上書きせず、candidate を出して手動統合を促します。
 
 ## `init` で何が作られるか
 

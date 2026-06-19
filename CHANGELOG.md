@@ -4,6 +4,20 @@ All notable changes to MochiFlow are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+
+- `mochiflow join` for setting up local generated state and refreshing
+  MochiFlow-managed entrypoints after cloning or pulling an already-initialized
+  team project.
+- `mochiflow index --check` and doctor warnings for stale `INDEX.md`.
+
+### Changed
+
+- Re-running `mochiflow init` in a repository with an existing config now follows
+  the safe join-style local setup path unless `--force` is provided.
+
 ## [1.1.1] - 2026-06-18
 
 ### Added
