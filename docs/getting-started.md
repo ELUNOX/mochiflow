@@ -76,3 +76,21 @@ mochiflow doctor
 
 When `doctor` passes, the project has the context and workflow instructions your
 AI tool needs.
+
+## Detach later
+
+Use `mochiflow detach` when you want to remove MochiFlow from the active AI
+tools without deleting project knowledge. The command removes generated adapter
+content plus `.mochiflow/engine/` and `.mochiflow/state/`, but keeps
+`.mochiflow/config.toml`, specs, ADR, context, and constitution files. Running
+`mochiflow init` again restores the engine and adapters from the preserved
+config.
+
+Use purge mode only for a full deletion:
+
+```bash
+mochiflow detach --purge --confirm "delete mochiflow data"
+```
+
+Purge removes all MochiFlow project data, including specs, ADR, context,
+constitution, and config.

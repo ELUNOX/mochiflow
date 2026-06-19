@@ -32,6 +32,17 @@ embedded may require a candidate merge or explicit `--force` replacement.
 
 The `codex` alias resolves to the neutral `agents` adapter.
 
+Remove adapter integration with:
+
+```bash
+mochiflow detach
+```
+
+The default detach removes only generated adapter content and runtime state, so
+the preserved config and project knowledge can be restored with `mochiflow
+init`. To delete everything under `.mochiflow/`, use `mochiflow detach --purge
+--confirm "delete mochiflow data"`.
+
 ## Language
 
 Project language controls generated user-facing artifacts and defaults from your

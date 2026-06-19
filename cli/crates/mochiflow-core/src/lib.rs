@@ -1,6 +1,7 @@
 pub mod adapter;
 pub mod backlog;
 pub mod config;
+pub mod detach;
 pub mod detect;
 pub mod doctor;
 pub mod index;

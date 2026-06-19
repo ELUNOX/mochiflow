@@ -89,6 +89,24 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+    /// Detach MochiFlow from this project while preserving project knowledge
+    Detach {
+        /// Target repo root
+        #[arg(long, default_value = ".")]
+        target: String,
+        /// Remove all MochiFlow project data, including specs/ADR/context
+        #[arg(long)]
+        purge: bool,
+        /// Preview without writing
+        #[arg(long)]
+        dry_run: bool,
+        /// Emit a single JSON document on stdout
+        #[arg(long)]
+        json: bool,
+        /// Exact confirmation phrase required for --purge in non-interactive use
+        #[arg(long)]
+        confirm: Option<String>,
+    },
     /// Print the usage-vocabulary card (the four verbs + approval gates)
     Guide,
     /// Generate shell completion scripts
@@ -283,6 +301,16 @@ fn main() -> Result<()> {
                 Some(&extract_fn),
             )
         }
+        Commands::Detach {
+            target,
+            purge,
+            dry_run,
+            json,
+            confirm,
+        } => {
+            let cfg = load_detach_cfg(cli.config.as_deref(), &target, purge, dry_run, json)?;
+            mochiflow_core::detach::run_detach(&cfg, purge, dry_run, json, confirm.as_deref())
+        }
         Commands::Guide => {
             // The card is usable before setup is complete; resolve the language from
             // config when present, otherwise default to English (never exit).
@@ -455,6 +483,45 @@ fn load_cfg(config_path: Option<&str>) -> Result<mochiflow_core::config::Config>
         Ok(cfg) => Ok(cfg),
         Err(e) => {
             println!("FAIL: {e}");
+            std::process::exit(2);
+        }
+    }
+}
+
+fn load_detach_cfg(
+    config_path: Option<&str>,
+    target: &str,
+    purge: bool,
+    dry_run: bool,
+    json: bool,
+) -> Result<mochiflow_core::config::Config> {
+    let path = match config_path {
+        Some(p) => std::path::PathBuf::from(p),
+        None => std::path::PathBuf::from(target)
+            .join(".mochiflow")
+            .join("config.toml"),
+    };
+    match mochiflow_core::config::load_config(&path) {
+        Ok(cfg) => Ok(cfg),
+        Err(e) => {
+            if json {
+                let doc = serde_json::json!({
+                    "mode": if purge { "purge" } else { "detach" },
+                    "dry_run": dry_run,
+                    "removed": [],
+                    "updated": [],
+                    "kept": [],
+                    "skipped": [],
+                    "errors": [format!("{e}")],
+                    "exit_code": 2,
+                });
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&doc).unwrap_or_else(|_| "{}".into())
+                );
+            } else {
+                println!("FAIL: {e}");
+            }
             std::process::exit(2);
         }
     }
