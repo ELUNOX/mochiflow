@@ -111,6 +111,12 @@ enum Commands {
         #[arg(long)]
         dry_run: bool,
     },
+    /// Developer engine maintenance commands
+    #[command(hide = true)]
+    Engine {
+        #[command(subcommand)]
+        command: EngineCommand,
+    },
 }
 
 #[derive(Subcommand)]
@@ -136,6 +142,16 @@ enum BacklogCommand {
     List,
     Show { slug: String },
     Validate { slug: String },
+}
+
+#[derive(Subcommand)]
+enum EngineCommand {
+    /// Regenerate MANIFEST.json for an engine directory
+    Manifest {
+        /// Engine directory to hash
+        #[arg(long, default_value = "engine")]
+        engine_dir: String,
+    },
 }
 
 #[derive(Clone, Copy, ValueEnum)]
@@ -304,6 +320,21 @@ fn main() -> Result<()> {
                 dry_run,
             )
         }
+        Commands::Engine { command } => match command {
+            EngineCommand::Manifest { engine_dir } => {
+                let engine_dir = std::path::PathBuf::from(engine_dir);
+                match mochiflow_core::upgrade::write_manifest_for_engine_dir(&engine_dir) {
+                    Ok(()) => {
+                        println!("wrote {}", engine_dir.join("MANIFEST.json").display());
+                        0
+                    }
+                    Err(e) => {
+                        println!("FAIL: could not write {}: {e}", engine_dir.display());
+                        1
+                    }
+                }
+            }
+        },
     };
 
     std::process::exit(exit_code);

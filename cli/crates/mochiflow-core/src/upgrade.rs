@@ -189,13 +189,17 @@ where
 
 /// Write MANIFEST.json for the current engine state.
 pub fn write_manifest(cfg: &Config) -> std::io::Result<()> {
+    write_manifest_for_engine_dir(&cfg.engine_dir())
+}
+
+/// Write MANIFEST.json for an explicit engine directory.
+pub fn write_manifest_for_engine_dir(engine_dir: &Path) -> std::io::Result<()> {
     use sha2::{Digest, Sha256};
     use std::collections::BTreeMap;
 
-    let engine_dir = cfg.engine_dir();
     let mut files = BTreeMap::new();
-    for entry in walkdir_files(&engine_dir) {
-        let rel = entry.strip_prefix(&engine_dir).unwrap_or(&entry);
+    for entry in walkdir_files(engine_dir) {
+        let rel = entry.strip_prefix(engine_dir).unwrap_or(&entry);
         let rel_str = rel.to_string_lossy().replace('\\', "/");
         if rel_str.contains("__pycache__") || rel_str == "MANIFEST.json" {
             continue;
@@ -205,7 +209,7 @@ pub fn write_manifest(cfg: &Config) -> std::io::Result<()> {
             files.insert(rel_str, format!("sha256:{hash:x}"));
         }
     }
-    let version = read_engine_version(&engine_dir).map_err(std::io::Error::other)?;
+    let version = read_engine_version(engine_dir).map_err(std::io::Error::other)?;
     let manifest = serde_json::json!({
         "version": version,
         "files": files,

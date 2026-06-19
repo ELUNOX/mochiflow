@@ -32,6 +32,20 @@ fn set_json_field(path: &Path, key: &str, value: serde_json::Value) {
     fs::write(path, serde_json::to_string_pretty(&json).unwrap() + "\n").unwrap();
 }
 
+fn copy_dir_all(src: &Path, dst: &Path) {
+    fs::create_dir_all(dst).unwrap();
+    for entry in fs::read_dir(src).unwrap() {
+        let entry = entry.unwrap();
+        let ty = entry.file_type().unwrap();
+        let target = dst.join(entry.file_name());
+        if ty.is_dir() {
+            copy_dir_all(&entry.path(), &target);
+        } else {
+            fs::copy(entry.path(), target).unwrap();
+        }
+    }
+}
+
 /// Deterministic init: no flags, piped stdin (non-TTY) → exit 0, scaffolds
 /// config from machine detection. A bare temp dir detects nothing concrete, so
 /// the verify command stays a TODO sentinel and confirm markers are attached
@@ -1023,6 +1037,50 @@ fn readmes_do_not_list_onboard_as_cli_command() {
     assert!(
         !engine_readme.contains("`mochiflow onboard`"),
         "{engine_readme}"
+    );
+}
+
+#[test]
+fn onboard_instructions_do_not_force_adapter_generation_by_default() {
+    let text = fs::read_to_string(repo_root().join("engine/commands/onboard.md")).unwrap();
+    assert!(
+        !text.contains("Run adapter generate --force"),
+        "onboard must not force-overwrite adapter files by default:\n{text}"
+    );
+    assert!(
+        text.contains("mochiflow adapter generate` without"),
+        "onboard should instruct safe adapter generation first:\n{text}"
+    );
+}
+
+#[test]
+fn engine_manifest_regenerates_manifest_for_engine_dir() {
+    let dir = tempfile::tempdir().unwrap();
+    let engine_dir = dir.path().join("engine");
+    copy_dir_all(&repo_root().join("engine"), &engine_dir);
+    fs::write(engine_dir.join("VERSION"), "9.8.7\n").unwrap();
+
+    let result = bin()
+        .args([
+            "engine",
+            "manifest",
+            "--engine-dir",
+            engine_dir.to_str().unwrap(),
+        ])
+        .assert()
+        .success();
+    let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
+    assert!(out.contains("MANIFEST.json"), "{out}");
+
+    let manifest_text = fs::read_to_string(engine_dir.join("MANIFEST.json")).unwrap();
+    let manifest: serde_json::Value = serde_json::from_str(&manifest_text).unwrap();
+    assert_eq!(manifest["version"].as_str(), Some("9.8.7"), "{manifest}");
+    assert!(
+        manifest["files"]
+            .as_object()
+            .unwrap()
+            .contains_key("VERSION"),
+        "{manifest}"
     );
 }
 
