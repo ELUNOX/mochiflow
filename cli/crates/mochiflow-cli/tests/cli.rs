@@ -1568,10 +1568,10 @@ fn completions_bash_prints_script_without_config() {
 }
 
 #[test]
-fn version_is_1_1_1() {
+fn version_is_1_1_2() {
     let result = bin().arg("--version").assert().success();
     let stdout = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
-    assert_eq!(stdout.trim(), "mochiflow 1.1.1");
+    assert_eq!(stdout.trim(), "mochiflow 1.1.2");
 }
 
 /// Unknown doctor targets are rejected by clap instead of silently passing.
