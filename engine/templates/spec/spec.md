@@ -1,38 +1,38 @@
-# {タイトル}
+# {title}
 
-## 背景と設計判断
+## Background and Decisions
 
-- 解決する課題 / なぜ今 / なぜこの方針か
-- 主要な設計判断とその理由（採用案・却下案）
-- 由来（backlog seed 由来なら slug / source）
+- Problem / why now / why this approach
+- Key design decisions and rationale (accepted / rejected options)
+- Origin (backlog seed slug / source, when applicable)
 
-## ユーザーストーリー
+## User Story
 
-{誰が} は {何を} したい。なぜなら {理由}。
+As {actor}, I want {capability}, so that {reason}.
 
-## スコープ
+## Scope
 
-- 含む:
-- 含まない:
+- In:
+- Out:
 
 ## Edge Cases
 
 - 
 
-## 受入基準（EARS）
+## Acceptance Criteria (EARS)
 
 - AC-01: THE SYSTEM SHALL ...
 - AC-02: WHEN ..., THE SYSTEM SHALL ...
 
-## QA シナリオ
+## QA Scenarios
 
-| QA | Scope | 操作手順 | 期待結果 |
+| QA | Scope | Steps | Expected Result |
 | --- | --- | --- | --- |
-| QA-01 | ios | ... | ... |
+| QA-01 | {surface} | ... | ... |
 
-## 完了条件
+## Completion Conditions
 
-- 全 AC が AC Verification Matrix に存在し FAIL を含まない
-- 検証コマンドと結果が記録されている
+- Every AC appears in the AC Verification Matrix and no row is `FAIL`.
+- Verification command and result are recorded.
 
-<!-- 実装後、ここに ## AC Verification Matrix を追記する（design.md/tasks.md がある場合は tasks.md 末尾） -->
+<!-- After implementation, append ## AC Verification Matrix here (or at the end of tasks.md when tasks.md exists). -->

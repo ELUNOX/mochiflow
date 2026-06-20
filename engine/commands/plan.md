@@ -19,7 +19,7 @@ artifacts:
   - "{specs_dir}/{slug}/design.md (conditional)"
   - "{specs_dir}/{slug}/tasks.md (conditional)"
 prerequisites:
-  - Agreed discussion (Decision summary)
+  - Agreed discussion (Decision summary), or a trivial / well-scoped direct plan request that can synthesize one from user intent + code investigation
 execution: inline
 allowed_writes:
   - "{specs_dir}/**"
@@ -48,17 +48,17 @@ and drive to human approval for implementation. Do not start implementation.
 
 ## Procedure
 
-1. Check for slug duplicates under `{specs_dir}/` and `_done/`, then create `spec.yaml` (`status: draft`) and `spec.md` per `reference/authoring.md`. Judge risk per `reference/risk.md`.
+1. Confirm there is an agreed Decision summary. For a trivial / well-scoped direct plan request, first investigate the relevant code, then synthesize a minimal Decision summary from the user request + discovered facts instead of requiring a separate `discuss` run. Check for slug duplicates under `{specs_dir}/` and `_done/`, then create `spec.yaml` (`status: draft`) and `spec.md` per `reference/authoring.md`. Judge risk per `reference/risk.md`.
 2. Create `design.md` only when `reference/risk.md ## design.md required condition` applies. Create `tasks.md` when multi-step. Let depth follow `reference/workflow.md ## Depth scaling` (a trivial change is spec.md only).
-3. If it came from a backlog seed, delete `_backlog/{slug}.md` after creating the spec documents and record the origin in spec.md `## 背景と設計判断`.
+3. If it came from a backlog seed, delete `_backlog/{slug}.md` after creating the spec documents and record the origin in spec.md `## Background and Decisions`.
 4. Run `reference/authoring.md ## Consistency check` **exactly once**.
 5. Run `mochiflow lint --spec {slug}` and fix any FAIL before asking for approval.
    When talking to the user, call this a consistency check unless the exact
    command matters.
 6. Present readiness in project-language plain wording: what will change, what
    was checked, and what approval is needed to start implementation. On an
-   approval word (`reference/workflow.md ## Human gates`), update `status:
-   approved`.
+   approval word (`reference/workflow.md ## Delivery approval gates`), update
+   `status: approved`.
 7. Re-run `mochiflow lint --spec {slug}` after setting `status: approved`; fix any FAIL before ending plan.
 8. After the approved consistency check passes, present the next action as a
    handoff card: recommend a new session and include a copy-paste prompt rendered
@@ -70,7 +70,7 @@ and drive to human approval for implementation. Do not start implementation.
 
 ## Stop conditions
 
-- Do not proceed to spec creation without a Decision summary or with Open Questions unresolved.
+- Do not proceed to spec creation without a Decision summary, except for a trivial / well-scoped direct plan request where the Decision summary is synthesized from the user request + code investigation. Do not proceed with Open Questions unresolved.
 - Do not ask for implementation approval until `mochiflow lint --spec {slug}` passes on the draft spec.
 - Do not set `status: approved` without an approval word.
 - Do not touch implementation code / branch / build / PR / archive.

@@ -1,33 +1,34 @@
-# {タイトル} — 設計
+# {title} — Design
 
-> `design.md` は risk≥elevated / integration≠none / surfaces>1 の時に作る。
-> 判断と契約のみを書く。具象 class/struct 定義は書かない（実装時に source を読む）。
+> Create `design.md` only when risk>=elevated, integration!=none, or surfaces>1.
+> Write decisions and contracts only. Do not define concrete classes/structs here;
+> read source during implementation.
 
-## 設計判断
+## Design Decisions
 
-- 判断 / 理由
+- Decision / rationale
 
-## アーキテクチャ
-
-- 
-
-## データモデル / インターフェース（signature レベル）
+## Architecture
 
 - 
 
-## エラーハンドリング
+## Data Model / Interfaces (Signature Level)
 
 - 
 
-## テスト戦略
+## Error Handling
+
+- 
+
+## Test Strategy
 
 - 
 
 ## Workstreams
 
-<!-- 複数 workstream / cross-surface のときのみ -->
+<!-- Only when there are multiple workstreams or cross-surface coordination. -->
 
-| Workstream | Surface | 責務 | 依存 | 検証 |
+| Workstream | Surface | Responsibility | Depends On | Verification |
 | --- | --- | --- | --- | --- |
 |  |  |  |  |  |
 
@@ -39,9 +40,10 @@
 
 ## Review Results
 
-<!-- risk≥elevated の mandatory reviewer run を記録。Reviewer mode: delegated | inline / Verdict: pass | pass-with-comments | fail -->
+<!-- Record mandatory reviewer runs for risk>=elevated. Reviewer mode: delegated | inline / Verdict: pass | pass-with-comments | fail -->
 
-## 統合ログ
+## Integration Log
 
-<!-- build 中に append-only。design からの seam 乖離・所有権境界・dead code 扱い・次セッション申し送り。
-     plan で確定済みの内容や commit log で足りる情報は書かない。 -->
+<!-- Append-only during build. Capture seams that diverged from design, ownership boundaries,
+     dead-code handling, and next-session handoff. Do not repeat content already settled in
+     plan or information that commit history captures well enough. -->

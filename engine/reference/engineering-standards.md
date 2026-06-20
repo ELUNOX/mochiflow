@@ -29,7 +29,8 @@ display, local refactors) where no tool / framework idiom is in question.
 
 For each in-scope decision, record the chosen approach **and its primary
 source** (official doc URL + version or date) where that decision already lives:
-`spec.md` 背景と設計判断 / `design.md` 設計判断 / build's `## 統合ログ` for fixes.
+`spec.md ## Background and Decisions` / `design.md ## Design Decisions` /
+build's `## Integration Log` for fixes.
 A decision without a verifiable basis is not done.
 
 ## Workarounds are last resort

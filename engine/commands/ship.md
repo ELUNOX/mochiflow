@@ -7,10 +7,11 @@ description: |
   in a single close-out commit before the PR — and PR metadata and creation.
   Activate on the explicit command `mochiflow-ship`, or natural phrasing like
   "PR出して" / "リリースして"; the human merge report "{slug} merged" /
-  "{slug} マージ済み" / "{slug} 完了" resumes ship's post-merge tail. PR title/body
-  are always generated after human approval; `mochiflow pr` runs pre-flight +
-  push + backend (custom driver / provider built-in / legacy command / manual
-  handoff). Fold + archive land in the PR; post-merge is local cleanup only.
+  "{slug} マージ済み" / "{slug} 完了" resumes ship's post-merge local cleanup only.
+  PR title/body are always generated after human approval; `mochiflow pr` runs
+  pre-flight + push + backend (custom driver / provider built-in / legacy command
+  / manual handoff). Fold + archive land in the PR; post-merge is local cleanup
+  only.
 triggers:
   - mochiflow-ship
   - PR出して
@@ -21,7 +22,7 @@ trigger_patterns:
   - "{slug} マージ済み"
   - "{slug} 完了"
 artifacts:
-  - "{install_dir}/state/{slug}/qa-instructions.md"
+  - "{specs_dir}/{slug}/qa-instructions.md"
   - "{install_dir}/state/{slug}/pr-body.md"
   - "{install_dir}/state/{slug}/pr-request.json (pr_driver backend only)"
   - "{specs_dir}/_done/{slug}/"
@@ -54,22 +55,22 @@ Complete acceptance verification, QA, PR creation, the living-spec fold, and arc
 
 ### Acceptance
 
-1. Build `qa-instructions.md` into `{install_dir}/state/{slug}/` from the QA scenarios in `spec.md` (reference, do not copy — `spec.md` is the source of truth for *what* to test). Pick the adapter via `reference/workflow.md ## Acceptance adapters`. This is a ship-time working sheet (ephemeral, gitignored, not archived per `reference/authoring.md ## Durable vs ephemeral`).
+1. Build `qa-instructions.md` into `{specs_dir}/{slug}/` from the QA scenarios in `spec.md` (reference, do not copy — `spec.md` is the source of truth for *what* to test). Pick the adapter via `reference/workflow.md ## Acceptance adapters`. This is a durable reviewer-facing execution guide that is archived with the spec.
 2. Run the final verification command and record the result.
-3. Request QA that needs human operation / visual checking here **exactly once**. The human follows `qa-instructions.md`; record results and evidence in the **AC Verification Matrix** (the durable ledger — the matrix is the record, not an instruction sheet). Evidence pointers live in the matrix so the ephemeral worksheet can be discarded.
-4. When the acceptance conditions in `reference/workflow.md ## AC Verification Matrix` all hold (matrix complete, no FAIL, no pending, and the reviewer verdict recorded when `risk ≥ elevated`), set `spec.yaml` `status: done` / `updated` mechanically. This is not a gate and uses no approval word; `ship` is the only path that sets `done`.
+3. Request QA that needs human operation / visual checking here **exactly once**. The human follows `qa-instructions.md`; record results and evidence in the **AC Verification Matrix** (the durable ledger — the matrix is the record, not an instruction sheet). Evidence pointers live in the matrix.
+4. When the acceptance conditions in `reference/workflow.md ## AC Verification Matrix` all hold (matrix complete, no FAIL, no `人間確認待ち` / pending human verification, and the reviewer verdict recorded when `risk ≥ elevated`), set `spec.yaml` `status: done` / `updated` mechanically. This is not a gate and uses no approval word; `ship` is the only path that sets `done`.
 
 ### Close-out
 
 5. Fold, archive, and close out — on the feature branch, before `mochiflow pr`.
    - Fold per `reference/git.md ## Living-spec fold`: append the *why* that code cannot reproduce (decision rationale, rejected options) to `[adr].decisions` with a date, and operational pitfalls to `[adr].pitfalls` using the active guardrail format. Do not fold prose that describes current state. Skip when there is no new rationale or pitfall.
    - **Foundational context refresh check (not a fold)**: if the change introduced a coarse structural shift (new module / surface / moved entry point / technology or verification responsibility) that makes `[context].product` / `[context].structure` / `[context].tech` stale, prompt the human to run `refresh-context` (`commands/refresh-context.md`). Do **not** regenerate or commit the context layer automatically here — context is refreshed from code under human confirmation, never folded.
-   - Archive: move `{specs_dir}/{slug}/` → `{specs_dir}/_done/{slug}/` and regenerate `{index}` (`mochiflow index`).
+   - Archive: move `{specs_dir}/{slug}/` (including `qa-instructions.md`) → `{specs_dir}/_done/{slug}/` and regenerate `{index}` (`mochiflow index`).
    - Make the **single close-out commit** per `reference/git.md ## Auto-commit and staging ### Ship close-out commit`: stage exactly `status: done` + the AC Verification Matrix + the fold (`[adr]`) + the `_done/{slug}/` move + `{index}`, with an external-reviewer message (no spec slug, no AC IDs, no mochiflow vocabulary). Nothing is pushed to the base branch here.
 
 ### PR
 
-6. Generate the PR title / description per `templates/delivery/pr-description.md` (the spec now lives under `_done/{slug}/`), write the body to `{install_dir}/state/{slug}/pr-body.md` (ephemeral, gitignored — **never** the spec dir), present it, and wait for human approval (gate 2). The PR title/body are always produced — the automatable, provider-independent part.
+6. Generate the PR title / description per `templates/delivery/pr-description.md` (the spec now lives under `_done/{slug}/`), write the body to `{install_dir}/state/{slug}/pr-body.md` (ephemeral, gitignored — **never** the spec dir), present it, and wait for human approval (delivery approval gate 2). The PR title/body are always produced — the automatable, provider-independent part.
 7. After approval, run `mochiflow pr --spec {slug} --title "<title>" --body-file {install_dir}/state/{slug}/pr-body.md` (add `--draft` if applicable). ship is the sole producer of the body file; `mochiflow pr` only reads it (and writes `pr-request.json` under `state/{slug}/` for the `pr_driver` backend only). The working tree is clean because the close-out commit (step 5) already captured every tracked change. The CLI owns pre-flight (clean tree / branch / base≠head), the single `git push`, and backend resolution per `reference/git.md ## PR` (`pr_driver` > `provider` built-in > legacy `pr_command` > manual). Read its exit code:
    - `0` — PR created; capture the printed URL.
    - `10` — manual handoff: the branch is pushed; create the PR with the presented content via your provider UI/CLI, then report the URL / merge.
@@ -79,7 +80,7 @@ Complete acceptance verification, QA, PR creation, the living-spec fold, and arc
 
 ### Post-merge
 
-8. After the human reports the merge, run `reference/git.md ## Post-merge local cleanup` — local git hygiene only (switch to base, `pull --ff-only`, `branch -d`, `rm -rf {install_dir}/state/{slug}/`). The fold + archive are already merged via the close-out commit; **do not** commit or push anything to the base branch here. Knowledge discovered at or after merge is routed to a follow-up (small `fix` spec or backlog seed), never appended to the archived spec.
+8. After the human reports the merge, run `reference/git.md ## Post-merge local cleanup` — local git hygiene only (switch to base, `pull --ff-only`, `branch -d {branch}`, `rm -rf {install_dir}/state/{slug}/`). The fold + archive are already merged via the close-out commit; **do not** commit or push anything to the base branch here. Knowledge discovered at or after merge is routed to a follow-up (small `fix` spec or backlog seed), never appended to the archived spec.
 
 ## Presentation
 
@@ -94,7 +95,7 @@ Complete acceptance verification, QA, PR creation, the living-spec fold, and arc
 ## Stop conditions
 
 - Do not proceed to ship while implementation and verification are incomplete.
-- Do not run `mochiflow pr` before human approval of the PR content (gate 2).
+- Do not run `mochiflow pr` before human approval of the PR content (delivery approval gate 2).
 - Do not force past a pre-flight FAIL (`mochiflow pr` exit 3); fix and re-run.
 - Do not call `git push` / `gh` / `az` directly; `mochiflow pr` owns push and creation.
 - Do not build the close-out commit before `status: done` holds (acceptance conditions met). Skip the fold only when there is genuinely no new rationale or pitfall; archive (the `_done` move + `INDEX`) still happens.

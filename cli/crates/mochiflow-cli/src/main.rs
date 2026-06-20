@@ -126,7 +126,7 @@ enum Commands {
         #[arg(long)]
         confirm: Option<String>,
     },
-    /// Print the usage-vocabulary card (the four verbs + approval gates)
+    /// Print the usage-vocabulary card (the four verbs + delivery approval gates)
     Guide,
     /// Generate shell completion scripts
     Completions { shell: Shell },

@@ -36,13 +36,16 @@ For a multi-surface spec, evaluate each surface and adopt the highest risk.
 
 Reviewer = `agents/independent-reviewer.md`, read-only. A recorded reviewer
 verdict (`pass` / `pass-with-comments`) is required when `risk ≥ elevated`; this
-is one of the acceptance conditions ship checks before setting `done`
-(`workflow.md ## AC Verification Matrix`). Record mandatory reviewer runs in
-`design.md ## Review Results`, using `Reviewer mode: delegated | inline` and
-`Verdict: pass | pass-with-comments | fail`. For `critical`, append one entry per
-required review run; for `elevated`, append the single post-task review entry.
-Branch / PR / archive mechanics live in `git.md`; the AC Verification Matrix
-format and human gates live in `workflow.md`.
+is a build-completion gate and one of the acceptance conditions ship checks
+before setting `done` (`workflow.md ## AC Verification Matrix`). Verified commit
+units may be committed before the mandatory reviewer run; reviewer findings are
+fixed, verified, and committed as follow-up work before build completes. Record
+mandatory reviewer runs in `design.md ## Review Results`, using `Reviewer mode:
+delegated | inline` and `Verdict: pass | pass-with-comments | fail`. For
+`critical`, append one entry per required review run; for `elevated`, append the
+single post-task review entry. Branch / PR / archive mechanics live in
+`git.md`; the AC Verification Matrix format and delivery approval gates live in
+`workflow.md`.
 
 ## Review transport
 
@@ -76,10 +79,12 @@ Otherwise `design.md` is optional and the spec may be `spec.md` only.
 
 When the user explicitly requests review (`レビューして` / `mochiflow-review`),
 run `agents/independent-reviewer.md` via `## Review transport` regardless of
-risk level.
+risk level. Ad-hoc review is report-only and read-only.
 
 - Target: the active spec's latest artifacts (spec.md, design.md, tasks.md as applicable).
-- On HIGH findings: fix inline and re-run lint before resuming.
+- On HIGH / Critical findings: report the findings and the recommended follow-up
+  route (`build` in an active approved spec context, or `patch` for an eligible
+  small fix). Do not fix inline during ad-hoc review.
 - On PASS / pass-with-comments: report the result and resume the interrupted flow.
 - Does not change `status`, create commits, or block approval by itself.
 

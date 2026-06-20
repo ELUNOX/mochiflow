@@ -13,7 +13,7 @@ discuss ──▶ plan ──▶ build ──▶ ship
 | state | meaning | set by |
 | --- | --- | --- |
 | `draft` | spec authored, not yet approved | plan |
-| `approved` | human approved implementation start | human gate |
+| `approved` | human approved implementation start | delivery approval gate |
 | `done` | acceptance conditions met and accepted | ship |
 
 State lives in `spec.yaml` `status`. There is no separate per-document status.
@@ -30,16 +30,19 @@ needs a new product/design decision, public contract change, migration, security
 or data-loss judgment, multi-surface coordination, or human QA record, stop and
 route to `plan`.
 
-## Human gates (exactly two)
+## Delivery approval gates (exactly two)
 
 1. **approve-to-build** — human approves the spec for implementation (`draft → approved`).
-2. **approve-PR** — human approves PR title/description before `[git].pr_command` runs.
+2. **approve-PR** — human approves PR title/description before `mochiflow pr` runs.
 
 Approval words: `OK` / `承認` / `LGTM` / `approved`. They apply **only** to these
-two gates. The AI never sets `approved` without the gate-1 signal and never
-creates a PR before gate 2. `done` is **not** a gate: it is an acceptance state
-that `ship` sets mechanically when the acceptance conditions below hold — no
-approval word is involved.
+two delivery approval gates. The AI never sets `approved` without the delivery
+approval gate 1 signal and never creates a PR before delivery approval gate 2.
+Setup, context refresh, and QA evidence may require human confirmations, but
+those confirmations are not delivery approval gates and do not change spec
+lifecycle state except where explicitly defined. `done` is **not** a gate: it is
+an acceptance state that `ship` sets mechanically when the acceptance conditions
+below hold — no approval word is involved.
 
 ## Depth scaling
 
@@ -63,19 +66,25 @@ present).
 ```md
 ## AC Verification Matrix
 
-| AC | Scope | 実装箇所 | テスト | QA | 結果 | 備考 |
+| AC | Scope | Implementation | Test | QA | Result | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| AC-01 | ios | `path/File.swift` | `Test.test_case` | QA-01 | PASS |  |
+| AC-01 | {surface} | `path/File.ext` | `Test.test_case` | QA-01 | PASS |  |
 ```
 
-Result is `PASS` / `人間確認済み` / `対象外（理由）` / `FAIL`.
+Result is one of:
+
+- `PASS`
+- `人間確認待ち`
+- `人間確認済み`
+- `対象外（理由）`
+- `FAIL`
 
 `done` is an **acceptance state**, not a human approval. `ship` sets
 `status: done` mechanically (no approval word) once **all** of these acceptance
 conditions hold; `build` never sets `done`:
 
 1. the AC Verification Matrix is present and complete — every spec AC appears as a row;
-2. no row is `FAIL` and none is still pending human verification;
+2. no row is `FAIL` and none is `人間確認待ち` / legacy `pending human verification`;
 3. when `risk ≥ elevated`, the reviewer verdict is recorded (condition owned by
    `risk.md ## Consequences`; referenced here, not redefined).
 
@@ -111,7 +120,7 @@ auto-commit.
 
 ## Acceptance adapters (ship)
 
-Build `qa-instructions.md` from `spec.md` QA scenarios (reference, do not copy),
+Build `{specs_dir}/{slug}/qa-instructions.md` from `spec.md` QA scenarios (reference, do not copy),
 and pick the adapter by `Scope` / kind:
 
 | Scope / kind | adapter | main checks |

@@ -1,71 +1,71 @@
-# QA 指示書: {spec-title}
+# QA Guide: {spec-title}
 
-**spec**: `{slug}`
-**ブランチ**: `{type}/{slug}`
-**対象モジュール**: {module}
-**作成日**: {date}
-
----
-
-## 凡例
-
-- ✅ **自動テスト** — unit test / integration test / snapshot test / UI test など、コマンドで再現できる検証
-- 👤 **人間が操作** — 物理デバイス・OS 権限ダイアログ・外部連携・複雑な業務データ状態など、人間の操作が必要な確認
-- 👁️ **人間が目視確認** — Accessibility ツリーに出ない視覚的な確認（アニメーション、チャート形状など）
+**Spec**: `{slug}`
+**Branch**: `{branch}`
+**Module**: {module}
+**Created**: {date}
 
 ---
 
-## 事前準備
+## Legend
 
-✅ AI が実行:
-
-- 最終検証コマンド（build / test）を実行し、結果を記録する
-
-👤 人間が実施（必要な場合のみ）:
-
-- [ ] {テストデータの前提条件があれば記載（例: 車両・タイヤの登録）}
-- [ ] 準備完了後、AI に「QA を開始して」と伝える
+- **Automated** — unit, integration, snapshot, UI, or other command-repeatable checks
+- **Human operation** — checks requiring a person, device, OS permission dialog, external service, or complex business state
+- **Human visual** — visual checks that are not represented in accessible state, such as animation, chart shape, or layout polish
 
 ---
 
-## シナリオ一覧
+## Preparation
 
-| #     | シナリオ名         | Scope | 種別 | 優先度 | 結果 |
-| ----- | ------------------ | ----- | ---- | ------ | ---- |
-| QA-01 | {scenario-01-name} | ios / api / web / cross-surface / human | ✅ 自動テスト | 必須 | 未実行 |
-| QA-02 | {scenario-02-name} | ios / api / web / cross-surface / human | 👤 人間が操作 | 必須 | 未実行 |
-| QA-03 | {scenario-03-name} | ios / api / web / cross-surface / human | 👁️ 人間が目視確認 | 推奨 | 未実行 |
+AI runs:
+
+- Run the final verification command and record the result.
+
+Human runs when needed:
+
+- [ ] {test-data or environment prerequisites}
+- [ ] After setup is ready, tell the AI to start QA.
 
 ---
 
-## 詳細手順
+## Scenarios
+
+| # | Scenario | Scope | Kind | Priority | Result |
+| --- | --- | --- | --- | --- | --- |
+| QA-01 | {scenario-01-name} | {surface} / cross-surface / human | Automated | Required | Not run |
+| QA-02 | {scenario-02-name} | {surface} / cross-surface / human | Human operation | Required | Not run |
+| QA-03 | {scenario-03-name} | {surface} / cross-surface / human | Human visual | Recommended | Not run |
+
+---
+
+## Steps
 
 ### QA-01: {scenario-01-name}
 
-**前提**: {precondition}
-**Scope**: ios / api / web / cross-surface / human
-**実行者**: ✅ 自動テスト / 👤 人間が操作 / 👁️ 人間が目視確認
-**確認方法**: 自動テスト / 人間操作後に AI が結果記録 / 人間目視
-**結果**: 未実行 / PASS / FAIL / 人間確認済み / 対象外（理由）
-**証跡**: {スクリーンショットパス・ログ・人間確認コメント}
+**Precondition**: {precondition}
+**Scope**: {surface} / cross-surface / human
+**Runner**: Automated / Human operation / Human visual
+**Check method**: automated test / AI records result after human operation / human visual confirmation
+**Result**: Not run / PASS / FAIL / 人間確認待ち / 人間確認済み / 対象外（理由）
+**Evidence**: {screenshot path, log path, or human confirmation comment}
 
-👤 人間が実施:
+Human operation:
 
-1. {操作手順}
-2. AI に「QA-01 の確認をして」と伝える
+1. {operation step}
+2. Tell the AI that QA-01 is ready to record.
 
-✅ 自動テストで確認:
+Automated check:
 
+```text
+Command: {verification-command}
+Expected: {expected-result}
 ```
-コマンド: {検証コマンド}
-期待: {期待結果}
-```
 
-👁️ 人間が目視確認（必要な場合のみ）:
+Human visual check when needed:
 
-- {視覚的な確認内容}
+- {visual check}
 
-**NG 例**: {ng-example}
+**Failing example**: {ng-example}
 
 ---
 
@@ -75,33 +75,33 @@
 
 ---
 
-## 報告フォーマット
+## Report Format
 
-AI が確認失敗した場合:
+When AI verification fails:
 
-```
-シナリオ: QA-XX（確認 X）
-期待: {expected}
-実際: {actual}
-証跡: {スクリーンショットパス・ログ}
-```
-
-人間が目視確認で問題を発見した場合:
-
-```
-シナリオ: QA-XX
-手順: X番目
-実際の動作:
-期待した動作:
-再現率: 毎回 / 時々
-証跡: {スクリーンショットパス・人間確認コメント}
+```text
+Scenario: QA-XX (step X)
+Expected: {expected}
+Actual: {actual}
+Evidence: {screenshot path or log path}
 ```
 
-人間確認で問題なしの場合:
+When a human visual check finds a problem:
 
+```text
+Scenario: QA-XX
+Step: X
+Actual behavior:
+Expected behavior:
+Repro rate: always / sometimes
+Evidence: {screenshot path or human confirmation comment}
 ```
-シナリオ: QA-XX
-確認者: {名前または「人間」}
-結果: 人間確認済み
-コメント:
+
+When human confirmation passes:
+
+```text
+Scenario: QA-XX
+Reviewer: {name or "human"}
+Result: 人間確認済み
+Comment:
 ```

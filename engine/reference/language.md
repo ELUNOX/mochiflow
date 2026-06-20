@@ -51,6 +51,13 @@ mochiflow engine files (`commands/**`, `reference/**`, `agents/**`,
 engine content in English; do not embed project-specific values, paths, or
 commands (those belong in `config.toml`).
 
+Templates are neutral scaffolds, not final artifact language. When creating a
+spec, QA guide, PR description, or handoff prompt from `templates/**`, render the
+final artifact in the configured project language while preserving command
+tokens, filenames, metadata values, schema enum values, AC IDs, and required
+result literals such as `PASS`, `FAIL`, `人間確認待ち`, `人間確認済み`, and
+`対象外（理由）`.
+
 ## Generated adapters
 
 Adapter target files are generated artifacts (see `reference/git.md` and the

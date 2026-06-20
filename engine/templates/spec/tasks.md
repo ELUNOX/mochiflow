@@ -1,23 +1,23 @@
-# {タイトル} — タスク
+# {title} — Tasks
 
-実装内容: {1 行}
+Implementation summary: {one-line summary}
 risk: {standard|elevated|critical}
-重大停止条件:
-- {spec 固有のもの 1-3 個}
+Critical stop conditions:
+- {1-3 spec-specific stop conditions}
 
 ## Defaults
 
-- 検証: {共通の検証コマンド}
-- 共通停止条件: scope 外変更 / 新しい設計判断が必要 / 検証 FAIL 継続
+- Verification: {shared verification command}
+- Common stop conditions: out-of-scope change / new design decision needed / verification keeps failing
 
-## タスク 1: {タイトル} [P]
+## Task 1: {title} [P]
 
-対応 AC: AC-01
+Covers AC: AC-01
 
-変更予定領域:
+Planned change area:
 - `path/to/File.swift`
 
-追加停止条件:
-- {本タスク固有。共通は Defaults 参照}
+Additional stop conditions:
+- {task-specific stop conditions; shared conditions are in Defaults}
 
-<!-- 全タスク完了後、ここに ## AC Verification Matrix を追記する -->
+<!-- After all tasks complete, append ## AC Verification Matrix here. -->
