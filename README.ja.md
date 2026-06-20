@@ -3,8 +3,7 @@
 </p>
 
 <p align="center">
-  AIコーディングエージェント向けのSpecワークフロー。
-  相談、設計、実装、出荷準備までを、プロジェクト文脈を保ったまま進めます。
+  AIコーディングエージェントに、相談・設計・実装・出荷準備の流れを渡すSpecワークフロー。
 </p>
 
 <p align="center">
@@ -19,24 +18,35 @@
 
 ---
 
+# MochiFlow
+
 MochiFlowは、AIコーディングエージェントのための仕様駆動ワークフローです。
 
-Claude Code / Kiro / GitHub Copilot などのAIエージェントが、いきなり実装に入らず、
-「相談 → 設計 → 実装 → 出荷準備」の流れで、文脈を保ちながら開発できるようにします。
+Claude Code、Kiro、GitHub CopilotなどのAIツールに、プロジェクト文脈・仕様作成フロー・承認ステップを読み込ませ、AIがいきなり実装へ進まず、合意された設計に沿って変更を進められるようにします。
 
-* **作る前に整理する** — ざっくりした要望を、スコープのある仕様に落とします。
-* **実装の先走りを防ぐ** — 実装前に設計承認、出荷前に確認ステップを挟みます。
-* **知見を次へ引き継ぐ** — 判断やハマりどころを記録し、次の開発で参照します。
+MochiFlow自体はAIモデルやAIランタイムではありません。
+プロジェクト内に `.mochiflow/` とAIツール向けの入口ファイルを生成する、Rust製の単一バイナリです。
 
-MochiFlowは、AIモデルやAIエージェントそのものではありません。
-既存のAIコーディングツールに、プロジェクトごとの文脈、仕様作成フロー、承認ステップを渡すためのワークフローです。
+## 30秒ガイド
 
-外部ランタイムは不要です。
-導入用のコマンドはRust製の単一バイナリとして動き、プロジェクト内にAIエージェント向けのワークフロー文脈を生成します。
+MochiFlowでは、導入や状態確認はターミナルで行い、日々の開発はAIツールとの会話で進めます。
 
-## クイックスタート
+| やりたいこと | 使うもの |
+| --- | --- |
+| 新しいプロジェクトに導入する | ターミナルで `mochiflow init` |
+| チームの既存リポジトリに参加する | ターミナルで `mochiflow join` |
+| 状態を確認する | ターミナルで `mochiflow doctor` |
+| 要件やスコープを相談する | AIツールに自然に相談、または `mochiflow-discuss` |
+| 設計文書を作る | AIツールに「設計に進めて」、または `mochiflow-plan` |
+| 実装して検証する | AIツールに「実装して」、または `mochiflow-build` |
+| PR準備をする | AIツールに「出荷準備して」、または `mochiflow-ship` |
 
-MochiFlowの導入コマンドをインストールします。
+`mochiflow-discuss`、`mochiflow-plan`、`mochiflow-build`、`mochiflow-ship` はターミナルで実行するコマンドではありません。
+AIツールに段階を明確に伝えたいときのメッセージです。
+
+トリガー語は必須ではありません。普段は自然な言葉で相談し、段階を明確に指定したいときだけ使えます。
+
+## インストール
 
 ```bash
 # Homebrew（macOS / Linux 推奨）
@@ -54,19 +64,21 @@ cargo install --path cli/crates/mochiflow-cli
 
 ## 使い始める
 
-MochiFlow の始め方は、ひとりで使う場合と、チームのリポジトリに参加する場合で少し違います。
+MochiFlowの始め方は、リポジトリに初めて導入する場合と、すでにMochiFlowが入っているチームリポジトリに参加する場合で違います。
 
-### ひとりで使う場合
+### 新しいプロジェクトに導入する
 
-自分のプロジェクトに初めて MochiFlow を入れる場合は、プロジェクトのルートで `init` を実行します。
+自分のプロジェクトに初めてMochiFlowを入れる場合は、プロジェクトのルートで `init` を実行します。
 
 ```bash
 cd /path/to/project
 mochiflow init
 ```
 
-プロジェクト固有の確認が必要な場合、`init` は AI エージェントに貼るための文を表示します。
-その文を Claude Code や Kiro などに渡すと、AI がコードベースを読み取り、MochiFlow の設定とプロジェクト文脈を整えます。
+`init` は `.mochiflow/` ワークスペース、vendored engine、AIツール向け入口ファイルを作成します。
+
+プロジェクト固有の判断が必要な場合、`init` はAIエージェントに貼るための文を表示します。
+その文をClaude Code、Kiro、GitHub Copilotなどに渡すと、AIがコードベースを読み取り、MochiFlowの設定とプロジェクト文脈を整えます。
 
 最後に状態を確認します。
 
@@ -75,30 +87,127 @@ mochiflow doctor
 mochiflow index
 ```
 
-`doctor` が通れば、AI ツールは MochiFlow の流れで動くための準備ができています。
+`doctor` が通れば、AIツールはMochiFlowの流れで動く準備ができています。
 
-よく使うターミナルコマンド:
+### チームの既存リポジトリに参加する
 
-```bash
-mochiflow guide                         # AIツール向けの使い方カードを表示
-mochiflow config show                   # パス、言語、surface、git設定を確認
-mochiflow lint [--spec SLUG]            # spec の整合性を確認
-mochiflow doctor [config|specs|adapter|engine]
-mochiflow adapter generate [--check]
-mochiflow pr --spec SLUG --title "..." --body-file PATH
-```
+すでにMochiFlowが導入されているチームリポジトリでは、通常 `init` を再実行しません。
 
-### チームで使う場合
-
-チームでは、最初に1人がリポジトリへ MochiFlow を導入します。
-この人だけが `init` を実行します。
+リポジトリをcloneまたはpullしたあと、必要に応じて `join` を実行します。
 
 ```bash
-cd /path/to/project
-mochiflow init
+git clone <repository-url>
+cd <repository>
+mochiflow join
 ```
 
-オンボーディングを完了したら、次のような共有ファイルをコミットします。
+`join` は、このPCで必要なローカルstateを復元し、adapterや `INDEX.md` を最新にします。
+古い、または壊れた作業ツリーでは `.mochiflow/engine/` も復元できます。
+
+手書きのstructured adapterファイルは自動で上書きせず、candidateを出して手動統合を促します。
+
+## 日々の開発フロー
+
+MochiFlowの中心は、ターミナルコマンドではなくAIツールとの会話です。
+
+自然な言葉で相談しても、明示的なトリガー語を使っても、同じMochiFlowの流れに入れます。
+
+```mermaid
+flowchart LR
+    A["相談する"] --> B["スコープを整理"]
+    B --> C["設計する"]
+    C -->|"あなたが承認"| D["実装 + 検証"]
+    D -->|"あなたが承認"| E["出荷準備"]
+    E -.-> F["判断やハマりどころを次へ引き継ぐ"]
+```
+
+### 1. 相談する
+
+まずは普通にAIツールへ相談できます。
+
+```text
+検索画面に保存済みフィルタを追加したい。
+いきなり実装せず、まずスコープ、エッジケース、設計案を一緒に整理して。
+```
+
+段階を明確にしたいときは、トリガー語を使えます。
+
+```text
+mochiflow-discuss
+
+検索画面に保存済みフィルタを追加したい。
+```
+
+AIエージェントは、要件、制約、影響範囲、未決事項を整理します。
+
+### 2. 設計する
+
+方向性が見えたら、設計に進めます。
+
+```text
+設計に進めて。
+```
+
+または、明示的に指定できます。
+
+```text
+mochiflow-plan
+```
+
+AIエージェントは `.mochiflow/specs/{slug}/` に設計文書を書きます。
+この時点ではまだ実装しません。あなたの承認を待ちます。
+
+### 3. 実装する
+
+設計に納得したら、実装に進めます。
+
+```text
+この設計で実装して。
+```
+
+または、明示的に指定できます。
+
+```text
+mochiflow-build
+```
+
+AIエージェントは承認済みの設計に沿って実装し、テストを追加・更新し、設定された検証コマンドを実行します。
+
+### 4. 出荷準備する
+
+PRに出してよければ、出荷準備に進めます。
+
+```text
+出荷準備して。
+```
+
+または、明示的に指定できます。
+
+```text
+mochiflow-ship
+```
+
+MochiFlowは今回の判断やハマりどころを記録し、プロジェクトのPR手順に沿って出荷を進めます。
+
+## MochiFlowが作るファイル
+
+`mochiflow init` は、プロジェクトに `.mochiflow/` ワークスペースとAIツール向け入口ファイルを作成します。
+
+```text
+.mochiflow/
+  config.toml        # プロジェクト設定、adapter、検証コマンド
+  engine/            # プロジェクトに同梱されるワークフローengine
+  constitution.md    # 常に読み込まれるプロジェクトルール
+  context/           # コードから埋める現在地マップ
+  specs/             # ワークフローで作られる機能仕様
+  adr/               # 次回以降に引き継ぐ判断・落とし穴
+  INDEX.md           # specs / adr / context の索引
+
+AGENTS.md / CLAUDE.md / .kiro/ / .github/
+  # AIコーディングツール用に生成される入口ファイル
+```
+
+チームで使う場合、次のような共有ファイルはコミットします。
 
 ```text
 .mochiflow/config.toml
@@ -111,127 +220,87 @@ mochiflow init
 AGENTS.md / CLAUDE.md / .kiro/ / .github/
 ```
 
-一方で、次のローカル生成ファイルはコミットしません。
+一方で、次のローカル生成ファイルは通常コミットしません。
 
 ```text
 .mochiflow/state/
 .mochiflow/constitution.local.md
 ```
 
-ほかのメンバーは、リポジトリを clone または pull するだけで、vendored engine と AI ツールの入口ファイルを取得できます。ローカル state、adapter、`INDEX.md` の修復が必要なときは `init` ではなく `join` を実行します。
+## Specの中身
+
+通常の変更では、specは `.mochiflow/specs/{slug}/` の下に作られます。
+小さな修正では、必要な分だけ軽く使えます。
+
+| ファイル | 役割 |
+| --- | --- |
+| `spec.md` | 何を作るか、何を範囲外にするか、どう確認するか |
+| `design.md` | 技術方針、代替案、インターフェース、失敗時の扱い |
+| `tasks.md` | AIエージェントが順番に実行できる作業リスト |
+| AC Matrix | 受け入れ条件、実装、検証、証跡、結果の対応表 |
+
+MochiFlowはチャット履歴ではなく、リポジトリ内のファイルに状態を残します。
+そのため、次の開発でも過去の判断やハマりどころを参照できます。
+
+## 対応AIツール
+
+MochiFlowは、各AIコーディングツールが読み込める入口ファイルを生成します。
+
+| AIツール | 生成される入口 | 役割 |
+| --- | --- | --- |
+| Kiro | `.kiro/` | 専用エージェント / steeringを生成 |
+| Claude Code | `CLAUDE.md` | プロジェクトルールとワークフローを読み込ませる |
+| GitHub Copilot | `.github/` | Copilot向けの指示ファイルを生成 |
+| 汎用エージェント | `AGENTS.md` | 汎用AIエージェント向けの入口を生成 |
+
+導入時に `--adapter` で選択できます。
+あとから `mochiflow adapter generate` で再生成できます。
+
+既存のMarkdown指示ファイルは、カスタム内容を残したままMochiFlow管理ブロックだけが追加・更新されます。
+
+## よく使うCLIコマンド
 
 ```bash
-mochiflow join
+mochiflow init                         # 新しいプロジェクトに導入
+mochiflow join                         # チームリポジトリでローカル状態を修復
+mochiflow doctor                       # 設定・spec・adapter・engineを確認
+mochiflow guide                        # AIツール向けの使い方カードを表示
+mochiflow index                        # INDEX.md を更新
+mochiflow lint [--spec SLUG]           # specの整合性を確認
+mochiflow config show                  # 解決済み設定を表示
+mochiflow adapter generate [--check]   # AIツール入口ファイルを生成/確認
+mochiflow pr --spec SLUG --title "..." --body-file PATH
 ```
 
-`join` は、このPCで必要なローカル state を復元し、古い/壊れた作業ツリーでは `.mochiflow/engine/` も復元できます。AIツールの入口ファイルと `INDEX.md` も最新にします。
-手書きの structured adapter ファイルだけは自動で上書きせず、candidate を出して手動統合を促します。
+## 一時的に外す
 
-## `init` で何が作られるか
+MochiFlowの生成済みadapter内容とローカルstateだけを外したい場合は、次を実行します。
 
-`mochiflow init` は、プロジェクトに `.mochiflow/` ワークスペースを追加し、
-AIツールが読む入口ファイルを生成します。
-
-```text
-.mochiflow/
-  config.toml        # プロジェクト設定、adapter、検証コマンド
-  constitution.md    # あなたが書く、常に読み込まれるプロジェクトルール
-  context/           # オンボーディング時にコードから埋める現在地マップ
-  specs/             # ワークフローで作られる機能仕様
-  adr/               # 次回以降に引き継ぐ判断・落とし穴
-
-AGENTS.md / CLAUDE.md / .kiro/ / .github/
-  # AIコーディングツール用に生成される入口ファイル
+```bash
+mochiflow detach
 ```
 
-オンボーディングでは、AIエージェントがTODOを解決し、コードからproject contextを埋め、
-adapterを再生成し、最後に `mochiflow doctor` で状態を確認します。
+通常の `detach` は、tracked engine、config、specs、ADR、context、constitutionを保持します。
+あとから `mochiflow join` で統合を修復できます。
 
-## MochiFlowを使うと、開発はこう進みます
+MochiFlowのプロジェクトデータをすべて削除したい場合だけ、確認フレーズ付きでpurgeします。
 
-たとえば「検索画面に保存済みフィルタを追加したい」とします。
-
-AIツールには、自然な言葉でそのまま相談できます。
-
-```text
-検索画面に保存済みフィルタを追加したい。実装に入る前に、ブレストして。
+```bash
+mochiflow detach --purge --confirm "delete mochiflow data"
 ```
-
-段階を明確に指定したいときは、MochiFlowのトリガー語も使えます。
-
-`mochiflow-discuss`、`mochiflow-plan`、`mochiflow-build`、`mochiflow-ship` は、
-ターミナルで実行するコマンドではなく、AIツールに送るメッセージです。
-
-```text
-mochiflow-discuss 
-検索条件を保存して、あとから再利用できる機能を作りたい。
-```
-
-どちらの書き方でも、同じ流れに乗ります。
-
-```mermaid
-flowchart LR
-    A["作りたい機能をブレスト"] --> B["論点を整理"]
-    B --> C["設計文書にする"]
-    C -->|"あなたが承認"| D["実装 + 検証"]
-    D -->|"あなたが承認"| E["出荷準備"]
-    E -.-> F["次の開発へ知見を引き継ぐ"]
-```
-
-方向性が見えたら、設計に進めます。
-
-```text
-mochiflow-plan
-```
-
-AIエージェントは `.mochiflow/specs/...` に設計文書を書き、あなたの承認を待ちます。
-この時点ではまだ実装しません。
-
-設計に納得したら、実装に進めます。
-
-```text
-mochiflow-build
-```
-
-AIエージェントは設計に沿って実装し、テストを追加・更新し、設定された検証コマンドを通します。
-
-PRに出してよければ、出荷準備に進めます。
-
-```text
-mochiflow-ship
-```
-
-MochiFlowは今回の判断やハマりどころを記録し、プロジェクトのPR手順に沿って出荷を進めます。
-
-## 対応AIエージェント
-
-MochiFlowは、各AIコーディングツールが読み込める入口ファイルを生成し、
-同じ仕様駆動ワークフローで開発できるようにします。
-
-| AIエージェント       | 生成される入口     | 役割                      |
-| -------------- | ----------- | ----------------------- |
-| Kiro           | `.kiro/`    | 専用エージェント / steeringを生成  |
-| Claude Code    | `CLAUDE.md` | プロジェクトルールとワークフローを読み込ませる |
-| GitHub Copilot | `.github/`  | Copilot向けの指示ファイルを生成     |
-| 汎用エージェント       | `AGENTS.md` | 汎用AIエージェント向けの入口を生成      |
-
-導入時に `--adapter` で選択できます。あとから `mochiflow adapter generate`
-で再生成できます。既存の Markdown 指示ファイルはカスタム内容を残したまま、
-MochiFlow 管理ブロックだけが追加・更新されます。
 
 ## さらに詳しく
 
-* [Getting started](docs/getting-started.md)
-* [Concepts](docs/concepts.md)
-* [Configuration](docs/configuration.md)
-* [Versioning](docs/versioning.md)
-* [Release verification](docs/release-verification.md)
-* [Changelog](CHANGELOG.md)
+- [Getting started](docs/getting-started.md)
+- [Concepts](docs/concepts.md)
+- [Configuration](docs/configuration.md)
+- [Versioning](docs/versioning.md)
+- [Release verification](docs/release-verification.md)
+- [Changelog](CHANGELOG.md)
 
 ## コントリビュート
 
-歓迎します。開発環境の構築・テスト・PRの作法は [CONTRIBUTING.md](CONTRIBUTING.md) を、
-コミュニティ規範は [行動規範](CODE_OF_CONDUCT.md) を参照してください。
+歓迎します。開発環境の構築・テスト・PRの作法は [CONTRIBUTING.md](CONTRIBUTING.md) を、コミュニティ規範は [行動規範](CODE_OF_CONDUCT.md) を参照してください。
 
 ## セキュリティ
 
