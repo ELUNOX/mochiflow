@@ -497,7 +497,7 @@ const GOOD_YAML: &str = "version: 1\nslug: s\ntitle: S\ntype: feature\nsurfaces:
 
 #[test]
 fn lint_passes_valid_approved_spec() {
-    let md = "# S\n\n## 受入基準\n\n- AC-01: THE SYSTEM SHALL do the thing.\n";
+    let md = "# S\n\n## Requirements / Acceptance Criteria\n\n| AC | Type | Priority | Requirement | Verification |\n| --- | --- | --- | --- | --- |\n| AC-01 | functional | Must | THE SYSTEM SHALL do the thing. | automated |\n\n## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | UNVERIFIED |\n";
     let (code, _out) = run_lint_case(GOOD_YAML, md, None, None);
     assert_eq!(code, 0, "a well-formed approved spec must lint clean");
 }
@@ -508,52 +508,77 @@ fn lint_done_fails_when_matrix_missing() {
     let md = "# S\n\n## 受入基準\n\n- AC-01: THE SYSTEM SHALL do the thing.\n";
     let (code, out) = run_lint_case(&yaml, md, None, None);
     assert_eq!(code, 1);
-    assert!(out.contains("AC Verification Matrix is missing"), "{out}");
+    assert!(out.contains("AC Matrix is missing"), "{out}");
 }
 
 #[test]
 fn lint_done_fails_when_matrix_contains_fail() {
     let yaml = GOOD_YAML.replace("status: approved", "status: done");
     let md = "# S\n\n## 受入基準\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
-              ## AC Verification Matrix\n\n| AC | 結果 |\n| --- | --- |\n| AC-01 | FAIL |\n";
+              ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | FAIL |\n";
     let (code, out) = run_lint_case(&yaml, md, None, None);
     assert_eq!(code, 1);
     assert!(out.contains("contains FAIL"), "{out}");
 }
 
 #[test]
-fn lint_done_fails_when_matrix_contains_pending_human_verification() {
+fn lint_done_fails_when_matrix_contains_pending_human() {
     let yaml = GOOD_YAML.replace("status: approved", "status: done");
-    for result in ["人間確認待ち", "pending human verification"] {
+    for result in ["UNVERIFIED", "PENDING_HUMAN"] {
         let md = format!(
             "# S\n\n## Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
-             ## AC Verification Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | {result} |\n"
+             ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | {result} |\n"
         );
         let (code, out) = run_lint_case(&yaml, &md, None, None);
         assert_eq!(code, 1, "{result}: {out}");
-        assert!(out.contains("pending human verification"), "{result}: {out}");
+        assert!(out.contains(result), "{result}: {out}");
     }
+}
+
+#[test]
+fn lint_fails_when_matrix_result_is_not_canonical() {
+    let md = "# S\n\n## Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
+              ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | 人間確認待ち |\n";
+    let (code, out) = run_lint_case(GOOD_YAML, md, None, None);
+    assert_eq!(code, 1);
+    assert!(out.contains("must be one of UNVERIFIED"), "{out}");
+}
+
+#[test]
+fn lint_fails_when_matrix_na_has_no_reason() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: done");
+    let md = "# S\n\n## Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
+              ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | N/A |\n";
+    let (code, out) = run_lint_case(&yaml, md, None, None);
+    assert_eq!(code, 1);
+    assert!(out.contains("N/A: <reason>"), "{out}");
 }
 
 #[test]
 fn lint_done_fails_when_ac_not_in_matrix() {
     let yaml = GOOD_YAML.replace("status: approved", "status: done");
     let md = "# S\n\n## 受入基準\n\n- AC-01: THE SYSTEM SHALL x.\n- AC-02: WHEN y, THE SYSTEM SHALL z.\n\n\
-              ## AC Verification Matrix\n\n| AC | 結果 |\n| --- | --- |\n| AC-01 | PASS |\n";
+              ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | PASS |\n";
     let (code, out) = run_lint_case(&yaml, md, None, None);
     assert_eq!(code, 1);
-    assert!(
-        out.contains("AC not present in AC Verification Matrix: AC-02"),
-        "{out}"
-    );
+    assert!(out.contains("AC not present in AC Matrix: AC-02"), "{out}");
+}
+
+#[test]
+fn lint_approved_fails_when_ac_not_in_matrix() {
+    let md = "# S\n\n## Requirements / Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL x.\n- AC-02: WHEN y, THE SYSTEM SHALL z.\n\n\
+              ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | UNVERIFIED |\n";
+    let (code, out) = run_lint_case(GOOD_YAML, md, None, None);
+    assert_eq!(code, 1);
+    assert!(out.contains("AC not present in AC Matrix: AC-02"), "{out}");
 }
 
 #[test]
 fn lint_fails_when_tasks_do_not_cover_all_acs() {
     let yaml = GOOD_YAML.replace("status: approved", "status: done");
     let md = "# S\n\n## 受入基準\n\n- AC-01: THE SYSTEM SHALL x.\n- AC-02: WHEN y, THE SYSTEM SHALL z.\n\n\
-              ## AC Verification Matrix\n\n| AC | 結果 |\n| --- | --- |\n| AC-01 | PASS |\n| AC-02 | PASS |\n";
-    let tasks = "# Tasks\n\n## Task 1\n\n対応 AC: AC-01\n";
+              ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | PASS |\n| AC-02 | PASS |\n";
+    let tasks = "# Tasks\n\n- [x] T-001 [AC-01] Do x\n  - Depends on: none\n  - Files:\n    - `src/x.rs`\n  - Done:\n    - [ ] Verification passed\n  - Stop:\n    - stop\n";
     let (code, out) = run_lint_case(&yaml, md, None, Some(tasks));
     assert_eq!(code, 1);
     assert!(
@@ -565,11 +590,86 @@ fn lint_fails_when_tasks_do_not_cover_all_acs() {
 #[test]
 fn lint_accepts_english_acceptance_and_task_headings() {
     let yaml = GOOD_YAML.replace("status: approved", "status: done");
-    let md = "# S\n\n## Acceptance Criteria (EARS)\n\n- AC-01: THE SYSTEM SHALL x.\n";
-    let tasks = "# Tasks\n\n## Task 1\n\nCovers AC: AC-01\n\n\
+    let md = "# S\n\n## Acceptance Criteria (EARS)\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
+              ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | PASS |\n";
+    let tasks = "# Tasks\n\n- [x] T-001 [AC-01] Do x\n  - Depends on: none\n  - Files:\n    - `src/x.rs`\n  - Done:\n    - [ ] Verification passed\n    - [ ] AC Matrix updated\n  - Stop:\n    - stop\n";
+    let (code, out) = run_lint_case(&yaml, md, None, Some(tasks));
+    assert_eq!(code, 0, "{out}");
+}
+
+#[test]
+fn lint_accepts_legacy_matrix_in_tasks_when_spec_has_none() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: done");
+    let md = "# S\n\n## Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL x.\n";
+    let tasks = "# Tasks\n\n- [x] T-001 [AC-01] Do x\n  - Depends on: none\n  - Files:\n    - `src/x.rs`\n  - Done:\n    - [ ] Verification passed\n  - Stop:\n    - stop\n\n\
                  ## AC Verification Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | PASS |\n";
     let (code, out) = run_lint_case(&yaml, md, None, Some(tasks));
     assert_eq!(code, 0, "{out}");
+}
+
+#[test]
+fn lint_done_fails_when_task_is_unchecked() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: done");
+    let md = "# S\n\n## Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
+              ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | PASS |\n";
+    let tasks = "# Tasks\n\n- [ ] T-001 [AC-01] Do x\n  - Depends on: none\n  - Files:\n    - `src/x.rs`\n  - Done:\n    - [ ] Verification passed\n  - Stop:\n    - stop\n";
+    let (code, out) = run_lint_case(&yaml, md, None, Some(tasks));
+    assert_eq!(code, 1);
+    assert!(
+        out.contains("status is done but task T-001 is not checked"),
+        "{out}"
+    );
+}
+
+#[test]
+fn lint_approved_fails_with_needs_clarification() {
+    let md = "# S\n\n## Requirements / Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
+              ## Open Questions\n\n- [NEEDS-CLARIFICATION: decide x]\n\n\
+              ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | UNVERIFIED |\n";
+    let (code, out) = run_lint_case(GOOD_YAML, md, None, None);
+    assert_eq!(code, 1);
+    assert!(out.contains("[NEEDS-CLARIFICATION] remains"), "{out}");
+}
+
+#[test]
+fn lint_requirements_acceptance_heading_participates_in_ears_check() {
+    let md = "# S\n\n## Requirements / Acceptance Criteria\n\n- AC-01: x happens.\n\n\
+              ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | UNVERIFIED |\n";
+    let (code, out) = run_lint_case(GOOD_YAML, md, None, None);
+    assert_eq!(code, 0);
+    assert!(out.contains("AC without EARS keyword"), "{out}");
+}
+
+#[test]
+fn lint_contract_integration_accepts_integration_contract_section() {
+    let yaml = GOOD_YAML.replace("integration: none", "integration: contract");
+    let md = "# S\n\n## Requirements / Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
+              ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | UNVERIFIED |\n";
+    let design = "# S — Design\n\n## Integration Contract\n\n| Contract | Input / Request | Output / Response | Errors | Compatibility |\n| --- | --- | --- | --- | --- |\n| c | i | o | e | compatible |\n";
+    let (code, out) = run_lint_case(&yaml, md, Some(design), None);
+    assert_eq!(code, 0, "{out}");
+}
+
+#[test]
+fn lint_fails_when_tasks_are_not_executable_checklist() {
+    let tasks = "# Tasks\n\n## Task 1\n\nCovers AC: AC-01\n";
+    let md = "# S\n\n## Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
+              ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | UNVERIFIED |\n";
+    let (code, out) = run_lint_case(GOOD_YAML, md, None, Some(tasks));
+    assert_eq!(code, 1);
+    assert!(out.contains("top-level T-### checkbox tasks"), "{out}");
+}
+
+#[test]
+fn lint_fails_when_task_missing_required_blocks() {
+    let tasks = "# Tasks\n\n- [ ] T-001 [AC-01] Do x\n  - Depends on: none\n";
+    let md = "# S\n\n## Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
+              ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | UNVERIFIED |\n";
+    let (code, out) = run_lint_case(GOOD_YAML, md, None, Some(tasks));
+    assert_eq!(code, 1);
+    assert!(out.contains("missing Files:"), "{out}");
+    assert!(out.contains("missing Done:"), "{out}");
+    assert!(out.contains("missing Stop:"), "{out}");
 }
 
 #[test]
@@ -579,7 +679,7 @@ fn lint_done_elevated_fails_without_reviewer_verdict() {
         .replace("risk: standard", "risk: elevated");
     // elevated → design.md required; provide it so only the verdict check fails.
     let md = "# S\n\n## 受入基準\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
-              ## AC Verification Matrix\n\n| AC | 結果 |\n| --- | --- |\n| AC-01 | PASS |\n";
+              ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | PASS |\n";
     let design = "# design\n\n## 設計判断\n\n- ok\n";
     let (code, out) = run_lint_case(&yaml, md, Some(design), None);
     assert_eq!(code, 1);
@@ -592,7 +692,7 @@ fn lint_done_elevated_passes_with_reviewer_verdict() {
         .replace("status: approved", "status: done")
         .replace("risk: standard", "risk: elevated");
     let md = "# S\n\n## 受入基準\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
-              ## AC Verification Matrix\n\n| AC | 結果 |\n| --- | --- |\n| AC-01 | PASS |\n";
+              ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | PASS |\n";
     let design = "# design\n\n## 設計判断\n\n- ok\n\n## Review Results\n\nReviewer mode: inline\nVerdict: pass\n";
     let (code, _out) = run_lint_case(&yaml, md, Some(design), None);
     assert_eq!(code, 0);
@@ -605,8 +705,8 @@ fn lint_done_elevated_ignores_reviewer_verdict_outside_design() {
         .replace("risk: standard", "risk: elevated");
     let md = "# S\n\n## 受入基準\n\n- AC-01: THE SYSTEM SHALL x.\n";
     let design = "# design\n\n## 設計判断\n\n- ok\n\n## Review Results\n\n";
-    let tasks = "# tasks\n\n対応 AC: AC-01\n\nVerdict: pass\n\n\
-                 ## AC Verification Matrix\n\n| AC | 結果 |\n| --- | --- |\n| AC-01 | PASS |\n";
+    let tasks = "# tasks\n\n- [x] T-001 [AC-01] Do x\n  - Depends on: none\n  - Files:\n    - `src/x.rs`\n  - Done:\n    - [ ] Verification passed\n  - Stop:\n    - stop\n\nVerdict: pass\n\n\
+                 ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | PASS |\n";
     let (code, out) = run_lint_case(&yaml, md, Some(design), Some(tasks));
     assert_eq!(code, 1);
     assert!(out.contains("reviewer verdict"), "{out}");
@@ -728,7 +828,7 @@ fn materialize_full(root: &Path) -> PathBuf {
     .unwrap();
     std::fs::write(
         spec_dir.join("spec.md"),
-        "# Sample Spec\n\n## 受入基準\n\n- AC-01: THE SYSTEM SHALL do the thing.\n",
+        "# Sample Spec\n\n## 受入基準\n\n- AC-01: THE SYSTEM SHALL do the thing.\n\n## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | UNVERIFIED |\n",
     )
     .unwrap();
 
