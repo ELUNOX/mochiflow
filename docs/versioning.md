@@ -37,6 +37,6 @@ mochiflow doctor
 the installed CLI, regenerates adapters, and preserves project config, specs,
 context, and ADR files.
 
-For a fresh clone of an already-initialized team project, run `mochiflow join`
-instead. `join` restores the local engine and runtime state from the shared
-config without rewriting tracked files by default.
+For a fresh clone of an already-initialized team project, the tracked vendored
+engine is already present. Use `mochiflow join` only when local runtime state,
+adapters, `INDEX.md`, or a missing engine need repair.

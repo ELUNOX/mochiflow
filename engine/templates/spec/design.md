@@ -1,47 +1,105 @@
-# {タイトル} — 設計
+# {title} — Design
 
-> `design.md` は risk≥elevated / integration≠none / surfaces>1 の時に作る。
-> 判断と契約のみを書く。具象 class/struct 定義は書かない（実装時に source を読む）。
+<!--
+This template is structural. When rendering a real artifact, translate
+human-facing headings and prose to the configured project language.
+Preserve machine-readable IDs and enum values such as AC-01, QA-01, T-001,
+NFR-01, UNVERIFIED, PASS, PENDING_HUMAN, HUMAN_CONFIRMED, N/A: <reason>, FAIL.
+Remove template-only Rules blocks unless the project intentionally keeps them.
+-->
 
-## 設計判断
+> Create `design.md` only when the workflow requires a technical contract.
+> Write decisions, contracts, risks, and verification strategy. Do not turn this
+> into an implementation diary or current-state encyclopedia.
 
-- 判断 / 理由
+## Decision Summary
 
-## アーキテクチャ
+- D-01: {decision}
+  - Why: {reason}
+  - Alternatives considered:
+    - {alternative}
+  - Consequences:
+    - {tradeoff or implication}
 
-- 
+## Current State Scan
 
-## データモデル / インターフェース（signature レベル）
+- Relevant files:
+  - `path/to/file`
+- Existing patterns:
+  - {pattern}
+- Constraints:
+  - {constraint}
 
-- 
+## Proposed Design
 
-## エラーハンドリング
+### Components
 
-- 
-
-## テスト戦略
-
-- 
-
-## Workstreams
-
-<!-- 複数 workstream / cross-surface のときのみ -->
-
-| Workstream | Surface | 責務 | 依存 | 検証 |
-| --- | --- | --- | --- | --- |
-|  |  |  |  |  |
+| Component | Responsibility | Changes |
+| --- | --- | --- |
+| {component} | {responsibility} | {change} |
 
 ## Integration Contract
 
-<!-- integration ≠ none のときのみ -->
+| Contract | Input / Request | Output / Response | Errors | Compatibility |
+| --- | --- | --- | --- | --- |
+| {contract} | {input} | {output} | {error behavior} | {compatibility notes} |
 
-- Contract owner / Request / Response / Error / Auth / Compatibility / Failure handling / Verification
+## Failure Modes
+
+| Failure | Expected behavior | Verification |
+| --- | --- | --- |
+| {failure} | {expected behavior} | {AC or test} |
+
+## Migration / Rollout / Rollback
+
+- Migration:
+  - {steps or "None"}
+- Rollout:
+  - {plan or "None"}
+- Rollback:
+  - {rollback plan or "None"}
+- Backward compatibility:
+  - {compatibility notes}
+
+## Observability
+
+- Logs:
+  - {logs}
+- Metrics:
+  - {metrics}
+- Alerts:
+  - {alerts}
+- Debuggability:
+  - {debug notes}
+
+## Test Strategy
+
+| Layer | What | Related AC/NFR |
+| --- | --- | --- |
+| unit | {unit test scope} | AC-01 |
+| integration | {integration test scope} | AC-02 |
+| QA | {manual QA scope} | QA-01 |
 
 ## Review Results
 
-<!-- risk≥elevated の mandatory reviewer run を記録。Reviewer mode: delegated | inline / Verdict: pass | pass-with-comments | fail -->
+- Required reviewer:
+  - {yes/no and why}
+- Findings:
+  - {findings or "None yet"}
 
-## 統合ログ
+## Integration Log
 
-<!-- build 中に append-only。design からの seam 乖離・所有権境界・dead code 扱い・次セッション申し送り。
-     plan で確定済みの内容や commit log で足りる情報は書かない。 -->
+- {integration notes}
+
+<!-- Authoring rules:
+
+- `design.md` is required when risk is `elevated` or `critical`.
+- `design.md` is required when integration is not `none`.
+- `design.md` is required for multi-surface work.
+- `design.md` is required for migration or data loss risk.
+- `design.md` is required for external contracts, API changes, schema changes, security, privacy, performance, or accessibility impact.
+- `design.md` is required when independent reviewer is required.
+- For trivial or micro specs, `design.md` may be omitted when workflow docs allow it.
+- Do not turn `design.md` into a current-state encyclopedia.
+- Current state should be concise and relevant only to this spec.
+-->

@@ -14,7 +14,19 @@ use std::sync::LazyLock;
 static AC_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\bAC-\d{2,}\b").expect("AC_RE"));
 #[allow(clippy::expect_used)]
 static TASK_AC_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(?m)^対応 AC:\s*(.+)$").expect("TASK_AC_RE"));
+    LazyLock::new(|| Regex::new(r"(?m)^(?:Covers AC|対応 AC):\s*(.+)$").expect("TASK_AC_RE"));
+#[allow(clippy::expect_used)]
+static TASK_LINE_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"(?m)^- \[(?P<checked>[ xX])\] (?P<id>T-\d{3,})(?:\s+\[P\])?(?P<refs>(?:\s+\[[^\]]+\])*)\s+.+$",
+    )
+        .expect("TASK_LINE_RE")
+});
+#[allow(clippy::expect_used)]
+static TASK_ID_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\bT-\d{3,}\b").expect("TASK_ID_RE"));
+#[allow(clippy::expect_used)]
+static NFR_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\bNFR-\d{2,}\b").expect("NFR_RE"));
 #[allow(clippy::expect_used)]
 static EARS_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\b(?:SHALL|WHEN|WHILE|WHERE|THEN)\b").expect("EARS_RE"));
@@ -45,6 +57,10 @@ fn section<'a>(text: &'a str, heading: &str) -> Option<&'a str> {
     Some(&text[body_start..end])
 }
 
+fn section_any<'a>(text: &'a str, headings: &[&str]) -> Option<&'a str> {
+    headings.iter().find_map(|heading| section(text, heading))
+}
+
 fn ac_ids(text: &str) -> Vec<String> {
     AC_RE
         .find_iter(text)
@@ -53,15 +69,31 @@ fn ac_ids(text: &str) -> Vec<String> {
 }
 
 fn ac_ids_in_spec(text: &str) -> BTreeSet<String> {
-    let body = section(text, "受入基準").unwrap_or(text);
+    let body = section_any(
+        text,
+        &[
+            "Requirements / Acceptance Criteria",
+            "Acceptance Criteria",
+            "要件 / 受入基準",
+            "受入基準",
+        ],
+    )
+    .unwrap_or(text);
     ac_ids(body).into_iter().collect()
 }
 
 fn ac_ids_in_tasks(text: &str) -> BTreeSet<String> {
     let mut ids = BTreeSet::new();
+    for cap in TASK_LINE_RE.captures_iter(text) {
+        if let Some(refs) = cap.name("refs") {
+            for id in ac_ids(refs.as_str()) {
+                ids.insert(id);
+            }
+        }
+    }
     for cap in TASK_AC_RE.captures_iter(text) {
         let line = &cap[1];
-        if line.contains("なし") {
+        if line.contains("なし") || line.trim().eq_ignore_ascii_case("none") {
             continue;
         }
         for id in ac_ids(line) {
@@ -72,7 +104,16 @@ fn ac_ids_in_tasks(text: &str) -> BTreeSet<String> {
 }
 
 fn ac_lines_missing_ears(text: &str) -> BTreeSet<String> {
-    let body = section(text, "受入基準").unwrap_or("");
+    let body = section_any(
+        text,
+        &[
+            "Requirements / Acceptance Criteria",
+            "Acceptance Criteria",
+            "要件 / 受入基準",
+            "受入基準",
+        ],
+    )
+    .unwrap_or("");
     let mut missing = BTreeSet::new();
     for line in body.lines() {
         let found: Vec<String> = AC_RE
@@ -88,8 +129,195 @@ fn ac_lines_missing_ears(text: &str) -> BTreeSet<String> {
     missing
 }
 
+fn task_ids(text: &str) -> BTreeSet<String> {
+    TASK_LINE_RE
+        .captures_iter(text)
+        .filter_map(|cap| cap.name("id").map(|m| m.as_str().to_string()))
+        .collect()
+}
+
+fn unchecked_task_ids(text: &str) -> Vec<String> {
+    TASK_LINE_RE
+        .captures_iter(text)
+        .filter_map(|cap| {
+            let checked = cap.name("checked")?.as_str();
+            let id = cap.name("id")?.as_str();
+            if checked.eq_ignore_ascii_case("x") {
+                None
+            } else {
+                Some(id.to_string())
+            }
+        })
+        .collect()
+}
+
+fn task_refs_are_present(refs: &str) -> bool {
+    AC_RE.is_match(refs) || NFR_RE.is_match(refs) || refs.contains("[chore:")
+}
+
+fn parse_depends_on(line: &str) -> Vec<String> {
+    let Some((_, value)) = line.split_once(':') else {
+        return Vec::new();
+    };
+    if value.trim().eq_ignore_ascii_case("none")
+        || value
+            .trim()
+            .eq_ignore_ascii_case("all implementation tasks")
+    {
+        return Vec::new();
+    }
+    TASK_ID_RE
+        .find_iter(value)
+        .map(|m| m.as_str().to_string())
+        .collect()
+}
+
+fn lint_task_structure(text: &str) -> Vec<String> {
+    let mut issues = Vec::new();
+    let ids = task_ids(text);
+    let mut seen = BTreeSet::new();
+    let matches: Vec<_> = TASK_LINE_RE.find_iter(text).collect();
+
+    if matches.is_empty() {
+        issues.push("tasks.md must contain top-level T-### checkbox tasks".to_string());
+        return issues;
+    }
+
+    if text.contains("- [ ]") || text.contains("- [x]") || text.contains("- [X]") {
+        for line in text.lines().filter(|line| line.starts_with("- [")) {
+            if !TASK_LINE_RE.is_match(line) {
+                issues.push(format!(
+                    "top-level task is missing T-### ID or title: {line}"
+                ));
+            }
+        }
+    }
+
+    for cap in TASK_LINE_RE.captures_iter(text) {
+        let Some(task_id) = cap.name("id").map(|m| m.as_str()) else {
+            continue;
+        };
+        if !seen.insert(task_id.to_string()) {
+            issues.push(format!("duplicate task ID: {task_id}"));
+        }
+        let refs = cap.name("refs").map(|m| m.as_str()).unwrap_or("");
+        if !task_refs_are_present(refs) {
+            issues.push(format!(
+                "task {task_id} must reference AC, NFR, or chore reason"
+            ));
+        }
+    }
+
+    for (idx, task_match) in matches.iter().enumerate() {
+        let task_line = task_match.as_str();
+        let task_id = TASK_ID_RE
+            .find(task_line)
+            .map(|m| m.as_str())
+            .unwrap_or("task");
+        let start = task_match.end();
+        let end = matches.get(idx + 1).map_or(text.len(), regex::Match::start);
+        let body = &text[start..end];
+        for required in ["Depends on:", "Files:", "Done:", "Stop:"] {
+            if !body.contains(required) {
+                issues.push(format!("task {task_id} missing {required}"));
+            }
+        }
+        for line in body.lines() {
+            let trimmed = line.trim_start();
+            if trimmed.starts_with("- Depends on:") || trimmed.starts_with("Depends on:") {
+                for dep in parse_depends_on(trimmed) {
+                    if !ids.contains(&dep) {
+                        issues.push(format!("task {task_id} depends on unknown task {dep}"));
+                    }
+                }
+            }
+        }
+    }
+
+    issues
+}
+
 fn has_frontmatter(text: &str) -> bool {
     text.starts_with("---\n") && text[4..].contains("\n---\n")
+}
+
+#[derive(Debug)]
+struct MatrixRow {
+    ac: String,
+    result: String,
+}
+
+fn matrix_section(text: &str) -> Option<&str> {
+    section_any(
+        text,
+        &[
+            "Verification Plan / AC Matrix",
+            "AC Matrix",
+            "AC Verification Matrix",
+        ],
+    )
+}
+
+fn parse_matrix_rows(text: &str) -> Vec<MatrixRow> {
+    let Some(matrix) = matrix_section(text) else {
+        return Vec::new();
+    };
+    let mut lines = matrix
+        .lines()
+        .map(str::trim)
+        .filter(|line| line.starts_with('|') && line.ends_with('|'));
+    let Some(header) = lines.next() else {
+        return Vec::new();
+    };
+    let headers: Vec<_> = header
+        .trim_matches('|')
+        .split('|')
+        .map(|cell| cell.trim())
+        .collect();
+    let ac_idx = headers.iter().position(|cell| *cell == "AC");
+    let result_idx = headers
+        .iter()
+        .position(|cell| *cell == "Result" || *cell == "結果");
+    let (Some(ac_idx), Some(result_idx)) = (ac_idx, result_idx) else {
+        return Vec::new();
+    };
+
+    let mut rows = Vec::new();
+    for line in lines {
+        let cells: Vec<_> = line
+            .trim_matches('|')
+            .split('|')
+            .map(|cell| cell.trim())
+            .collect();
+        if cells
+            .iter()
+            .all(|cell| cell.chars().all(|c| c == '-' || c == ':'))
+        {
+            continue;
+        }
+        let Some(ac) = cells.get(ac_idx) else {
+            continue;
+        };
+        let Some(result) = cells.get(result_idx) else {
+            continue;
+        };
+        if AC_RE.is_match(ac) {
+            rows.push(MatrixRow {
+                ac: (*ac).to_string(),
+                result: (*result).to_string(),
+            });
+        }
+    }
+    rows
+}
+
+fn is_canonical_matrix_result(result: &str) -> bool {
+    matches!(
+        result,
+        "UNVERIFIED" | "PASS" | "PENDING_HUMAN" | "HUMAN_CONFIRMED" | "FAIL"
+    ) || result
+        .strip_prefix("N/A: ")
+        .is_some_and(|reason| !reason.trim().is_empty())
 }
 
 fn design_required(meta: &SpecMeta) -> bool {
@@ -230,8 +458,13 @@ fn lint_spec_dir(spec_dir: &Path, allowed_surfaces: &HashSet<String>) -> Vec<Iss
     }
     let spec_acs = ac_ids_in_spec(&spec_text);
     if spec_text.contains("[NEEDS-CLARIFICATION") {
+        let severity = if meta.status() == "draft" {
+            "WARN"
+        } else {
+            "FAIL"
+        };
         issues.push(Issue {
-            severity: "WARN".into(),
+            severity: severity.into(),
             path: spec_md.clone(),
             message: "[NEEDS-CLARIFICATION] remains; resolve before approved".into(),
         });
@@ -280,7 +513,6 @@ fn lint_spec_dir(spec_dir: &Path, allowed_surfaces: &HashSet<String>) -> Vec<Iss
     }
 
     // tasks.md
-    let mut matrix_text = spec_text.clone();
     let mut tasks_text: Option<String> = None;
     if tasks_md.exists() {
         let tt = std::fs::read_to_string(&tasks_md).unwrap_or_default();
@@ -303,48 +535,125 @@ fn lint_spec_dir(spec_dir: &Path, allowed_surfaces: &HashSet<String>) -> Vec<Iss
                 message: format!("tasks reference AC IDs not in spec.md: {}", list.join(", ")),
             });
         }
-        matrix_text = tt.clone();
         tasks_text = Some(tt);
     }
 
-    // status guards
-    if meta.status() == "done" {
-        let matrix = section(&matrix_text, "AC Verification Matrix");
-        if matrix.is_none() {
-            issues.push(Issue {
-                severity: "FAIL".into(),
-                path: spec_dir.join("spec.yaml"),
-                message: "status is done but AC Verification Matrix is missing".into(),
-            });
-        } else if let Some(m) = matrix {
-            if m.contains("FAIL") {
+    // AC Matrix guards
+    let spec_matrix = matrix_section(&spec_text);
+    let spec_matrix_rows = parse_matrix_rows(&spec_text);
+    let legacy_matrix_rows = if spec_matrix_rows.is_empty() {
+        tasks_text
+            .as_deref()
+            .map(parse_matrix_rows)
+            .unwrap_or_default()
+    } else {
+        Vec::new()
+    };
+    let using_legacy_matrix = spec_matrix_rows.is_empty() && !legacy_matrix_rows.is_empty();
+    let matrix_path = if using_legacy_matrix {
+        tasks_md.clone()
+    } else {
+        spec_md.clone()
+    };
+    let matrix_rows = if using_legacy_matrix {
+        legacy_matrix_rows
+    } else {
+        spec_matrix_rows
+    };
+    let matrix = if spec_matrix.is_some() || !matrix_rows.is_empty() {
+        Some(())
+    } else {
+        None
+    };
+    if matrix.is_some() {
+        for row in &matrix_rows {
+            if !is_canonical_matrix_result(&row.result) {
                 issues.push(Issue {
                     severity: "FAIL".into(),
-                    path: spec_dir.join("spec.yaml"),
-                    message: "status is done but AC Verification Matrix contains FAIL".into(),
-                });
-            }
-            let matrix_acs: BTreeSet<String> = ac_ids(m).into_iter().collect();
-            let uncovered: Vec<_> = spec_acs.difference(&matrix_acs).cloned().collect();
-            if !uncovered.is_empty() {
-                issues.push(Issue {
-                    severity: "FAIL".into(),
-                    path: spec_md.clone(),
+                    path: matrix_path.clone(),
                     message: format!(
-                        "AC not present in AC Verification Matrix: {}",
-                        uncovered.join(", ")
+                        "AC Matrix result for {} must be one of UNVERIFIED, PASS, PENDING_HUMAN, HUMAN_CONFIRMED, N/A: <reason>, FAIL",
+                        row.ac
                     ),
                 });
             }
         }
+    }
+    if meta.status() == "approved" && matrix.is_none() {
+        issues.push(Issue {
+            severity: "FAIL".into(),
+            path: spec_md.clone(),
+            message: "status is approved but AC Matrix is missing".into(),
+        });
+    }
+    if matches!(meta.status(), "approved" | "done") && matrix.is_some() {
+        let matrix_acs: BTreeSet<String> = matrix_rows.iter().map(|row| row.ac.clone()).collect();
+        let uncovered: Vec<_> = spec_acs.difference(&matrix_acs).cloned().collect();
+        if !uncovered.is_empty() {
+            issues.push(Issue {
+                severity: "FAIL".into(),
+                path: matrix_path.clone(),
+                message: format!("AC not present in AC Matrix: {}", uncovered.join(", ")),
+            });
+        }
+    }
+
+    if meta.status() == "done" {
+        if matrix.is_none() {
+            issues.push(Issue {
+                severity: "FAIL".into(),
+                path: spec_dir.join("spec.yaml"),
+                message: "status is done but AC Matrix is missing".into(),
+            });
+        } else {
+            for row in &matrix_rows {
+                if row.result == "FAIL" {
+                    issues.push(Issue {
+                        severity: "FAIL".into(),
+                        path: spec_dir.join("spec.yaml"),
+                        message: "status is done but AC Matrix contains FAIL".into(),
+                    });
+                }
+                if row.result == "UNVERIFIED" {
+                    issues.push(Issue {
+                        severity: "FAIL".into(),
+                        path: spec_dir.join("spec.yaml"),
+                        message: "status is done but AC Matrix contains UNVERIFIED".into(),
+                    });
+                }
+                if row.result == "PENDING_HUMAN" {
+                    issues.push(Issue {
+                        severity: "FAIL".into(),
+                        path: spec_dir.join("spec.yaml"),
+                        message: "status is done but AC Matrix contains PENDING_HUMAN".into(),
+                    });
+                }
+                if row.result == "N/A"
+                    || row.result.starts_with("N/A:") && row.result.trim() == "N/A:"
+                {
+                    issues.push(Issue {
+                        severity: "FAIL".into(),
+                        path: spec_dir.join("spec.yaml"),
+                        message: "AC Matrix N/A result must be written as N/A: <reason>".into(),
+                    });
+                }
+            }
+        }
         if let Some(ref tt) = tasks_text {
+            for task_id in unchecked_task_ids(tt) {
+                issues.push(Issue {
+                    severity: "FAIL".into(),
+                    path: tasks_md.clone(),
+                    message: format!("status is done but task {task_id} is not checked"),
+                });
+            }
             let untasked: Vec<_> = spec_acs.difference(&ac_ids_in_tasks(tt)).cloned().collect();
             if !untasked.is_empty() {
                 issues.push(Issue {
                     severity: "FAIL".into(),
                     path: tasks_md.clone(),
                     message: format!(
-                        "AC not covered by any task 対応 AC: {}",
+                        "AC not covered by any task Covers AC: {}",
                         untasked.join(", ")
                     ),
                 });
@@ -361,6 +670,16 @@ fn lint_spec_dir(spec_dir: &Path, allowed_surfaces: &HashSet<String>) -> Vec<Iss
             if !VERDICT_RE.is_match(&design_text) {
                 issues.push(Issue { severity: "FAIL".into(), path: spec_dir.join("spec.yaml"), message: "status is done but reviewer verdict (pass/pass-with-comments) is not recorded for risk>=elevated".into() });
             }
+        }
+    }
+
+    if let Some(ref tt) = tasks_text {
+        for message in lint_task_structure(tt) {
+            issues.push(Issue {
+                severity: "FAIL".into(),
+                path: tasks_md.clone(),
+                message,
+            });
         }
     }
 

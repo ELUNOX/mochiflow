@@ -39,7 +39,7 @@ loads this as a standing instruction. Do not load it from planning / reviewer ro
 2. On an explicit command (`mochiflow-<verb>`) match, declare the command in one line and activate.
 3. Match `{slug}` in `trigger_patterns` only against a spec slug that exists under `{specs_dir}/{slug}/`; on a match, declare the verb in one line and activate.
    - Exception: `{slug} discuss` resolves against a seed at `{specs_dir}/_backlog/{slug}.md` when the slug exists only there; if `{specs_dir}/{slug}/` already exists, re-open that spec instead.
-   - Event patterns `{slug} merged` / `{slug} マージ済み` / `{slug} 完了` resume ship's post-merge tail (fold → archive), not a fresh ship.
+   - Event patterns `{slug} merged` / `{slug} マージ済み` / `{slug} 完了` resume ship's post-merge local cleanup only, not a fresh ship. Fold + archive already happen in the close-out commit before `mochiflow pr`.
 4. With no active spec context, route concrete small-edit requests ("直して" / "fix this" / "仕様書なしで" / "quick fix") through the `commands/patch.md ## Eligibility` check before proposing a spec verb.
    - If eligible, declare `patch` in one line and proceed.
    - If ineligible or uncertain, propose `Start plan?` in one line and wait.
@@ -56,7 +56,7 @@ loads this as a standing instruction. Do not load it from planning / reviewer ro
 | discuss | inline | `commands/discuss.md` |
 | plan | inline | `commands/plan.md` |
 | build | main agent implements / verifies / commits inline; review uses independent-reviewer transport | `commands/build.md` |
-| ship | inline; through fold → archive | `commands/ship.md` |
+| ship | inline; through acceptance → close-out → PR → post-merge cleanup | `commands/ship.md` |
 | patch (non-phase) | inline; no spec artifacts; edit / verify / optional commit; escalate to plan when ineligible | `commands/patch.md` |
 | review (non-phase) | inline trigger; read-only review uses independent-reviewer transport; no state transition | `commands/review.md` |
 | refresh-context (non-phase) | inline; regenerate foundational context (`[context]`) from code under human confirm; no state transition | `commands/refresh-context.md` |

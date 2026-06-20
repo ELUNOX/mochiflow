@@ -119,6 +119,16 @@ pub fn run_pr(
 ) -> i32 {
     let root = &cfg.repo_root;
     let request_dir = resolve_request_dir(cfg, spec);
+    let body_file_path = match body_file {
+        Some(bf) => match std::fs::canonicalize(bf) {
+            Ok(path) => Some(path),
+            Err(e) => {
+                eprintln!("FAIL: could not resolve --body-file {bf}: {e}");
+                return EXIT_BACKEND_FAIL;
+            }
+        },
+        None => None,
+    };
 
     // Hard stop: never write PR delivery artifacts into the tracked spec tree.
     if request_dir.starts_with(cfg.specs_dir_path()) {
@@ -141,11 +151,11 @@ pub fn run_pr(
 
     // Title from flag; body only from --body-file (no implicit spec-dir read).
     let title = title.map(|s| s.to_string()).unwrap_or_default();
-    let body = match body_file {
+    let body = match body_file_path.as_ref() {
         Some(bf) => match std::fs::read_to_string(bf) {
             Ok(body) => body,
             Err(e) => {
-                eprintln!("FAIL: could not read --body-file {bf}: {e}");
+                eprintln!("FAIL: could not read --body-file {}: {e}", bf.display());
                 return EXIT_BACKEND_FAIL;
             }
         },
@@ -233,7 +243,7 @@ pub fn run_pr(
     // Dispatch.
     match backend {
         Backend::Driver(driver) => dispatch_driver(root, &driver, &request_dir),
-        Backend::Github => dispatch_github(root, &req, body_file),
+        Backend::Github => dispatch_github(root, &req, body_file_path.as_deref()),
         Backend::Command(cmd) => dispatch_command(root, &cmd, &request_dir),
         Backend::Manual => dispatch_manual(&req, pushed),
     }
@@ -298,7 +308,7 @@ fn dispatch_driver(root: &Path, driver: &str, request_dir: &Path) -> i32 {
     }
 }
 
-fn dispatch_github(root: &Path, req: &PrRequest, body_file: Option<&str>) -> i32 {
+fn dispatch_github(root: &Path, req: &PrRequest, body_file: Option<&Path>) -> i32 {
     let mut args: Vec<String> = vec![
         "pr".into(),
         "create".into(),
@@ -314,7 +324,7 @@ fn dispatch_github(root: &Path, req: &PrRequest, body_file: Option<&str>) -> i32
     match body_file {
         Some(bf) => {
             args.push("--body-file".into());
-            args.push(bf.to_string());
+            args.push(bf.to_string_lossy().to_string());
         }
         None => {
             args.push("--body".into());
@@ -347,8 +357,11 @@ fn dispatch_github(root: &Path, req: &PrRequest, body_file: Option<&str>) -> i32
 
 fn dispatch_command(root: &Path, pr_command: &str, request_dir: &Path) -> i32 {
     // Legacy: substitute {spec_dir} and run via the shell.
-    let cmd = pr_command.replace("{spec_dir}", &request_dir.to_string_lossy());
-    eprintln!("WARN: [git].pr_command is deprecated; prefer [git].pr_driver.");
+    let spec_dir = shell_single_quote(&request_dir.to_string_lossy());
+    let cmd = pr_command.replace("{spec_dir}", &spec_dir);
+    eprintln!(
+        "WARN: [git].pr_command is deprecated and runs through a shell; prefer [git].pr_driver."
+    );
     let status = Command::new("sh")
         .arg("-c")
         .arg(&cmd)
@@ -365,6 +378,11 @@ fn dispatch_command(root: &Path, pr_command: &str, request_dir: &Path) -> i32 {
             EXIT_BACKEND_FAIL
         }
     }
+}
+
+fn shell_single_quote(value: &str) -> String {
+    let escaped = value.replace('\'', "'\"'\"'");
+    format!("'{escaped}'")
 }
 
 fn dispatch_manual(req: &PrRequest, pushed: bool) -> i32 {
@@ -398,5 +416,13 @@ mod tests {
     #[test]
     fn parse_url_none_when_absent() {
         assert_eq!(parse_url("no json here\n"), None);
+    }
+
+    #[test]
+    fn shell_quote_handles_metacharacters() {
+        assert_eq!(
+            shell_single_quote("/tmp/a b/it's;bad"),
+            "'/tmp/a b/it'\"'\"'s;bad'"
+        );
     }
 }

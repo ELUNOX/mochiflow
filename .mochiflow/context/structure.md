@@ -5,23 +5,32 @@ source of truth; this is a forward-placed map to avoid first-move mistakes.
 
 ## Source vs generated vs vendored
 
-- **Engine source (SoT)**: repo-root `engine/` — edit here. `engine/MANIFEST.json`
-  is a generated hash map; regenerate after editing any engine file.
-- **Vendored engine copy**: `.mochiflow/engine/` — gitignored install snapshot,
-  **not** the source. Synced from repo-root `engine/` via `mochiflow upgrade`.
-  Never edit; the dogfood `mochiflow` run reads it and may lag the source.
+- **Engine source (SoT)**: repo-root `engine/` — edit here. It is embedded into
+  the CLI binary and is also the source for dogfood updates. `engine/MANIFEST.json`
+  is generated with `mochiflow engine manifest`.
+- **Vendored engine copy**: `.mochiflow/engine/` — installed project-local copy
+  used by generated adapters and dogfood runs, **not** the source. For this
+  repo, sync it from repo-root `engine/` with `mochiflow upgrade --source engine`
+  after source-engine edits.
 - **Generated adapters**: `engine/adapters/<tool>/*.tpl` render into repo-root
   tool entrypoints (`AGENTS.md`, `.kiro/`, `CLAUDE.md`, `.github/`). Regenerate
   with `mochiflow adapter generate`; never hand-edit the outputs.
 
 ## Code layout
 
-- `cli/crates/mochiflow-cli` — binary (clap CLI, `main.rs`), conformance tests in
-  `tests/conformance.rs` (+ fixtures at repo-root `tests/conformance/`).
-- `cli/crates/mochiflow-core` — library: `config` · `init` · `doctor` · `adapter`
-  · `lint` · `index` · `pr` · `upgrade` · `manifest` · `spec_meta`.
+- `cli/crates/mochiflow-cli` — clap binary (`main.rs`) and CLI integration tests
+  (`tests/cli.rs`, `tests/conformance.rs`, `tests/first_run.rs`, `tests/pr.rs`).
+- `cli/crates/mochiflow-core` — library modules: `adapter`, `backlog`,
+  `config`, `detach`, `detect`, `doctor`, `index`, `init`, `join`, `lint`,
+  `manifest`, `pr`, `present`, `spec_meta`, `upgrade`.
+- `docs/` — user-facing concepts, setup, configuration, versioning, and release
+  verification.
+- `assets/` — logo / mark images used by README and distribution material.
 - `contracts/` — frozen JSON schemas + `contracts.lock` (the version-gate hash
-  covers `contracts/*.json` + `golden/**` + MANIFEST `files`).
+  covers `contracts/*.json`, conformance golden fixtures, and engine manifest
+  files).
+- `tests/conformance/` — schema fixtures and golden files used by CLI
+  conformance tests.
 - `.mochiflow/constitution.md` — user-authored always-loaded project rules.
 - `.mochiflow/constitution.local.md` — gitignored user/machine-local always-loaded rules.
 - `.mochiflow/context/` — code/config-derived current-state maps (refresh:
@@ -32,6 +41,7 @@ source of truth; this is a forward-placed map to avoid first-move mistakes.
 
 ## Entry points
 
-- `mochiflow <command>` — `init` · `onboard` · `config` · `lint` · `doctor` ·
-  `adapter` · `index` · `ready` · `backlog` · `upgrade` · `pr`.
+- `mochiflow <command>` — `config`, `index`, `lint`, `doctor`, `adapter`,
+  `upgrade`, `ready`, `backlog`, `init`, `join`, `detach`, `guide`,
+  `completions`, `pr`; hidden developer command: `engine manifest`.
 - Verification surface: `cli` → `cargo test --manifest-path cli/Cargo.toml`.

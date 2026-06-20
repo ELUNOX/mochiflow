@@ -126,7 +126,8 @@ defensible choices for surfaces, verification, git, and write scope.
 13. **Present results and the usage card**: summarize what was done, list any
    `# mochiflow: confirm` values that are still open and need the user's OK, then
    run `mochiflow guide` and present its usage card (the four verbs and the two
-   approval gates) so the user knows how to drive MochiFlow next. Declare ready.
+   delivery approval gates) so the user knows how to drive MochiFlow next.
+   Declare ready.
 
 ## Stop conditions
 

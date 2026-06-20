@@ -63,16 +63,44 @@ mochiflow doctor
 When `doctor` passes, your AI tool has the project context and workflow
 instructions it needs.
 
+Useful terminal commands:
+
+```bash
+mochiflow guide                         # print the AI-tool usage card
+mochiflow config show                   # inspect resolved paths, language, surfaces, and git
+mochiflow lint [--spec SLUG]            # check spec consistency
+mochiflow doctor [config|specs|adapter|engine]
+mochiflow adapter generate [--check]
+mochiflow pr --spec SLUG --title "..." --body-file PATH
+```
+
+## Artifact model
+
+MochiFlow keeps state in files, not in chat history. A spec lives under
+`.mochiflow/specs/{slug}/` and grows only as much structure as the change needs:
+
+| Artifact | Role |
+| --- | --- |
+| `spec.md` | Product contract: problem, goal, scope, acceptance criteria, QA scenarios, non-functional requirements, and verification plan. |
+| `design.md` | Technical contract: decisions, alternatives, interface contracts, failure modes, rollout / rollback, observability, and test strategy. |
+| `tasks.md` | Executable checklist: dependency-ordered tasks an AI agent can run and verify. |
+| AC Matrix | Traceability ledger inside `spec.md`: AC → implementation → verification → evidence → result. |
+
+Small patches skip spec artifacts. Normal work uses `discuss → plan → build →
+ship`; only two delivery approvals exist: approval to build, and approval of the
+PR content before `mochiflow pr`.
+
 For a repository where MochiFlow is already tracked by the team, do not run a
-fresh setup. After cloning or pulling, run:
+fresh setup. Cloning or pulling brings down the vendored engine and AI-tool
+entrypoints. If local runtime state, adapters, or `INDEX.md` need repair, run:
 
 ```bash
 mochiflow join
 ```
 
-`join` restores local generated state such as `.mochiflow/engine/` and
-`.mochiflow/state/`, and refreshes the AI-tool entrypoints and `INDEX.md` when
-needed.
+`join` repairs local generated state such as `.mochiflow/state/`, can restore a
+missing `.mochiflow/engine/` for older or broken worktrees, and refreshes the
+AI-tool entrypoints and `INDEX.md` when needed.
 
 ## What `init` creates
 
@@ -82,6 +110,7 @@ files your AI tool reads.
 ```text
 .mochiflow/
   config.toml        # project settings, adapters, verification commands
+  engine/            # vendored workflow engine tracked with the project
   constitution.md    # always-loaded project rules written by you
   context/           # current project map, filled from code during onboarding
   specs/             # feature specs created by the workflow
@@ -95,9 +124,9 @@ During onboarding, your AI agent resolves TODOs, fills project context from the
 codebase, regenerates adapters, and finishes by checking `mochiflow doctor`.
 
 To temporarily remove the project integration, run `mochiflow detach`. It
-removes generated adapter content plus `.mochiflow/engine/` and
-`.mochiflow/state/`, while preserving config, specs, ADR, context, and
-constitution files so `mochiflow join` can restore the integration later. Use
+removes generated adapter content plus `.mochiflow/state/`, while preserving the
+tracked engine, config, specs, ADR, context, and constitution files so
+`mochiflow join` can repair the integration later. Use
 `mochiflow detach --purge --confirm "delete mochiflow data"` only when you want
 to delete all MochiFlow project data.
 
@@ -138,7 +167,8 @@ mochiflow-plan
 ```
 
 The agent writes a design document under `.mochiflow/specs/...` and waits for
-your approval. Nothing is implemented yet.
+your approval. Depending on depth, this includes `spec.md`, `tasks.md`, and
+`design.md`; nothing is implemented yet.
 
 When the plan looks right:
 
@@ -147,7 +177,7 @@ mochiflow-build
 ```
 
 The agent implements the plan, updates tests, runs the configured verification
-command, and reports what changed.
+command, updates the AC Matrix, and reports what changed.
 
 When you are ready to open the PR:
 
@@ -156,7 +186,7 @@ mochiflow-ship
 ```
 
 MochiFlow records the important decisions and pitfalls, then follows the
-project's PR path.
+project's PR path through `mochiflow pr`.
 
 `mochiflow-discuss`, `mochiflow-plan`, `mochiflow-build`, and `mochiflow-ship`
 are messages for your AI tool, not terminal commands.
@@ -175,8 +205,8 @@ Pick tools with `--adapter` during init. Regenerate anytime with
 custom content and receive a MochiFlow-managed block.
 
 Remove generated adapter content and runtime state with `mochiflow detach`.
-This preserves project knowledge by default; `--purge` requires the exact
-confirmation phrase `delete mochiflow data`.
+This preserves the tracked engine and project knowledge by default; `--purge`
+requires the exact confirmation phrase `delete mochiflow data`.
 
 ## Learn more
 

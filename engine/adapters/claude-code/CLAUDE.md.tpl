@@ -12,11 +12,15 @@ your standing instruction for any spec / implementation / PR work.
   `{{context.structure}}`, and `{{context.tech}}`. Always-loaded current-state
   orientation; load it first.
 - Router (read first): `{{engine}}/router.md`
-- Verb procedures: `{{engine}}/commands/{discuss,plan,build,ship}.md`; patch lane:
-  `{{engine}}/commands/patch.md`
+- Lifecycle verbs: `{{engine}}/commands/{discuss,plan,build,ship}.md`
+- Non-phase commands: `{{engine}}/commands/{patch,review,refresh-context}.md`
 - Cross-cutting rules: `{{engine}}/reference/{workflow,risk,authoring,git,language}.md`
 - Decision history / pitfalls — **on-demand** (*why*): `{{adr.decisions}}` / `{{adr.pitfalls}}`.
 - Project config: `mochiflow config show`
+- Artifact roles: `spec.md` is the product contract, `design.md` is the
+  technical contract when required, `tasks.md` is the executable checklist when
+  required, and the AC Matrix in `spec.md` tracks AC → implementation →
+  verification → evidence → result.
 
 ## Rules
 
@@ -32,3 +36,5 @@ your standing instruction for any spec / implementation / PR work.
 - At ship, fold durable knowledge into `{{adr.decisions}}` / `{{adr.pitfalls}}` before
   archiving. Context (`{{context.product}}` / `{{context.structure}}` /
   `{{context.tech}}`) is refreshed from code (onboard / refresh-context), never folded.
+- Do not call direct `git push` or provider PR creation commands; PR handoff
+  goes through `mochiflow pr` after the PR content approval gate.

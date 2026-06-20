@@ -1,5 +1,5 @@
-//! Project detach: remove MochiFlow runtime/adapter integration while
-//! preserving durable project knowledge by default.
+//! Project detach: remove MochiFlow local runtime/adapter integration while
+//! preserving durable project knowledge and the tracked engine by default.
 
 use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
@@ -44,6 +44,10 @@ enum AdapterAction {
     Skip {
         label: String,
         reason: String,
+    },
+    Error {
+        label: String,
+        message: String,
     },
 }
 
@@ -92,17 +96,12 @@ pub fn run_detach(
         );
     } else {
         remove_or_report(
-            &cfg.engine_dir(),
-            &format!("{}/engine", cfg.install_dir),
-            dry_run,
-            &mut report,
-        );
-        remove_or_report(
             &cfg.state_dir(),
             &format!("{}/state", cfg.install_dir),
             dry_run,
             &mut report,
         );
+        report.kept.push(format!("{}/engine", cfg.install_dir));
         keep_default_project_data(cfg, &mut report);
     }
 
@@ -132,8 +131,15 @@ fn plan_adapter_cleanup(cfg: &Config) -> AdapterPlan {
     let mut known_parents = Vec::new();
 
     for tool in &cfg.adapter_tools() {
-        let Some((_adapter_dir, files)) = load_manifest(cfg, tool) else {
-            continue;
+        let files = match load_manifest(cfg, tool) {
+            Ok((_adapter_dir, files)) => files,
+            Err(e) => {
+                actions.push(AdapterAction::Error {
+                    label: format!("adapter {tool}"),
+                    message: e.to_string(),
+                });
+                continue;
+            }
         };
         for (out_rel, _tpl_rel) in files {
             let target = cfg.repo_root.join(&out_rel);
@@ -236,6 +242,9 @@ fn apply_adapter_plan(cfg: &Config, plan: &AdapterPlan, dry_run: bool, report: &
             }
             AdapterAction::Skip { label, reason } => {
                 report.skipped.push(format!("{label} ({reason})"));
+            }
+            AdapterAction::Error { label, message } => {
+                report.errors.push(format!("{label}: {message}"));
             }
         }
     }

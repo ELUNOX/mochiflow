@@ -39,8 +39,9 @@ single source of truth for this behavior):
    present). Pass only the slug, the command path, a summary of the latest
    artifact, and a pointer to the spec — never the conversation history
    (`router.md` routing principle 5).
-2. On HIGH (or Critical) findings, fix inline and re-run `mochiflow lint --spec
-   {slug}` before resuming the interrupted flow.
+2. On HIGH (or Critical) findings, report the findings and the recommended
+   follow-up route (`build` in an active approved spec context, or `patch` for an
+   eligible small fix). Do not fix inline during ad-hoc review.
 3. Report `Reviewer mode: delegated | inline` with the verdict. On `pass` /
    `pass-with-comments`, resume the interrupted flow.
 
@@ -56,6 +57,8 @@ single source of truth for this behavior):
 
 - Do not change `spec.yaml` `status`, stage, commit, or create PR metadata —
   ad-hoc review is non-transitional (`reference/risk.md ## Ad-hoc review`).
+- Do not edit implementation or spec files during ad-hoc review; fixes require a
+  follow-up build / patch request.
 - Do not use this in place of the mandatory risk-cadence review during build
   (`reference/risk.md ## Consequences`); the two are independent.
 - Do not pass the conversation history to the reviewer; pass only the spec

@@ -4,6 +4,7 @@
 //! Literal single braces (e.g. `{slug}`) are NOT expanded (AC-07).
 
 use std::collections::BTreeMap;
+use std::fmt;
 use std::path::Path;
 
 use crate::config::Config;
@@ -249,23 +250,115 @@ fn preserve_kiro_agent_model(out_rel: &str, current: Option<&str>, rendered: &st
 /// File order matches the manifest's TOML declaration order (Python parity for
 /// the `wrote:` / `DRIFT:` output); `toml`'s `preserve_order` feature keeps the
 /// parsed table in insertion order.
+#[derive(Debug)]
+pub(crate) enum AdapterManifestError {
+    MissingManifest {
+        tool: String,
+        path: std::path::PathBuf,
+    },
+    Read {
+        tool: String,
+        path: std::path::PathBuf,
+        source: std::io::Error,
+    },
+    InvalidToml {
+        tool: String,
+        path: std::path::PathBuf,
+        source: Box<toml::de::Error>,
+    },
+    MissingFiles {
+        tool: String,
+        path: std::path::PathBuf,
+    },
+    InvalidFileMapping {
+        tool: String,
+        path: std::path::PathBuf,
+        target: String,
+    },
+}
+
+impl fmt::Display for AdapterManifestError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::MissingManifest { tool, path } => {
+                write!(f, "adapter {tool} manifest missing: {}", path.display())
+            }
+            Self::Read { tool, path, source } => {
+                write!(
+                    f,
+                    "adapter {tool} manifest read failed at {}: {source}",
+                    path.display()
+                )
+            }
+            Self::InvalidToml { tool, path, source } => {
+                write!(
+                    f,
+                    "adapter {tool} manifest invalid TOML at {}: {source}",
+                    path.display()
+                )
+            }
+            Self::MissingFiles { tool, path } => {
+                write!(
+                    f,
+                    "adapter {tool} manifest missing [files] table: {}",
+                    path.display()
+                )
+            }
+            Self::InvalidFileMapping { tool, path, target } => {
+                write!(
+                    f,
+                    "adapter {tool} manifest maps {target} to a non-string template path: {}",
+                    path.display()
+                )
+            }
+        }
+    }
+}
+
 pub(crate) fn load_manifest(
     cfg: &Config,
     tool: &str,
-) -> Option<(std::path::PathBuf, Vec<(String, String)>)> {
+) -> Result<(std::path::PathBuf, Vec<(String, String)>), AdapterManifestError> {
     let adir = cfg.engine_dir().join("adapters").join(tool);
     let manifest_path = adir.join("manifest.toml");
     if !manifest_path.exists() {
-        return None;
+        return Err(AdapterManifestError::MissingManifest {
+            tool: tool.to_string(),
+            path: manifest_path,
+        });
     }
-    let text = std::fs::read_to_string(&manifest_path).ok()?;
-    let data: toml::Value = text.parse().ok()?;
-    let files = data.get("files")?.as_table()?;
-    let map: Vec<(String, String)> = files
-        .iter()
-        .map(|(k, v)| (k.clone(), v.as_str().unwrap_or("").to_string()))
-        .collect();
-    Some((adir, map))
+    let text =
+        std::fs::read_to_string(&manifest_path).map_err(|source| AdapterManifestError::Read {
+            tool: tool.to_string(),
+            path: manifest_path.clone(),
+            source,
+        })?;
+    let data: toml::Value = text
+        .parse()
+        .map_err(|source| AdapterManifestError::InvalidToml {
+            tool: tool.to_string(),
+            path: manifest_path.clone(),
+            source: Box::new(source),
+        })?;
+    let files = data
+        .get("files")
+        .and_then(toml::Value::as_table)
+        .ok_or_else(|| AdapterManifestError::MissingFiles {
+            tool: tool.to_string(),
+            path: manifest_path.clone(),
+        })?;
+    let mut map = Vec::new();
+    for (k, v) in files {
+        let Some(tpl) = v.as_str() else {
+            return Err(AdapterManifestError::InvalidFileMapping {
+                tool: tool.to_string(),
+                path: manifest_path.clone(),
+                target: k.clone(),
+            });
+        };
+        map.push((k.clone(), tpl.to_string()));
+    }
+    Ok((adir, map))
 }
 
 pub struct AdapterResult {
@@ -291,8 +384,11 @@ pub fn generate(cfg: &Config, check: bool, force: bool) -> AdapterResult {
 
     for tool in &cfg.adapter_tools() {
         let (adir, files) = match load_manifest(cfg, tool) {
-            Some(v) => v,
-            None => continue,
+            Ok(v) => v,
+            Err(e) => {
+                result.errors.push(e.to_string());
+                continue;
+            }
         };
         let substitutions = subs(cfg, tool);
 
@@ -300,7 +396,13 @@ pub fn generate(cfg: &Config, check: bool, force: bool) -> AdapterResult {
             let tpl_path = adir.join(tpl_rel);
             let template = match std::fs::read_to_string(&tpl_path) {
                 Ok(t) => t,
-                Err(_) => continue,
+                Err(e) => {
+                    result.errors.push(format!(
+                        "adapter {tool} template missing or unreadable for {out_rel} at {}: {e}",
+                        tpl_path.display()
+                    ));
+                    continue;
+                }
             };
             let rendered = render(&template, &substitutions);
             let target = cfg.repo_root.join(out_rel);
@@ -415,8 +517,19 @@ pub fn cmd_adapter_generate(cfg: &Config, check: bool, force: bool) -> i32 {
         for f in &result.drift {
             println!("DRIFT: {f}");
         }
-        println!("\nSummary: {} drift", result.drift.len());
-        if result.drift.is_empty() { 0 } else { 1 }
+        for error in &result.errors {
+            println!("FAIL: {error}");
+        }
+        println!(
+            "\nSummary: {} drift, {} failed",
+            result.drift.len(),
+            result.errors.len()
+        );
+        if result.drift.is_empty() && result.errors.is_empty() {
+            0
+        } else {
+            1
+        }
     } else {
         for f in &result.wrote {
             println!("wrote: {f}");

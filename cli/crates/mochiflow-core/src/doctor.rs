@@ -132,10 +132,10 @@ pub fn validate_config(cfg: &Config) -> Vec<DoctorIssue> {
     issues
 }
 
-/// WARN when `{install_dir}/state/` is not gitignored. PR/QA delivery-artifact
-/// relocation into state/ relies on it being ignored; `init` writes
-/// `{install_dir}/.gitignore` for fresh projects, and this catches drift or
-/// older projects. Skipped when the project is not a git repo (cannot decide).
+/// WARN when `{install_dir}/state/` is not gitignored. PR handoff artifacts and
+/// generated caches live in state, so `init` writes `{install_dir}/.gitignore`
+/// for fresh projects, and this catches drift or older projects. Skipped when
+/// the project is not a git repo (cannot decide).
 pub fn check_state_ignored(cfg: &Config) -> Vec<DoctorIssue> {
     use std::process::Command;
     let root = &cfg.repo_root;
@@ -321,8 +321,12 @@ pub fn run_doctor_json_with_bundled(
 ) -> i32 {
     let reports = collect_reports(cfg, target, true, bundled_version);
     let total_fail = reports.iter().map(|r| r.fails).sum();
-    let doc = doctor_json(&reports, total_fail);
-    write_doctor_state(cfg, &doc);
+    let mut warnings = Vec::new();
+    let mut doc = doctor_json(&reports, total_fail, &warnings);
+    if let Err(e) = write_doctor_state(cfg, &doc) {
+        warnings.push(format!("could not write state/doctor.json: {e}"));
+        doc = doctor_json(&reports, total_fail, &warnings);
+    }
     println!("{}", serde_json::to_string_pretty(&doc).unwrap_or_default());
     if total_fail > 0 { 1 } else { 0 }
 }
@@ -354,9 +358,15 @@ pub fn run_doctor_with_bundled(
         report_ln!("  -> {fails} fail, {warns} warn");
     }
 
-    let doc = doctor_json(&reports, total_fail);
-    write_doctor_state(cfg, &doc);
+    let mut warnings = Vec::new();
+    let doc = doctor_json(&reports, total_fail, &warnings);
+    if let Err(e) = write_doctor_state(cfg, &doc) {
+        warnings.push(format!("could not write state/doctor.json: {e}"));
+    }
 
+    for warning in &warnings {
+        report_ln!("WARN: {warning}");
+    }
     report_ln!("\nDoctor: {total_fail} fail (state/doctor.json)");
     if total_fail > 0 { 1 } else { 0 }
 }
@@ -389,14 +399,19 @@ fn collect_reports(
                 }
                 "adapter" => {
                     let result = crate::adapter::generate(cfg, true, false);
-                    result
+                    let mut issues: Vec<DoctorIssue> = result
                         .drift
                         .iter()
                         .map(|f| DoctorIssue {
                             severity: "FAIL".into(),
                             message: format!("adapter drift: {f}"),
                         })
-                        .collect()
+                        .collect();
+                    issues.extend(result.errors.iter().map(|e| DoctorIssue {
+                        severity: "FAIL".into(),
+                        message: e.clone(),
+                    }));
+                    issues
                 }
                 "engine" => check_engine_with_bundled(cfg, bundled_version),
                 other => vec![DoctorIssue {
@@ -416,7 +431,11 @@ fn collect_reports(
         .collect()
 }
 
-fn doctor_json(reports: &[TargetReport], total_fail: usize) -> serde_json::Value {
+fn doctor_json(
+    reports: &[TargetReport],
+    total_fail: usize,
+    warnings: &[String],
+) -> serde_json::Value {
     let checks = reports
         .iter()
         .map(|report| {
@@ -431,16 +450,14 @@ fn doctor_json(reports: &[TargetReport], total_fail: usize) -> serde_json::Value
     serde_json::json!({
         "total_fail": total_fail,
         "exit_code": if total_fail > 0 { 1 } else { 0 },
+        "warnings": warnings,
         "checks": checks,
     })
 }
 
-fn write_doctor_state(cfg: &Config, doc: &serde_json::Value) {
+fn write_doctor_state(cfg: &Config, doc: &serde_json::Value) -> std::io::Result<()> {
     let state_dir = cfg.state_dir();
-    std::fs::create_dir_all(&state_dir).ok();
-    std::fs::write(
-        state_dir.join("doctor.json"),
-        serde_json::to_string_pretty(doc).unwrap_or_default(),
-    )
-    .ok();
+    std::fs::create_dir_all(&state_dir)?;
+    let body = serde_json::to_string_pretty(doc).map_err(std::io::Error::other)?;
+    std::fs::write(state_dir.join("doctor.json"), body)
 }

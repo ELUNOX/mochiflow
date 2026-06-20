@@ -4,6 +4,19 @@ All notable changes to MochiFlow are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.3] - Unreleased
+
+### Changed
+
+- New projects track `.mochiflow/engine/` by default and ignore only local
+  runtime state plus `constitution.local.md`; `join` is now positioned as a
+  repair helper after clone/pull.
+- `mochiflow detach` now preserves the tracked engine by default while removing
+  adapter integration and local state.
+- Ship now writes reviewer-facing `qa-instructions.md` into the spec folder so
+  it is reviewed and archived with the spec; PR body/request artifacts remain in
+  ignored state.
+
 ## [1.1.2] - 2026-06-19
 
 ### Added

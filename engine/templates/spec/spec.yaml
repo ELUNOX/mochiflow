@@ -4,7 +4,7 @@ title: {title}
 type: feature
 module: {module}
 surfaces:
-  - ios
+  - {surface}
 integration: none
 risk: standard
 status: draft

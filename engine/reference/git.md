@@ -6,12 +6,12 @@ mechanics and the living-spec fold.
 
 ## Branch
 
-- Branch name `{prefix}/{slug}`; `prefix` is derived from `spec.yaml` `type` via
-  the mapping below. `slug` is used as-is.
+- Branch name `{branch}` resolves to `{prefix}/{slug}`. `prefix` is derived from
+  `spec.yaml` `type` via the mapping below; `slug` is used as-is.
 - Prefix mapping (Conventional Commits alignment):
   - `feature` → `feat`
   - all other types (`fix`, `refactor`, `docs`, `chore`) → used as-is
-- If the current branch is already the target, do not switch.
+- If the current branch is already `{branch}`, do not switch.
 - "Unrelated changes" is precise: any uncommitted change **other than this
   spec's own `{specs_dir}/{slug}/**`**. The spec files just authored by `plan`
   are *related* and expected to be present at build start — they never block.
@@ -41,8 +41,11 @@ body (optional)
 
 ## Auto-commit and staging
 
-The AI auto-commits in all flows. Commit only after verification PASS (and
-reviewer PASS when `risk.md` requires it); never commit on FAIL.
+The AI auto-commits in all flows. Commit only after verification PASS; never
+commit on verification FAIL. Mandatory reviewer PASS is a build-completion gate,
+not a prerequisite for every earlier verified commit unit. If reviewer FAIL
+findings require changes, fix them, verify, and commit the follow-up before
+build completes.
 
 - Stage only files in the change plan / task plus tests added for verification.
 - Stage this spec's own files under `{specs_dir}/{slug}/**` together with the
@@ -54,7 +57,8 @@ reviewer PASS when `risk.md` requires it); never commit on FAIL.
   the worktree was already clean. Never `git add -f` to override either way. The
   ADR under `[adr]` is committed regardless of this choice.
 - `git add .` is forbidden — name files explicitly.
-- The install dir and `state/` are typically gitignored; never `git add -f` them.
+- `state/` is gitignored; never `git add -f` it. The vendored engine under the
+  install dir is tracked by default.
 - Do not stage `.env`, `.env.*`, or credential files; warn if encountered.
 
 ### Patch commit
@@ -79,7 +83,8 @@ dirty before the patch, do not commit; report the files and verification result.
 **before** `mochiflow pr`. It bundles, in a single commit:
 
 - `spec.yaml` `status: done` (+ `updated`);
-- the AC Verification Matrix rows added at ship (build already recorded the rest);
+- the AC Matrix rows added at ship (build already recorded the rest);
+- `qa-instructions.md`, the reviewer-facing QA guide generated at ship;
 - the ADR fold (`[adr].decisions` / `[adr].pitfalls`);
 - the archive move `{specs_dir}/{slug}/` → `{specs_dir}/_done/{slug}/`;
 - the regenerated `{index}`.
@@ -96,7 +101,8 @@ commit on the current branch, with no push.
 
 The PR title/body (per `templates/delivery/pr-description.md`: project language,
 external-reviewer facing, no spec-internal references, no spec slug, no AC IDs,
-no mochiflow vocabulary) are always generated after human gate 2 (`workflow.md`).
+no mochiflow vocabulary) are always generated after delivery approval gate 2
+(`workflow.md`).
 
 PR creation goes through **`mochiflow pr`** — the single command that owns
 pre-flight (working tree clean / current branch is the source / source ≠ target),
@@ -108,8 +114,9 @@ the one `git push`, and backend resolution. The AI never calls `git push` / `gh`
 
 - **`[git].pr_driver`** — a custom executable implementing the pr-request
   contract: invoked as `<driver> <request-dir>`, reads `pr-request.json`
-  (`contracts/pr-request.schema.json`), prints `{"url": "..."}`. For providers/
-  auth not covered by a built-in (e.g. an enterprise provider + secret-store PAT).
+  (the repo-level CLI contract at `contracts/pr-request.schema.json`), prints
+  `{"url": "..."}`. For providers/auth not covered by a built-in (e.g. an
+  enterprise provider + secret-store PAT).
   The request-dir is `{install_dir}/state/{slug}/` (gitignored), where
   `mochiflow pr` writes `pr-request.json` — only for this driver backend; the
   schema is unchanged, only its location moved out of the tracked spec tree.
@@ -175,9 +182,9 @@ PR's close-out commit):
 1. `git status --short` clean — else stop.
 2. `git switch {[git].base_branch}`
 3. `git pull --ff-only origin {[git].base_branch}` — stop if ff-only fails (divergent local).
-4. `git branch -d {type}/{slug}` (safe delete; fails if unmerged → leave it, ask human).
+4. `git branch -d {branch}` (safe delete; fails if unmerged → leave it, ask human).
 5. Do not touch the remote branch.
-6. Remove the spec's ephemeral delivery scratch: `rm -rf {install_dir}/state/{slug}/` (gitignored — PR body / `pr-request.json` / `qa-instructions.md` are not archived).
+6. Remove the spec's ephemeral delivery scratch: `rm -rf {install_dir}/state/{slug}/` (gitignored — PR body / `pr-request.json` are not archived).
 
 The fold + archive (`_done` move + `INDEX`) are **not** performed here — they are
 part of the feature branch's close-out commit (`## Living-spec fold`,

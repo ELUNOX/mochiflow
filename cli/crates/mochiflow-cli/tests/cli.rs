@@ -110,7 +110,14 @@ fn init_yes_uses_defaults_without_prompting() {
 fn init_yes_uses_japanese_locale_without_prompting() {
     let dir = tempfile::tempdir().unwrap();
     let result = bin()
-        .args(["init", "--yes", "--target", dir.path().to_str().unwrap()])
+        .args([
+            "init",
+            "--yes",
+            "--adapter",
+            "kiro",
+            "--target",
+            dir.path().to_str().unwrap(),
+        ])
         .env("LANG", "ja_JP.UTF-8")
         .env_remove("LC_ALL")
         .env_remove("LC_MESSAGES")
@@ -165,7 +172,14 @@ fn init_existing_config_runs_join_style_local_setup() {
         .success();
 
     let result = bin()
-        .args(["init", "--yes", "--target", dir.path().to_str().unwrap()])
+        .args([
+            "init",
+            "--yes",
+            "--adapter",
+            "kiro",
+            "--target",
+            dir.path().to_str().unwrap(),
+        ])
         .env("LANG", "ja_JP.UTF-8")
         .env_remove("LC_ALL")
         .env_remove("LC_MESSAGES")
@@ -174,6 +188,12 @@ fn init_existing_config_runs_join_style_local_setup() {
     let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
     assert!(
         out.contains("MochiFlow is already initialized; running join-style local setup"),
+        "{out}"
+    );
+    assert!(
+        out.contains(
+            "Ignoring --adapter kiro because existing config is kept; configured adapters: agents"
+        ),
         "{out}"
     );
     assert!(out.contains("Join: 0 fail"), "{out}");
@@ -224,6 +244,31 @@ fn join_requires_existing_config() {
     let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
     assert!(out.contains("config.toml not found"), "{out}");
     assert!(out.contains("mochiflow init"), "{out}");
+}
+
+#[test]
+fn index_fails_when_index_path_is_not_writable_file() {
+    let dir = tempfile::tempdir().unwrap();
+    bin()
+        .args(["init", "--target", dir.path().to_str().unwrap()])
+        .write_stdin("")
+        .assert()
+        .success();
+    let config = dir.path().join(".mochiflow/config.toml");
+    let original = fs::read_to_string(&config).unwrap();
+    fs::write(
+        &config,
+        original.replace("index = \".mochiflow/INDEX.md\"", "index = \".mochiflow\""),
+    )
+    .unwrap();
+
+    let result = bin()
+        .args(["--config", config.to_str().unwrap(), "index"])
+        .assert()
+        .failure()
+        .code(1);
+    let out = String::from_utf8_lossy(&result.get_output().stdout);
+    assert!(out.contains("FAIL: could not write index files"), "{out}");
 }
 
 fn prepare_join_project(dir: &tempfile::TempDir) -> PathBuf {
@@ -481,7 +526,7 @@ fn init_force_staged_swap_removes_stale_engine_files() {
 }
 
 #[test]
-fn init_staging_failure_leaves_existing_engine_intact() {
+fn init_force_ignores_old_fixed_staging_path() {
     let dir = tempfile::tempdir().unwrap();
     bin()
         .args(["init", "--target", dir.path().to_str().unwrap()])
@@ -493,16 +538,26 @@ fn init_staging_failure_leaves_existing_engine_intact() {
     let before = fs::read_to_string(&version).unwrap();
     fs::write(dir.path().join(".mochiflow/.engine.upgrade"), "not a dir\n").unwrap();
 
-    let result = bin()
+    bin()
         .args(["init", "--force", "--target", dir.path().to_str().unwrap()])
         .write_stdin("")
         .assert()
-        .failure()
-        .code(1);
+        .success();
 
-    let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
-    assert!(out.contains("FAIL: staging error"), "{out}");
     assert_eq!(fs::read_to_string(&version).unwrap(), before);
+    assert_eq!(
+        fs::read_to_string(dir.path().join(".mochiflow/.engine.upgrade")).unwrap(),
+        "not a dir\n"
+    );
+    assert!(
+        fs::read_dir(dir.path().join(".mochiflow"))
+            .unwrap()
+            .filter_map(|entry| entry.ok())
+            .map(|entry| entry.file_name().to_string_lossy().to_string())
+            .all(|name| !name.starts_with(".engine.backup-")
+                && !name.starts_with(".engine.upgrade-")),
+        "unique staging/backup directories should be cleaned up"
+    );
 }
 
 /// --adapter resolves the `codex` label to the `agents` ID, and --language is
@@ -571,10 +626,10 @@ fn init_accepts_multiple_adapters() {
         .success();
 
     let cfg = fs::read_to_string(dir.path().join(".mochiflow/config.toml")).unwrap();
-    assert!(
-        cfg.contains("tools = [\"kiro\", \"claude-code\"]"),
-        "got:\n{cfg}"
-    );
+    let parsed: toml::Value = toml::from_str(&cfg).unwrap();
+    let tools = parsed["adapter"]["tools"].as_array().unwrap();
+    assert_eq!(tools[0].as_str(), Some("kiro"), "got:\n{cfg}");
+    assert_eq!(tools[1].as_str(), Some("claude-code"), "got:\n{cfg}");
 }
 
 /// Comma-separated adapters are split, resolved, and de-duplicated
@@ -807,7 +862,7 @@ fn detach_removes_managed_block_and_runtime_but_preserves_project_data() {
 
     let detached = fs::read_to_string(&agents).unwrap();
     assert_eq!(detached, "CUSTOM AGENTS\n");
-    assert!(!dir.path().join(".mochiflow/engine").exists());
+    assert!(dir.path().join(".mochiflow/engine").exists());
     assert!(!dir.path().join(".mochiflow/state").exists());
     assert!(dir.path().join(".mochiflow/config.toml").exists());
     assert!(dir.path().join(".mochiflow/specs").exists());
@@ -1096,6 +1151,129 @@ fn adapter_generate_check_does_not_write_candidate() {
     );
 }
 
+#[test]
+fn adapter_generate_check_fails_on_missing_manifest() {
+    let dir = tempfile::tempdir().unwrap();
+    bin()
+        .args([
+            "init",
+            "--adapter",
+            "kiro",
+            "--target",
+            dir.path().to_str().unwrap(),
+        ])
+        .write_stdin("")
+        .assert()
+        .success();
+    let config = dir.path().join(".mochiflow/config.toml");
+    fs::remove_file(
+        dir.path()
+            .join(".mochiflow/engine/adapters/kiro/manifest.toml"),
+    )
+    .unwrap();
+
+    let result = bin()
+        .args([
+            "--config",
+            config.to_str().unwrap(),
+            "adapter",
+            "generate",
+            "--check",
+        ])
+        .assert()
+        .failure();
+    let out = String::from_utf8_lossy(&result.get_output().stdout);
+    assert!(out.contains("manifest missing"), "{out}");
+
+    let result = bin()
+        .args(["--config", config.to_str().unwrap(), "doctor", "adapter"])
+        .assert()
+        .failure();
+    let out = String::from_utf8_lossy(&result.get_output().stdout);
+    assert!(out.contains("manifest missing"), "{out}");
+}
+
+#[test]
+fn adapter_generate_check_fails_on_missing_template() {
+    let dir = tempfile::tempdir().unwrap();
+    bin()
+        .args([
+            "init",
+            "--adapter",
+            "kiro",
+            "--target",
+            dir.path().to_str().unwrap(),
+        ])
+        .write_stdin("")
+        .assert()
+        .success();
+    let config = dir.path().join(".mochiflow/config.toml");
+    fs::write(
+        dir.path()
+            .join(".mochiflow/engine/adapters/kiro/manifest.toml"),
+        "[files]\n\".kiro/agents/spec-builder.json\" = \"missing.json.tpl\"\n",
+    )
+    .unwrap();
+
+    let result = bin()
+        .args([
+            "--config",
+            config.to_str().unwrap(),
+            "adapter",
+            "generate",
+            "--check",
+        ])
+        .assert()
+        .failure();
+    let out = String::from_utf8_lossy(&result.get_output().stdout);
+    assert!(out.contains("template missing or unreadable"), "{out}");
+}
+
+#[test]
+fn kiro_spec_builder_shell_uses_narrow_allowlist() {
+    let dir = tempfile::tempdir().unwrap();
+    bin()
+        .args([
+            "init",
+            "--adapter",
+            "kiro",
+            "--target",
+            dir.path().to_str().unwrap(),
+        ])
+        .write_stdin("")
+        .assert()
+        .success();
+
+    let json: serde_json::Value = serde_json::from_str(
+        &fs::read_to_string(dir.path().join(".kiro/agents/spec-builder.json")).unwrap(),
+    )
+    .unwrap();
+    let allowed = json["toolsSettings"]["shell"]["allowedCommands"]
+        .as_array()
+        .unwrap();
+    let allowed: Vec<&str> = allowed.iter().map(|v| v.as_str().unwrap()).collect();
+    assert!(!allowed.contains(&".*"), "{allowed:?}");
+    assert!(
+        allowed.iter().any(|cmd| cmd.contains("mochiflow pr")),
+        "{allowed:?}"
+    );
+    assert!(
+        !allowed.iter().any(|cmd| cmd.contains("gh pr create")
+            || cmd.contains("glab mr create")
+            || cmd.contains("az repos pr create")),
+        "{allowed:?}"
+    );
+    let denied = json["toolsSettings"]["shell"]["deniedCommands"]
+        .as_array()
+        .unwrap();
+    assert!(
+        denied
+            .iter()
+            .any(|cmd| cmd.as_str().unwrap().contains("gh pr create")),
+        "{denied:?}"
+    );
+}
+
 /// Normal adapter generation appends a managed block to existing Markdown files.
 #[test]
 fn adapter_generate_appends_managed_block_to_existing_markdown() {
@@ -1331,6 +1509,51 @@ fn kiro_agent_model_override_is_not_adapter_drift_and_survives_force() {
 }
 
 #[test]
+fn kiro_builder_allows_subagent_and_loads_non_phase_resources() {
+    let dir = tempfile::tempdir().unwrap();
+    bin()
+        .args([
+            "init",
+            "--adapter",
+            "kiro",
+            "--target",
+            dir.path().to_str().unwrap(),
+        ])
+        .write_stdin("")
+        .assert()
+        .success();
+
+    let builder = dir.path().join(".kiro/agents/spec-builder.json");
+    let builder_json: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&builder).unwrap()).unwrap();
+
+    for key in ["tools", "allowedTools"] {
+        let values = builder_json[key].as_array().unwrap();
+        assert!(
+            values.iter().any(|v| v.as_str() == Some("subagent")),
+            "{key} should contain subagent: {builder_json}"
+        );
+    }
+
+    let resources = builder_json["resources"].as_array().unwrap();
+    for resource in [
+        "commands/patch.md",
+        "commands/review.md",
+        "commands/refresh-context.md",
+        "reference/engineering-standards.md",
+        "agents/independent-reviewer.md",
+    ] {
+        assert!(
+            resources
+                .iter()
+                .filter_map(|v| v.as_str())
+                .any(|v| v.ends_with(resource)),
+            "resources should contain {resource}: {builder_json}"
+        );
+    }
+}
+
+#[test]
 fn kiro_agent_non_model_override_is_adapter_drift() {
     let dir = tempfile::tempdir().unwrap();
     bin()
@@ -1405,7 +1628,7 @@ fn adapter_generate_fails_when_candidate_parent_cannot_be_created() {
     assert!(out.contains("FAIL:"), "{out}");
     assert!(out.contains(".mochiflow/state/adapters"), "{out}");
     assert!(
-        out.contains("Summary: 7 written, 0 blocked, 1 failed"),
+        out.contains("Summary: 9 written, 0 blocked, 1 failed"),
         "{out}"
     );
 }
@@ -1557,6 +1780,46 @@ fn doctor_json_outputs_single_document() {
     assert_eq!(json["exit_code"].as_i64(), Some(0), "{stdout}");
     assert!(json["checks"]["config"].is_array(), "{stdout}");
     assert!(dir.path().join(".mochiflow/state/doctor.json").exists());
+}
+
+#[test]
+fn doctor_json_warns_when_state_write_fails() {
+    let dir = tempfile::tempdir().unwrap();
+    bin()
+        .args(["init", "--target", dir.path().to_str().unwrap()])
+        .write_stdin("")
+        .assert()
+        .success();
+    let config_path = dir.path().join(".mochiflow/config.toml");
+    let state = dir.path().join(".mochiflow/state");
+    if state.is_dir() {
+        fs::remove_dir_all(&state).unwrap();
+    }
+    fs::write(&state, "not a directory\n").unwrap();
+
+    let result = bin()
+        .args([
+            "--config",
+            config_path.to_str().unwrap(),
+            "doctor",
+            "--json",
+            "config",
+        ])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
+    let json: serde_json::Value = serde_json::from_str(&stdout).unwrap();
+    assert!(
+        json["warnings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|warning| warning
+                .as_str()
+                .unwrap()
+                .contains("could not write state/doctor.json")),
+        "{stdout}"
+    );
 }
 
 #[test]
@@ -1751,7 +2014,7 @@ fn init_dry_run_json_writes_nothing_and_marks_dry_run() {
     assert!(!dir.path().join(".mochiflow/.gitignore").exists());
 }
 
-/// AC-04: init writes {install_dir}/.gitignore with engine/ and state/, and
+/// AC-04: init writes {install_dir}/.gitignore with state/ only, and
 /// never touches the project's top-level .gitignore.
 #[test]
 fn init_writes_install_gitignore() {
@@ -1764,8 +2027,9 @@ fn init_writes_install_gitignore() {
     let gi = dir.path().join(".mochiflow/.gitignore");
     assert!(gi.exists(), "{} should exist", gi.display());
     let body = fs::read_to_string(&gi).unwrap();
-    assert!(body.contains("engine/"), "got:\n{body}");
     assert!(body.contains("state/"), "got:\n{body}");
+    assert!(body.contains("constitution.local.md"), "got:\n{body}");
+    assert!(!body.contains("engine/"), "got:\n{body}");
     assert!(
         !dir.path().join(".gitignore").exists(),
         "top-level .gitignore must not be created"
@@ -1797,10 +2061,9 @@ fn init_gitignore_preserve_then_force() {
         .assert()
         .success();
     let body = fs::read_to_string(&gi).unwrap();
-    assert!(
-        body.contains("engine/") && body.contains("state/"),
-        "got:\n{body}"
-    );
+    assert!(body.contains("state/"), "got:\n{body}");
+    assert!(body.contains("constitution.local.md"), "got:\n{body}");
+    assert!(!body.contains("engine/"), "got:\n{body}");
 }
 
 /// A missing config.toml exits 2 for non-init commands.

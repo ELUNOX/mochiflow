@@ -2,7 +2,7 @@
 slug: {slug}
 title: {title}
 module: {module}
-surface: ios
+surface: {surface}
 type_hint: feature | fix | refactor | docs | chore
 maturity: seed
 source: conversation

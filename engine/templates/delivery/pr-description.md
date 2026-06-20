@@ -1,23 +1,24 @@
 # PR Description Template
 
-PR description は外部 reviewer 向け。spec ファイル / 内部 ID（slug、AC-01 など）/
-mochiflow 用語（risk: standard など）を含めない。日本語で書く。
+Write the PR description for external reviewers in the configured project
+language. Do not include spec files, internal IDs (`slug`, `AC-01`, etc.), or
+MochiFlow vocabulary (`risk: standard`, etc.).
 
 ```markdown
-## 概要
+## Summary
 
-{この変更の目的を 1〜3 行。なぜ必要か}
+{Purpose of this change in 1-3 lines, including why it is needed.}
 
-## 変更
+## Changes
 
-- {変更の論理的単位で箇条書き。何が・どう変わったか}
+- {Logical change unit: what changed and how.}
 
-## テスト
+## Verification
 
-- {実行した検証 command と結果}
-- {人間確認した場合の概要を 1 行}
+- {Verification command and result.}
+- {One-line summary of human confirmation when applicable.}
 
-## リスク
+## Risk
 
-- {自然な日本語で。可逆性、schema/contract 影響、影響範囲を 1〜2 行}
+- {Natural project-language description of reversibility, schema/contract impact, and affected area in 1-2 lines.}
 ```

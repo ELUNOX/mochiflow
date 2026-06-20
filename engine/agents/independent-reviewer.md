@@ -26,7 +26,7 @@ references:
 - Stage 1: check whether implementation matches AC, design, task scope, and metadata.
 - Stage 2: check maintainability, safety, minimalism, and project consistency.
 - State whether the reviewer mode is `delegated` or `inline`.
-- Read the full diff and `design.md ## 統合ログ` together to catch integration-level defects:
+- Read the full diff and `design.md ## Integration Log` together to catch integration-level defects:
   dead code / unreachable facades, double binding or double writes of the same
   state, and contract drift across surfaces.
 - Call out under-building and over-building.
@@ -35,11 +35,13 @@ references:
 ## Inputs from builder
 
 - `spec.yaml` metadata summary
-- requirements / AC（全体）
-- design（全体）
-- tasks または Change Plan（全体）
-- 変更ファイル全体への read アクセス、または full diff
-- `design.md ## 統合ログ`（builder の Integration Log）— `risk` が必須範囲（`reference/risk.md` の integration log 列）の場合は提示される。任意範囲で空でも reviewer は diff と spec から判断する
+- full requirements / AC
+- full design
+- full tasks or Change Plan
+- read access to all changed files, or the full diff
+- `design.md ## Integration Log` — provided when the `risk` row in
+  `reference/risk.md` requires an integration log; if optional and empty, review
+  from the diff and spec
 - Verification results when available
 
 ## Operating rules

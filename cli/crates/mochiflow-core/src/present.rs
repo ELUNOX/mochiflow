@@ -593,7 +593,7 @@ fn detected_json(report: &DetectionReport) -> serde_json::Value {
 }
 
 /// Static usage-vocabulary card (AC-07): the four verbs (natural-language
-/// trigger + explicit command) and the two approval gates. Content is fixed
+/// trigger + explicit command) and the two delivery approval gates. Content is fixed
 /// and project-independent; only the language of the framing text varies.
 pub fn render_guide(language: &str) -> String {
     if language == "ja" {

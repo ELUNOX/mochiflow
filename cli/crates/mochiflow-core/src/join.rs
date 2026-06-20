@@ -150,9 +150,9 @@ fn required_gitignore_entries_missing(cfg: &Config) -> Vec<&'static str> {
     let path = cfg.install_dir_path().join(".gitignore");
     let content = match std::fs::read_to_string(&path) {
         Ok(content) => content,
-        Err(_) => return vec!["engine/", "state/", "constitution.local.md"],
+        Err(_) => return vec!["state/", "constitution.local.md"],
     };
-    ["engine/", "state/", "constitution.local.md"]
+    ["state/", "constitution.local.md"]
         .into_iter()
         .filter(|entry| !content.lines().any(|line| line.trim() == *entry))
         .collect()
@@ -266,6 +266,7 @@ pub fn run_join(
         if dry_run {
             let adapter_result = adapter::generate(&cfg, true, false);
             report.adapter_drift = adapter_result.drift;
+            report.errors.extend(adapter_result.errors);
             if !report.adapter_drift.is_empty() {
                 report
                     .actions
@@ -294,12 +295,19 @@ pub fn run_join(
             }
             report.errors.extend(adapter_result.errors);
             if report.index_stale {
-                index::generate_index_quiet(&cfg);
-                report.actions.push(format!(
-                    "regenerated {} and state/index.json",
-                    cfg.index_path().display()
-                ));
-                report.index_stale = false;
+                match index::generate_index_quiet(&cfg) {
+                    Ok(()) => {
+                        report.actions.push(format!(
+                            "regenerated {} and state/index.json",
+                            cfg.index_path().display()
+                        ));
+                        report.index_stale = false;
+                    }
+                    Err(e) => report.errors.push(format!(
+                        "could not regenerate {} and state/index.json: {e}",
+                        cfg.index_path().display()
+                    )),
+                }
             }
         }
     }
