@@ -264,7 +264,7 @@ pub(crate) enum AdapterManifestError {
     InvalidToml {
         tool: String,
         path: std::path::PathBuf,
-        source: toml::de::Error,
+        source: Box<toml::de::Error>,
     },
     MissingFiles {
         tool: String,
@@ -338,7 +338,7 @@ pub(crate) fn load_manifest(
         .map_err(|source| AdapterManifestError::InvalidToml {
             tool: tool.to_string(),
             path: manifest_path.clone(),
-            source,
+            source: Box::new(source),
         })?;
     let files = data
         .get("files")

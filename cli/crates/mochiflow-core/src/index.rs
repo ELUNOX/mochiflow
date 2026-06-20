@@ -363,8 +363,7 @@ fn render_index(cfg: &Config, now: &str) -> String {
 
 fn md_table_cell(value: &str) -> String {
     value
-        .replace('\r', " ")
-        .replace('\n', " ")
+        .replace(['\r', '\n'], " ")
         .replace('|', r"\|")
 }
 
