@@ -144,10 +144,7 @@ where
     }
 
     let parent = target_engine.parent().unwrap_or(Path::new("."));
-    let staging = parent.join(".engine.upgrade");
-    if staging.exists() {
-        std::fs::remove_dir_all(&staging).map_err(EngineInstallError::Staging)?;
-    }
+    let staging = unique_engine_temp_path(parent, ".engine.upgrade");
     std::fs::create_dir_all(&staging).map_err(EngineInstallError::Staging)?;
 
     if let Err(e) = stage_engine(&staging) {
@@ -167,10 +164,12 @@ where
         return Err(EngineInstallError::SamePath);
     }
 
-    let backup = parent.join(".engine.backup");
-    if backup.exists() {
-        std::fs::remove_dir_all(&backup).map_err(EngineInstallError::Staging)?;
+    if let Err(e) = write_manifest_for_engine_dir(&staging) {
+        std::fs::remove_dir_all(&staging).ok();
+        return Err(EngineInstallError::Manifest(e));
     }
+
+    let backup = unique_engine_temp_path(parent, ".engine.backup");
     if target_engine.exists() {
         std::fs::rename(&target_engine, &backup).map_err(EngineInstallError::Rename)?;
     }
@@ -184,7 +183,22 @@ where
         std::fs::remove_dir_all(&backup).ok();
     }
 
-    write_manifest(cfg).map_err(EngineInstallError::Manifest)
+    Ok(())
+}
+
+fn unique_engine_temp_path(parent: &Path, prefix: &str) -> std::path::PathBuf {
+    let pid = std::process::id();
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    for attempt in 0..1000_u32 {
+        let candidate = parent.join(format!("{prefix}-{pid}-{nanos}-{attempt}"));
+        if !candidate.exists() {
+            return candidate;
+        }
+    }
+    parent.join(format!("{prefix}-{pid}-{nanos}-fallback"))
 }
 
 /// Write MANIFEST.json for the current engine state.

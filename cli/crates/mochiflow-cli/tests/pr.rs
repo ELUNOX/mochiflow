@@ -183,6 +183,74 @@ fn pr_command_only_runs_exits_0() {
     assert!(marker.exists(), "pr_command should have run");
 }
 
+#[test]
+fn pr_command_escapes_spec_dir_placeholder() {
+    let dir = tempfile::tempdir().unwrap();
+    let block =
+        "provider = \"none\"\npr_command = \"mkdir -p {spec_dir} && touch {spec_dir}/marker\"";
+    let cfg = setup(dir.path(), block, false);
+    run_pr(&cfg, &["--title", "Add", "--spec", "semi;touch hacked"]).success();
+    assert!(
+        dir.path()
+            .join("repo/.mochiflow/state/semi;touch hacked/marker")
+            .exists()
+    );
+    assert!(!dir.path().join("repo/hacked").exists());
+}
+
+#[test]
+fn pr_github_body_file_is_canonicalized_from_calling_cwd() {
+    let dir = tempfile::tempdir().unwrap();
+    let cfg = setup(dir.path(), "provider = \"github\"", false);
+    let repo = dir.path().join("repo");
+    let subdir = repo.join("subdir");
+    fs::create_dir_all(&subdir).unwrap();
+    let body = dir.path().join("body.md");
+    fs::write(&body, "body\n").unwrap();
+
+    let fakebin = dir.path().join("fakebin");
+    fs::create_dir_all(&fakebin).unwrap();
+    let capture = dir.path().join("gh-args.txt");
+    let gh = fakebin.join("gh");
+    fs::write(
+        &gh,
+        format!(
+            "#!/bin/sh\nprintf '%s\\n' \"$@\" > '{}'\necho https://example/pr/42\n",
+            capture.display()
+        ),
+    )
+    .unwrap();
+    Proc::new("chmod")
+        .args(["+x", gh.to_str().unwrap()])
+        .status()
+        .unwrap();
+    let old_path = std::env::var("PATH").unwrap_or_default();
+    let path = format!("{}:{old_path}", fakebin.display());
+
+    let result = bin()
+        .current_dir(&subdir)
+        .env("PATH", path)
+        .args([
+            "--config",
+            cfg.to_str().unwrap(),
+            "pr",
+            "--title",
+            "Add",
+            "--body-file",
+            "../../body.md",
+        ])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&result.get_output().stdout);
+    assert!(stdout.contains("https://example/pr/42"), "{stdout}");
+    let args = fs::read_to_string(&capture).unwrap();
+    let expected_body = body.canonicalize().unwrap().to_string_lossy().to_string();
+    assert!(
+        args.lines().any(|line| line == expected_body),
+        "gh args should contain canonical body path, got:\n{args}"
+    );
+}
+
 /// --dry-run writes/pushes/dispatches nothing.
 #[test]
 fn pr_dry_run_noop() {
@@ -400,7 +468,7 @@ fn pr_missing_body_file_exits_1_before_dispatch() {
     .failure()
     .code(1)
     .stderr(predicates::str::contains(
-        "FAIL: could not read --body-file",
+        "FAIL: could not resolve --body-file",
     ));
 
     assert!(

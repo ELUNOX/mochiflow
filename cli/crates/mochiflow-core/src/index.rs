@@ -288,12 +288,12 @@ fn render_index(cfg: &Config, now: &str) -> String {
         for s in &seeds {
             lines.push(format!(
                 "| [{}]({specs_rel}/_backlog/{}.md) | {} | {} {} | {} |",
-                s.slug,
-                s.slug,
-                s.title,
+                md_table_cell(&s.slug),
+                url_path_segment(&s.slug),
+                md_table_cell(&s.title),
                 status_emoji(&s.maturity),
-                s.maturity,
-                s.source
+                md_table_cell(&s.maturity),
+                md_table_cell(&s.source)
             ));
         }
     }
@@ -310,13 +310,13 @@ fn render_index(cfg: &Config, now: &str) -> String {
         for a in &active {
             lines.push(format!(
                 "| [{}]({specs_rel}/{}/) | {} {} | {} | {} | {} |",
-                a.slug,
-                a.slug,
+                md_table_cell(&a.slug),
+                url_path_segment(&a.slug),
                 status_emoji(&a.status),
-                a.status,
-                a.risk,
-                a.docs,
-                a.module
+                md_table_cell(&a.status),
+                md_table_cell(&a.risk),
+                md_table_cell(&a.docs),
+                md_table_cell(&a.module)
             ));
         }
     }
@@ -347,7 +347,11 @@ fn render_index(cfg: &Config, now: &str) -> String {
             }
             lines.push(format!(
                 "| {} | [{}]({specs_rel}/_done/{}/) | {} | {} |",
-                d.updated, d.slug, d.slug, d.title, d.spec_type
+                md_table_cell(&d.updated),
+                md_table_cell(&d.slug),
+                url_path_segment(&d.slug),
+                md_table_cell(&d.title),
+                md_table_cell(&d.spec_type)
             ));
         }
         lines.push(String::new());
@@ -355,6 +359,17 @@ fn render_index(cfg: &Config, now: &str) -> String {
     }
 
     lines.join("\n") + "\n"
+}
+
+fn md_table_cell(value: &str) -> String {
+    value
+        .replace('\r', " ")
+        .replace('\n', " ")
+        .replace('|', r"\|")
+}
+
+fn url_path_segment(value: &str) -> String {
+    value.replace('\\', "%5C").replace(' ', "%20")
 }
 
 pub fn is_index_stale(cfg: &Config) -> bool {
@@ -378,15 +393,15 @@ pub fn check_index(cfg: &Config) -> i32 {
 }
 
 /// Generate INDEX.md and state/index.json (matching Python's index.main).
-pub fn generate_index(cfg: &Config) {
-    generate_index_inner(cfg, true);
+pub fn generate_index(cfg: &Config) -> std::io::Result<()> {
+    generate_index_inner(cfg, true)
 }
 
-pub fn generate_index_quiet(cfg: &Config) {
-    generate_index_inner(cfg, false);
+pub fn generate_index_quiet(cfg: &Config) -> std::io::Result<()> {
+    generate_index_inner(cfg, false)
 }
 
-fn generate_index_inner(cfg: &Config, print_summary: bool) {
+fn generate_index_inner(cfg: &Config, print_summary: bool) -> std::io::Result<()> {
     let (active, done, seeds) = collect(cfg);
     let now = utc_now_formatted();
     let content = render_index(cfg, &now);
@@ -394,15 +409,15 @@ fn generate_index_inner(cfg: &Config, print_summary: bool) {
     // Write INDEX.md
     let index_path = cfg.index_path();
     if let Some(parent) = index_path.parent() {
-        std::fs::create_dir_all(parent).ok();
+        std::fs::create_dir_all(parent)?;
     }
-    std::fs::write(&index_path, &content).ok();
+    std::fs::write(&index_path, &content)?;
 
     // Write state/index.json
     let state_dir = cfg.state_dir();
-    std::fs::create_dir_all(&state_dir).ok();
+    std::fs::create_dir_all(&state_dir)?;
     let json_data = build_json(&now, &active, &done, &seeds);
-    std::fs::write(state_dir.join("index.json"), json_data).ok();
+    std::fs::write(state_dir.join("index.json"), json_data)?;
 
     if print_summary {
         println!(
@@ -411,6 +426,7 @@ fn generate_index_inner(cfg: &Config, print_summary: bool) {
             state_dir.join("index.json").display()
         );
     }
+    Ok(())
 }
 
 fn build_json(now: &str, active: &[ActiveEntry], done: &[DoneEntry], seeds: &[SeedInfo]) -> String {
@@ -509,4 +525,14 @@ fn utc_now_formatted() -> String {
 /// Public API for reading a seed file.
 pub fn read_seed_public(path: &Path) -> Option<SeedInfo> {
     read_seed(path)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn md_table_cell_escapes_pipes_and_newlines() {
+        assert_eq!(md_table_cell("a|b\nc\rd"), r"a\|b c d");
+    }
 }

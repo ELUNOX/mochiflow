@@ -5,7 +5,7 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -50,7 +50,7 @@ fn default_language() -> String {
 }
 
 /// Always-loaded layer — user-authored project and local rules.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct RawConstitution {
     pub project: String,
     pub local: String,
@@ -58,7 +58,7 @@ pub struct RawConstitution {
 
 /// Foundational layer — refresh targets (`onboard` / `refresh-context`
 /// regenerate from code; always-loaded orientation map).
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct RawContext {
     pub product: String,
     pub structure: String,
@@ -66,13 +66,13 @@ pub struct RawContext {
 }
 
 /// ADR layer — fold targets (`ship` appends durable decisions and pitfalls).
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct RawAdr {
     pub decisions: String,
     pub pitfalls: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct RawGit {
     #[serde(default = "default_provider")]
     pub provider: String,
@@ -105,7 +105,7 @@ fn default_branch() -> String {
     "main".to_string()
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, Serialize)]
 pub struct RawAdapter {
     /// Legacy single tool (backward compat).
     #[serde(default)]
@@ -132,7 +132,7 @@ fn default_tool() -> String {
     "agents".to_string()
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, Serialize)]
 pub struct RawWrite {
     #[serde(default)]
     pub allow: Vec<String>,
@@ -140,7 +140,7 @@ pub struct RawWrite {
     pub deny: Vec<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct RawSurface {
     #[serde(default)]
     pub description: String,
@@ -277,20 +277,21 @@ pub fn load_config(config_path: &Path) -> Result<Config, ConfigError> {
 
 /// Derive repo_root from config_path and install_dir (matches Python logic).
 fn resolve(raw: RawConfig, config_path: &Path) -> Result<Config, ConfigError> {
+    validate_install_dir(&raw.install_dir)?;
+    validate_adapter_config(&raw.adapter)?;
+
     let config_abs = config_path
         .canonicalize()
         .unwrap_or_else(|_| config_path.to_path_buf());
-    // config.toml lives at <install_dir>/config.toml, so its parent IS the install dir.
+    // config.toml lives at <install_dir>/config.toml, so its parent is the
+    // install dir and that parent's parent is the repo root. Do not infer the
+    // repo root from the configured install_dir text; that value is data to
+    // validate, not an authority for path traversal.
     let install_dir_abs = config_abs.parent().unwrap_or(Path::new("."));
-    // repo_root = install_dir_abs walked up by the number of path components in
-    // install_dir (mirrors Python: `install_dir_abs.parents[len(parts) - 1]`,
-    // i.e. `len(parts)` calls to `.parent()`). For install_dir = ".mochiflow"
-    // that is one level up = the repo root.
-    let component_count = Path::new(&raw.install_dir).components().count();
-    let mut repo_root = install_dir_abs.to_path_buf();
-    for _ in 0..component_count {
-        repo_root = repo_root.parent().unwrap_or(Path::new("/")).to_path_buf();
-    }
+    let repo_root = install_dir_abs
+        .parent()
+        .unwrap_or(Path::new("/"))
+        .to_path_buf();
 
     Ok(Config {
         schema_version: raw.schema_version,
@@ -308,4 +309,57 @@ fn resolve(raw: RawConfig, config_path: &Path) -> Result<Config, ConfigError> {
         repo_root,
         config_path: config_abs,
     })
+}
+
+fn validate_install_dir(install_dir: &str) -> Result<(), ConfigError> {
+    use std::path::Component;
+
+    let trimmed = install_dir.trim();
+    if trimmed.is_empty() {
+        return Err(ConfigError::Invalid("install_dir must not be empty".into()));
+    }
+    let path = Path::new(trimmed);
+    if path.is_absolute() {
+        return Err(ConfigError::Invalid(
+            "install_dir must be a relative path".into(),
+        ));
+    }
+    for component in path.components() {
+        match component {
+            Component::ParentDir => {
+                return Err(ConfigError::Invalid(
+                    "install_dir must not contain `..`".into(),
+                ));
+            }
+            Component::Normal(_) | Component::CurDir => {}
+            Component::Prefix(_) | Component::RootDir => {
+                return Err(ConfigError::Invalid(
+                    "install_dir must be a relative path".into(),
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn validate_adapter_config(adapter: &RawAdapter) -> Result<(), ConfigError> {
+    if adapter.tools.as_ref().is_some_and(Vec::is_empty) {
+        return Err(ConfigError::Invalid(
+            "adapter.tools must contain at least one tool".into(),
+        ));
+    }
+    if adapter
+        .tools
+        .as_ref()
+        .is_some_and(|tools| tools.iter().any(|tool| tool.trim().is_empty()))
+        || adapter
+            .tool
+            .as_ref()
+            .is_some_and(|tool| tool.trim().is_empty())
+    {
+        return Err(ConfigError::Invalid(
+            "adapter tools must not be empty strings".into(),
+        ));
+    }
+    Ok(())
 }

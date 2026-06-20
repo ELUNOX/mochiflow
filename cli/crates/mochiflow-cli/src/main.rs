@@ -237,8 +237,13 @@ fn main() -> Result<()> {
             if check {
                 mochiflow_core::index::check_index(&cfg)
             } else {
-                mochiflow_core::index::generate_index(&cfg);
-                0
+                match mochiflow_core::index::generate_index(&cfg) {
+                    Ok(()) => 0,
+                    Err(e) => {
+                        println!("FAIL: could not write index files: {e}");
+                        1
+                    }
+                }
             }
         }
         Commands::Lint { spec } => {
@@ -319,6 +324,23 @@ fn main() -> Result<()> {
                     .join("config.toml")
                     .exists()
             {
+                let existing_config = std::path::PathBuf::from(&target)
+                    .join(".mochiflow")
+                    .join("config.toml");
+                if !adapter.is_empty()
+                    && let Ok(cfg) = mochiflow_core::config::load_config(&existing_config)
+                {
+                    let message = format!(
+                        "Ignoring --adapter {} because existing config is kept; configured adapters: {}. Use --force to rewrite config.",
+                        adapter.join(", "),
+                        cfg.adapter_tools().join(", ")
+                    );
+                    if json {
+                        eprintln!("{message}");
+                    } else {
+                        println!("{message}");
+                    }
+                }
                 if json {
                     eprintln!(
                         "MochiFlow is already initialized; running join-style local setup. Use `mochiflow join` for existing projects."

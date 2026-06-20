@@ -45,6 +45,10 @@ enum AdapterAction {
         label: String,
         reason: String,
     },
+    Error {
+        label: String,
+        message: String,
+    },
 }
 
 struct AdapterPlan {
@@ -127,8 +131,15 @@ fn plan_adapter_cleanup(cfg: &Config) -> AdapterPlan {
     let mut known_parents = Vec::new();
 
     for tool in &cfg.adapter_tools() {
-        let Some((_adapter_dir, files)) = load_manifest(cfg, tool) else {
-            continue;
+        let files = match load_manifest(cfg, tool) {
+            Ok((_adapter_dir, files)) => files,
+            Err(e) => {
+                actions.push(AdapterAction::Error {
+                    label: format!("adapter {tool}"),
+                    message: e.to_string(),
+                });
+                continue;
+            }
         };
         for (out_rel, _tpl_rel) in files {
             let target = cfg.repo_root.join(&out_rel);
@@ -231,6 +242,9 @@ fn apply_adapter_plan(cfg: &Config, plan: &AdapterPlan, dry_run: bool, report: &
             }
             AdapterAction::Skip { label, reason } => {
                 report.skipped.push(format!("{label} ({reason})"));
+            }
+            AdapterAction::Error { label, message } => {
+                report.errors.push(format!("{label}: {message}"));
             }
         }
     }
