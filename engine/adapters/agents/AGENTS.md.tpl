@@ -12,8 +12,8 @@ your standing instruction and follow it for any spec / implementation / PR work.
   `{{context.structure}}`, and `{{context.tech}}`. This is the always-loaded
   current-state orientation; load it first.
 - Router (read this first): `{{engine}}/router.md`
-- Verb procedures: `{{engine}}/commands/{discuss,plan,build,ship}.md`; patch lane:
-  `{{engine}}/commands/patch.md`
+- Lifecycle verbs: `{{engine}}/commands/{discuss,plan,build,ship}.md`
+- Non-phase commands: `{{engine}}/commands/{patch,review,refresh-context}.md`
 - Cross-cutting rules: `{{engine}}/reference/{workflow,risk,authoring,git,language}.md`
 - Decision history / pitfalls — **on-demand** (*why*, not current state):
   `{{adr.decisions}}` / `{{adr.pitfalls}}`.

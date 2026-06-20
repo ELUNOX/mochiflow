@@ -1331,6 +1331,51 @@ fn kiro_agent_model_override_is_not_adapter_drift_and_survives_force() {
 }
 
 #[test]
+fn kiro_builder_allows_subagent_and_loads_non_phase_resources() {
+    let dir = tempfile::tempdir().unwrap();
+    bin()
+        .args([
+            "init",
+            "--adapter",
+            "kiro",
+            "--target",
+            dir.path().to_str().unwrap(),
+        ])
+        .write_stdin("")
+        .assert()
+        .success();
+
+    let builder = dir.path().join(".kiro/agents/spec-builder.json");
+    let builder_json: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&builder).unwrap()).unwrap();
+
+    for key in ["tools", "allowedTools"] {
+        let values = builder_json[key].as_array().unwrap();
+        assert!(
+            values.iter().any(|v| v.as_str() == Some("subagent")),
+            "{key} should contain subagent: {builder_json}"
+        );
+    }
+
+    let resources = builder_json["resources"].as_array().unwrap();
+    for resource in [
+        "commands/patch.md",
+        "commands/review.md",
+        "commands/refresh-context.md",
+        "reference/engineering-standards.md",
+        "agents/independent-reviewer.md",
+    ] {
+        assert!(
+            resources
+                .iter()
+                .filter_map(|v| v.as_str())
+                .any(|v| v.ends_with(resource)),
+            "resources should contain {resource}: {builder_json}"
+        );
+    }
+}
+
+#[test]
 fn kiro_agent_non_model_override_is_adapter_drift() {
     let dir = tempfile::tempdir().unwrap();
     bin()
