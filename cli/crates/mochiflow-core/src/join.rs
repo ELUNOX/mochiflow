@@ -150,9 +150,9 @@ fn required_gitignore_entries_missing(cfg: &Config) -> Vec<&'static str> {
     let path = cfg.install_dir_path().join(".gitignore");
     let content = match std::fs::read_to_string(&path) {
         Ok(content) => content,
-        Err(_) => return vec!["engine/", "state/", "constitution.local.md"],
+        Err(_) => return vec!["state/", "constitution.local.md"],
     };
-    ["engine/", "state/", "constitution.local.md"]
+    ["state/", "constitution.local.md"]
         .into_iter()
         .filter(|entry| !content.lines().any(|line| line.trim() == *entry))
         .collect()

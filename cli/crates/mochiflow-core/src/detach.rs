@@ -1,5 +1,5 @@
-//! Project detach: remove MochiFlow runtime/adapter integration while
-//! preserving durable project knowledge by default.
+//! Project detach: remove MochiFlow local runtime/adapter integration while
+//! preserving durable project knowledge and the tracked engine by default.
 
 use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
@@ -92,17 +92,12 @@ pub fn run_detach(
         );
     } else {
         remove_or_report(
-            &cfg.engine_dir(),
-            &format!("{}/engine", cfg.install_dir),
-            dry_run,
-            &mut report,
-        );
-        remove_or_report(
             &cfg.state_dir(),
             &format!("{}/state", cfg.install_dir),
             dry_run,
             &mut report,
         );
+        report.kept.push(format!("{}/engine", cfg.install_dir));
         keep_default_project_data(cfg, &mut report);
     }
 

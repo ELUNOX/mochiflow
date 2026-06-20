@@ -132,10 +132,10 @@ pub fn validate_config(cfg: &Config) -> Vec<DoctorIssue> {
     issues
 }
 
-/// WARN when `{install_dir}/state/` is not gitignored. PR/QA delivery-artifact
-/// relocation into state/ relies on it being ignored; `init` writes
-/// `{install_dir}/.gitignore` for fresh projects, and this catches drift or
-/// older projects. Skipped when the project is not a git repo (cannot decide).
+/// WARN when `{install_dir}/state/` is not gitignored. PR handoff artifacts and
+/// generated caches live in state, so `init` writes `{install_dir}/.gitignore`
+/// for fresh projects, and this catches drift or older projects. Skipped when
+/// the project is not a git repo (cannot decide).
 pub fn check_state_ignored(cfg: &Config) -> Vec<DoctorIssue> {
     use std::process::Command;
     let root = &cfg.repo_root;

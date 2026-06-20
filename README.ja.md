@@ -77,6 +77,17 @@ mochiflow index
 
 `doctor` が通れば、AI ツールは MochiFlow の流れで動くための準備ができています。
 
+よく使うターミナルコマンド:
+
+```bash
+mochiflow guide                         # AIツール向けの使い方カードを表示
+mochiflow config show                   # パス、言語、surface、git設定を確認
+mochiflow lint [--spec SLUG]            # spec の整合性を確認
+mochiflow doctor [config|specs|adapter|engine]
+mochiflow adapter generate [--check]
+mochiflow pr --spec SLUG --title "..." --body-file PATH
+```
+
 ### チームで使う場合
 
 チームでは、最初に1人がリポジトリへ MochiFlow を導入します。
@@ -96,24 +107,24 @@ mochiflow init
 .mochiflow/specs/
 .mochiflow/adr/
 .mochiflow/INDEX.md
+.mochiflow/engine/
 AGENTS.md / CLAUDE.md / .kiro/ / .github/
 ```
 
 一方で、次のローカル生成ファイルはコミットしません。
 
 ```text
-.mochiflow/engine/
 .mochiflow/state/
 .mochiflow/constitution.local.md
 ```
 
-ほかのメンバーは、リポジトリを clone または pull したあと、`init` ではなく `join` を実行します。
+ほかのメンバーは、リポジトリを clone または pull するだけで、vendored engine と AI ツールの入口ファイルを取得できます。ローカル state、adapter、`INDEX.md` の修復が必要なときは `init` ではなく `join` を実行します。
 
 ```bash
 mochiflow join
 ```
 
-`join` は、このPCで必要なローカルファイルを復元し、AIツールの入口ファイルと `INDEX.md` も最新にします。
+`join` は、このPCで必要なローカル state を復元し、古い/壊れた作業ツリーでは `.mochiflow/engine/` も復元できます。AIツールの入口ファイルと `INDEX.md` も最新にします。
 手書きの structured adapter ファイルだけは自動で上書きせず、candidate を出して手動統合を促します。
 
 ## `init` で何が作られるか

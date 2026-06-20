@@ -807,7 +807,7 @@ fn detach_removes_managed_block_and_runtime_but_preserves_project_data() {
 
     let detached = fs::read_to_string(&agents).unwrap();
     assert_eq!(detached, "CUSTOM AGENTS\n");
-    assert!(!dir.path().join(".mochiflow/engine").exists());
+    assert!(dir.path().join(".mochiflow/engine").exists());
     assert!(!dir.path().join(".mochiflow/state").exists());
     assert!(dir.path().join(".mochiflow/config.toml").exists());
     assert!(dir.path().join(".mochiflow/specs").exists());
@@ -1751,7 +1751,7 @@ fn init_dry_run_json_writes_nothing_and_marks_dry_run() {
     assert!(!dir.path().join(".mochiflow/.gitignore").exists());
 }
 
-/// AC-04: init writes {install_dir}/.gitignore with engine/ and state/, and
+/// AC-04: init writes {install_dir}/.gitignore with state/ only, and
 /// never touches the project's top-level .gitignore.
 #[test]
 fn init_writes_install_gitignore() {
@@ -1764,8 +1764,9 @@ fn init_writes_install_gitignore() {
     let gi = dir.path().join(".mochiflow/.gitignore");
     assert!(gi.exists(), "{} should exist", gi.display());
     let body = fs::read_to_string(&gi).unwrap();
-    assert!(body.contains("engine/"), "got:\n{body}");
     assert!(body.contains("state/"), "got:\n{body}");
+    assert!(body.contains("constitution.local.md"), "got:\n{body}");
+    assert!(!body.contains("engine/"), "got:\n{body}");
     assert!(
         !dir.path().join(".gitignore").exists(),
         "top-level .gitignore must not be created"
@@ -1797,10 +1798,9 @@ fn init_gitignore_preserve_then_force() {
         .assert()
         .success();
     let body = fs::read_to_string(&gi).unwrap();
-    assert!(
-        body.contains("engine/") && body.contains("state/"),
-        "got:\n{body}"
-    );
+    assert!(body.contains("state/"), "got:\n{body}");
+    assert!(body.contains("constitution.local.md"), "got:\n{body}");
+    assert!(!body.contains("engine/"), "got:\n{body}");
 }
 
 /// A missing config.toml exits 2 for non-init commands.

@@ -79,25 +79,26 @@ AI tool needs.
 
 ## Join an initialized team project
 
-If `.mochiflow/config.toml` is already tracked in the repository, the project has
-already been initialized. After cloning or pulling, run:
+If `.mochiflow/config.toml` and `.mochiflow/engine/` are already tracked in the
+repository, the project has already been initialized. Clone or pull is enough
+for the AI-tool entrypoints to resolve. If local runtime state, adapters, or
+`INDEX.md` need repair, run:
 
 ```bash
 mochiflow join
 ```
 
-`join` restores local generated state such as `.mochiflow/engine/` and
-`.mochiflow/state/`, and refreshes the AI-tool entrypoints and `INDEX.md` when
-needed.
+`join` repairs local generated state such as `.mochiflow/state/`, can restore a
+missing `.mochiflow/engine/` for older or broken worktrees, and refreshes the
+AI-tool entrypoints and `INDEX.md` when needed.
 
 ## Detach later
 
 Use `mochiflow detach` when you want to remove MochiFlow from the active AI
 tools without deleting project knowledge. The command removes generated adapter
-content plus `.mochiflow/engine/` and `.mochiflow/state/`, but keeps
+content plus `.mochiflow/state/`, but keeps the tracked engine,
 `.mochiflow/config.toml`, specs, ADR, context, and constitution files. Running
-`mochiflow join` restores the local engine and adapters from the preserved
-config.
+`mochiflow join` repairs local state and adapters from the preserved config.
 
 Use purge mode only for a full deletion:
 

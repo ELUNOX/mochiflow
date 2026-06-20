@@ -63,16 +63,28 @@ mochiflow doctor
 When `doctor` passes, your AI tool has the project context and workflow
 instructions it needs.
 
+Useful terminal commands:
+
+```bash
+mochiflow guide                         # print the AI-tool usage card
+mochiflow config show                   # inspect resolved paths, language, surfaces, and git
+mochiflow lint [--spec SLUG]            # check spec consistency
+mochiflow doctor [config|specs|adapter|engine]
+mochiflow adapter generate [--check]
+mochiflow pr --spec SLUG --title "..." --body-file PATH
+```
+
 For a repository where MochiFlow is already tracked by the team, do not run a
-fresh setup. After cloning or pulling, run:
+fresh setup. Cloning or pulling brings down the vendored engine and AI-tool
+entrypoints. If local runtime state, adapters, or `INDEX.md` need repair, run:
 
 ```bash
 mochiflow join
 ```
 
-`join` restores local generated state such as `.mochiflow/engine/` and
-`.mochiflow/state/`, and refreshes the AI-tool entrypoints and `INDEX.md` when
-needed.
+`join` repairs local generated state such as `.mochiflow/state/`, can restore a
+missing `.mochiflow/engine/` for older or broken worktrees, and refreshes the
+AI-tool entrypoints and `INDEX.md` when needed.
 
 ## What `init` creates
 
@@ -82,6 +94,7 @@ files your AI tool reads.
 ```text
 .mochiflow/
   config.toml        # project settings, adapters, verification commands
+  engine/            # vendored workflow engine tracked with the project
   constitution.md    # always-loaded project rules written by you
   context/           # current project map, filled from code during onboarding
   specs/             # feature specs created by the workflow
@@ -95,9 +108,9 @@ During onboarding, your AI agent resolves TODOs, fills project context from the
 codebase, regenerates adapters, and finishes by checking `mochiflow doctor`.
 
 To temporarily remove the project integration, run `mochiflow detach`. It
-removes generated adapter content plus `.mochiflow/engine/` and
-`.mochiflow/state/`, while preserving config, specs, ADR, context, and
-constitution files so `mochiflow join` can restore the integration later. Use
+removes generated adapter content plus `.mochiflow/state/`, while preserving the
+tracked engine, config, specs, ADR, context, and constitution files so
+`mochiflow join` can repair the integration later. Use
 `mochiflow detach --purge --confirm "delete mochiflow data"` only when you want
 to delete all MochiFlow project data.
 
@@ -175,8 +188,8 @@ Pick tools with `--adapter` during init. Regenerate anytime with
 custom content and receive a MochiFlow-managed block.
 
 Remove generated adapter content and runtime state with `mochiflow detach`.
-This preserves project knowledge by default; `--purge` requires the exact
-confirmation phrase `delete mochiflow data`.
+This preserves the tracked engine and project knowledge by default; `--purge`
+requires the exact confirmation phrase `delete mochiflow data`.
 
 ## Learn more
 

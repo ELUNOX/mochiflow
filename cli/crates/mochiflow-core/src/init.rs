@@ -399,11 +399,11 @@ fn find_engine_source() -> Option<PathBuf> {
     None
 }
 
-/// Write `{install_dir}/.gitignore` so the vendored engine copy and runtime
-/// state are never tracked, guaranteeing the ignore that delivery-artifact
-/// relocation relies on. Returns `Ok(true)` when written, `Ok(false)` when an
-/// existing file is kept (no `--force`). Never touches the project's top-level
-/// `.gitignore` (init's source-tree-inviolable rule).
+/// Write `{install_dir}/.gitignore` so local runtime state is never tracked.
+/// The vendored engine is project state and is tracked by default. Returns
+/// `Ok(true)` when written, `Ok(false)` when an existing file is kept (no
+/// `--force`). Never touches the project's top-level `.gitignore` (init's
+/// source-tree-inviolable rule).
 fn write_install_gitignore(install_dir: &Path, force: bool) -> std::io::Result<bool> {
     let path = install_dir.join(".gitignore");
     if path.exists() && !force {
@@ -411,7 +411,7 @@ fn write_install_gitignore(install_dir: &Path, force: bool) -> std::io::Result<b
     }
     std::fs::write(
         &path,
-        "# Managed by mochiflow init. Regenerated, local, or runtime-derived — do not track.\nengine/\nstate/\nconstitution.local.md\n",
+        "# Managed by mochiflow init. Local runtime-derived files — do not track.\nstate/\nconstitution.local.md\n",
     )?;
     Ok(true)
 }

@@ -34,17 +34,19 @@ The `codex` alias resolves to the neutral `agents` adapter.
 
 ## Joining an existing project
 
-`mochiflow init` creates the shared project configuration. In a team repository
-where `.mochiflow/config.toml` is already tracked, use:
+`mochiflow init` creates the shared project configuration and vendored engine.
+In a team repository where `.mochiflow/config.toml` and `.mochiflow/engine/` are
+already tracked, clone or pull is enough for the AI-tool entrypoints to resolve.
+If local runtime state, adapters, or `INDEX.md` need repair, use:
 
 ```bash
 mochiflow join
 ```
 
-`join` restores local generated state (`.mochiflow/engine/` and
-`.mochiflow/state/`) and refreshes shared adapter files and `INDEX.md` when
-needed. Existing Markdown instructions keep their custom content; MochiFlow only
-updates its managed block.
+`join` repairs local generated state (`.mochiflow/state/`), can restore a missing
+`.mochiflow/engine/` for older or broken worktrees, and refreshes shared adapter
+files and `INDEX.md` when needed. Existing Markdown instructions keep their
+custom content; MochiFlow only updates its managed block.
 
 Remove adapter integration with:
 
@@ -52,10 +54,10 @@ Remove adapter integration with:
 mochiflow detach
 ```
 
-The default detach removes only generated adapter content and runtime state, so
-the preserved config and project knowledge can be restored with `mochiflow
-init`. To delete everything under `.mochiflow/`, use `mochiflow detach --purge
---confirm "delete mochiflow data"`.
+The default detach removes only generated adapter content and runtime state,
+leaving the tracked engine, config, and project knowledge in place. To delete
+everything under `.mochiflow/`, use `mochiflow detach --purge --confirm "delete
+mochiflow data"`.
 
 ## Language
 
@@ -81,9 +83,10 @@ Use `mochiflow config show` to inspect the active project configuration.
 
 ## What to track
 
-Track authored project knowledge:
+Track project files:
 
 - `.mochiflow/config.toml`
+- `.mochiflow/engine/`
 - `.mochiflow/context/`
 - `.mochiflow/specs/`
 - `.mochiflow/adr/`
@@ -92,10 +95,10 @@ Track authored project knowledge:
 Ignore regenerated or runtime-derived state:
 
 ```gitignore
-.mochiflow/engine/
 .mochiflow/state/
+.mochiflow/constitution.local.md
 ```
 
-The vendored engine copy is restored by `init`, `join`, or `upgrade`; runtime
-state is derived from commands and should not be committed. Team members
-normally restore these local files with `mochiflow join`.
+The vendored engine copy is created by `init` and updated by `upgrade`; because
+it is tracked, engine upgrades are reviewed and committed like other project
+changes. Runtime state is derived from commands and should not be committed.
