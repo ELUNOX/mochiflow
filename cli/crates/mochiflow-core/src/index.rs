@@ -362,9 +362,7 @@ fn render_index(cfg: &Config, now: &str) -> String {
 }
 
 fn md_table_cell(value: &str) -> String {
-    value
-        .replace(['\r', '\n'], " ")
-        .replace('|', r"\|")
+    value.replace(['\r', '\n'], " ").replace('|', r"\|")
 }
 
 fn url_path_segment(value: &str) -> String {
