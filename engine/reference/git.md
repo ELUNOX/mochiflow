@@ -83,7 +83,7 @@ dirty before the patch, do not commit; report the files and verification result.
 **before** `mochiflow pr`. It bundles, in a single commit:
 
 - `spec.yaml` `status: done` (+ `updated`);
-- the AC Verification Matrix rows added at ship (build already recorded the rest);
+- the AC Matrix rows added at ship (build already recorded the rest);
 - `qa-instructions.md`, the reviewer-facing QA guide generated at ship;
 - the ADR fold (`[adr].decisions` / `[adr].pitfalls`);
 - the archive move `{specs_dir}/{slug}/` → `{specs_dir}/_done/{slug}/`;

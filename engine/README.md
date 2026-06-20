@@ -14,6 +14,21 @@ and resolves every project path/command from `config.toml` (one level up, at
 - Adapter templates → `adapters/{tool}/`
 - Read-only reviewer → `agents/independent-reviewer.md`
 
+## Artifact model
+
+- `spec.md` is the product contract: problem, goal, scope, ACs, QA scenarios,
+  NFRs, and the verification plan.
+- `design.md` is the technical contract when required: decisions, alternatives,
+  interface contracts, failure modes, rollout / rollback, observability, and
+  test strategy.
+- `tasks.md` is the executable checklist when required: dependency-ordered
+  `T-###` tasks with files, done criteria, and stop conditions.
+- The AC Matrix lives in `spec.md` and tracks AC → implementation →
+  verification → evidence → result.
+
+Generated prose follows the project language. Machine-readable IDs and Matrix
+results remain stable English tokens.
+
 ## Layout
 
 ```

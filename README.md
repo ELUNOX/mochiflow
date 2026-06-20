@@ -74,6 +74,22 @@ mochiflow adapter generate [--check]
 mochiflow pr --spec SLUG --title "..." --body-file PATH
 ```
 
+## Artifact model
+
+MochiFlow keeps state in files, not in chat history. A spec lives under
+`.mochiflow/specs/{slug}/` and grows only as much structure as the change needs:
+
+| Artifact | Role |
+| --- | --- |
+| `spec.md` | Product contract: problem, goal, scope, acceptance criteria, QA scenarios, non-functional requirements, and verification plan. |
+| `design.md` | Technical contract: decisions, alternatives, interface contracts, failure modes, rollout / rollback, observability, and test strategy. |
+| `tasks.md` | Executable checklist: dependency-ordered tasks an AI agent can run and verify. |
+| AC Matrix | Traceability ledger inside `spec.md`: AC → implementation → verification → evidence → result. |
+
+Small patches skip spec artifacts. Normal work uses `discuss → plan → build →
+ship`; only two delivery approvals exist: approval to build, and approval of the
+PR content before `mochiflow pr`.
+
 For a repository where MochiFlow is already tracked by the team, do not run a
 fresh setup. Cloning or pulling brings down the vendored engine and AI-tool
 entrypoints. If local runtime state, adapters, or `INDEX.md` need repair, run:
@@ -151,7 +167,8 @@ mochiflow-plan
 ```
 
 The agent writes a design document under `.mochiflow/specs/...` and waits for
-your approval. Nothing is implemented yet.
+your approval. Depending on depth, this includes `spec.md`, `tasks.md`, and
+`design.md`; nothing is implemented yet.
 
 When the plan looks right:
 
@@ -160,7 +177,7 @@ mochiflow-build
 ```
 
 The agent implements the plan, updates tests, runs the configured verification
-command, and reports what changed.
+command, updates the AC Matrix, and reports what changed.
 
 When you are ready to open the PR:
 
@@ -169,7 +186,7 @@ mochiflow-ship
 ```
 
 MochiFlow records the important decisions and pitfalls, then follows the
-project's PR path.
+project's PR path through `mochiflow pr`.
 
 `mochiflow-discuss`, `mochiflow-plan`, `mochiflow-build`, and `mochiflow-ship`
 are messages for your AI tool, not terminal commands.

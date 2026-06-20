@@ -30,21 +30,21 @@ For a multi-surface spec, evaluate each surface and adopt the highest risk.
 
 | risk | reviewer cadence | integration log | commit granularity |
 | --- | --- | --- | --- |
-| `standard` | none (AC Verification Matrix only) | not written | 1 commit |
+| `standard` | none (AC Matrix only) | not written | 1 commit |
 | `elevated` | independent-reviewer once, after all tasks | optional | per logical step |
 | `critical` | independent-reviewer after **each** task | required, appended per task | per task |
 
 Reviewer = `agents/independent-reviewer.md`, read-only. A recorded reviewer
 verdict (`pass` / `pass-with-comments`) is required when `risk ≥ elevated`; this
 is a build-completion gate and one of the acceptance conditions ship checks
-before setting `done` (`workflow.md ## AC Verification Matrix`). Verified commit
+before setting `done` (`workflow.md ## AC Matrix`). Verified commit
 units may be committed before the mandatory reviewer run; reviewer findings are
 fixed, verified, and committed as follow-up work before build completes. Record
 mandatory reviewer runs in `design.md ## Review Results`, using `Reviewer mode:
 delegated | inline` and `Verdict: pass | pass-with-comments | fail`. For
 `critical`, append one entry per required review run; for `elevated`, append the
 single post-task review entry. Branch / PR / archive mechanics live in
-`git.md`; the AC Verification Matrix format and delivery approval gates live in
+`git.md`; the AC Matrix format and delivery approval gates live in
 `workflow.md`.
 
 ## Review transport
@@ -72,6 +72,10 @@ findings or resuming the flow.
 - `risk ∈ {elevated, critical}`
 - `integration ≠ none`
 - `len(surfaces) > 1`
+- migration or data loss risk exists
+- external contract, API, or schema changes exist
+- security, privacy, performance, or accessibility impact exists
+- an independent reviewer is required
 
 Otherwise `design.md` is optional and the spec may be `spec.md` only.
 

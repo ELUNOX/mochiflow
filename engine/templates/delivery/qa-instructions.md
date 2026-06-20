@@ -30,11 +30,11 @@ Human runs when needed:
 
 ## Scenarios
 
-| # | Scenario | Scope | Kind | Priority | Result |
-| --- | --- | --- | --- | --- | --- |
-| QA-01 | {scenario-01-name} | {surface} / cross-surface / human | Automated | Required | Not run |
-| QA-02 | {scenario-02-name} | {surface} / cross-surface / human | Human operation | Required | Not run |
-| QA-03 | {scenario-03-name} | {surface} / cross-surface / human | Human visual | Recommended | Not run |
+| QA | AC | Scenario | Scope | Kind | Priority | Result | Evidence |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| QA-01 | AC-01 | {scenario-01-name} | {surface} / cross-surface / human | Automated | Required | UNVERIFIED |  |
+| QA-02 | AC-02 | {scenario-02-name} | {surface} / cross-surface / human | Human operation | Required | PENDING_HUMAN |  |
+| QA-03 | AC-03 | {scenario-03-name} | {surface} / cross-surface / human | Human visual | Recommended | PENDING_HUMAN |  |
 
 ---
 
@@ -43,10 +43,11 @@ Human runs when needed:
 ### QA-01: {scenario-01-name}
 
 **Precondition**: {precondition}
+**Related AC**: AC-01
 **Scope**: {surface} / cross-surface / human
 **Runner**: Automated / Human operation / Human visual
 **Check method**: automated test / AI records result after human operation / human visual confirmation
-**Result**: Not run / PASS / FAIL / 人間確認待ち / 人間確認済み / 対象外（理由）
+**Result**: UNVERIFIED / PASS / FAIL / PENDING_HUMAN / HUMAN_CONFIRMED / N/A: <reason>
 **Evidence**: {screenshot path, log path, or human confirmation comment}
 
 Human operation:
@@ -70,6 +71,8 @@ Human visual check when needed:
 ---
 
 ### QA-02: {scenario-02-name}
+
+**Related AC**: AC-02
 
 ...
 
@@ -102,6 +105,6 @@ When human confirmation passes:
 ```text
 Scenario: QA-XX
 Reviewer: {name or "human"}
-Result: 人間確認済み
+Result: HUMAN_CONFIRMED
 Comment:
 ```
