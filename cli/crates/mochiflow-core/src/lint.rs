@@ -14,7 +14,7 @@ use std::sync::LazyLock;
 static AC_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\bAC-\d{2,}\b").expect("AC_RE"));
 #[allow(clippy::expect_used)]
 static TASK_AC_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(?m)^対応 AC:\s*(.+)$").expect("TASK_AC_RE"));
+    LazyLock::new(|| Regex::new(r"(?m)^(?:Covers AC|対応 AC):\s*(.+)$").expect("TASK_AC_RE"));
 #[allow(clippy::expect_used)]
 static EARS_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\b(?:SHALL|WHEN|WHILE|WHERE|THEN)\b").expect("EARS_RE"));
@@ -45,6 +45,10 @@ fn section<'a>(text: &'a str, heading: &str) -> Option<&'a str> {
     Some(&text[body_start..end])
 }
 
+fn section_any<'a>(text: &'a str, headings: &[&str]) -> Option<&'a str> {
+    headings.iter().find_map(|heading| section(text, heading))
+}
+
 fn ac_ids(text: &str) -> Vec<String> {
     AC_RE
         .find_iter(text)
@@ -53,7 +57,7 @@ fn ac_ids(text: &str) -> Vec<String> {
 }
 
 fn ac_ids_in_spec(text: &str) -> BTreeSet<String> {
-    let body = section(text, "受入基準").unwrap_or(text);
+    let body = section_any(text, &["Acceptance Criteria", "受入基準"]).unwrap_or(text);
     ac_ids(body).into_iter().collect()
 }
 
@@ -61,7 +65,7 @@ fn ac_ids_in_tasks(text: &str) -> BTreeSet<String> {
     let mut ids = BTreeSet::new();
     for cap in TASK_AC_RE.captures_iter(text) {
         let line = &cap[1];
-        if line.contains("なし") {
+        if line.contains("なし") || line.trim().eq_ignore_ascii_case("none") {
             continue;
         }
         for id in ac_ids(line) {
@@ -72,7 +76,7 @@ fn ac_ids_in_tasks(text: &str) -> BTreeSet<String> {
 }
 
 fn ac_lines_missing_ears(text: &str) -> BTreeSet<String> {
-    let body = section(text, "受入基準").unwrap_or("");
+    let body = section_any(text, &["Acceptance Criteria", "受入基準"]).unwrap_or("");
     let mut missing = BTreeSet::new();
     for line in body.lines() {
         let found: Vec<String> = AC_RE
@@ -324,6 +328,13 @@ fn lint_spec_dir(spec_dir: &Path, allowed_surfaces: &HashSet<String>) -> Vec<Iss
                     message: "status is done but AC Verification Matrix contains FAIL".into(),
                 });
             }
+            if m.contains("人間確認待ち") || m.contains("pending human verification") {
+                issues.push(Issue {
+                    severity: "FAIL".into(),
+                    path: spec_dir.join("spec.yaml"),
+                    message: "status is done but AC Verification Matrix contains pending human verification".into(),
+                });
+            }
             let matrix_acs: BTreeSet<String> = ac_ids(m).into_iter().collect();
             let uncovered: Vec<_> = spec_acs.difference(&matrix_acs).cloned().collect();
             if !uncovered.is_empty() {
@@ -344,7 +355,7 @@ fn lint_spec_dir(spec_dir: &Path, allowed_surfaces: &HashSet<String>) -> Vec<Iss
                     severity: "FAIL".into(),
                     path: tasks_md.clone(),
                     message: format!(
-                        "AC not covered by any task 対応 AC: {}",
+                        "AC not covered by any task Covers AC: {}",
                         untasked.join(", ")
                     ),
                 });

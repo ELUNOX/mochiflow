@@ -522,6 +522,20 @@ fn lint_done_fails_when_matrix_contains_fail() {
 }
 
 #[test]
+fn lint_done_fails_when_matrix_contains_pending_human_verification() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: done");
+    for result in ["人間確認待ち", "pending human verification"] {
+        let md = format!(
+            "# S\n\n## Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
+             ## AC Verification Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | {result} |\n"
+        );
+        let (code, out) = run_lint_case(&yaml, &md, None, None);
+        assert_eq!(code, 1, "{result}: {out}");
+        assert!(out.contains("pending human verification"), "{result}: {out}");
+    }
+}
+
+#[test]
 fn lint_done_fails_when_ac_not_in_matrix() {
     let yaml = GOOD_YAML.replace("status: approved", "status: done");
     let md = "# S\n\n## 受入基準\n\n- AC-01: THE SYSTEM SHALL x.\n- AC-02: WHEN y, THE SYSTEM SHALL z.\n\n\
@@ -543,9 +557,19 @@ fn lint_fails_when_tasks_do_not_cover_all_acs() {
     let (code, out) = run_lint_case(&yaml, md, None, Some(tasks));
     assert_eq!(code, 1);
     assert!(
-        out.contains("AC not covered by any task 対応 AC: AC-02"),
+        out.contains("AC not covered by any task Covers AC: AC-02"),
         "{out}"
     );
+}
+
+#[test]
+fn lint_accepts_english_acceptance_and_task_headings() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: done");
+    let md = "# S\n\n## Acceptance Criteria (EARS)\n\n- AC-01: THE SYSTEM SHALL x.\n";
+    let tasks = "# Tasks\n\n## Task 1\n\nCovers AC: AC-01\n\n\
+                 ## AC Verification Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | PASS |\n";
+    let (code, out) = run_lint_case(&yaml, md, None, Some(tasks));
+    assert_eq!(code, 0, "{out}");
 }
 
 #[test]
