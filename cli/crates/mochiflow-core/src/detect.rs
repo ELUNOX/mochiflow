@@ -177,6 +177,16 @@ fn read_pkg_scripts(pkg: &Path) -> BTreeMap<String, String> {
 /// Returns `Medium` confidence (not `High`) when a package manifest exposes
 /// more than one candidate script (e.g. both `test` and `lint`), so the
 /// ambiguity is surfaced as a confirm marker; `Low` when nothing is detected.
+fn shell_single_quote(value: &str) -> String {
+    format!("'{}'", value.replace('\'', "'\\''"))
+}
+
+fn subdir_command_prefix(subdir: Option<&str>) -> String {
+    subdir
+        .map(|s| format!("cd {} && ", shell_single_quote(s)))
+        .unwrap_or_default()
+}
+
 fn infer_verify(root: &Path, subdir: Option<&str>, runner: &str) -> (String, Confidence) {
     let base = match subdir {
         Some(s) => root.join(s),
@@ -192,7 +202,7 @@ fn infer_verify(root: &Path, subdir: Option<&str>, runner: &str) -> (String, Con
             .filter(|c| scripts.contains_key(*c))
             .collect();
         if let Some(cmd) = present.first() {
-            let prefix = subdir.map(|s| format!("cd {s} && ")).unwrap_or_default();
+            let prefix = subdir_command_prefix(subdir);
             let run_cmd = format!("{runner} run");
             let confidence = if present.len() == 1 {
                 Confidence::High
@@ -204,12 +214,12 @@ fn infer_verify(root: &Path, subdir: Option<&str>, runner: &str) -> (String, Con
     }
     let cargo = base.join("Cargo.toml");
     if cargo.exists() {
-        let prefix = subdir.map(|s| format!("cd {s} && ")).unwrap_or_default();
+        let prefix = subdir_command_prefix(subdir);
         return (format!("{prefix}cargo test"), Confidence::High);
     }
     let pyproject = base.join("pyproject.toml");
     if pyproject.exists() {
-        let prefix = subdir.map(|s| format!("cd {s} && ")).unwrap_or_default();
+        let prefix = subdir_command_prefix(subdir);
         return (format!("{prefix}uv run ruff check ."), Confidence::High);
     }
     ("TODO: define test command".into(), Confidence::Low)
@@ -598,6 +608,21 @@ mod tests {
         assert!(web.description.contains("site-a"));
         assert!(web.description.contains("site-b"));
         let api = surfaces.iter().find(|s| s.name == "api").unwrap();
+        assert_eq!(api.confidence, Confidence::Medium);
+    }
+
+    #[test]
+    fn monorepo_api_subdir_with_space_is_shell_quoted() {
+        let d = tmp();
+        for sub in ["site", "api app"] {
+            let dir = d.path().join(sub);
+            std::fs::create_dir_all(&dir).unwrap();
+            std::fs::write(dir.join("package.json"), r#"{"scripts":{"test":"vitest"}}"#).unwrap();
+        }
+
+        let surfaces = detect_surfaces(d.path());
+        let api = surfaces.iter().find(|s| s.name == "api").unwrap();
+        assert_eq!(api.verify, "cd 'api app' && npm run test");
         assert_eq!(api.confidence, Confidence::Medium);
     }
 
