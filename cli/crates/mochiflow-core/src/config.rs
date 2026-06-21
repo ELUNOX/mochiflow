@@ -5,7 +5,7 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -22,8 +22,10 @@ pub enum ConfigError {
 #[derive(Debug, Deserialize)]
 pub struct RawConfig {
     pub schema_version: u32,
-    #[serde(default = "default_language")]
-    pub language: String,
+    #[serde(default)]
+    pub language: Option<String>,
+    #[serde(default)]
+    pub i18n: Option<RawI18nConfig>,
     pub install_dir: String,
     pub specs_dir: String,
     /// Generated spec index path (top-level; not part of a living-spec layer).
@@ -45,12 +47,16 @@ pub struct RawConfig {
     pub surfaces: BTreeMap<String, RawSurface>,
 }
 
-fn default_language() -> String {
-    "en".to_string()
+#[derive(Debug, Deserialize)]
+pub struct RawI18nConfig {
+    #[serde(default)]
+    pub artifact_language: Option<String>,
+    #[serde(default)]
+    pub conversation_language: Option<String>,
 }
 
 /// Always-loaded layer — user-authored project and local rules.
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize)]
 pub struct RawConstitution {
     pub project: String,
     pub local: String,
@@ -58,7 +64,7 @@ pub struct RawConstitution {
 
 /// Foundational layer — refresh targets (`onboard` / `refresh-context`
 /// regenerate from code; always-loaded orientation map).
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize)]
 pub struct RawContext {
     pub product: String,
     pub structure: String,
@@ -66,13 +72,13 @@ pub struct RawContext {
 }
 
 /// ADR layer — fold targets (`ship` appends durable decisions and pitfalls).
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize)]
 pub struct RawAdr {
     pub decisions: String,
     pub pitfalls: String,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize)]
 pub struct RawGit {
     #[serde(default = "default_provider")]
     pub provider: String,
@@ -105,7 +111,7 @@ fn default_branch() -> String {
     "main".to_string()
 }
 
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize)]
 pub struct RawAdapter {
     /// Legacy single tool (backward compat).
     #[serde(default)]
@@ -132,7 +138,7 @@ fn default_tool() -> String {
     "agents".to_string()
 }
 
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize)]
 pub struct RawWrite {
     #[serde(default)]
     pub allow: Vec<String>,
@@ -140,7 +146,7 @@ pub struct RawWrite {
     pub deny: Vec<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize)]
 pub struct RawSurface {
     #[serde(default)]
     pub description: String,
@@ -152,7 +158,8 @@ pub struct RawSurface {
 #[derive(Debug)]
 pub struct Config {
     pub schema_version: u32,
-    pub language: String,
+    pub i18n: I18nConfig,
+    pub i18n_meta: I18nMeta,
     pub install_dir: String,
     pub specs_dir: String,
     pub index: String,
@@ -165,6 +172,29 @@ pub struct Config {
     pub surfaces: BTreeMap<String, RawSurface>,
     pub repo_root: PathBuf,
     pub config_path: PathBuf,
+}
+
+#[derive(Debug, Clone)]
+pub struct I18nConfig {
+    pub artifact_language: String,
+    pub conversation_language: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum I18nValueSource {
+    I18n,
+    LegacyLanguage,
+    Default,
+}
+
+#[derive(Debug, Clone)]
+pub struct I18nMeta {
+    pub has_i18n_table: bool,
+    pub has_legacy_language: bool,
+    pub missing_artifact_language: bool,
+    pub missing_conversation_language: bool,
+    pub artifact_source: I18nValueSource,
+    pub conversation_source: I18nValueSource,
 }
 
 impl Config {
@@ -236,6 +266,16 @@ impl Config {
             .unwrap_or("agents")
     }
 
+    /// Language to use for CLI text when conversation language cannot be inferred
+    /// from a current user utterance. Agents still treat `auto` dynamically.
+    pub fn conversation_output_language(&self) -> &str {
+        if self.i18n.conversation_language == "auto" {
+            &self.i18n.artifact_language
+        } else {
+            &self.i18n.conversation_language
+        }
+    }
+
     pub fn verify_command(
         &self,
         surface: &str,
@@ -264,51 +304,18 @@ impl Config {
     }
 }
 
-/// Load config from a specific path.
-pub fn load_config(config_path: &Path) -> Result<Config, ConfigError> {
-    if !config_path.exists() {
-        return Err(ConfigError::NotFound(config_path.to_path_buf()));
-    }
-    let text = std::fs::read_to_string(config_path)
-        .map_err(|e| ConfigError::Invalid(format!("cannot read: {e}")))?;
-    let raw: RawConfig = toml::from_str(&text)?;
-    resolve(raw, config_path)
+pub fn is_valid_language_tag(value: &str) -> bool {
+    regex::Regex::new(r"^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$")
+        .map(|re| re.is_match(value))
+        .unwrap_or(false)
 }
 
-/// Derive repo_root from config_path and install_dir (matches Python logic).
-fn resolve(raw: RawConfig, config_path: &Path) -> Result<Config, ConfigError> {
-    validate_install_dir(&raw.install_dir)?;
-    validate_adapter_config(&raw.adapter)?;
+pub fn is_valid_artifact_language(value: &str) -> bool {
+    value != "auto" && is_valid_language_tag(value)
+}
 
-    let config_abs = config_path
-        .canonicalize()
-        .unwrap_or_else(|_| config_path.to_path_buf());
-    // config.toml lives at <install_dir>/config.toml, so its parent is the
-    // install dir and that parent's parent is the repo root. Do not infer the
-    // repo root from the configured install_dir text; that value is data to
-    // validate, not an authority for path traversal.
-    let install_dir_abs = config_abs.parent().unwrap_or(Path::new("."));
-    let repo_root = install_dir_abs
-        .parent()
-        .unwrap_or(Path::new("/"))
-        .to_path_buf();
-
-    Ok(Config {
-        schema_version: raw.schema_version,
-        language: raw.language,
-        install_dir: raw.install_dir,
-        specs_dir: raw.specs_dir,
-        index: raw.index,
-        constitution: raw.constitution,
-        context: raw.context,
-        adr: raw.adr,
-        git: raw.git,
-        adapter: raw.adapter,
-        write: raw.write,
-        surfaces: raw.surfaces,
-        repo_root,
-        config_path: config_abs,
-    })
+pub fn is_valid_conversation_language(value: &str) -> bool {
+    value == "auto" || is_valid_language_tag(value)
 }
 
 fn validate_install_dir(install_dir: &str) -> Result<(), ConfigError> {
@@ -362,4 +369,125 @@ fn validate_adapter_config(adapter: &RawAdapter) -> Result<(), ConfigError> {
         ));
     }
     Ok(())
+}
+
+/// Load config from a specific path.
+pub fn load_config(config_path: &Path) -> Result<Config, ConfigError> {
+    if !config_path.exists() {
+        return Err(ConfigError::NotFound(config_path.to_path_buf()));
+    }
+    let text = std::fs::read_to_string(config_path)
+        .map_err(|e| ConfigError::Invalid(format!("cannot read: {e}")))?;
+    let raw: RawConfig = toml::from_str(&text)?;
+    resolve(raw, config_path)
+}
+
+/// Derive repo_root from config_path and install_dir (matches Python logic).
+fn resolve(raw: RawConfig, config_path: &Path) -> Result<Config, ConfigError> {
+    validate_install_dir(&raw.install_dir)?;
+    validate_adapter_config(&raw.adapter)?;
+
+    let config_abs = config_path
+        .canonicalize()
+        .unwrap_or_else(|_| config_path.to_path_buf());
+    // config.toml lives at <install_dir>/config.toml, so its parent is the
+    // install dir and that parent's parent is the repo root. Do not infer the
+    // repo root from the configured install_dir text; that value is data to
+    // validate, not an authority for path traversal.
+    let install_dir_abs = config_abs.parent().unwrap_or(Path::new("."));
+    let repo_root = install_dir_abs
+        .parent()
+        .unwrap_or(Path::new("/"))
+        .to_path_buf();
+
+    let has_i18n_table = raw.i18n.is_some();
+    let has_legacy_language = raw.language.is_some();
+    let missing_artifact_language = raw
+        .i18n
+        .as_ref()
+        .is_some_and(|i18n| i18n.artifact_language.is_none());
+    let missing_conversation_language = raw
+        .i18n
+        .as_ref()
+        .is_some_and(|i18n| i18n.conversation_language.is_none());
+
+    let (artifact_language, artifact_source) = if let Some(language) = raw
+        .i18n
+        .as_ref()
+        .and_then(|i18n| i18n.artifact_language.clone())
+    {
+        (language, I18nValueSource::I18n)
+    } else if let Some(language) = raw.language.clone() {
+        (language, I18nValueSource::LegacyLanguage)
+    } else {
+        ("en".to_string(), I18nValueSource::Default)
+    };
+    let (conversation_language, conversation_source) = if let Some(language) = raw
+        .i18n
+        .as_ref()
+        .and_then(|i18n| i18n.conversation_language.clone())
+    {
+        (language, I18nValueSource::I18n)
+    } else {
+        ("auto".to_string(), I18nValueSource::Default)
+    };
+
+    Ok(Config {
+        schema_version: raw.schema_version,
+        i18n: I18nConfig {
+            artifact_language,
+            conversation_language,
+        },
+        i18n_meta: I18nMeta {
+            has_i18n_table,
+            has_legacy_language,
+            missing_artifact_language,
+            missing_conversation_language,
+            artifact_source,
+            conversation_source,
+        },
+        install_dir: raw.install_dir,
+        specs_dir: raw.specs_dir,
+        index: raw.index,
+        constitution: raw.constitution,
+        context: raw.context,
+        adr: raw.adr,
+        git: raw.git,
+        adapter: raw.adapter,
+        write: raw.write,
+        surfaces: raw.surfaces,
+        repo_root,
+        config_path: config_abs,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn validates_bcp47_style_language_tags() {
+        for value in [
+            "en", "ja", "ko", "fr", "de", "zh-Hans", "zh-Hant", "pt-BR", "es-419",
+        ] {
+            assert!(is_valid_language_tag(value), "{value}");
+        }
+        for value in ["", " ", "ja JP", "ja\n", "../ja"] {
+            assert!(!is_valid_language_tag(value), "{value:?}");
+        }
+    }
+
+    #[test]
+    fn artifact_language_rejects_auto() {
+        assert!(is_valid_artifact_language("ja"));
+        assert!(!is_valid_artifact_language("auto"));
+    }
+
+    #[test]
+    fn conversation_language_allows_auto() {
+        assert!(is_valid_conversation_language("auto"));
+        assert!(is_valid_conversation_language("pt-BR"));
+        assert!(!is_valid_conversation_language(""));
+        assert!(!is_valid_conversation_language("../ja"));
+    }
 }

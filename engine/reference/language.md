@@ -1,37 +1,56 @@
 # Language Policy
 
-## Response and generated artifacts
+MochiFlow separates language into three domains:
 
-Conversational responses and generated spec artifacts under `{specs_dir}` are
-written in the project language declared by `language` in `config.toml`. Use
-`mochiflow config show` to read it.
+1. Engine language
+2. Artifact language
+3. Conversation language
 
-Generated prose, human-facing headings, placeholders, and examples follow the
-project language. Machine-readable identifiers and status values remain stable
-English tokens:
+## Engine Language
 
-- `AC-01`, `QA-01`, `T-001`, `NFR-01`
-- `UNVERIFIED`, `PASS`, `PENDING_HUMAN`, `HUMAN_CONFIRMED`, `N/A: <reason>`, `FAIL`
-- `draft`, `approved`, `done`
-- `feature`, `fix`, `refactor`, `docs`, `chore`
-- `standard`, `elevated`, `critical`
+Engine files are always authored in English and are not configurable:
 
-Do not localize canonical IDs or enum values. It is fine to explain their
-meaning in prose using the project language.
+- `commands/**`
+- `reference/**`
+- `agents/**`
+- `adapters/**`
+- `templates/**`
 
-## User-facing communication
+Templates are English source templates. They describe structure, required
+sections, and constraints; they are not the final prose language of rendered
+artifacts.
+
+## Artifact Language
+
+Durable artifacts must be written in `[i18n].artifact_language` from
+`config.toml`. Use `mochiflow config show` to read the resolved value.
+
+Artifact language applies to generated project prose such as:
+
+- `spec.md`, `design.md`, and `tasks.md`
+- PR titles and descriptions
+- QA instructions
+- backlog seeds
+- integration logs and review summaries
+- session handoff prompts
+
+Do not infer artifact language from the current chat turn unless onboarding has
+no better signal. During setup, prefer explicit config / CLI options and
+repository human-facing docs over the current conversation.
+
+## Conversation Language
+
+Conversation should use `[i18n].conversation_language`.
+
+If `[i18n].conversation_language = "auto"`, respond in the user's current
+language. If the current language cannot be inferred in a non-conversational
+context, use the artifact language as a deterministic fallback.
 
 MochiFlow uses precise internal vocabulary for routing and validation, but the
 user experience should read like normal project collaboration. In ordinary
 conversation and completion summaries, translate internal terms into plain
-language in the configured project language. Keep internal terms for file names,
-commands, metadata fields, schema enum values, and canonical table tokens
-required by tooling.
-
-Human-facing headings and explanatory prose inside generated spec artifacts
-follow the project language unless a heading is explicitly documented as
-machine-readable. Preserve command tokens, filenames, metadata values, schema
-enum values, AC/QA/T/NFR IDs, and required result literals exactly.
+language. Keep internal terms for file names, commands, metadata fields, schema
+enum values, and canonical table tokens required by tooling.
 
 Use these examples as meaning guides, not as a fixed dictionary:
 
@@ -49,41 +68,39 @@ Use these examples as meaning guides, not as a fixed dictionary:
 | `archive` | move to completed work | 完了済みに整理 |
 | reviewer verdict | review result | レビュー結果 |
 
-For other project languages, do not invent a fixed glossary. Preserve commands
-and identifiers, and explain the same meaning in the user's language using
-plain, non-internal wording. If an internal status matters, put it in a short
-`MochiFlow:` note after the user-facing summary instead of making it the main
-message.
+## Stable Identifiers
 
-Session handoff prompts are user-facing generated output and follow the project
-language. Preserve command tokens, spec slugs, paths, metadata values, and
-filenames exactly.
+Machine-readable identifiers and fixed workflow values remain stable and must
+not be reworded or translated after selection:
 
-## Engine documents
+- filenames and paths
+- command names
+- YAML keys and TOML keys
+- status enum values
+- branch prefixes
+- adapter names
+- canonical IDs such as `AC-01`, `QA-01`, `T-001`, `NFR-01`
+- AC Verification Matrix result values from `workflow.md`: `PASS`,
+  `人間確認済み`, `対象外（<reason>）`, `FAIL`, `PENDING_HUMAN`
+- lifecycle and metadata enum values such as `draft`, `approved`, `done`,
+  `feature`, `fix`, `refactor`, `docs`, `chore`, `standard`, `elevated`,
+  `critical`
 
-mochiflow engine files (`commands/**`, `reference/**`, `agents/**`,
-`templates/**`) are written in English and stay project-agnostic. Add new engine
-content in English; do not embed project-specific values, paths, or commands
-that belong in `config.toml`.
+It is fine to explain these values in prose using the conversation or artifact
+language, but preserve the token itself exactly where tooling expects it.
 
-Templates are neutral structural scaffolds, not final artifact language. When
-creating a spec, QA guide, PR description, or handoff prompt from
-`templates/**`, render the final artifact in the configured project language
-while preserving command tokens, filenames, metadata values, schema enum values,
-AC/QA/T/NFR IDs, and required result literals.
-
-## Generated adapters
+## Generated Adapters
 
 Adapter target files are generated artifacts (see `reference/git.md` and the
-adapter templates). Their prose follows the project language; do not hand-edit
-them.
+adapter templates). Their prose follows the configured artifact/conversation
+rules; do not hand-edit generated adapter targets.
 
-## Git metadata
+## Git Metadata
 
-Commit messages, PR titles, and PR descriptions follow the project language.
-Format is defined in `reference/git.md`.
+Commit messages, PR titles, and PR descriptions follow artifact language. Format
+is defined in `reference/git.md`.
 
-## Code conventions
+## Code Conventions
 
 For source code, follow the existing convention of each file (identifiers,
 comments, test names, error messages). Do not introduce a new language

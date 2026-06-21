@@ -14,6 +14,7 @@ references:
   - commands/patch.md
   - commands/review.md
   - commands/refresh-context.md
+  - commands/onboard.md
   - reference/workflow.md
   - reference/risk.md
   - reference/language.md
@@ -39,7 +40,8 @@ loads this as a standing instruction. Do not load it from planning / reviewer ro
 2. On an explicit command (`mochiflow-<verb>`) match, declare the command in one line and activate.
 3. Match `{slug}` in `trigger_patterns` only against a spec slug that exists under `{specs_dir}/{slug}/`; on a match, declare the verb in one line and activate.
    - Exception: `{slug} discuss` resolves against a seed at `{specs_dir}/_backlog/{slug}.md` when the slug exists only there; if `{specs_dir}/{slug}/` already exists, re-open that spec instead.
-   - Event patterns `{slug} merged` / `{slug} マージ済み` / `{slug} 完了` resume ship's post-merge local cleanup only, not a fresh ship. Fold + archive already happen in the close-out commit before `mochiflow pr`.
+   - Exception: `{slug} plan` may resolve against `{specs_dir}/_backlog/{slug}.md` only when `{specs_dir}/{slug}/` does not exist and the backlog frontmatter has `maturity: ready-for-plan`; declare `plan` and activate because plan creates the active spec directory. If the backlog file has `maturity: seed` or any other value, do not activate plan — guide back to `{slug} discuss`.
+   - Event patterns `{slug} merged` / `{slug} マージ済み` / `{slug} 完了` are the only trigger-pattern exception for completed specs: resolve `{slug}` against `{specs_dir}/_done/{slug}/` first, then resume ship's post-merge local cleanup only, not a fresh ship. Fold/archive already happened in the feature branch close-out commit before PR.
 4. With no active spec context, route concrete small-edit requests ("直して" / "fix this" / "仕様書なしで" / "quick fix") through the `commands/patch.md ## Eligibility` check before proposing a spec verb.
    - If eligible, declare `patch` in one line and proceed.
    - If ineligible or uncertain, propose `Start plan?` in one line and wait.
@@ -47,7 +49,31 @@ loads this as a standing instruction. Do not load it from planning / reviewer ro
 6. With no trigger but clear mochiflow intent, propose the verb or non-phase command in one line and wait for approval.
 7. With ambiguous intent, do not activate mochiflow.
 8. Once committed to a verb or non-phase command, before starting, consult the matching `commands/{verb}.md` and its frontmatter `references` (reference / templates). If they are not in standing context, lazy-load them from the engine root with read.
-9. For user-facing speech, follow `reference/language.md ## User-facing communication`: use project-language plain wording first, and keep internal MochiFlow vocabulary only for commands, file names, metadata, or a short `MochiFlow:` note.
+9. For user-facing speech, follow `reference/language.md ## User-facing communication`: use conversation-language plain wording first, and keep internal MochiFlow vocabulary only for commands, file names, metadata, or a short `MochiFlow:` note.
+
+## Active Spec Resolution
+
+Resolve the active spec in this order:
+
+1. Explicit slug from the user, for example `{slug} build`.
+2. Explicit path to `{specs_dir}/{slug}/`.
+3. Current git branch matching the spec branch convention in
+   `reference/git.md ## Branch` (`{prefix}/{slug}`).
+4. Exactly one non-done spec whose status allows the requested verb per the
+   command prerequisites.
+5. Exactly one recently modified spec only when the user refers to "this spec"
+   or "the current plan".
+
+If more than one candidate remains, ask one concise disambiguation question.
+Never guess between multiple candidate specs.
+
+## PR Feedback Loop Routing
+
+If PR feedback, CI failure, reviewer comments, or PR-body approval follow-up
+requires code changes before merge, route the work back to the shipped spec
+instead of `patch`, unless the change is unrelated to that spec. Restore the
+archived spec per `commands/ship.md ## PR Feedback Loop`, run the change through
+`build`, then re-run `ship` close-out and update the PR body when needed.
 
 ## Verb Delegation
 
@@ -60,6 +86,7 @@ loads this as a standing instruction. Do not load it from planning / reviewer ro
 | patch (non-phase) | inline; no spec artifacts; edit / verify / optional commit; escalate to plan when ineligible | `commands/patch.md` |
 | review (non-phase) | inline trigger; read-only review uses independent-reviewer transport; no state transition | `commands/review.md` |
 | refresh-context (non-phase) | inline; regenerate foundational context (`[context]`) from code under human confirm; no state transition | `commands/refresh-context.md` |
+| onboard (non-phase) | inline; setup / first-run project onboarding | `commands/onboard.md` |
 
 ## Transition Discipline
 
@@ -71,7 +98,7 @@ loads this as a standing instruction. Do not load it from planning / reviewer ro
 
 ## Completion Output
 
-After running, summarize in the project language using plain user-facing labels:
+After running, summarize in the conversation language using plain user-facing labels:
 what changed / what was checked / what the user needs to do next. Do not lead
 with an internal state list. Include internal state only when useful, as a brief
 `MochiFlow:` note after the summary.

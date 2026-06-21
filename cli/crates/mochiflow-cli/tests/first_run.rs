@@ -183,8 +183,19 @@ fn qa06_json_matches_golden_and_stdout_is_pure_json() {
     assert_eq!(parsed["status"].as_str(), Some("needs_ai_review"));
     assert_eq!(parsed["exit_code"].as_i64(), Some(0));
     assert_eq!(parsed["dry_run"].as_bool(), Some(false));
-    assert_eq!(parsed["language"].as_str(), Some("en"));
-    assert_eq!(parsed["language_source"].as_str(), Some("locale"));
+    assert_eq!(parsed["i18n"]["artifact_language"].as_str(), Some("en"));
+    assert_eq!(
+        parsed["i18n"]["artifact_language_source"].as_str(),
+        Some("default")
+    );
+    assert_eq!(
+        parsed["i18n"]["conversation_language"].as_str(),
+        Some("auto")
+    );
+    assert_eq!(
+        parsed["i18n"]["conversation_language_source"].as_str(),
+        Some("default")
+    );
     assert_eq!(parsed["review"]["required"].as_bool(), Some(true));
     assert!(
         parsed["review"]["prompt"]
@@ -216,14 +227,14 @@ fn qa07_guide_card_matches_golden_en_and_ja() {
     let en = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
     assert_eq!(en, include_str!("golden/guide_en.txt"));
 
-    // ja: config with language = ja
+    // ja: config with artifact language = ja; conversation auto falls back to it.
     let dir = tempfile::tempdir().unwrap();
     bin()
         .args([
             "init",
             "--target",
             dir.path().to_str().unwrap(),
-            "--language",
+            "--artifact-language",
             "ja",
         ])
         .write_stdin("")

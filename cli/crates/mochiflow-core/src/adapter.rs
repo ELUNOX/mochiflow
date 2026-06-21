@@ -46,6 +46,7 @@ fn subs(cfg: &Config, tool: &str) -> BTreeMap<String, String> {
     let engine = format!("{}/engine", cfg.install_dir);
     let mut allow: Vec<String> = vec![
         format!("{}/**", cfg.specs_dir),
+        format!("{}/state/**", cfg.install_dir),
         cfg.constitution.project.clone(),
         cfg.constitution.local.clone(),
         cfg.context.product.clone(),
@@ -67,7 +68,14 @@ fn subs(cfg: &Config, tool: &str) -> BTreeMap<String, String> {
     m.insert("install_dir".into(), cfg.install_dir.clone());
     m.insert("specs_dir".into(), cfg.specs_dir.clone());
     m.insert("specs_glob".into(), format!("{}/**", cfg.specs_dir));
-    m.insert("language".into(), cfg.language.clone());
+    m.insert(
+        "artifact_language".into(),
+        cfg.i18n.artifact_language.clone(),
+    );
+    m.insert(
+        "conversation_language".into(),
+        cfg.i18n.conversation_language.clone(),
+    );
     m.insert("engine_version".into(), engine_version);
     m.insert("adapter_tool".into(), tool.to_string());
     m.insert(
@@ -564,11 +572,23 @@ mod tests {
     #[test]
     fn subs_exposes_layer_tokens_and_allows_all_living_spec_paths() {
         use crate::config::{
-            Config, RawAdapter, RawAdr, RawConstitution, RawContext, RawGit, RawWrite,
+            Config, I18nConfig, I18nMeta, I18nValueSource, RawAdapter, RawAdr, RawConstitution,
+            RawContext, RawGit, RawWrite,
         };
         let cfg = Config {
             schema_version: 1,
-            language: "en".into(),
+            i18n: I18nConfig {
+                artifact_language: "en".into(),
+                conversation_language: "auto".into(),
+            },
+            i18n_meta: I18nMeta {
+                has_i18n_table: true,
+                has_legacy_language: false,
+                missing_artifact_language: false,
+                missing_conversation_language: false,
+                artifact_source: I18nValueSource::I18n,
+                conversation_source: I18nValueSource::I18n,
+            },
             install_dir: ".mochiflow".into(),
             specs_dir: ".mochiflow/specs".into(),
             index: ".mochiflow/INDEX.md".into(),
@@ -624,10 +644,11 @@ mod tests {
         // legacy flat tokens are gone
         assert!(!m.contains_key("paths.architecture"));
         assert!(!m.contains_key("paths.structure"));
-        // write allow lists all four living-spec paths + index
+        // write allow lists living-spec paths, delivery state, and shared guidance files
         assert!(m.contains_key("allow_json"), "allow_json missing");
         let allow = m.get("allow_json").map(String::as_str).unwrap_or("");
         for p in [
+            ".mochiflow/state/**",
             ".mochiflow/constitution.md",
             ".mochiflow/constitution.local.md",
             ".mochiflow/context/product.md",
@@ -670,9 +691,16 @@ mod tests {
     fn render_replaces_double_brace_tokens() {
         let mut subs = BTreeMap::new();
         subs.insert("engine".to_string(), ".mochiflow/engine".to_string());
-        subs.insert("language".to_string(), "ja".to_string());
-        let out = render("engine={{engine}} lang={{language}}", &subs);
-        assert_eq!(out, "engine=.mochiflow/engine lang=ja");
+        subs.insert("artifact_language".to_string(), "ja".to_string());
+        subs.insert("conversation_language".to_string(), "auto".to_string());
+        let out = render(
+            "engine={{engine}} artifact={{artifact_language}} conversation={{conversation_language}}",
+            &subs,
+        );
+        assert_eq!(
+            out,
+            "engine=.mochiflow/engine artifact=ja conversation=auto"
+        );
     }
 
     #[test]

@@ -48,8 +48,13 @@
   },
   "dry_run": false,
   "exit_code": 0,
-  "language": "en",
-  "language_source": "locale",
+  "i18n": {
+    "artifact_language": "en",
+    "artifact_language_source": "default",
+    "conversation_language": "auto",
+    "conversation_language_source": "default",
+    "display_language": "en"
+  },
   "next": {
     "kind": "ai_review",
     "message": "Paste this into your AI agent:\n\nComplete MochiFlow setup for this repository. Read .mochiflow/config.toml, treat \"# mochiflow: confirm\" markers and TODOs as setup questions for uncertain detected values, resolve them with me, fill .mochiflow/context/product.md, .mochiflow/context/structure.md, and .mochiflow/context/tech.md from the code, adjust surfaces / verify / write scope / git settings if needed, regenerate adapters, and finish with mochiflow doctor."

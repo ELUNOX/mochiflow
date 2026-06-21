@@ -12,9 +12,10 @@ your standing instruction and follow it for any spec / implementation / PR work.
   `{{context.structure}}`, and `{{context.tech}}`. This is the always-loaded
   current-state orientation; load it first.
 - Router (read this first): `{{engine}}/router.md`
-- Lifecycle verbs: `{{engine}}/commands/{discuss,plan,build,ship}.md`
-- Non-phase commands: `{{engine}}/commands/{patch,review,refresh-context}.md`
-- Cross-cutting rules: `{{engine}}/reference/{workflow,risk,authoring,git,language}.md`
+- Verb procedures: `{{engine}}/commands/{discuss,plan,build,ship}.md`; patch lane:
+  `{{engine}}/commands/patch.md`
+- Non-phase commands: `{{engine}}/commands/{patch,review,refresh-context,onboard}.md`
+- Cross-cutting rules: `{{engine}}/reference/{workflow,risk,authoring,git,language,engineering-standards}.md`
 - Decision history / pitfalls — **on-demand** (*why*, not current state):
   `{{adr.decisions}}` / `{{adr.pitfalls}}`.
 - Project config (surfaces / verify commands / git): run `mochiflow config show`
@@ -31,9 +32,9 @@ your standing instruction and follow it for any spec / implementation / PR work.
 - Specs live under `{{specs_dir}}/{slug}/`; metadata is `spec.yaml` (status `draft → approved → done`).
 - Run verification via the command for the spec's surface from `[surfaces.<surface>.verify]`.
 - Validate specs with `mochiflow lint`; quality gate is `mochiflow doctor`.
-- Response and generated-artifact language: `{{language}}`; in user-facing
-  speech, translate MochiFlow internal terms into plain project-language wording
-  per `{{engine}}/reference/language.md`.
+- Artifact language: `{{artifact_language}}`; conversation language:
+  `{{conversation_language}}`. Follow `{{engine}}/reference/language.md` for
+  user-facing wording and `auto` conversation behavior.
 - At ship, fold durable knowledge into `{{adr.decisions}}` (decisions) /
   `{{adr.pitfalls}}` (pitfalls) before archiving to `{{specs_dir}}/_done/`. The
   context layer (`{{context.product}}` / `{{context.structure}}` /

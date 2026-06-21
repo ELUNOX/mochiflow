@@ -31,8 +31,12 @@ static NFR_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\bNFR-\d{2,}\b").
 static EARS_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\b(?:SHALL|WHEN|WHILE|WHERE|THEN)\b").expect("EARS_RE"));
 #[allow(clippy::expect_used)]
-static VERDICT_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(?i)Verdict:\s*(pass|pass-with-comments)").expect("VERDICT_RE"));
+static VERDICT_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)Verdict:\s*(pass-with-comments|pass|fail)").expect("VERDICT_RE")
+});
+#[allow(clippy::expect_used)]
+static TASK_HEADING_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?m)^## Task\b").expect("TASK_HEADING_RE"));
 
 pub struct Issue {
     pub severity: String,
@@ -42,13 +46,26 @@ pub struct Issue {
 
 fn section<'a>(text: &'a str, heading: &str) -> Option<&'a str> {
     let pattern = format!("## {heading}");
-    let start = text.find(&pattern)?;
-    let after = &text[start..];
-    // Find next ## heading or end
-    let body_start = after
-        .find('\n')
-        .map(|i| start + i + 1)
-        .unwrap_or(text.len());
+    let matches_heading = |line: &str| {
+        let line = line.trim_end();
+        line == pattern
+            || line
+                .strip_prefix(&pattern)
+                .is_some_and(|suffix| suffix.starts_with(' '))
+    };
+
+    let mut body_start = None;
+    let mut offset = 0;
+    for line in text.split_inclusive('\n') {
+        let line_without_newline = line.strip_suffix('\n').unwrap_or(line);
+        if matches_heading(line_without_newline) {
+            body_start = Some(offset + line.len());
+            break;
+        }
+        offset += line.len();
+    }
+
+    let body_start = body_start?;
     let body = &text[body_start..];
     let end = body
         .find("\n## ")
@@ -101,6 +118,22 @@ fn ac_ids_in_tasks(text: &str) -> BTreeSet<String> {
         }
     }
     ids
+}
+
+fn review_verdicts(design_text: &str) -> Vec<String> {
+    let Some(review_results) = section(design_text, "Review Results") else {
+        return Vec::new();
+    };
+    VERDICT_RE
+        .captures_iter(review_results)
+        .filter_map(|cap| cap.get(1).map(|m| m.as_str().to_ascii_lowercase()))
+        .collect()
+}
+
+fn task_count(tasks_text: Option<&str>) -> usize {
+    tasks_text
+        .map(|text| TASK_HEADING_RE.find_iter(text).count())
+        .unwrap_or(0)
 }
 
 fn ac_lines_missing_ears(text: &str) -> BTreeSet<String> {
@@ -314,10 +347,24 @@ fn parse_matrix_rows(text: &str) -> Vec<MatrixRow> {
 fn is_canonical_matrix_result(result: &str) -> bool {
     matches!(
         result,
-        "UNVERIFIED" | "PASS" | "PENDING_HUMAN" | "HUMAN_CONFIRMED" | "FAIL"
+        "UNVERIFIED" | "PASS" | "PENDING_HUMAN" | "人間確認済み" | "FAIL"
     ) || result
         .strip_prefix("N/A: ")
         .is_some_and(|reason| !reason.trim().is_empty())
+        || result
+            .strip_prefix("対象外（")
+            .and_then(|s| s.strip_suffix('）'))
+            .is_some_and(|reason| !reason.trim().is_empty() && reason.trim() != "理由")
+}
+
+fn is_done_matrix_result(result: &str) -> bool {
+    if result == "PASS" || result == "人間確認済み" {
+        return true;
+    }
+    result
+        .strip_prefix("対象外（")
+        .and_then(|s| s.strip_suffix('）'))
+        .is_some_and(|reason| !reason.trim().is_empty() && reason.trim() != "理由")
 }
 
 fn design_required(meta: &SpecMeta) -> bool {
@@ -572,7 +619,7 @@ fn lint_spec_dir(spec_dir: &Path, allowed_surfaces: &HashSet<String>) -> Vec<Iss
                     severity: "FAIL".into(),
                     path: matrix_path.clone(),
                     message: format!(
-                        "AC Matrix result for {} must be one of UNVERIFIED, PASS, PENDING_HUMAN, HUMAN_CONFIRMED, N/A: <reason>, FAIL",
+                        "AC Matrix result for {} must be one of UNVERIFIED, PASS, PENDING_HUMAN, 人間確認済み, N/A: <reason>, 対象外（<reason>）, FAIL",
                         row.ac
                     ),
                 });
@@ -603,38 +650,25 @@ fn lint_spec_dir(spec_dir: &Path, allowed_surfaces: &HashSet<String>) -> Vec<Iss
             issues.push(Issue {
                 severity: "FAIL".into(),
                 path: spec_dir.join("spec.yaml"),
-                message: "status is done but AC Matrix is missing".into(),
+                message:
+                    "status is done but AC Verification Matrix is missing; AC Matrix is missing"
+                        .into(),
             });
         } else {
             for row in &matrix_rows {
-                if row.result == "FAIL" {
+                if !is_done_matrix_result(&row.result) {
+                    let shown = if row.result.is_empty() {
+                        "<empty>"
+                    } else {
+                        row.result.as_str()
+                    };
                     issues.push(Issue {
                         severity: "FAIL".into(),
                         path: spec_dir.join("spec.yaml"),
-                        message: "status is done but AC Matrix contains FAIL".into(),
-                    });
-                }
-                if row.result == "UNVERIFIED" {
-                    issues.push(Issue {
-                        severity: "FAIL".into(),
-                        path: spec_dir.join("spec.yaml"),
-                        message: "status is done but AC Matrix contains UNVERIFIED".into(),
-                    });
-                }
-                if row.result == "PENDING_HUMAN" {
-                    issues.push(Issue {
-                        severity: "FAIL".into(),
-                        path: spec_dir.join("spec.yaml"),
-                        message: "status is done but AC Matrix contains PENDING_HUMAN".into(),
-                    });
-                }
-                if row.result == "N/A"
-                    || row.result.starts_with("N/A:") && row.result.trim() == "N/A:"
-                {
-                    issues.push(Issue {
-                        severity: "FAIL".into(),
-                        path: spec_dir.join("spec.yaml"),
-                        message: "AC Matrix N/A result must be written as N/A: <reason>".into(),
+                        message: format!(
+                            "status is done but AC Matrix row {} has invalid result `{shown}`; expected PASS, 人間確認済み, or 対象外（<reason>）",
+                            row.ac
+                        ),
                     });
                 }
             }
@@ -667,13 +701,40 @@ fn lint_spec_dir(spec_dir: &Path, allowed_surfaces: &HashSet<String>) -> Vec<Iss
         };
         if risk_order(meta.risk()) >= 1 {
             let design_text = std::fs::read_to_string(&design_md).unwrap_or_default();
-            if !VERDICT_RE.is_match(&design_text) {
-                issues.push(Issue { severity: "FAIL".into(), path: spec_dir.join("spec.yaml"), message: "status is done but reviewer verdict (pass/pass-with-comments) is not recorded for risk>=elevated".into() });
+            let verdicts = review_verdicts(&design_text);
+            if verdicts.iter().any(|v| v == "fail") {
+                issues.push(Issue {
+                    severity: "FAIL".into(),
+                    path: spec_dir.join("spec.yaml"),
+                    message: "status is done but Review Results contains reviewer Verdict: fail"
+                        .into(),
+                });
+            }
+            let pass_count = verdicts
+                .iter()
+                .filter(|v| v.as_str() == "pass" || v.as_str() == "pass-with-comments")
+                .count();
+            if pass_count == 0 {
+                issues.push(Issue { severity: "FAIL".into(), path: spec_dir.join("spec.yaml"), message: "status is done but reviewer verdict (pass/pass-with-comments) is not recorded in design.md ## Review Results for risk>=elevated".into() });
+            }
+            if meta.risk() == "critical" {
+                let required = task_count(tasks_text.as_deref());
+                if required > 0 && pass_count < required {
+                    issues.push(Issue {
+                        severity: "FAIL".into(),
+                        path: spec_dir.join("spec.yaml"),
+                        message: format!(
+                            "status is done but critical risk requires at least {required} passing reviewer verdict(s), found {pass_count}"
+                        ),
+                    });
+                }
             }
         }
     }
 
-    if let Some(ref tt) = tasks_text {
+    if let Some(ref tt) = tasks_text
+        && (meta.status() != "done" || !task_ids(tt).is_empty())
+    {
         for message in lint_task_structure(tt) {
             issues.push(Issue {
                 severity: "FAIL".into(),
@@ -726,6 +787,57 @@ fn walkdir(root: &Path) -> Vec<PathBuf> {
     result
 }
 
+fn is_explicit_spec_path(target: &str) -> bool {
+    let path = Path::new(target);
+    path.is_absolute() || path.exists() || path.components().count() > 1
+}
+
+fn resolve_lint_targets(cfg: &Config, target: &str) -> Result<Vec<PathBuf>, Issue> {
+    if is_explicit_spec_path(target) {
+        let path = PathBuf::from(target);
+        let spec_dir = if path.is_file() {
+            path.parent().unwrap_or(&path).to_path_buf()
+        } else {
+            path
+        };
+        if spec_dir.join("spec.yaml").exists() {
+            return Ok(vec![spec_dir]);
+        }
+        return Err(Issue {
+            severity: "FAIL".into(),
+            path: spec_dir.join("spec.yaml"),
+            message: format!("spec not found: {target}"),
+        });
+    }
+
+    let active = cfg.specs_dir_path().join(target);
+    let archived = cfg.specs_dir_path().join("_done").join(target);
+    let mut matches = Vec::new();
+    for candidate in [&active, &archived] {
+        if candidate.join("spec.yaml").exists() {
+            matches.push(candidate.to_path_buf());
+        }
+    }
+
+    match matches.len() {
+        0 => Err(Issue {
+            severity: "FAIL".into(),
+            path: active.join("spec.yaml"),
+            message: format!("spec not found: {target}"),
+        }),
+        1 => Ok(matches),
+        _ => Err(Issue {
+            severity: "FAIL".into(),
+            path: active.join("spec.yaml"),
+            message: format!(
+                "spec target is ambiguous: {target} matches {} and {}",
+                active.display(),
+                archived.display()
+            ),
+        }),
+    }
+}
+
 /// Run lint, print issues, return exit code (0=pass, 1=fail).
 pub fn run_lint(cfg: &Config, spec_slug: Option<&str>, log_to_stderr: bool) -> i32 {
     macro_rules! report_ln {
@@ -734,16 +846,23 @@ pub fn run_lint(cfg: &Config, spec_slug: Option<&str>, log_to_stderr: bool) -> i
         };
     }
     let allowed: HashSet<String> = cfg.surface_names().into_iter().collect();
-    let paths = if let Some(slug) = spec_slug {
-        vec![cfg.specs_dir_path().join(slug)]
+    let mut all_issues = Vec::new();
+    let paths = if let Some(target) = spec_slug {
+        match resolve_lint_targets(cfg, target) {
+            Ok(paths) => paths,
+            Err(issue) => {
+                all_issues.push(issue);
+                Vec::new()
+            }
+        }
     } else {
         vec![cfg.specs_dir_path()]
     };
 
-    let mut all_issues = Vec::new();
     let mut seen = HashSet::new();
     for root in &paths {
-        for spec_dir in discover_spec_dirs(root) {
+        let spec_dirs = discover_spec_dirs(root);
+        for spec_dir in spec_dirs {
             if seen.contains(&spec_dir) {
                 continue;
             }

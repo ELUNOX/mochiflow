@@ -1,6 +1,6 @@
 # PR Description Template
 
-Write the PR description for external reviewers in the configured project
+Write the PR description for external reviewers in the configured artifact
 language. Do not include spec files, internal IDs (`slug`, `AC-01`, etc.), or
 MochiFlow vocabulary (`risk: standard`, etc.).
 
@@ -20,5 +20,5 @@ MochiFlow vocabulary (`risk: standard`, etc.).
 
 ## Risk
 
-- {Natural project-language description of reversibility, schema/contract impact, and affected area in 1-2 lines.}
+- {Natural artifact-language description of reversibility, schema/contract impact, and affected area in 1-2 lines.}
 ```

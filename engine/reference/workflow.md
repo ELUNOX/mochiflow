@@ -43,6 +43,10 @@ are not delivery approval gates and do not change spec lifecycle state except
 where explicitly defined. `done` is not a gate: it is an acceptance state that
 `ship` sets mechanically when the acceptance conditions below hold.
 
+The no-PR fast path exists only after explicit human opt-in. It skips
+**approve-PR** because no PR is created, but it still runs `ship`; `ship` still
+sets `done` from acceptance conditions and creates the same close-out commit.
+
 ## Depth scaling
 
 A change is always one folder under `{specs_dir}/{slug}/`. Documents grow only
@@ -89,28 +93,27 @@ The AC Matrix is created during plan in `spec.md` under
 | AC-01 | {surface} | automated | `cargo test ...` | `path/File.ext` | PASS | test output |  |
 ```
 
-Canonical result values are:
+Canonical result values are exact tokens:
 
-- `UNVERIFIED` — planned but not verified yet; allowed during plan and build, not at ship.
-- `PASS` — automated or manual verification passed.
-- `PENDING_HUMAN` — human QA is required but not completed yet; allowed during build, not at ship.
-- `HUMAN_CONFIRMED` — human QA completed and confirmed.
-- `N/A: <reason>` — not applicable with explicit reason; reason is required.
-- `FAIL` — verification failed; not allowed at ship.
-
-Do not use localized enum values as canonical Matrix values. Explain them in
-prose when useful, but keep the table value as the English token.
+- `PASS` — done-eligible automated or AI-observed verification passed.
+- `人間確認済み` — done-eligible human/visual QA was confirmed.
+- `対象外（<reason>）` — done-eligible not-applicable result with a concrete reason.
+- `FAIL` — failing result; not done-eligible.
+- `PENDING_HUMAN` — provisional build-time result for human/visual QA that has
+  not been performed yet; not done-eligible.
 
 `done` is an acceptance state, not a human approval. `ship` sets `status: done`
 mechanically once all of these conditions hold:
 
-1. the AC Matrix is present and complete;
-2. every spec AC appears as one or more matrix rows;
-3. no row has `UNVERIFIED`, `PENDING_HUMAN`, or `FAIL`;
-4. every `N/A` result is written as `N/A: <reason>`;
-5. required evidence is recorded;
-6. required tasks in `tasks.md` are complete or explicitly not applicable;
-7. when `risk ≥ elevated`, the reviewer verdict is recorded per `risk.md`.
+1. the AC Verification Matrix is present and complete — every spec AC appears as a row;
+2. every row has a done-eligible result token (`PASS`, `人間確認済み`, or `対象外（<reason>）`);
+3. when `risk ≥ elevated`, the reviewer verdict is recorded (condition owned by
+   `risk.md ## Consequences`; referenced here, not redefined).
+
+For `status: done`, `lint` enforces matrix presence, AC↔task coverage, and final
+result tokens; `PENDING_HUMAN`, `FAIL`, empty cells, and unknown/free-text
+results fail. It also warns on `[NEEDS-CLARIFICATION]` and AC lines missing an
+EARS keyword (resolve before `approved`).
 
 `build` never sets `done`.
 
@@ -142,8 +145,8 @@ auto-commit.
 
 ## Acceptance adapters (ship)
 
-Build `{specs_dir}/{slug}/qa-instructions.md` from `spec.md` QA scenarios
-(reference, do not copy), and pick the adapter by `Scope` / kind:
+Build `{install_dir}/state/{slug}/qa-instructions.md` from `spec.md` QA
+scenarios (reference, do not copy), and pick the adapter by `Scope` / kind:
 
 | Scope / kind | adapter | main checks |
 | --- | --- | --- |
@@ -155,20 +158,33 @@ Build `{specs_dir}/{slug}/qa-instructions.md` from `spec.md` QA scenarios
 | `cross-surface` | contract / workflow QA | contract or workflow across surfaces |
 
 Human/visual AC are requested once, in ship, alongside `qa-instructions.md` —
-not pre-requested during build.
+not during build. During build, mark those Matrix rows `PENDING_HUMAN` with the
+needed QA scenario and evidence expectation.
 
 ## Backlog seeds
 
-`{specs_dir}/_backlog/{slug}.md` is a single-file seed inbox: raw input for
-`discuss`, not a spec. Use `templates/backlog/seed.md`. Frontmatter:
-`slug,title,maturity,source,created,updated` (+ optional
-`module,surface,type_hint,source_spec,source_phase`). Body: `## Signal`,
-`## Why It Matters`, `## Evidence`, `## Open Questions`.
+`{specs_dir}/_backlog/{slug}.md` is a single-file inbox for either raw ideas or
+discuss-to-plan handoff artifacts. It is not a spec.
 
-Lifecycle: create seed → `discuss` reads it as input (seed kept) → `plan`
-creates `{specs_dir}/{slug}/` and deletes the seed, recording origin in
-`spec.md`. Interrupted discuss keeps the seed. Do not put AC, QA, design, tasks,
-or final classification in a seed.
+- Raw seed: `maturity: seed`, created from `templates/backlog/seed.md`, and used
+  as raw input for `discuss`. Body: `## Signal`, `## Why It Matters`,
+  `## Evidence`, `## Open Questions`.
+- Ready-for-plan handoff: `maturity: ready-for-plan`, created by `discuss` from
+  `templates/backlog/discuss-handoff.md`, and used by `plan` as the durable
+  Decision summary when the conversation is not available. Body:
+  `## Decision Summary`, `## Decisions`, `## Assumptions`, `## Open Questions`,
+  `## Change Impact`, `## Evidence`.
+
+Shared frontmatter: `slug,title,maturity,source,created,updated` (+ optional
+`module,surface,type_hint,source_spec,source_phase`). A ready-for-plan handoff
+also sets `source: conversation` and `source_phase: discuss`.
+
+Lifecycle: create raw seed → `discuss` reads it as input and may update the same
+file to `maturity: ready-for-plan` when agreement is reached → `plan` creates
+`{specs_dir}/{slug}/` and deletes the seed/handoff
+(`rm {specs_dir}/_backlog/{slug}.md`), recording origin in `spec.md`.
+Interrupted discuss keeps the seed/handoff file. Do not put AC, QA, design,
+tasks, or final classification in backlog files.
 
 Legacy `_backlog/{slug}/` spec-format directories are deprecated and no longer
 rendered by tooling; they remain on disk read-only.

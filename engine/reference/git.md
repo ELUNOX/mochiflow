@@ -15,18 +15,23 @@ mechanics and the living-spec fold.
 - "Unrelated changes" is precise: any uncommitted change **other than this
   spec's own `{specs_dir}/{slug}/**`**. The spec files just authored by `plan`
   are *related* and expected to be present at build start — they never block.
-  Any other dirt → stop instead of switching.
+  Exception: only when returning from `ship.md ## PR Feedback Loop`, the restore
+  from the archived shipped spec is also related, so the allowed dirty paths are
+  exactly `{specs_dir}/{slug}/**` and `{specs_dir}/_done/{slug}/**`. Other slugs
+  under `_done/`, other specs, source changes, and `state/` files remain
+  unrelated dirt. Any other dirt → stop instead of switching.
 - Create from `origin/{[git].base_branch}` when the branch does not exist.
   Create the branch first and let `git switch -c` carry the uncommitted
   `{specs_dir}/{slug}/**` onto it (a fresh branch has no conflict; no stash
   needed), so the base branch HEAD is never dirtied by the spec scaffold.
-- Trivial `risk: standard` changes MAY commit on the current branch with no new
-  branch and no PR, only when the user opts in (no-PR fast path). Default is a
-  feature branch + PR.
+- Trivial `risk: standard` changes MAY use the current branch with no new branch
+  and no PR only when the user explicitly opts in (no-PR fast path). Default is
+  a feature branch + PR. no-PR skips PR creation and the approve-PR gate, but it
+  still runs `ship` acceptance and the close-out commit.
 
 ## Commit
 
-Conventional Commits, in the project language.
+Conventional Commits, in `[i18n].artifact_language`.
 
 ```
 type(scope): summary
@@ -42,10 +47,10 @@ body (optional)
 ## Auto-commit and staging
 
 The AI auto-commits in all flows. Commit only after verification PASS; never
-commit on verification FAIL. Mandatory reviewer PASS is a build-completion gate,
-not a prerequisite for every earlier verified commit unit. If reviewer FAIL
-findings require changes, fix them, verify, and commit the follow-up before
-build completes.
+commit on verification FAIL. When `risk.md` requires a reviewer verdict,
+reviewer PASS is a phase-completion / ship-acceptance gate, not a pre-commit gate.
+If reviewer FAIL findings require changes, fix them, verify, and commit the
+follow-up before build completes.
 
 - Stage only files in the change plan / task plus tests added for verification.
 - Stage this spec's own files under `{specs_dir}/{slug}/**` together with the
@@ -84,13 +89,12 @@ dirty before the patch, do not commit; report the files and verification result.
 
 - `spec.yaml` `status: done` (+ `updated`);
 - the AC Matrix rows added at ship (build already recorded the rest);
-- `qa-instructions.md`, the reviewer-facing QA guide generated at ship;
 - the ADR fold (`[adr].decisions` / `[adr].pitfalls`);
 - the archive move `{specs_dir}/{slug}/` → `{specs_dir}/_done/{slug}/`;
 - the regenerated `{index}`.
 
 Stage exactly these paths (`git add .` is still forbidden). The message follows
-the Commit convention above — Conventional Commits, project language, and **no
+the Commit convention above — Conventional Commits, artifact language, and **no
 spec slug, no AC IDs, no mochiflow vocabulary** (never "fold" / "archive" in the
 summary). This relocates what was formerly a post-merge base-branch push into the
 PR, so the durable record is reviewed; post-merge then does only local hygiene
@@ -99,10 +103,12 @@ commit on the current branch, with no push.
 
 ## PR
 
-The PR title/body (per `templates/delivery/pr-description.md`: project language,
-external-reviewer facing, no spec-internal references, no spec slug, no AC IDs,
-no mochiflow vocabulary) are always generated after delivery approval gate 2
-(`workflow.md`).
+On the normal PR path, the PR title/body (per
+`templates/delivery/pr-description.md`: artifact language, external-reviewer
+facing, no spec-internal references, no spec slug, no AC IDs, no mochiflow
+vocabulary) are generated after human gate 2 (`workflow.md`). On the explicit
+no-PR fast path, skip PR title/body generation and `mochiflow pr`; `ship`
+acceptance and the close-out commit still happen.
 
 PR creation goes through **`mochiflow pr`** — the single command that owns
 pre-flight (working tree clean / current branch is the source / source ≠ target),
@@ -160,8 +166,11 @@ now", "where things live"). The context layer (`[context].product` /
 `[context].structure` / `[context].tech`) is **not** a fold target — it is a current-state
 orientation map regenerated from code via onboard / `refresh-context`, never
 appended to during fold. For coarse code-layout changes (new module,
-responsibility move, technology/verification change), run `refresh-context` (`commands/refresh-context.md`)
-instead of editing it inline; code remains the source of truth.
+responsibility move, technology/verification change), flag a post-ship
+`refresh-context` (`commands/refresh-context.md`) follow-up instead of editing it
+inline or running it during close-out; code remains the source of truth. Context
+refresh is separate work after PR creation / merge unless the human explicitly
+runs and commits it as a separate change later.
 
 Fold is skipped when the change yields no new rationale or pitfall (e.g. a trivial
 display fix). Do not archive until the fold (or the decision that none is needed)
@@ -182,14 +191,15 @@ PR's close-out commit):
 1. `git status --short` clean — else stop.
 2. `git switch {[git].base_branch}`
 3. `git pull --ff-only origin {[git].base_branch}` — stop if ff-only fails (divergent local).
-4. `git branch -d {branch}` (safe delete; fails if unmerged → leave it, ask human).
+4. `git branch -d {prefix}/{slug}` (safe delete; fails if unmerged → leave it, ask human). Resolve `prefix` from `type`: `feature` → `feat`; all other types use `type` as-is.
 5. Do not touch the remote branch.
 6. Remove the spec's ephemeral delivery scratch: `rm -rf {install_dir}/state/{slug}/` (gitignored — PR body / `pr-request.json` are not archived).
 
 The fold + archive (`_done` move + `INDEX`) are **not** performed here — they are
 part of the feature branch's close-out commit (`## Living-spec fold`,
-`## Auto-commit and staging`). The no-PR fast path commits the fold + archive
-locally on the current branch right after verification, with no base-branch push.
+`## Auto-commit and staging`). The no-PR fast path makes that same close-out
+commit locally on the current branch after `ship` acceptance, with no
+base-branch push.
 
 ## Safety
 

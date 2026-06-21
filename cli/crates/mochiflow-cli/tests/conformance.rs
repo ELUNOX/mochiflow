@@ -38,6 +38,23 @@ fn read_json(path: &Path) -> serde_json::Value {
     serde_json::from_str(&text).unwrap_or_else(|e| panic!("parse {}: {e}", path.display()))
 }
 
+fn read_repo_file(path: &str) -> String {
+    let path = repo_root().join(path);
+    std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()))
+}
+
+fn collect_files(dir: &Path, out: &mut Vec<PathBuf>) {
+    for entry in std::fs::read_dir(dir).unwrap_or_else(|e| panic!("read {}: {e}", dir.display())) {
+        let entry = entry.unwrap();
+        let path = entry.path();
+        if path.is_dir() {
+            collect_files(&path, out);
+        } else if path.is_file() {
+            out.push(path);
+        }
+    }
+}
+
 fn load_schema(name: &str) -> jsonschema::Validator {
     let schema = read_json(&contracts_dir().join(name));
     jsonschema::validator_for(&schema).unwrap_or_else(|e| panic!("compile schema {name}: {e}"))
@@ -87,6 +104,32 @@ fn schema_spec_rejects_missing_required() {
 fn schema_config_accepts_good() {
     let v = load_schema("config.schema.json");
     assert!(v.is_valid(&load_fixture("config_good.json")));
+}
+
+#[test]
+fn schema_config_i18n_rules() {
+    let v = load_schema("config.schema.json");
+    let mut good = load_fixture("config_good.json");
+
+    good["i18n"]["artifact_language"] = serde_json::Value::String("pt-BR".to_string());
+    good["i18n"]["conversation_language"] = serde_json::Value::String("auto".to_string());
+    assert!(v.is_valid(&good));
+
+    let mut artifact_auto = good.clone();
+    artifact_auto["i18n"]["artifact_language"] = serde_json::Value::String("auto".to_string());
+    assert!(!v.is_valid(&artifact_auto));
+
+    let mut bad_conversation = good.clone();
+    bad_conversation["i18n"]["conversation_language"] =
+        serde_json::Value::String("../ja".to_string());
+    assert!(!v.is_valid(&bad_conversation));
+
+    let mut partial = good;
+    partial["i18n"]
+        .as_object_mut()
+        .unwrap()
+        .remove("conversation_language");
+    assert!(!v.is_valid(&partial));
 }
 
 #[test]
@@ -419,7 +462,536 @@ fn version_gate_hash_matches_committed_lock() {
     );
 }
 
-// --- (e) Behavioral / property tests: lint rules pinned without golden --------
+// --- (e) Engine prose/template drift guards ----------------------------------
+
+#[test]
+fn router_merged_event_is_cleanup_only() {
+    let router = read_repo_file("engine/router.md");
+    let merged_line = router
+        .lines()
+        .find(|line| line.contains("Event patterns `{slug} merged`"))
+        .expect("router merged-event routing line exists");
+
+    assert!(
+        merged_line.contains("post-merge local cleanup only"),
+        "merged-event routing must resume cleanup only; got: {merged_line}"
+    );
+    assert!(
+        merged_line.contains("{specs_dir}/_done/{slug}/"),
+        "merged-event routing must resolve archived specs first; got: {merged_line}"
+    );
+    assert!(
+        merged_line.contains("Fold/archive already happened"),
+        "merged-event routing must state fold/archive already happened before PR; got: {merged_line}"
+    );
+    assert!(
+        !merged_line.contains("fold → archive") && !merged_line.contains("fold -> archive"),
+        "merged-event routing must not instruct fold/archive after merge; got: {merged_line}"
+    );
+}
+
+#[test]
+fn router_plan_can_resolve_ready_backlog_handoff() {
+    let router = read_repo_file("engine/router.md");
+
+    assert!(
+        router.contains("Exception: `{slug} discuss` resolves against a seed"),
+        "router must retain the backlog discuss exception"
+    );
+    assert!(
+        router.contains("Exception: `{slug} plan`")
+            && router.contains("{specs_dir}/_backlog/{slug}.md")
+            && router.contains("maturity: ready-for-plan")
+            && router.contains("plan creates the active spec directory"),
+        "router must allow plan from ready-for-plan backlog handoffs"
+    );
+    assert!(
+        router.contains("maturity: seed") && router.contains("guide back to `{slug} discuss`"),
+        "router must route raw backlog seeds back to discuss"
+    );
+    assert!(
+        router.contains("Event patterns `{slug} merged`")
+            && router.contains("{specs_dir}/_done/{slug}/"),
+        "router must retain the merged-event _done exception"
+    );
+}
+
+#[test]
+fn branch_placeholders_use_prefix_slug() {
+    let qa = read_repo_file("engine/templates/delivery/qa-instructions.md");
+    let git = read_repo_file("engine/reference/git.md");
+
+    assert!(
+        qa.contains("**branch**: `{prefix}/{slug}`"),
+        "QA template must display the real branch placeholder"
+    );
+    assert!(
+        !qa.contains("{type}/{slug}"),
+        "QA template must not use the unmapped branch placeholder"
+    );
+    assert!(
+        git.contains("git branch -d {prefix}/{slug}"),
+        "post-merge cleanup must delete the real branch placeholder"
+    );
+    assert!(
+        !git.contains("git branch -d {type}/{slug}"),
+        "post-merge cleanup must not delete the unmapped branch placeholder"
+    );
+}
+
+#[test]
+fn pr_feedback_restore_is_related_dirty_only_for_same_spec() {
+    let ship = read_repo_file("engine/commands/ship.md");
+    let build = read_repo_file("engine/commands/build.md");
+    let git = read_repo_file("engine/reference/git.md");
+
+    assert!(
+        ship.contains("related lifecycle change")
+            && ship.contains("{specs_dir}/{slug}/**")
+            && ship.contains("{specs_dir}/_done/{slug}/**")
+            && ship.contains("Any other dirt still stops"),
+        "ship PR Feedback Loop must treat only active + archived same-spec paths as related"
+    );
+    assert!(
+        build.contains("when build resumes from `ship.md ## PR Feedback Loop`")
+            && build.contains("{specs_dir}/_done/{slug}/**")
+            && build.contains("any other dirt still stops"),
+        "build dirty check must allow the archived same-spec path only for PR feedback resumes"
+    );
+    assert!(
+        git.contains("Exception: only when returning from `ship.md ## PR Feedback Loop`")
+            && git.contains("exactly `{specs_dir}/{slug}/**` and `{specs_dir}/_done/{slug}/**`")
+            && git.contains("Other slugs")
+            && git
+                .contains("under `_done/`, other specs, source changes, and `state/` files remain"),
+        "git dirty rules must keep the feedback-loop exception narrow"
+    );
+}
+
+#[test]
+fn ship_defers_context_refresh_until_after_pr_or_merge() {
+    let ship = read_repo_file("engine/commands/ship.md");
+    let git = read_repo_file("engine/reference/git.md");
+    let refresh = read_repo_file("engine/commands/refresh-context.md");
+
+    assert!(
+        ship.contains("post-ship `refresh-context` follow-up after PR creation or after merge")
+            && ship.contains("Do **not** run or trigger `refresh-context` before the close-out commit or `mochiflow pr`")
+            && ship.contains("would dirty the tree before PR pre-flight"),
+        "ship must defer context refresh instead of prompting pre-PR execution"
+    );
+    assert!(
+        !ship.contains("prompt the human to run `refresh-context`"),
+        "ship must not tell users to run refresh-context during close-out"
+    );
+    assert!(
+        git.contains("flag a post-ship")
+            && git.contains("follow-up instead of editing it")
+            && git.contains("running it during close-out")
+            && git.contains("separate work after PR creation / merge"),
+        "git fold guidance must make context refresh a separate follow-up"
+    );
+    assert!(
+        refresh.contains("Refresh does not auto-commit")
+            && refresh.contains("after PR creation / merge")
+            && refresh.contains("as separate follow-up")
+            && refresh.contains("trigger this during close-out"),
+        "refresh-context must remain no-auto-commit and safe outside ship close-out"
+    );
+}
+
+#[test]
+fn auto_commit_gate_is_verification_not_reviewer() {
+    let git = read_repo_file("engine/reference/git.md");
+
+    assert!(
+        git.contains("Commit only after verification PASS"),
+        "auto-commit rules must keep verification as the commit gate"
+    );
+    assert!(
+        git.contains("not a pre-commit gate"),
+        "auto-commit rules must state reviewer verdict gates completion, not commits"
+    );
+    assert!(
+        !git.contains("reviewer PASS when `risk.md` requires it"),
+        "auto-commit rules must not require reviewer PASS before each commit"
+    );
+}
+
+#[test]
+fn spec_templates_require_done_eligible_matrix_results() {
+    for path in [
+        "engine/templates/spec/spec.md",
+        "engine/templates/spec/spec.standard.md",
+    ] {
+        let template = read_repo_file(path);
+        assert!(
+            template.contains("done-eligible result token"),
+            "{path} must describe the current Matrix completion rule"
+        );
+        assert!(
+            !template.contains("with no `FAIL` result"),
+            "{path} must not imply FAIL is the only non-final Matrix state"
+        );
+    }
+    let git = read_repo_file("engine/reference/git.md");
+    assert!(
+        !git.contains("right after verification"),
+        "no-PR close-out must be tied to ship acceptance, not raw verification"
+    );
+}
+
+#[test]
+fn discuss_persists_ready_for_plan_handoff() {
+    let discuss = read_repo_file("engine/commands/discuss.md");
+    let workflow = read_repo_file("engine/reference/workflow.md");
+    let plan = read_repo_file("engine/commands/plan.md");
+    let handoff = read_repo_file("engine/templates/backlog/discuss-handoff.md");
+
+    assert!(
+        discuss.contains("{specs_dir}/_backlog/{slug}.md")
+            && discuss.contains("maturity: ready-for-plan")
+            && discuss.contains("templates/backlog/discuss-handoff.md"),
+        "discuss must persist a ready-for-plan handoff under _backlog"
+    );
+    assert!(
+        plan.contains("maturity: ready-for-plan")
+            && plan.contains("maturity: seed")
+            && plan.contains("{slug} discuss")
+            && plan.contains("rather than inventing decisions"),
+        "plan must distinguish agreed handoffs from raw seeds"
+    );
+    assert!(
+        workflow.contains("Raw seed: `maturity: seed`")
+            && workflow.contains("Ready-for-plan handoff: `maturity: ready-for-plan`")
+            && workflow.contains("durable\n  Decision summary"),
+        "workflow must document both backlog artifact types"
+    );
+    for heading in [
+        "## Decision Summary",
+        "## Decisions",
+        "## Assumptions",
+        "## Open Questions",
+        "## Change Impact",
+        "## Evidence",
+    ] {
+        assert!(
+            handoff.contains(heading),
+            "handoff template missing {heading}"
+        );
+    }
+}
+
+#[test]
+fn ac_matrix_pending_human_is_canonical_provisional_token() {
+    let workflow = read_repo_file("engine/reference/workflow.md");
+    let build = read_repo_file("engine/commands/build.md");
+    let language = read_repo_file("engine/reference/language.md");
+    let qa = read_repo_file("engine/templates/delivery/qa-instructions.md");
+
+    assert!(workflow.contains("`PENDING_HUMAN`"), "{workflow}");
+    assert!(
+        workflow.contains("not done-eligible"),
+        "workflow must mark provisional results as not done-eligible"
+    );
+    assert!(
+        build.contains("`PENDING_HUMAN`") && !build.contains("\"pending human verification\""),
+        "build must use the canonical provisional token"
+    );
+    assert!(
+        language.contains("`PENDING_HUMAN`"),
+        "language reference must preserve the provisional token"
+    );
+    assert!(
+        qa.contains("Human confirmed` is worksheet prose only") && qa.contains("`人間確認済み`"),
+        "QA worksheet must map prose confirmation to the Matrix token"
+    );
+}
+
+#[test]
+fn ad_hoc_review_is_report_only() {
+    let review = read_repo_file("engine/commands/review.md");
+    let risk = read_repo_file("engine/reference/risk.md");
+
+    assert!(
+        review.contains("Reports findings only")
+            && review.contains("Do not fix inline as part of ad-hoc review"),
+        "ad-hoc review command must be report-only"
+    );
+    assert!(
+        risk.contains("For mandatory risk-cadence review during `build`")
+            && risk.contains("For ad-hoc review, do not fix findings inline"),
+        "risk reference must separate build review fixes from ad-hoc review reporting"
+    );
+    assert!(
+        !review.contains("fix inline and re-run") && !risk.contains("fix inline and re-run"),
+        "review docs must not auto-fix from ad-hoc review"
+    );
+}
+
+#[test]
+fn workflow_todo_verify_is_not_runnable() {
+    let workflow = read_repo_file("engine/reference/workflow.md");
+    assert!(
+        workflow.contains("`TODO:` placeholder is not yet runnable")
+            && workflow.contains("define\nits command before building that surface"),
+        "workflow must say TODO verification is not runnable before build"
+    );
+}
+
+#[test]
+fn no_pr_fast_path_skips_pr_gate_but_still_ships() {
+    let workflow = read_repo_file("engine/reference/workflow.md");
+    let git = read_repo_file("engine/reference/git.md");
+    let ship = read_repo_file("engine/commands/ship.md");
+    let build = read_repo_file("engine/commands/build.md");
+
+    assert!(
+        workflow.contains("skips")
+            && workflow.contains("**approve-PR**")
+            && workflow.contains("still runs `ship`"),
+        "workflow must describe the no-PR gate exception"
+    );
+    assert!(
+        git.contains("no-PR skips PR creation and the approve-PR gate")
+            && git.contains("still runs `ship` acceptance"),
+        "git reference must keep no-PR tied to ship acceptance"
+    );
+    assert!(
+        ship.contains("On the explicit no-PR fast path, skip this PR section")
+            && ship.contains("same close-out commit"),
+        "ship must skip PR work only after close-out"
+    );
+    assert!(
+        build.contains("no-PR fast path branch choice") && !build.contains("no-PR fast commit"),
+        "build must not imply no-PR completes at build commit"
+    );
+}
+
+#[test]
+fn workflow_gate_2_uses_mochiflow_pr() {
+    let workflow = read_repo_file("engine/reference/workflow.md");
+    let gate_2 = workflow
+        .lines()
+        .find(|line| line.contains("**approve-PR**"))
+        .expect("workflow approve-PR gate line exists");
+
+    assert!(
+        gate_2.contains("before `mochiflow pr` runs"),
+        "gate 2 must point to mochiflow pr; got: {gate_2}"
+    );
+    assert!(
+        !gate_2.contains("[git].pr_command"),
+        "gate 2 must not point to deprecated [git].pr_command; got: {gate_2}"
+    );
+}
+
+#[test]
+fn readme_lists_public_cli_commands() {
+    let readme = read_repo_file("README.md");
+    let commands = [
+        "init",
+        "join",
+        "detach",
+        "guide",
+        "config",
+        "lint",
+        "doctor",
+        "adapter",
+        "index",
+        "ready",
+        "backlog",
+        "upgrade",
+        "pr",
+        "completions",
+    ];
+
+    for command in commands {
+        let needle = format!("`mochiflow {command}`");
+        assert!(
+            readme.contains(&needle),
+            "README.md must list public CLI command {needle}"
+        );
+    }
+}
+
+#[test]
+fn micro_template_has_no_ac_verification_matrix() {
+    let template = read_repo_file("engine/templates/spec/spec.micro.md");
+
+    assert!(
+        !template.contains("AC Verification Matrix"),
+        "micro spec template must not include the build/ship-owned AC Verification Matrix"
+    );
+    assert!(
+        !template.contains("UNVERIFIED"),
+        "UNVERIFIED is not part of the AC result enum and must not appear in the micro template"
+    );
+}
+
+#[test]
+fn language_reference_uses_current_ac_results() {
+    let language = read_repo_file("engine/reference/language.md");
+
+    for stale in ["UNVERIFIED", "HUMAN_CONFIRMED"] {
+        assert!(
+            !language.contains(stale),
+            "language reference must not preserve stale AC result token {stale}"
+        );
+    }
+    for current in [
+        "`PASS`",
+        "`人間確認済み`",
+        "`対象外（<reason>）`",
+        "`FAIL`",
+        "`PENDING_HUMAN`",
+    ] {
+        assert!(
+            language.contains(current),
+            "language reference must list current AC result value {current}"
+        );
+    }
+}
+
+#[test]
+fn templates_do_not_use_fixed_ios_surface() {
+    for path in [
+        "engine/templates/spec/spec.yaml",
+        "engine/templates/backlog/seed.md",
+    ] {
+        let template = read_repo_file(path);
+        assert!(
+            !template.contains("surface: ios"),
+            "{path} must not hard-code surface: ios"
+        );
+        assert!(
+            !template.contains("- ios"),
+            "{path} must not hard-code an ios list item"
+        );
+        assert!(
+            template.contains("{surface}"),
+            "{path} must expose a surface placeholder"
+        );
+    }
+}
+
+#[test]
+fn design_template_optional_residue_guard() {
+    let plan = read_repo_file("engine/commands/plan.md");
+    let design = read_repo_file("engine/templates/spec/design.md");
+
+    assert!(
+        plan.contains("delete optional sections at creation time"),
+        "plan must require optional design sections to be removed at creation time"
+    );
+    assert!(
+        design.matches("Delete this heading").count() >= 4,
+        "design template optional sections must instruct agents to delete inapplicable headings"
+    );
+}
+
+#[test]
+fn engine_templates_are_english_source() {
+    let templates_dir = repo_root().join("engine/templates");
+    let mut files = Vec::new();
+    collect_files(&templates_dir, &mut files);
+
+    for path in files {
+        let mut text = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+        for token in ["人間確認済み", "対象外"] {
+            text = text.replace(token, "");
+        }
+        let has_japanese = text.chars().any(|c| {
+            ('\u{3040}'..='\u{30ff}').contains(&c) || ('\u{4e00}'..='\u{9fff}').contains(&c)
+        });
+        assert!(
+            !has_japanese,
+            "engine source templates must stay English-only: {}",
+            path.strip_prefix(repo_root()).unwrap_or(&path).display()
+        );
+    }
+}
+
+#[test]
+fn english_template_headings_are_present() {
+    let spec = read_repo_file("engine/templates/spec/spec.md");
+    let design = read_repo_file("engine/templates/spec/design.md");
+    let tasks = read_repo_file("engine/templates/spec/tasks.md");
+    let qa = read_repo_file("engine/templates/delivery/qa-instructions.md");
+
+    for heading in [
+        "## Background and Design Rationale",
+        "## User Story",
+        "## Scope",
+        "## Acceptance Criteria (EARS)",
+        "## QA Scenarios",
+        "## Completion Conditions",
+    ] {
+        assert!(spec.contains(heading), "spec template missing {heading}");
+    }
+    for heading in [
+        "## Design Decisions",
+        "## Architecture",
+        "## Data Model / Interfaces",
+        "## Error Handling",
+        "## Test Strategy",
+        "## Integration Log",
+    ] {
+        assert!(
+            design.contains(heading),
+            "design template missing {heading}"
+        );
+    }
+    for heading in [
+        "Implementation Summary:",
+        "Critical Stop Conditions:",
+        "Covers AC:",
+        "Planned Change Areas:",
+        "Additional Stop Conditions:",
+    ] {
+        assert!(tasks.contains(heading), "tasks template missing {heading}");
+    }
+    for heading in [
+        "# QA Instructions:",
+        "## Legend",
+        "## Preparation",
+        "## Scenario List",
+        "## Detailed Steps",
+        "## Report Formats",
+    ] {
+        assert!(qa.contains(heading), "QA template missing {heading}");
+    }
+}
+
+#[test]
+fn engine_references_do_not_use_removed_japanese_template_headings() {
+    let engine_dir = repo_root().join("engine");
+    let mut files = Vec::new();
+    collect_files(&engine_dir, &mut files);
+    let removed = ["背景と設計判断", "設計判断", "統合ログ", "対応 AC"];
+
+    for path in files {
+        let rel = path
+            .strip_prefix(repo_root())
+            .unwrap_or(&path)
+            .to_string_lossy()
+            .replace('\\', "/");
+        if rel == "engine/MANIFEST.json" {
+            continue;
+        }
+        let text = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+        for token in removed {
+            assert!(
+                !text.contains(token),
+                "{rel} must not reference removed Japanese template heading token {token}"
+            );
+        }
+    }
+}
+
+// --- (f) Behavioral / property tests: lint rules pinned without golden --------
 
 /// Materialize a minimal project (config + memory + specs) and write a single
 /// spec under slug `s`. Returns (exit_code, stdout) of `lint --spec s`.
@@ -503,6 +1075,16 @@ fn lint_passes_valid_approved_spec() {
 }
 
 #[test]
+fn lint_passes_english_template_headings_and_covers_ac() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: done");
+    let md = "# S\n\n## Acceptance Criteria (EARS)\n\n- AC-01: THE SYSTEM SHALL do the thing.\n";
+    let tasks = "# Tasks\n\n## Task 1\n\nCovers AC: AC-01\n\n\
+                 ## AC Verification Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | PASS |\n";
+    let (code, out) = run_lint_case(&yaml, md, None, Some(tasks));
+    assert_eq!(code, 0, "{out}");
+}
+
+#[test]
 fn lint_done_fails_when_matrix_missing() {
     let yaml = GOOD_YAML.replace("status: approved", "status: done");
     let md = "# S\n\n## 受入基準\n\n- AC-01: THE SYSTEM SHALL do the thing.\n";
@@ -512,13 +1094,77 @@ fn lint_done_fails_when_matrix_missing() {
 }
 
 #[test]
+fn lint_done_ignores_matrix_heading_inside_comment() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: done");
+    let md = "# S\n\n## 受入基準\n\n- AC-01: THE SYSTEM SHALL do the thing.\n\n\
+              <!-- After implementation, append ## AC Verification Matrix here. -->\n";
+    let (code, out) = run_lint_case(&yaml, md, None, None);
+    assert_eq!(code, 1);
+    assert!(out.contains("AC Verification Matrix is missing"), "{out}");
+}
+
+#[test]
 fn lint_done_fails_when_matrix_contains_fail() {
     let yaml = GOOD_YAML.replace("status: approved", "status: done");
     let md = "# S\n\n## 受入基準\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
               ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | FAIL |\n";
     let (code, out) = run_lint_case(&yaml, md, None, None);
     assert_eq!(code, 1);
-    assert!(out.contains("contains FAIL"), "{out}");
+    assert!(out.contains("invalid result `FAIL`"), "{out}");
+}
+
+#[test]
+fn lint_done_passes_with_canonical_final_matrix_results() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: done");
+    let md = "# S\n\n## 受入基準\n\n\
+              - AC-01: THE SYSTEM SHALL x.\n\
+              - AC-02: WHEN y, THE SYSTEM SHALL z.\n\
+              - AC-03: WHERE q, THE SYSTEM SHALL r.\n\n\
+              ## AC Verification Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | PASS |\n| AC-02 | 人間確認済み |\n| AC-03 | 対象外（not relevant for CLI） |\n";
+    let (code, out) = run_lint_case(&yaml, md, None, None);
+    assert_eq!(code, 0, "{out}");
+}
+
+#[test]
+fn lint_done_fails_when_matrix_contains_pending_or_unknown_result() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: done");
+    for result in [
+        "PENDING_HUMAN",
+        "pending human verification",
+        "Human confirmed",
+    ] {
+        let md = format!(
+            "# S\n\n## 受入基準\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
+             ## AC Verification Matrix\n\n| AC | 結果 |\n| --- | --- |\n| AC-01 | {result} |\n"
+        );
+        let (code, out) = run_lint_case(&yaml, &md, None, None);
+        assert_eq!(code, 1, "{result}: {out}");
+        assert!(out.contains(&format!("invalid result `{result}`")), "{out}");
+    }
+}
+
+#[test]
+fn lint_done_fails_when_matrix_result_is_empty() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: done");
+    let md = "# S\n\n## 受入基準\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
+              ## AC Verification Matrix\n\n| AC | 結果 |\n| --- | --- |\n| AC-01 |  |\n";
+    let (code, out) = run_lint_case(&yaml, md, None, None);
+    assert_eq!(code, 1);
+    assert!(out.contains("invalid result `<empty>`"), "{out}");
+}
+
+#[test]
+fn lint_done_fails_when_not_applicable_reason_is_placeholder_or_empty() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: done");
+    for result in ["対象外（）", "対象外（理由）"] {
+        let md = format!(
+            "# S\n\n## 受入基準\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
+             ## AC Verification Matrix\n\n| AC | 結果 |\n| --- | --- |\n| AC-01 | {result} |\n"
+        );
+        let (code, out) = run_lint_case(&yaml, &md, None, None);
+        assert_eq!(code, 1, "{result}: {out}");
+        assert!(out.contains(&format!("invalid result `{result}`")), "{out}");
+    }
 }
 
 #[test]
@@ -699,6 +1345,43 @@ fn lint_done_elevated_passes_with_reviewer_verdict() {
 }
 
 #[test]
+fn lint_done_elevated_fails_with_only_fail_reviewer_verdict() {
+    let yaml = GOOD_YAML
+        .replace("status: approved", "status: done")
+        .replace("risk: standard", "risk: elevated");
+    let md = "# S\n\n## 受入基準\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
+              ## AC Verification Matrix\n\n| AC | 結果 |\n| --- | --- |\n| AC-01 | PASS |\n";
+    let design = "# design\n\n## Review Results\n\nReviewer mode: inline\nVerdict: fail\n";
+    let (code, out) = run_lint_case(&yaml, md, Some(design), None);
+    assert_eq!(code, 1);
+    assert!(
+        out.contains("Review Results contains reviewer Verdict: fail"),
+        "{out}"
+    );
+}
+
+#[test]
+fn lint_done_critical_requires_passing_verdict_per_task() {
+    let yaml = GOOD_YAML
+        .replace("status: approved", "status: done")
+        .replace("risk: standard", "risk: critical");
+    let md = "# S\n\n## 受入基準\n\n- AC-01: THE SYSTEM SHALL x.\n- AC-02: THE SYSTEM SHALL y.\n";
+    let tasks_one_verdict = "# Tasks\n\n## Task 1\n\nCovers AC: AC-01\n\n## Task 2\n\nCovers AC: AC-02\n\n\
+                             ## AC Verification Matrix\n\n| AC | 結果 |\n| --- | --- |\n| AC-01 | PASS |\n| AC-02 | PASS |\n";
+    let design_one = "# design\n\n## Review Results\n\nReviewer mode: inline\nVerdict: pass\n";
+    let (code, out) = run_lint_case(&yaml, md, Some(design_one), Some(tasks_one_verdict));
+    assert_eq!(code, 1);
+    assert!(
+        out.contains("critical risk requires at least 2 passing reviewer verdict"),
+        "{out}"
+    );
+
+    let design_two = "# design\n\n## Review Results\n\nReviewer mode: inline\nVerdict: pass\n\nReviewer mode: inline\nVerdict: pass-with-comments\n";
+    let (code, out) = run_lint_case(&yaml, md, Some(design_two), Some(tasks_one_verdict));
+    assert_eq!(code, 0, "{out}");
+}
+
+#[test]
 fn lint_done_elevated_ignores_reviewer_verdict_outside_design() {
     let yaml = GOOD_YAML
         .replace("status: approved", "status: done")
@@ -779,10 +1462,12 @@ fn materialize_full(root: &Path) -> PathBuf {
     std::fs::write(
         install.join("config.toml"),
         "schema_version = 1\n\
-         language = \"en\"\n\n\
          install_dir = \".mochiflow\"\n\
          specs_dir = \".mochiflow/specs\"\n\
          index = \".mochiflow/INDEX.md\"\n\n\
+         [i18n]\n\
+         artifact_language = \"en\"\n\
+         conversation_language = \"auto\"\n\n\
          [constitution]\n\
          project = \".mochiflow/constitution.md\"\n\
          local = \".mochiflow/constitution.local.md\"\n\n\
@@ -836,10 +1521,15 @@ fn materialize_full(root: &Path) -> PathBuf {
 }
 
 fn run_cli(config: &Path, args: &[&str]) -> (i32, String) {
+    run_cli_in_dir(config, Path::new("."), args)
+}
+
+fn run_cli_in_dir(config: &Path, cwd: &Path, args: &[&str]) -> (i32, String) {
     let mut full = vec!["--config", config.to_str().unwrap()];
     full.extend_from_slice(args);
     let out = assert_cmd::Command::cargo_bin("mochiflow")
         .unwrap()
+        .current_dir(cwd)
         .args(&full)
         .output()
         .unwrap();
@@ -847,6 +1537,23 @@ fn run_cli(config: &Path, args: &[&str]) -> (i32, String) {
         out.status.code().unwrap_or(-1),
         String::from_utf8_lossy(&out.stdout).into_owned(),
     )
+}
+
+fn write_done_spec(specs_dir: &Path, slug: &str) {
+    let spec_dir = specs_dir.join("_done").join(slug);
+    std::fs::create_dir_all(&spec_dir).unwrap();
+    std::fs::write(
+        spec_dir.join("spec.yaml"),
+        format!(
+            "version: 1\nslug: {slug}\ntitle: Archived Spec\ntype: feature\nsurfaces:\n  - app\nintegration: none\nrisk: standard\nstatus: done\n"
+        ),
+    )
+    .unwrap();
+    std::fs::write(
+        spec_dir.join("spec.md"),
+        "# Archived Spec\n\n## 受入基準\n\n- AC-01: THE SYSTEM SHALL do the thing.\n\n## AC Verification Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | PASS |\n",
+    )
+    .unwrap();
 }
 
 #[test]
@@ -882,6 +1589,164 @@ fn behavioral_lint_and_ready() {
         out.contains("READY") && out.contains("sample-spec"),
         "{out}"
     );
+}
+
+#[test]
+fn behavioral_ready_fails_when_spec_verify_is_todo() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg = materialize_full(tmp.path());
+    let config = std::fs::read_to_string(&cfg).unwrap().replace(
+        "default = \"echo test-pass\"",
+        "default = \"TODO: define test command\"",
+    );
+    std::fs::write(&cfg, config).unwrap();
+
+    let (code, out) = run_cli(&cfg, &["ready", "sample-spec"]);
+    assert_eq!(code, 1);
+    assert!(out.contains("FAIL"), "{out}");
+    assert!(
+        out.contains("verification command for surface `app`"),
+        "{out}"
+    );
+    assert!(out.contains("TODO: define test command"), "{out}");
+    assert!(!out.contains("READY"), "{out}");
+}
+
+#[test]
+fn behavioral_ready_fails_when_spec_verify_default_is_missing() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg = materialize_full(tmp.path());
+    let config = std::fs::read_to_string(&cfg)
+        .unwrap()
+        .replace("default = \"echo test-pass\"\n", "");
+    std::fs::write(&cfg, config).unwrap();
+
+    let (code, out) = run_cli(&cfg, &["ready", "sample-spec"]);
+    assert_eq!(code, 1);
+    assert!(out.contains("FAIL"), "{out}");
+    assert!(
+        out.contains("verification command for surface `app`"),
+        "{out}"
+    );
+    assert!(out.contains("has no verify profile: default"), "{out}");
+    assert!(!out.contains("READY"), "{out}");
+}
+
+#[test]
+fn behavioral_ready_fails_when_any_spec_surface_verify_is_not_runnable() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg = materialize_full(tmp.path());
+    let mut config = std::fs::read_to_string(&cfg).unwrap();
+    config.push_str(
+        "\n[surfaces.api]\n\
+         description = \"api\"\n\n\
+         [surfaces.api.verify]\n\
+         default = \"TODO: define test command\"\n",
+    );
+    std::fs::write(&cfg, config).unwrap();
+
+    let spec_dir = cfg.parent().unwrap().join("specs").join("sample-spec");
+    std::fs::write(
+        spec_dir.join("spec.yaml"),
+        "version: 1\nslug: sample-spec\ntitle: Sample Spec\ntype: feature\nsurfaces:\n  - app\n  - api\nintegration: none\nrisk: standard\nstatus: approved\n",
+    )
+    .unwrap();
+    std::fs::write(
+        spec_dir.join("design.md"),
+        "# Design\n\n## Integration Log\n\n- Multi-surface verification guard.\n",
+    )
+    .unwrap();
+
+    let (code, out) = run_cli(&cfg, &["ready", "sample-spec"]);
+    assert_eq!(code, 1);
+    assert!(out.contains("FAIL"), "{out}");
+    assert!(
+        out.contains("verification command for surface `api`"),
+        "{out}"
+    );
+    assert!(!out.contains("READY"), "{out}");
+}
+
+#[test]
+fn behavioral_ready_ignores_todo_verify_on_unused_surface() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg = materialize_full(tmp.path());
+    let mut config = std::fs::read_to_string(&cfg).unwrap();
+    config.push_str(
+        "\n[surfaces.unused]\n\
+         description = \"unused\"\n\n\
+         [surfaces.unused.verify]\n\
+         default = \"TODO: define test command\"\n",
+    );
+    std::fs::write(&cfg, config).unwrap();
+
+    let (code, out) = run_cli(&cfg, &["ready", "sample-spec"]);
+    assert_eq!(code, 0, "{out}");
+    assert!(
+        out.contains("READY") && out.contains("sample-spec"),
+        "{out}"
+    );
+}
+
+#[test]
+fn behavioral_lint_spec_missing_fails() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg = materialize_full(tmp.path());
+
+    let (code, out) = run_cli(&cfg, &["lint", "--spec", "missing-spec"]);
+    assert_eq!(code, 1);
+    assert!(out.contains("spec not found: missing-spec"), "{out}");
+}
+
+#[test]
+fn behavioral_lint_archived_spec_by_slug_passes() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg = materialize_full(tmp.path());
+    write_done_spec(&tmp.path().join(".mochiflow/specs"), "archived-spec");
+
+    let (code, out) = run_cli(&cfg, &["lint", "--spec", "archived-spec"]);
+    assert_eq!(code, 0, "{out}");
+}
+
+#[test]
+fn behavioral_lint_spec_slug_ambiguity_fails() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg = materialize_full(tmp.path());
+    write_done_spec(&tmp.path().join(".mochiflow/specs"), "sample-spec");
+
+    let (code, out) = run_cli(&cfg, &["lint", "--spec", "sample-spec"]);
+    assert_eq!(code, 1);
+    assert!(
+        out.contains("spec target is ambiguous: sample-spec"),
+        "{out}"
+    );
+    assert!(out.contains(".mochiflow/specs/sample-spec"), "{out}");
+    assert!(out.contains(".mochiflow/specs/_done/sample-spec"), "{out}");
+}
+
+#[test]
+fn behavioral_lint_spec_path_to_done_passes() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg = materialize_full(tmp.path());
+    write_done_spec(&tmp.path().join(".mochiflow/specs"), "archived-spec");
+
+    let (code, out) = run_cli_in_dir(
+        &cfg,
+        tmp.path(),
+        &["lint", "--spec", ".mochiflow/specs/_done/archived-spec"],
+    );
+    assert_eq!(code, 0, "{out}");
+
+    let (code, out) = run_cli_in_dir(
+        &cfg,
+        tmp.path(),
+        &[
+            "lint",
+            "--spec",
+            ".mochiflow/specs/_done/archived-spec/spec.yaml",
+        ],
+    );
+    assert_eq!(code, 0, "{out}");
 }
 
 #[test]

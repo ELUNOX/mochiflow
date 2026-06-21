@@ -13,9 +13,20 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   repair helper after clone/pull.
 - `mochiflow detach` now preserves the tracked engine by default while removing
   adapter integration and local state.
-- Ship now writes reviewer-facing `qa-instructions.md` into the spec folder so
-  it is reviewed and archived with the spec; PR body/request artifacts remain in
-  ignored state.
+- Ship now writes the reviewer-facing `qa-instructions.md` worksheet into
+  ignored state, while durable QA evidence remains in the AC Verification Matrix
+  that is reviewed and archived with the spec.
+- Replaced the legacy top-level `language` config with `[i18n]`
+  `artifact_language` and `conversation_language`.
+- `mochiflow init` now writes `[i18n]` and uses `--artifact-language` /
+  `--conversation-language`; the old `--language` flag has been removed.
+- Engine language policy now treats engine docs/templates as English source and
+  rendered durable artifacts as artifact-language output.
+
+### Deprecated
+
+- Existing top-level `language` config remains readable as a legacy artifact
+  language source and is reported by `doctor config` as deprecated.
 
 ## [1.1.2] - 2026-06-19
 

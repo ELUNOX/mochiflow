@@ -65,6 +65,8 @@ pub enum InitLanguageSource {
     Locale,
     Default,
     ExistingConfig,
+    LegacyConfig,
+    Docs,
 }
 
 impl InitLanguageSource {
@@ -75,6 +77,8 @@ impl InitLanguageSource {
             Self::Locale => "locale",
             Self::Default => "default",
             Self::ExistingConfig => "existing_config",
+            Self::LegacyConfig => "legacy_config",
+            Self::Docs => "docs",
         }
     }
 }
@@ -87,8 +91,11 @@ pub struct InitJsonInput<'a> {
     pub status: InitStatus,
     pub extra_confirmation_items: &'a [String],
     pub blocked_items: &'a [InitBlockedItem],
-    pub language: &'a str,
-    pub language_source: InitLanguageSource,
+    pub artifact_language: &'a str,
+    pub conversation_language: &'a str,
+    pub display_language: &'a str,
+    pub artifact_language_source: InitLanguageSource,
+    pub conversation_language_source: InitLanguageSource,
 }
 
 impl ColorChoice {
@@ -257,15 +264,33 @@ pub fn render_init_summary(
     status: InitStatus,
     mode: OutputMode,
     color: ColorChoice,
-    language: &str,
-    language_source: InitLanguageSource,
+    artifact_language: &str,
+    conversation_language: &str,
+    display_language: &str,
+    artifact_language_source: InitLanguageSource,
+    conversation_language_source: InitLanguageSource,
 ) -> String {
-    let ja = language == "ja";
+    let ja = display_language == "ja";
     let mut out = String::new();
     out.push_str("Detected:\n");
     out.push_str(&line(
         ItemStatus::Ok,
-        &format!("language: {} ({})", language, language_source.as_str()),
+        &format!(
+            "artifact language: {} ({})",
+            artifact_language,
+            artifact_language_source.as_str()
+        ),
+        mode,
+        color,
+    ));
+    out.push('\n');
+    out.push_str(&line(
+        ItemStatus::Ok,
+        &format!(
+            "conversation language: {} ({})",
+            conversation_language,
+            conversation_language_source.as_str()
+        ),
         mode,
         color,
     ));
@@ -334,7 +359,7 @@ pub fn render_init_summary(
     } else {
         "Needs review:\n"
     });
-    let mut confirm_items = confirmation_items(report, language);
+    let mut confirm_items = confirmation_items(report, display_language);
     confirm_items.extend(extra_confirmation_items.iter().cloned());
     if confirm_items.is_empty() {
         out.push_str(&line(
@@ -371,9 +396,9 @@ pub fn render_init_summary(
     out.push('\n');
     out.push_str("Next:\n");
     out.push_str(&match status {
-        InitStatus::Ready => render_ready_next(language),
-        InitStatus::NeedsAiReview => render_ai_review_prompt(language),
-        InitStatus::Blocked => render_blocked_next(language),
+        InitStatus::Ready => render_ready_next(display_language),
+        InitStatus::NeedsAiReview => render_ai_review_prompt(display_language),
+        InitStatus::Blocked => render_blocked_next(display_language),
     });
     out.push('\n');
     out
@@ -496,7 +521,7 @@ pub fn render_blocked_next(language: &str) -> String {
 
 pub fn render_init_json(input: InitJsonInput<'_>) -> String {
     let review_items = {
-        let mut items = confirmation_items(input.report, input.language);
+        let mut items = confirmation_items(input.report, input.display_language);
         items.extend(input.extra_confirmation_items.iter().cloned());
         items
     };
@@ -513,9 +538,9 @@ pub fn render_init_json(input: InitJsonInput<'_>) -> String {
         .collect();
     let review_required = input.status == InitStatus::NeedsAiReview;
     let next_message = match input.status {
-        InitStatus::Ready => render_ready_next(input.language),
-        InitStatus::NeedsAiReview => render_ai_review_prompt(input.language),
-        InitStatus::Blocked => render_blocked_next(input.language),
+        InitStatus::Ready => render_ready_next(input.display_language),
+        InitStatus::NeedsAiReview => render_ai_review_prompt(input.display_language),
+        InitStatus::Blocked => render_blocked_next(input.display_language),
     };
     let next_kind = match input.status {
         InitStatus::Ready => "start_building",
@@ -529,15 +554,20 @@ pub fn render_init_json(input: InitJsonInput<'_>) -> String {
         "exit_code": input.status.exit_code(),
         "target": input.target,
         "dry_run": input.dry_run,
-        "language": input.language,
-        "language_source": input.language_source.as_str(),
+        "i18n": {
+            "artifact_language": input.artifact_language,
+            "artifact_language_source": input.artifact_language_source.as_str(),
+            "conversation_language": input.conversation_language,
+            "conversation_language_source": input.conversation_language_source.as_str(),
+            "display_language": input.display_language,
+        },
         "detected": detected_json(input.report),
         "created_updated": input.created_updated,
         "review": {
             "required": review_required,
             "items": review_items,
             "prompt": if review_required {
-                serde_json::Value::String(render_ai_review_prompt(input.language))
+                serde_json::Value::String(render_ai_review_prompt(input.display_language))
             } else {
                 serde_json::Value::Null
             },
@@ -772,10 +802,17 @@ mod tests {
             OutputMode::Plain,
             ColorChoice::Never,
             "en",
+            "auto",
+            "en",
             InitLanguageSource::Flag,
+            InitLanguageSource::Default,
         );
         assert!(out.contains("Detected:"), "{out}");
-        assert!(out.contains("language: en (flag)"), "{out}");
+        assert!(out.contains("artifact language: en (flag)"), "{out}");
+        assert!(
+            out.contains("conversation language: auto (default)"),
+            "{out}"
+        );
         assert!(out.contains("Created/Updated:"), "{out}");
         assert!(out.contains("Status:"), "{out}");
         assert!(
@@ -799,9 +836,19 @@ mod tests {
             OutputMode::Plain,
             ColorChoice::Never,
             "ja",
+            "auto",
+            "ja",
             InitLanguageSource::ExistingConfig,
+            InitLanguageSource::Default,
         );
-        assert!(out.contains("language: ja (existing_config)"), "{out}");
+        assert!(
+            out.contains("artifact language: ja (existing_config)"),
+            "{out}"
+        );
+        assert!(
+            out.contains("conversation language: auto (default)"),
+            "{out}"
+        );
         assert!(out.contains("作成/更新:"), "{out}");
         assert!(out.contains("Status:"), "{out}");
         assert!(out.contains("Blocked"), "{out}");

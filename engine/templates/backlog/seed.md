@@ -1,15 +1,14 @@
 ---
-slug: {slug}
-title: {title}
-module: {module}
-surface: {surface}
-type_hint: feature | fix | refactor | docs | chore
-maturity: seed
-source: conversation
-source_spec: {source-spec-if-any}
-source_phase: think | plan | run | finish
-created: YYYY-MM-DD
-updated: YYYY-MM-DD
+slug: "{slug}"
+title: "{title}"
+surface: "{surface}"
+type_hint: "{type}"
+maturity: "seed"
+source: "conversation"
+source_spec: "{source-spec-if-any}"
+source_phase: "{source-phase}"
+created: "{date}"
+updated: "{date}"
 ---
 
 # {title}

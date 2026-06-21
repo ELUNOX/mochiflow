@@ -51,7 +51,7 @@ mochiflow lint [--spec SLUG]
 mochiflow index
 mochiflow doctor [config|specs|adapter|engine]
 mochiflow adapter generate [--force] [--check]
-mochiflow init [--target .] [--adapter TOOL] [--language LANG] [--force] [--dry-run]
+mochiflow init [--target .] [--adapter TOOL] [--artifact-language TAG] [--conversation-language TAG|auto] [--force] [--dry-run]
 mochiflow join [--target .] [--dry-run]
 mochiflow detach [--target .] [--dry-run] [--purge]
 mochiflow upgrade --source PATH [--force]

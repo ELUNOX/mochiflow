@@ -27,6 +27,49 @@ pub fn validate_config(cfg: &Config) -> Vec<DoctorIssue> {
             message: "schema_version must be 1".into(),
         });
     }
+    if cfg.i18n_meta.has_legacy_language {
+        issues.push(DoctorIssue {
+            severity: "WARN".into(),
+            message: "top-level `language` is deprecated; use `[i18n].artifact_language` instead."
+                .into(),
+        });
+    }
+    if !cfg.i18n_meta.has_i18n_table {
+        issues.push(DoctorIssue {
+            severity: "WARN".into(),
+            message: "missing `[i18n]`; using artifact_language=\"en\" and conversation_language=\"auto\" defaults unless legacy `language` is present.".into(),
+        });
+    }
+    if cfg.i18n_meta.missing_artifact_language {
+        issues.push(DoctorIssue {
+            severity: "FAIL".into(),
+            message: "`[i18n].artifact_language` is required".into(),
+        });
+    }
+    if cfg.i18n_meta.missing_conversation_language {
+        issues.push(DoctorIssue {
+            severity: "FAIL".into(),
+            message: "`[i18n].conversation_language` is required".into(),
+        });
+    }
+    if !crate::config::is_valid_artifact_language(&cfg.i18n.artifact_language) {
+        issues.push(DoctorIssue {
+            severity: "FAIL".into(),
+            message: format!(
+                "`[i18n].artifact_language` must be a BCP 47-style language tag and must not be `auto`: {}",
+                cfg.i18n.artifact_language
+            ),
+        });
+    }
+    if !crate::config::is_valid_conversation_language(&cfg.i18n.conversation_language) {
+        issues.push(DoctorIssue {
+            severity: "FAIL".into(),
+            message: format!(
+                "`[i18n].conversation_language` must be `auto` or a BCP 47-style language tag: {}",
+                cfg.i18n.conversation_language
+            ),
+        });
+    }
     if cfg.specs_dir.is_empty() {
         issues.push(DoctorIssue {
             severity: "FAIL".into(),
@@ -132,10 +175,10 @@ pub fn validate_config(cfg: &Config) -> Vec<DoctorIssue> {
     issues
 }
 
-/// WARN when `{install_dir}/state/` is not gitignored. PR handoff artifacts and
-/// generated caches live in state, so `init` writes `{install_dir}/.gitignore`
-/// for fresh projects, and this catches drift or older projects. Skipped when
-/// the project is not a git repo (cannot decide).
+/// FAIL when `{install_dir}/state/` is not gitignored. PR/QA delivery artifacts
+/// are written under state/, and `mochiflow pr` requires a clean working tree.
+/// `init` writes `{install_dir}/.gitignore` for fresh projects; this catches
+/// drift or older projects. Skipped when the project is not a git repo.
 pub fn check_state_ignored(cfg: &Config) -> Vec<DoctorIssue> {
     use std::process::Command;
     let root = &cfg.repo_root;
@@ -149,10 +192,11 @@ pub fn check_state_ignored(cfg: &Config) -> Vec<DoctorIssue> {
         return Vec::new();
     }
     let state = cfg.state_dir();
+    let state_probe = state.join(".gitignore-probe");
     let ignored = Command::new("git")
         .arg("check-ignore")
         .arg("-q")
-        .arg(&state)
+        .arg(&state_probe)
         .current_dir(root)
         .status()
         .map(|s| s.success())
@@ -161,7 +205,7 @@ pub fn check_state_ignored(cfg: &Config) -> Vec<DoctorIssue> {
         Vec::new()
     } else {
         vec![DoctorIssue {
-            severity: "WARN".into(),
+            severity: "FAIL".into(),
             message: format!(
                 "{} is not gitignored; add `state/` to {}/.gitignore (init does this for new projects)",
                 state.display(),

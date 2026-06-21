@@ -105,6 +105,31 @@ fn pr_dirty_tree_exits_3() {
     run_pr(&cfg, &["--title", "X"]).failure().code(3);
 }
 
+#[test]
+fn pr_unignored_state_still_exits_3_with_gitignore_hint() {
+    let dir = tempfile::tempdir().unwrap();
+    let cfg = setup(dir.path(), "provider = \"none\"", false);
+    let repo = dir.path().join("repo");
+    fs::write(
+        repo.join(".gitignore"),
+        ".mochiflow/config.toml\n.mochiflow/specs/\n",
+    )
+    .unwrap();
+    fs::write(repo.join(".mochiflow/.keep"), "\n").unwrap();
+    git(&repo, &["add", ".gitignore", ".mochiflow/.keep"]);
+    git(&repo, &["commit", "-q", "-m", "track state drift"]);
+
+    let state_file = repo.join(".mochiflow/state/my-slug/pr-body.md");
+    fs::create_dir_all(state_file.parent().unwrap()).unwrap();
+    fs::write(state_file, "body\n").unwrap();
+
+    let result = run_pr(&cfg, &["--title", "X"]).failure().code(3);
+    let err = String::from_utf8_lossy(&result.get_output().stderr).into_owned();
+    assert!(err.contains("working tree not clean"), "{err}");
+    assert!(err.contains("pre-flight hint"), "{err}");
+    assert!(err.contains("add `state/`"), "{err}");
+}
+
 /// On the base branch (head == base) → pre-flight FAIL (exit 3).
 #[test]
 fn pr_base_equals_head_exits_3() {

@@ -1,9 +1,9 @@
 # Build Session Handoff Prompt Template
 
-Use this template at the end of `spec-plan` after `spec.yaml` is `approved` and
-the final consistency check passes. Render the copy-paste prompt in the project
-language from `config.toml` (`language`). Preserve commands, paths, metadata
-values, and identifiers exactly.
+Use this template at the end of `mochiflow-plan` after `spec.yaml` is `approved` and
+the final consistency check passes. Render the copy-paste prompt in
+`[i18n].artifact_language`. Preserve commands, paths, metadata values, and
+identifiers exactly.
 
 Do not name a specific adapter entrypoint such as `AGENTS.md`, `CLAUDE.md`,
 `.kiro/`, or Copilot instructions. The target session should follow whichever
@@ -21,6 +21,6 @@ required verification, and record the acceptance-check results in the spec
 artifacts.
 ```
 
-For non-English project languages, translate only the prose. Keep `{slug}`,
+For non-English artifact languages, translate only the prose. Keep `{slug}`,
 `{specs_dir}/{slug}/`, `build`, `spec.yaml`, `spec.md`, `design.md`, `tasks.md`,
 and `status: approved` unchanged.

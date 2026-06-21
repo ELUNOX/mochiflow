@@ -94,9 +94,19 @@ fn init_yes_uses_defaults_without_prompting() {
 
     let cfg = fs::read_to_string(dir.path().join(".mochiflow/config.toml")).unwrap();
     assert!(cfg.contains("tools = [\"agents\"]"), "got:\n{cfg}");
-    assert!(cfg.contains("language = \"en\""), "got:\n{cfg}");
+    assert!(cfg.contains("[i18n]"), "got:\n{cfg}");
+    assert!(cfg.contains("artifact_language = \"en\""), "got:\n{cfg}");
+    assert!(
+        cfg.contains("conversation_language = \"auto\""),
+        "got:\n{cfg}"
+    );
+    assert!(!cfg.contains("\nlanguage = "), "got:\n{cfg}");
     let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
-    assert!(out.contains("language: en (locale)"), "{out}");
+    assert!(out.contains("artifact language: en (default)"), "{out}");
+    assert!(
+        out.contains("conversation language: auto (default)"),
+        "{out}"
+    );
     assert!(out.contains("Status:"), "{out}");
     assert!(
         out.contains("paste the setup prompt below into your AI agent"),
@@ -107,7 +117,7 @@ fn init_yes_uses_defaults_without_prompting() {
 }
 
 #[test]
-fn init_yes_uses_japanese_locale_without_prompting() {
+fn init_uses_artifact_language_flag_without_prompting() {
     let dir = tempfile::tempdir().unwrap();
     let result = bin()
         .args([
@@ -115,19 +125,25 @@ fn init_yes_uses_japanese_locale_without_prompting() {
             "--yes",
             "--adapter",
             "kiro",
+            "--artifact-language",
+            "ja",
             "--target",
             dir.path().to_str().unwrap(),
         ])
-        .env("LANG", "ja_JP.UTF-8")
+        .env("LANG", "en_US.UTF-8")
         .env_remove("LC_ALL")
         .env_remove("LC_MESSAGES")
         .assert()
         .success();
 
     let cfg = fs::read_to_string(dir.path().join(".mochiflow/config.toml")).unwrap();
-    assert!(cfg.contains("language = \"ja\""), "got:\n{cfg}");
+    assert!(cfg.contains("artifact_language = \"ja\""), "got:\n{cfg}");
+    assert!(
+        cfg.contains("conversation_language = \"auto\""),
+        "got:\n{cfg}"
+    );
     let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
-    assert!(out.contains("language: ja (locale)"), "{out}");
+    assert!(out.contains("artifact language: ja (flag)"), "{out}");
     assert!(out.contains("初期設定を完了してください"), "{out}");
     assert!(out.contains("エラーではありません"), "{out}");
     assert!(
@@ -142,7 +158,7 @@ fn init_existing_config_runs_join_style_local_setup() {
     bin()
         .args([
             "init",
-            "--language",
+            "--artifact-language",
             "en",
             "--target",
             dir.path().to_str().unwrap(),
@@ -215,7 +231,7 @@ fn init_is_idempotent_nondestructive() {
     // Hand-edit a value in config
     let config_path = dir.path().join(".mochiflow/config.toml");
     let original = fs::read_to_string(&config_path).unwrap();
-    let edited = original.replace("language = \"en\"", "language = \"ja\"");
+    let edited = original.replace("artifact_language = \"en\"", "artifact_language = \"ja\"");
     fs::write(&config_path, &edited).unwrap();
 
     // Second run without --force preserves config and follows join-style setup.
@@ -228,7 +244,7 @@ fn init_is_idempotent_nondestructive() {
     // Config should be preserved (not overwritten)
     let after = fs::read_to_string(&config_path).unwrap();
     assert!(
-        after.contains("language = \"ja\""),
+        after.contains("artifact_language = \"ja\""),
         "hand-edited value should be preserved, got:\n{after}"
     );
 }
@@ -377,6 +393,29 @@ fn join_blocks_handwritten_structured_adapter_and_writes_candidate() {
     assert_eq!(
         fs::read_to_string(&structured).unwrap(),
         "{\"custom\": true}\n"
+    );
+}
+
+#[test]
+fn kiro_adapter_allows_delivery_state_paths() {
+    let dir = tempfile::tempdir().unwrap();
+    bin()
+        .args([
+            "init",
+            "--adapter",
+            "kiro",
+            "--target",
+            dir.path().to_str().unwrap(),
+        ])
+        .write_stdin("")
+        .assert()
+        .success();
+
+    let builder = dir.path().join(".kiro/agents/spec-builder.json");
+    let body = fs::read_to_string(&builder).unwrap();
+    assert!(
+        body.contains("\".mochiflow/state/**\""),
+        "Kiro allowedPaths must include delivery state:\n{body}"
     );
 }
 
@@ -560,18 +599,20 @@ fn init_force_ignores_old_fixed_staging_path() {
     );
 }
 
-/// --adapter resolves the `codex` label to the `agents` ID, and --language is
+/// --adapter resolves the `codex` label to the `agents` ID, and i18n flags are
 /// written to config.
 #[test]
-fn init_respects_adapter_language_overrides() {
+fn init_respects_adapter_i18n_overrides() {
     let dir = tempfile::tempdir().unwrap();
     bin()
         .args([
             "init",
             "--adapter",
             "codex",
-            "--language",
+            "--artifact-language",
             "ja",
+            "--conversation-language",
+            "auto",
             "--target",
             dir.path().to_str().unwrap(),
         ])
@@ -584,14 +625,20 @@ fn init_respects_adapter_language_overrides() {
 
     let cfg = fs::read_to_string(dir.path().join(".mochiflow/config.toml")).unwrap();
     assert!(cfg.contains("tools = [\"agents\"]"), "got:\n{cfg}");
-    assert!(cfg.contains("language = \"ja\""), "got:\n{cfg}");
+    assert!(cfg.contains("artifact_language = \"ja\""), "got:\n{cfg}");
+    assert!(
+        cfg.contains("conversation_language = \"auto\""),
+        "got:\n{cfg}"
+    );
     let result = bin()
         .args([
             "init",
             "--adapter",
             "codex",
-            "--language",
+            "--artifact-language",
             "ja",
+            "--conversation-language",
+            "auto",
             "--target",
             dir.path().to_str().unwrap(),
             "--force",
@@ -600,7 +647,8 @@ fn init_respects_adapter_language_overrides() {
         .assert()
         .success();
     let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
-    assert!(out.contains("language: ja (flag)"), "{out}");
+    assert!(out.contains("artifact language: ja (flag)"), "{out}");
+    assert!(out.contains("conversation language: auto (flag)"), "{out}");
     assert!(
         out.contains("AI アシスタントにこの文を貼ってください"),
         "{out}"
@@ -739,7 +787,7 @@ fn init_existing_structured_adapter_target_guidance_is_language_aware() {
             "init",
             "--adapter",
             "kiro",
-            "--language",
+            "--artifact-language",
             "ja",
             "--target",
             dir.path().to_str().unwrap(),
@@ -1756,6 +1804,71 @@ fn config_validate_fails_on_empty_adapter_tools() {
 }
 
 #[test]
+fn config_validate_warns_on_legacy_language() {
+    let dir = tempfile::tempdir().unwrap();
+    bin()
+        .args(["init", "--target", dir.path().to_str().unwrap()])
+        .write_stdin("")
+        .assert()
+        .success();
+
+    let config_path = dir.path().join(".mochiflow/config.toml");
+    let original = fs::read_to_string(&config_path).unwrap();
+    let edited = original.replace(
+        "[i18n]\nartifact_language = \"en\"\nconversation_language = \"auto\"\n\n",
+        "language = \"ja\"\n\n",
+    );
+    fs::write(&config_path, &edited).unwrap();
+
+    let result = bin()
+        .args([
+            "--config",
+            config_path.to_str().unwrap(),
+            "config",
+            "validate",
+        ])
+        .assert()
+        .success();
+    let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
+    assert!(out.contains("top-level `language` is deprecated"), "{out}");
+    assert!(out.contains("missing `[i18n]`"), "{out}");
+    assert!(out.contains("0 fail"), "{out}");
+}
+
+#[test]
+fn config_validate_fails_on_invalid_i18n() {
+    let dir = tempfile::tempdir().unwrap();
+    bin()
+        .args(["init", "--target", dir.path().to_str().unwrap()])
+        .write_stdin("")
+        .assert()
+        .success();
+
+    let config_path = dir.path().join(".mochiflow/config.toml");
+    let original = fs::read_to_string(&config_path).unwrap();
+    let edited = original
+        .replace("artifact_language = \"en\"", "artifact_language = \"auto\"")
+        .replace(
+            "conversation_language = \"auto\"",
+            "conversation_language = \"../ja\"",
+        );
+    fs::write(&config_path, &edited).unwrap();
+
+    let result = bin()
+        .args([
+            "--config",
+            config_path.to_str().unwrap(),
+            "config",
+            "validate",
+        ])
+        .assert()
+        .failure();
+    let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
+    assert!(out.contains("artifact_language"), "{out}");
+    assert!(out.contains("conversation_language"), "{out}");
+}
+
+#[test]
 fn doctor_json_outputs_single_document() {
     let dir = tempfile::tempdir().unwrap();
     bin()
@@ -1964,6 +2077,17 @@ fn init_rejects_removed_flags() {
         .assert()
         .failure()
         .code(2);
+    bin()
+        .args([
+            "init",
+            "--language",
+            "ja",
+            "--target",
+            dir.path().to_str().unwrap(),
+        ])
+        .assert()
+        .failure()
+        .code(2);
 }
 
 /// --dry-run previews without writing anything.
@@ -2076,10 +2200,10 @@ fn config_error_exits_2() {
         .code(2);
 }
 
-/// AC-06: `doctor config` WARNs (exit 0) when {install_dir}/state/ is not
-/// gitignored, and stays silent once it is ignored (init writes the rule).
+/// AC-06: `doctor config` FAILs when {install_dir}/state/ is not gitignored,
+/// and stays silent once it is ignored (init writes the rule).
 #[test]
-fn doctor_warns_when_state_not_gitignored() {
+fn doctor_fails_when_state_not_gitignored() {
     let dir = tempfile::tempdir().unwrap();
     let root = dir.path();
     std::process::Command::new("git")
@@ -2105,15 +2229,17 @@ fn doctor_warns_when_state_not_gitignored() {
         "state should be ignored after init:\n{out}"
     );
 
-    // Drop the ignore rule → WARN, still exit 0 (WARN is not a failure).
+    // Drop the ignore rule → FAIL because ship/pr delivery state must be ignored.
     fs::write(root.join(".mochiflow/.gitignore"), "").unwrap();
-    let warned = bin()
+    let failed = bin()
         .args(["--config", config.to_str().unwrap(), "doctor", "config"])
         .assert()
-        .success();
-    let out2 = String::from_utf8_lossy(&warned.get_output().stdout).into_owned();
+        .failure()
+        .code(1);
+    let out2 = String::from_utf8_lossy(&failed.get_output().stdout).into_owned();
+    assert!(out2.contains("FAIL"), "expected state-ignore FAIL:\n{out2}");
     assert!(
         out2.contains("not gitignored"),
-        "expected state-ignore WARN:\n{out2}"
+        "expected state-ignore FAIL:\n{out2}"
     );
 }
