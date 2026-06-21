@@ -190,8 +190,9 @@ PR's close-out commit):
 
 The fold + archive (`_done` move + `INDEX`) are **not** performed here — they are
 part of the feature branch's close-out commit (`## Living-spec fold`,
-`## Auto-commit and staging`). The no-PR fast path commits the fold + archive
-locally on the current branch right after verification, with no base-branch push.
+`## Auto-commit and staging`). The no-PR fast path makes that same close-out
+commit locally on the current branch after `ship` acceptance, with no
+base-branch push.
 
 ## Safety
 

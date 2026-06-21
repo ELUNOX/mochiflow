@@ -31,8 +31,12 @@ static NFR_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\bNFR-\d{2,}\b").
 static EARS_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\b(?:SHALL|WHEN|WHILE|WHERE|THEN)\b").expect("EARS_RE"));
 #[allow(clippy::expect_used)]
-static VERDICT_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(?i)Verdict:\s*(pass|pass-with-comments)").expect("VERDICT_RE"));
+static VERDICT_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)Verdict:\s*(pass-with-comments|pass|fail)").expect("VERDICT_RE")
+});
+#[allow(clippy::expect_used)]
+static TASK_HEADING_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?m)^## Task\b").expect("TASK_HEADING_RE"));
 
 pub struct Issue {
     pub severity: String,
@@ -42,13 +46,26 @@ pub struct Issue {
 
 fn section<'a>(text: &'a str, heading: &str) -> Option<&'a str> {
     let pattern = format!("## {heading}");
-    let start = text.find(&pattern)?;
-    let after = &text[start..];
-    // Find next ## heading or end
-    let body_start = after
-        .find('\n')
-        .map(|i| start + i + 1)
-        .unwrap_or(text.len());
+    let matches_heading = |line: &str| {
+        let line = line.trim_end();
+        line == pattern
+            || line
+                .strip_prefix(&pattern)
+                .is_some_and(|suffix| suffix.starts_with(' '))
+    };
+
+    let mut body_start = None;
+    let mut offset = 0;
+    for line in text.split_inclusive('\n') {
+        let line_without_newline = line.strip_suffix('\n').unwrap_or(line);
+        if matches_heading(line_without_newline) {
+            body_start = Some(offset + line.len());
+            break;
+        }
+        offset += line.len();
+    }
+
+    let body_start = body_start?;
     let body = &text[body_start..];
     let end = body
         .find("\n## ")
@@ -101,6 +118,22 @@ fn ac_ids_in_tasks(text: &str) -> BTreeSet<String> {
         }
     }
     ids
+}
+
+fn review_verdicts(design_text: &str) -> Vec<String> {
+    let Some(review_results) = section(design_text, "Review Results") else {
+        return Vec::new();
+    };
+    VERDICT_RE
+        .captures_iter(review_results)
+        .filter_map(|cap| cap.get(1).map(|m| m.as_str().to_ascii_lowercase()))
+        .collect()
+}
+
+fn task_count(tasks_text: Option<&str>) -> usize {
+    tasks_text
+        .map(|text| TASK_HEADING_RE.find_iter(text).count())
+        .unwrap_or(0)
 }
 
 fn ac_lines_missing_ears(text: &str) -> BTreeSet<String> {
@@ -661,8 +694,33 @@ fn lint_spec_dir(spec_dir: &Path, allowed_surfaces: &HashSet<String>) -> Vec<Iss
         };
         if risk_order(meta.risk()) >= 1 {
             let design_text = std::fs::read_to_string(&design_md).unwrap_or_default();
-            if !VERDICT_RE.is_match(&design_text) {
-                issues.push(Issue { severity: "FAIL".into(), path: spec_dir.join("spec.yaml"), message: "status is done but reviewer verdict (pass/pass-with-comments) is not recorded for risk>=elevated".into() });
+            let verdicts = review_verdicts(&design_text);
+            if verdicts.iter().any(|v| v == "fail") {
+                issues.push(Issue {
+                    severity: "FAIL".into(),
+                    path: spec_dir.join("spec.yaml"),
+                    message: "status is done but Review Results contains reviewer Verdict: fail"
+                        .into(),
+                });
+            }
+            let pass_count = verdicts
+                .iter()
+                .filter(|v| v.as_str() == "pass" || v.as_str() == "pass-with-comments")
+                .count();
+            if pass_count == 0 {
+                issues.push(Issue { severity: "FAIL".into(), path: spec_dir.join("spec.yaml"), message: "status is done but reviewer verdict (pass/pass-with-comments) is not recorded in design.md ## Review Results for risk>=elevated".into() });
+            }
+            if meta.risk() == "critical" {
+                let required = task_count(tasks_text.as_deref());
+                if required > 0 && pass_count < required {
+                    issues.push(Issue {
+                        severity: "FAIL".into(),
+                        path: spec_dir.join("spec.yaml"),
+                        message: format!(
+                            "status is done but critical risk requires at least {required} passing reviewer verdict(s), found {pass_count}"
+                        ),
+                    });
+                }
             }
         }
     }
@@ -737,7 +795,17 @@ pub fn run_lint(cfg: &Config, spec_slug: Option<&str>, log_to_stderr: bool) -> i
     let mut all_issues = Vec::new();
     let mut seen = HashSet::new();
     for root in &paths {
-        for spec_dir in discover_spec_dirs(root) {
+        let spec_dirs = discover_spec_dirs(root);
+        if let Some(slug) = spec_slug
+            && spec_dirs.is_empty()
+        {
+            all_issues.push(Issue {
+                severity: "FAIL".into(),
+                path: root.join("spec.yaml"),
+                message: format!("spec not found: {slug}"),
+            });
+        }
+        for spec_dir in spec_dirs {
             if seen.contains(&spec_dir) {
                 continue;
             }

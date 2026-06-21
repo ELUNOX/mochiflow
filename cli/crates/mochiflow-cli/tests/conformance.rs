@@ -532,6 +532,29 @@ fn auto_commit_gate_is_verification_not_reviewer() {
 }
 
 #[test]
+fn spec_templates_require_done_eligible_matrix_results() {
+    for path in [
+        "engine/templates/spec/spec.md",
+        "engine/templates/spec/spec.standard.md",
+    ] {
+        let template = read_repo_file(path);
+        assert!(
+            template.contains("done-eligible result token"),
+            "{path} must describe the current Matrix completion rule"
+        );
+        assert!(
+            !template.contains("with no `FAIL` result"),
+            "{path} must not imply FAIL is the only non-final Matrix state"
+        );
+    }
+    let git = read_repo_file("engine/reference/git.md");
+    assert!(
+        !git.contains("right after verification"),
+        "no-PR close-out must be tied to ship acceptance, not raw verification"
+    );
+}
+
+#[test]
 fn ac_matrix_pending_human_is_canonical_provisional_token() {
     let workflow = read_repo_file("engine/reference/workflow.md");
     let build = read_repo_file("engine/commands/build.md");
@@ -933,6 +956,16 @@ fn lint_done_fails_when_matrix_missing() {
 }
 
 #[test]
+fn lint_done_ignores_matrix_heading_inside_comment() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: done");
+    let md = "# S\n\n## 受入基準\n\n- AC-01: THE SYSTEM SHALL do the thing.\n\n\
+              <!-- After implementation, append ## AC Verification Matrix here. -->\n";
+    let (code, out) = run_lint_case(&yaml, md, None, None);
+    assert_eq!(code, 1);
+    assert!(out.contains("AC Verification Matrix is missing"), "{out}");
+}
+
+#[test]
 fn lint_done_fails_when_matrix_contains_fail() {
     let yaml = GOOD_YAML.replace("status: approved", "status: done");
     let md = "# S\n\n## 受入基準\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
@@ -1174,6 +1207,43 @@ fn lint_done_elevated_passes_with_reviewer_verdict() {
 }
 
 #[test]
+fn lint_done_elevated_fails_with_only_fail_reviewer_verdict() {
+    let yaml = GOOD_YAML
+        .replace("status: approved", "status: done")
+        .replace("risk: standard", "risk: elevated");
+    let md = "# S\n\n## 受入基準\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
+              ## AC Verification Matrix\n\n| AC | 結果 |\n| --- | --- |\n| AC-01 | PASS |\n";
+    let design = "# design\n\n## Review Results\n\nReviewer mode: inline\nVerdict: fail\n";
+    let (code, out) = run_lint_case(&yaml, md, Some(design), None);
+    assert_eq!(code, 1);
+    assert!(
+        out.contains("Review Results contains reviewer Verdict: fail"),
+        "{out}"
+    );
+}
+
+#[test]
+fn lint_done_critical_requires_passing_verdict_per_task() {
+    let yaml = GOOD_YAML
+        .replace("status: approved", "status: done")
+        .replace("risk: standard", "risk: critical");
+    let md = "# S\n\n## 受入基準\n\n- AC-01: THE SYSTEM SHALL x.\n- AC-02: THE SYSTEM SHALL y.\n";
+    let tasks_one_verdict = "# Tasks\n\n## Task 1\n\nCovers AC: AC-01\n\n## Task 2\n\nCovers AC: AC-02\n\n\
+                             ## AC Verification Matrix\n\n| AC | 結果 |\n| --- | --- |\n| AC-01 | PASS |\n| AC-02 | PASS |\n";
+    let design_one = "# design\n\n## Review Results\n\nReviewer mode: inline\nVerdict: pass\n";
+    let (code, out) = run_lint_case(&yaml, md, Some(design_one), Some(tasks_one_verdict));
+    assert_eq!(code, 1);
+    assert!(
+        out.contains("critical risk requires at least 2 passing reviewer verdict"),
+        "{out}"
+    );
+
+    let design_two = "# design\n\n## Review Results\n\nReviewer mode: inline\nVerdict: pass\n\nReviewer mode: inline\nVerdict: pass-with-comments\n";
+    let (code, out) = run_lint_case(&yaml, md, Some(design_two), Some(tasks_one_verdict));
+    assert_eq!(code, 0, "{out}");
+}
+
+#[test]
 fn lint_done_elevated_ignores_reviewer_verdict_outside_design() {
     let yaml = GOOD_YAML
         .replace("status: approved", "status: done")
@@ -1359,6 +1429,16 @@ fn behavioral_lint_and_ready() {
         out.contains("READY") && out.contains("sample-spec"),
         "{out}"
     );
+}
+
+#[test]
+fn behavioral_lint_spec_missing_fails() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg = materialize_full(tmp.path());
+
+    let (code, out) = run_cli(&cfg, &["lint", "--spec", "missing-spec"]);
+    assert_eq!(code, 1);
+    assert!(out.contains("spec not found: missing-spec"), "{out}");
 }
 
 #[test]
