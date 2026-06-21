@@ -132,4 +132,4 @@ After authoring, verify once against the spec's own intent before approval:
 - `design.md` decisions do not contradict `spec.md`.
 - Required artifacts match risk, integration, and surfaces.
 - `spec.yaml` metadata is consistent with artifact content.
-- Generated prose follows project language; machine-readable IDs/enums remain English tokens.
+- Generated prose follows artifact language; machine-readable IDs/enums remain English tokens.

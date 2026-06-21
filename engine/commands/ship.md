@@ -41,7 +41,7 @@ references:
   - templates/delivery/pr-description.md
 ---
 
-# spec-ship
+# mochiflow-ship
 
 ## Purpose
 
@@ -105,6 +105,19 @@ living-spec fold, and archive.
     - `1`/`2` — backend / config failure; stop and diagnose.
     Do not call `az` / `gh` / `git push` directly.
 
+## PR Feedback Loop
+
+If PR feedback, CI failure, reviewer comments, or PR-body approval follow-up
+requires code changes before merge:
+
+1. Do not use `patch` unless the change is unrelated to the shipped spec.
+2. Move `{specs_dir}/_done/{slug}/` back to `{specs_dir}/{slug}/`.
+3. Set `spec.yaml` status from `done` back to `approved` and update `updated`.
+4. Apply the requested changes through `build`.
+5. Re-run verification and update the AC Verification Matrix.
+6. Re-run `ship` close-out: set `done`, archive again, regenerate `INDEX`, and
+   update the PR body when needed.
+
 ### Post-merge
 
 14. After the human reports the merge, run
@@ -118,7 +131,7 @@ living-spec fold, and archive.
 ## Presentation
 
 - In user-facing speech, describe ship as wrap-up / PR preparation in the
-  project language. Use `ship` only for the command or when the user uses it.
+  conversation language. Use `ship` only for the command or when the user uses it.
 - Describe fold as recording durable learnings, archive as moving work to
   completed, and `status: done` as marking the work complete.
 - Describe the AC Matrix as the acceptance checks or verification items, and the
@@ -134,7 +147,8 @@ living-spec fold, and archive.
 - Do not run `mochiflow pr` before human approval of the PR content.
 - Do not force past a pre-flight FAIL (`mochiflow pr` exit 3); fix and re-run.
 - Do not call `git push` / `gh` / `az` directly; `mochiflow pr` owns push and creation.
-- Do not build the close-out commit before `status: done` holds.
-- Do not commit or push anything to the base branch during post-merge cleanup.
-- The no-PR fast path makes the same close-out commit on the current branch and
-  creates no PR. `ship` still sets `status: done` on acceptance conditions.
+- Do not build the close-out commit before `status: done` holds (acceptance conditions met). Skip the fold only when there is genuinely no new rationale or pitfall; archive (the `_done` move + `INDEX`) still happens.
+- Do not commit or push anything to the base branch during post-merge cleanup — the fold + archive are already in the PR; post-merge is local hygiene only.
+- The no-PR fast path makes the same close-out commit (`status: done` + AC matrix + fold + archive + `INDEX`) on the current branch and creates no PR. `ship` still sets `status: done` on the acceptance conditions (step 4) — there is no path where `done` is set outside ship.
+- Before merge, route PR feedback / CI fixes for this shipped spec through
+  `## PR Feedback Loop`, not `patch`.

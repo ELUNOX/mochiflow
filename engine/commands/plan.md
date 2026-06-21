@@ -101,7 +101,7 @@ required. `tasks.md` is the executable checklist when required. The AC Matrix in
 10. Run `mochiflow lint --spec {slug}` and fix any FAIL before asking for
     approval. When talking to the user, call this a consistency check unless the
     exact command matters.
-11. Present readiness in project-language plain wording: what will change, what
+11. Present readiness in conversation-language plain wording: what will change, what
     was checked, and what approval is needed to start implementation. On an
     approval word (`reference/workflow.md ## Delivery approval gates`), update
     `status: approved`.
@@ -112,7 +112,7 @@ required. `tasks.md` is the executable checklist when required. The AC Matrix in
     rendered from `templates/handoff/build-session-prompt.md`. The handoff
     prompt must include `{slug}` and `{specs_dir}/{slug}/` because the new
     session has no conversation state. Also offer an explicit same-session
-    continuation phrase in the project language, without the slug.
+    continuation phrase in the conversation language, without the slug.
 
 ## Stop conditions
 
@@ -127,7 +127,7 @@ required. `tasks.md` is the executable checklist when required. The AC Matrix in
 - Do not touch implementation code / branch / build / PR / archive.
 - Do not add a new human approval gate. Cross-artifact analysis is a quality
   gate before the existing approve-to-build gate.
-- Continue to `spec-build` in the same session only when the user explicitly
+- Continue to `mochiflow-build` in the same session only when the user explicitly
   asks in the active spec context; do not require or suggest a slug for that
-  same-session phrase. Otherwise guide `spec-build` in a separate session with
+  same-session phrase. Otherwise guide `mochiflow-build` in a separate session with
   the handoff prompt and stop.

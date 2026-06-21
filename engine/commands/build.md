@@ -35,7 +35,7 @@ forbidden_writes:
   - .git/**
 ---
 
-# spec-build
+# mochiflow-build
 
 ## Purpose
 
@@ -96,9 +96,9 @@ not create the PR, set `done`, fold, or archive.
 
 ## Presentation
 
-- In user-facing summaries, call the AC Matrix the acceptance checks or
-  verification items in the project language. Keep the exact heading only when
-  pointing to the document.
+- In user-facing summaries, call the AC Verification Matrix the acceptance
+  checks or verification items in the artifact language. Keep the exact heading
+  only when pointing to the document.
 - Report reviewer output as the review result. Include `delegated` / `inline`
   only when it explains how the review ran or when the user asks.
 - Summarize implementation as what changed, what was checked, and what remains

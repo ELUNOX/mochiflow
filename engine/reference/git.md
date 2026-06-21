@@ -26,7 +26,7 @@ mechanics and the living-spec fold.
 
 ## Commit
 
-Conventional Commits, in the project language.
+Conventional Commits, in `[i18n].artifact_language`.
 
 ```
 type(scope): summary
@@ -90,7 +90,7 @@ dirty before the patch, do not commit; report the files and verification result.
 - the regenerated `{index}`.
 
 Stage exactly these paths (`git add .` is still forbidden). The message follows
-the Commit convention above — Conventional Commits, project language, and **no
+the Commit convention above — Conventional Commits, artifact language, and **no
 spec slug, no AC IDs, no mochiflow vocabulary** (never "fold" / "archive" in the
 summary). This relocates what was formerly a post-merge base-branch push into the
 PR, so the durable record is reviewed; post-merge then does only local hygiene
@@ -99,7 +99,7 @@ commit on the current branch, with no push.
 
 ## PR
 
-The PR title/body (per `templates/delivery/pr-description.md`: project language,
+The PR title/body (per `templates/delivery/pr-description.md`: artifact language,
 external-reviewer facing, no spec-internal references, no spec slug, no AC IDs,
 no mochiflow vocabulary) are always generated after delivery approval gate 2
 (`workflow.md`).

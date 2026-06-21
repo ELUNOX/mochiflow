@@ -90,6 +90,32 @@ fn schema_config_accepts_good() {
 }
 
 #[test]
+fn schema_config_i18n_rules() {
+    let v = load_schema("config.schema.json");
+    let mut good = load_fixture("config_good.json");
+
+    good["i18n"]["artifact_language"] = serde_json::Value::String("pt-BR".to_string());
+    good["i18n"]["conversation_language"] = serde_json::Value::String("auto".to_string());
+    assert!(v.is_valid(&good));
+
+    let mut artifact_auto = good.clone();
+    artifact_auto["i18n"]["artifact_language"] = serde_json::Value::String("auto".to_string());
+    assert!(!v.is_valid(&artifact_auto));
+
+    let mut bad_conversation = good.clone();
+    bad_conversation["i18n"]["conversation_language"] =
+        serde_json::Value::String("../ja".to_string());
+    assert!(!v.is_valid(&bad_conversation));
+
+    let mut partial = good;
+    partial["i18n"]
+        .as_object_mut()
+        .unwrap()
+        .remove("conversation_language");
+    assert!(!v.is_valid(&partial));
+}
+
+#[test]
 fn schema_config_rejects_bad_schema_version() {
     let v = load_schema("config.schema.json");
     assert!(
@@ -779,10 +805,12 @@ fn materialize_full(root: &Path) -> PathBuf {
     std::fs::write(
         install.join("config.toml"),
         "schema_version = 1\n\
-         language = \"en\"\n\n\
          install_dir = \".mochiflow\"\n\
          specs_dir = \".mochiflow/specs\"\n\
          index = \".mochiflow/INDEX.md\"\n\n\
+         [i18n]\n\
+         artifact_language = \"en\"\n\
+         conversation_language = \"auto\"\n\n\
          [constitution]\n\
          project = \".mochiflow/constitution.md\"\n\
          local = \".mochiflow/constitution.local.md\"\n\n\

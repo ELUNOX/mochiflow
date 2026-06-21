@@ -76,9 +76,12 @@ enum Commands {
         /// `--adapter kiro --adapter claude-code` or `--adapter codex,kiro`.
         #[arg(long)]
         adapter: Vec<String>,
-        /// Project language
+        /// Durable artifact language (BCP 47-style tag, e.g. en, ja, pt-BR)
         #[arg(long)]
-        language: Option<String>,
+        artifact_language: Option<String>,
+        /// User-facing conversation language (`auto` or a BCP 47-style tag)
+        #[arg(long)]
+        conversation_language: Option<String>,
         /// Overwrite existing config
         #[arg(long)]
         force: bool,
@@ -308,7 +311,8 @@ fn main() -> Result<()> {
         Commands::Init {
             target,
             adapter,
-            language,
+            artifact_language,
+            conversation_language,
             force,
             dry_run,
             yes,
@@ -362,7 +366,8 @@ fn main() -> Result<()> {
                 mochiflow_core::init::run_init(
                     &target,
                     &adapter,
-                    language.as_deref(),
+                    artifact_language.as_deref(),
+                    conversation_language.as_deref(),
                     force,
                     dry_run,
                     json,
@@ -410,7 +415,7 @@ fn main() -> Result<()> {
                     .join("config.toml"),
             };
             let language = mochiflow_core::config::load_config(&path)
-                .map(|c| c.language)
+                .map(|c| c.conversation_output_language().to_string())
                 .unwrap_or_else(|_| "en".to_string());
             print!("{}", mochiflow_core::present::render_guide(&language));
             0
@@ -473,7 +478,9 @@ fn cmd_config_show(cfg: &mochiflow_core::config::Config, bundled_engine_version:
         mochiflow_core::manifest::engine_version_label(&cfg.engine_dir())
     );
     println!("bundled_engine_version   : {bundled_engine_version}");
-    println!("language       : {}", cfg.language);
+    println!("i18n           :");
+    println!("  artifact     : {}", cfg.i18n.artifact_language);
+    println!("  conversation : {}", cfg.i18n.conversation_language);
     println!("repo_root      : {}", cfg.repo_root.display());
     println!("install_dir    : {}", cfg.install_dir_path().display());
     println!("engine_dir     : {}", cfg.engine_dir().display());

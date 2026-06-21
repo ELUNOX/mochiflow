@@ -14,6 +14,9 @@ triggers:
 trigger_patterns: []
 references:
   - reference/workflow.md
+  - templates/context/product.md
+  - templates/context/structure.md
+  - templates/context/tech.md
 ---
 
 # Onboard
@@ -44,7 +47,7 @@ defensible choices for surfaces, verification, git, and write scope.
    value(s) to `--adapter` (repeatable or comma-separated).
 
 2. **Ensure the skeleton exists**: if `.mochiflow/config.toml` is missing, run
-   `mochiflow init --target <project> --adapter <tool>[ --adapter <tool2>] --language <lang>`
+   `mochiflow init --target <project> --adapter <tool>[ --adapter <tool2>] --artifact-language <tag>[ --conversation-language auto]`
    first. `init` machine-detects surfaces / verify / branch / write scope, writes
    them, and attaches `# mochiflow: confirm` markers to values that need a human
    decision. If the Rust CLI is unavailable, report that `mochiflow` must be
@@ -89,9 +92,10 @@ defensible choices for surfaces, verification, git, and write scope.
    deny list.
 
 8. **Fill config.toml**: update `.mochiflow/config.toml` with the confirmed
-   surfaces, verify commands, git config, adapter, language, and write scope.
-   Set `language` to match the language this session is being conducted in (e.g.
-   if the user is speaking Japanese, set `language = "ja"`).
+   surfaces, verify commands, git config, adapter, `[i18n]`, and write scope.
+   Set `[i18n].artifact_language` to the language used for durable project
+   artifacts. Set `[i18n].conversation_language` to `auto` unless the user wants
+   a fixed conversation language.
    Remove a `# mochiflow: confirm` marker once its value is settled; keep the
    marker for anything still genuinely open.
 
@@ -103,13 +107,15 @@ defensible choices for surfaces, verification, git, and write scope.
    generate --force` only after the user explicitly approves replacing existing
    adapter files.
 
-10. **Generate the foundational context layer from code**: write only the
-   context files from what the code/config actually show:
+10. **Generate the foundational context layer from code**: use
+   `templates/context/{product,structure,tech}.md` for structure and write only
+   the context files from what the code/config actually show:
    - `[context].product`: purpose / users / domain terms / core invariants / non-goals.
    - `[context].structure`: coarse code layout / entry points / "source is X,
      generated is Y, vendored is Z" map.
    - `[context].tech`: technology stack, verification surfaces, primary commands,
      generated artifacts, and contract/version gates.
+   Include evidence pointers and the source commit/date for each context file.
    Keep the context layer to the minimal slice that is costly to re-derive yet
    rarely changes. Have the human confirm it matches current code. (The same
    procedure backs `commands/refresh-context.md`; onboard is its first run.)

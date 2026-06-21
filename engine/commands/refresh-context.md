@@ -30,6 +30,9 @@ references:
   - commands/onboard.md
   - reference/git.md
   - reference/language.md
+  - templates/context/product.md
+  - templates/context/structure.md
+  - templates/context/tech.md
 ---
 
 # refresh-context
@@ -51,12 +54,14 @@ Code is the source of truth; this layer is a derived map, not new knowledge.
 
 1. Read the code to fix current state (never ask what code can answer). Re-derive,
    do not diff prose against prose.
-2. Regenerate, reusing onboard's foundational-generation step (`commands/onboard.md`):
+2. Regenerate, reusing onboard's foundational-generation step (`commands/onboard.md`)
+   and `templates/context/{product,structure,tech}.md`:
    - `[context].product`: purpose / users / domain terms / core invariants / non-goals.
    - `[context].structure`: coarse code layout / entry points / "source is X,
      generated is Y, vendored is Z" map.
    - `[context].tech`: technology stack, verification surfaces, primary commands,
      generated artifacts, and contract/version gates derived from code/config.
+   Include evidence pointers and the source commit/date for each context file.
    Keep all three to the minimal slice that is costly to re-derive yet rarely changes.
 3. Present the regenerated context and the diff; the human confirms it matches
    current code before it is committed. Refresh does not auto-commit.

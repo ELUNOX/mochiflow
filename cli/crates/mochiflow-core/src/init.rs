@@ -7,10 +7,10 @@
 
 use std::path::{Path, PathBuf};
 
-use serde::Serialize;
-
 use crate::adapter;
-use crate::config::load_config;
+use crate::config::{
+    I18nValueSource, is_valid_artifact_language, is_valid_conversation_language, load_config,
+};
 use crate::doctor;
 use crate::upgrade::{install_engine_staged, stage_source_engine};
 
@@ -76,62 +76,86 @@ pub type EngineExtractFn<'a> = &'a dyn Fn(&Path) -> std::io::Result<()>;
 /// init (it is dropped by serde round-trips — AC-09).
 const CONFIRM: &str = "# mochiflow: confirm";
 
-#[derive(Serialize)]
-struct ConfigTemplate {
-    schema_version: u32,
-    language: String,
-    install_dir: String,
-    specs_dir: String,
-    index: String,
-    constitution: ConfigLayerTemplate,
-    context: ContextTemplate,
-    adr: AdrTemplate,
-    git: GitTemplate,
-    adapter: AdapterTemplate,
-    write: WriteTemplate,
-    surfaces: std::collections::BTreeMap<String, SurfaceTemplate>,
+/// Render a TOML string literal.
+fn toml_string(value: &str) -> String {
+    toml::Value::String(value.to_string()).to_string()
 }
 
-#[derive(Serialize)]
-struct ConfigLayerTemplate {
-    project: String,
-    local: String,
+/// Render a TOML string array literal.
+fn toml_array(items: &[String]) -> String {
+    toml::Value::Array(
+        items
+            .iter()
+            .map(|s| toml::Value::String(s.clone()))
+            .collect(),
+    )
+    .to_string()
 }
 
-#[derive(Serialize)]
-struct ContextTemplate {
-    product: String,
-    structure: String,
-    tech: String,
+/// Render one TOML dotted-key segment. Bare keys keep the generated config easy
+/// to read; everything else is quoted so detected names cannot break tables.
+fn toml_key_segment(value: &str) -> String {
+    if !value.is_empty()
+        && value
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+    {
+        value.to_string()
+    } else {
+        toml_string(value)
+    }
 }
 
-#[derive(Serialize)]
-struct AdrTemplate {
-    decisions: String,
-    pitfalls: String,
+/// Render the `[git]` section, keeping `provider = "none"` (AC-03) and adding a
+/// confirm marker that records any detected provider as a fact to verify.
+fn render_git_section(git: &crate::detect::DetectedGit) -> String {
+    let mut out = String::from("[git]\n");
+    if git.has_known_provider() {
+        out.push_str(&format!(
+            "{CONFIRM} detected remote provider \"{}\"; keep provider=none for manual PR (default) or set provider/pr_driver to automate.\n",
+            git.provider
+        ));
+    }
+    out.push_str(
+        "provider = \"none\"          # none | github (built-in `gh`). none = manual PR\n",
+    );
+    if git.branch_confidence.needs_confirm() {
+        out.push_str(&format!(
+            "{CONFIRM} base branch fell back to a default; confirm it.\n"
+        ));
+    }
+    out.push_str(&format!(
+        "base_branch = {}\n",
+        toml_string(&git.base_branch)
+    ));
+    out.push_str(
+        "# PR creation: default is manual handoff (mochiflow pr pushes + hands off).\n\
+         # To automate, set provider = \"github\", or pr_driver = \"path/to/driver\".\n\
+         # pr_driver = \"...\"\n",
+    );
+    out
 }
 
-#[derive(Serialize)]
-struct GitTemplate {
-    provider: String,
-    base_branch: String,
-}
-
-#[derive(Serialize)]
-struct AdapterTemplate {
-    tools: Vec<String>,
-}
-
-#[derive(Serialize)]
-struct WriteTemplate {
-    allow: Vec<String>,
-    deny: Vec<String>,
-}
-
-#[derive(Serialize)]
-struct SurfaceTemplate {
-    description: String,
-    verify: std::collections::BTreeMap<String, String>,
+/// Render the `[surfaces.*]` sections from detected surfaces, attaching a
+/// confirm marker to the verify command when its confidence is below High.
+fn render_surfaces_section(surfaces: &[crate::detect::DetectedSurface]) -> String {
+    let mut out = String::new();
+    for s in surfaces {
+        let surface_key = toml_key_segment(&s.name);
+        out.push_str(&format!("\n[surfaces.{surface_key}]\n"));
+        out.push_str(&format!("description = {}\n", toml_string(&s.description)));
+        out.push_str(&format!("\n[surfaces.{surface_key}.verify]\n"));
+        if s.confidence.needs_confirm() {
+            let reason = if s.verify.starts_with("TODO:") {
+                "no verify command detected"
+            } else {
+                "multiple candidate scripts; confirm the verify command"
+            };
+            out.push_str(&format!("{CONFIRM} {reason}\n"));
+        }
+        out.push_str(&format!("default = {}\n", toml_string(&s.verify)));
+    }
+    out
 }
 
 /// Render the deterministic config.toml template, injecting machine-detected
@@ -139,127 +163,60 @@ struct SurfaceTemplate {
 /// confirmation (AC-01 / AC-02). Detection failures fall back to TODO sentinels
 /// and confirm markers — the config is never corrupted (AC-10).
 fn render_config(
-    language: &str,
+    artifact_language: &str,
+    conversation_language: &str,
     adapter_tools: &[String],
     report: &crate::detect::DetectionReport,
 ) -> String {
-    let mut surfaces = std::collections::BTreeMap::new();
-    for surface in &report.surfaces {
-        let mut verify = std::collections::BTreeMap::new();
-        verify.insert("default".to_string(), surface.verify.clone());
-        surfaces.insert(
-            surface.name.clone(),
-            SurfaceTemplate {
-                description: surface.description.clone(),
-                verify,
-            },
-        );
-    }
-
-    let template = ConfigTemplate {
-        schema_version: 1,
-        language: language.to_string(),
-        install_dir: DEFAULT_INSTALL.to_string(),
-        specs_dir: ".mochiflow/specs".to_string(),
-        index: ".mochiflow/INDEX.md".to_string(),
-        constitution: ConfigLayerTemplate {
-            project: ".mochiflow/constitution.md".to_string(),
-            local: ".mochiflow/constitution.local.md".to_string(),
-        },
-        context: ContextTemplate {
-            product: ".mochiflow/context/product.md".to_string(),
-            structure: ".mochiflow/context/structure.md".to_string(),
-            tech: ".mochiflow/context/tech.md".to_string(),
-        },
-        adr: AdrTemplate {
-            decisions: ".mochiflow/adr/decisions.md".to_string(),
-            pitfalls: ".mochiflow/adr/pitfalls.md".to_string(),
-        },
-        git: GitTemplate {
-            provider: "none".to_string(),
-            base_branch: report.git.base_branch.clone(),
-        },
-        adapter: AdapterTemplate {
-            tools: adapter_tools.to_vec(),
-        },
-        write: WriteTemplate {
-            allow: report.write_scope.allow.clone(),
-            deny: report.write_scope.deny.clone(),
-        },
-        surfaces,
+    let tools_literal = toml_array(adapter_tools);
+    let git_section = render_git_section(&report.git);
+    let surfaces_section = render_surfaces_section(&report.surfaces);
+    let allow_literal = toml_array(&report.write_scope.allow);
+    let deny_literal = toml_array(&report.write_scope.deny);
+    let write_confirm = if report.write_scope.confidence.needs_confirm() {
+        format!("{CONFIRM} write scope fell back to a default; confirm the AI edit boundary.\n")
+    } else {
+        String::new()
     };
+    format!(
+        r##"# MochiFlow project config. `mochiflow init` writes this skeleton with
+# machine-detected values. Lines flagged with a MochiFlow confirmation marker need
+# review before the setup is considered complete. `mochiflow doctor` reports
+# remaining TODOs and confirmation markers.
+schema_version = 1
 
-    let serialized = match toml::to_string_pretty(&template) {
-        Ok(text) => text,
-        Err(e) => {
-            return format!(
-                "# MochiFlow project config failed to render as TOML: {e}\nschema_version = 1\n"
-            );
-        }
-    };
-    add_config_comments(serialized, report)
-}
+install_dir = ".mochiflow"
+specs_dir = ".mochiflow/specs"
+index = ".mochiflow/INDEX.md"
 
-fn add_config_comments(serialized: String, report: &crate::detect::DetectionReport) -> String {
-    let mut out = String::from(
-        "# MochiFlow project config. `mochiflow init` writes this skeleton with\n\
-         # machine-detected values. Lines flagged with a MochiFlow confirmation marker need\n\
-         # review before the setup is considered complete. `mochiflow doctor` reports\n\
-         # remaining TODOs and confirmation markers.\n",
-    );
-    let mut current_section = String::new();
-    for line in serialized.lines() {
-        if line.starts_with('[') {
-            current_section = line.to_string();
-        }
-        if line == "[git]" {
-            out.push('\n');
-        }
-        if line == "provider = \"none\"" {
-            if report.git.has_known_provider() {
-                out.push_str(&format!(
-                    "{CONFIRM} detected remote provider \"{}\"; keep provider=none for manual PR (default) or set provider/pr_driver to automate.\n",
-                    report.git.provider
-                ));
-            }
-            out.push_str("# provider: none | github (built-in `gh`). none = manual PR\n");
-        }
-        if line.starts_with("base_branch = ") && report.git.branch_confidence.needs_confirm() {
-            out.push_str(&format!(
-                "{CONFIRM} base branch fell back to a default; confirm it.\n"
-            ));
-        }
-        if line == "[adapter]" {
-            out.push_str(
-                "# PR creation: default is manual handoff (mochiflow pr pushes + hands off).\n\
-                 # To automate, set [git].provider = \"github\", or [git].pr_driver = \"path/to/driver\".\n",
-            );
-        }
-        if line == "[write]" && report.write_scope.confidence.needs_confirm() {
-            out.push_str(&format!(
-                "{CONFIRM} write scope fell back to a default; confirm the AI edit boundary.\n"
-            ));
-        }
-        if current_section.starts_with("[surfaces.")
-            && current_section.ends_with(".verify]")
-            && line.starts_with("default = ")
-            && let Some(surface) = report.surfaces.iter().find(|s| {
-                current_section.contains(&format!(".{}.", s.name))
-                    || current_section.contains(&format!("\"{}\"", s.name))
-            })
-            && surface.confidence.needs_confirm()
-        {
-            let reason = if surface.verify.starts_with("TODO:") {
-                "no verify command detected"
-            } else {
-                "multiple candidate scripts; confirm the verify command"
-            };
-            out.push_str(&format!("{CONFIRM} {reason}\n"));
-        }
-        out.push_str(line);
-        out.push('\n');
-    }
-    out
+[i18n]
+artifact_language = {artifact_language_literal}
+conversation_language = {conversation_language_literal}
+
+[constitution]
+project = ".mochiflow/constitution.md"
+local = ".mochiflow/constitution.local.md"
+
+[context]
+product = ".mochiflow/context/product.md"
+structure = ".mochiflow/context/structure.md"
+tech = ".mochiflow/context/tech.md"
+
+[adr]
+decisions = ".mochiflow/adr/decisions.md"
+pitfalls = ".mochiflow/adr/pitfalls.md"
+
+{git_section}
+[adapter]
+tools = {tools_literal}
+
+[write]
+{write_confirm}allow = {allow_literal}
+deny = {deny_literal}
+{surfaces_section}"##,
+        artifact_language_literal = toml_string(artifact_language),
+        conversation_language_literal = toml_string(conversation_language),
+    )
 }
 
 /// Adapter selection menu: (id, human description). Order is the menu order.
@@ -347,6 +304,13 @@ struct ResolvedLanguage {
     source: crate::present::InitLanguageSource,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ResolvedI18n {
+    artifact_language: ResolvedLanguage,
+    conversation_language: ResolvedLanguage,
+}
+
+#[cfg(test)]
 fn parse_language_selection(input: &str, default: &str) -> String {
     let trimmed = input.trim().to_ascii_lowercase();
     match trimmed.as_str() {
@@ -357,10 +321,12 @@ fn parse_language_selection(input: &str, default: &str) -> String {
     }
 }
 
+#[cfg(test)]
 fn is_japanese_locale(value: &str) -> bool {
     value.to_ascii_lowercase().starts_with("ja")
 }
 
+#[cfg(test)]
 fn locale_language_default_from_values<'a>(
     values: impl IntoIterator<Item = Option<&'a str>>,
 ) -> ResolvedLanguage {
@@ -388,63 +354,177 @@ fn locale_language_default_from_values<'a>(
     }
 }
 
-fn locale_language_default() -> ResolvedLanguage {
-    let lang = std::env::var("LANG").ok();
-    let lc_all = std::env::var("LC_ALL").ok();
-    let lc_messages = std::env::var("LC_MESSAGES").ok();
-    locale_language_default_from_values([
-        lang.as_deref(),
-        lc_all.as_deref(),
-        lc_messages.as_deref(),
-    ])
+fn contains_japanese(text: &str) -> bool {
+    text.chars().any(|c| {
+        matches!(
+            c,
+            '\u{3040}'..='\u{30ff}' | '\u{3400}'..='\u{9fff}' | '\u{f900}'..='\u{faff}'
+        )
+    })
 }
 
-fn prompt_language(default: &str) -> String {
-    use std::io::Write;
-    let default_index = if default == "ja" { 2 } else { 1 };
-    eprintln!("\nSelect project language:");
-    eprintln!("  1) en English");
-    eprintln!("  2) ja Japanese");
-    eprint!("Selection [Enter = {default_index}) {default}]: ");
-    let _ = std::io::stderr().flush();
-    let mut line = String::new();
-    if std::io::stdin().read_line(&mut line).is_err() {
-        return default.to_string();
-    }
-    parse_language_selection(&line, default)
+fn scan_file_for_japanese(path: &Path) -> bool {
+    const MAX_BYTES: usize = 64 * 1024;
+    let Ok(bytes) = std::fs::read(path) else {
+        return false;
+    };
+    let end = bytes.len().min(MAX_BYTES);
+    std::str::from_utf8(&bytes[..end])
+        .map(contains_japanese)
+        .unwrap_or(false)
 }
 
-fn resolve_language(
-    language_flag: Option<&str>,
-    yes: bool,
-    json: bool,
-    existing_config_language: Option<String>,
-) -> ResolvedLanguage {
-    use std::io::IsTerminal;
-
-    if let Some(language) = existing_config_language {
-        return ResolvedLanguage {
-            value: language,
-            source: crate::present::InitLanguageSource::ExistingConfig,
-        };
+fn scan_dir_for_japanese(dir: &Path, depth: usize, visited: &mut usize) -> bool {
+    const MAX_FILES: usize = 64;
+    if depth == 0 || *visited >= MAX_FILES {
+        return false;
     }
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return false;
+    };
+    for entry in entries.flatten() {
+        if *visited >= MAX_FILES {
+            return false;
+        }
+        let path = entry.path();
+        let name = entry.file_name();
+        let name = name.to_string_lossy();
+        if name.starts_with('.') && name != ".mochiflow" {
+            continue;
+        }
+        if path.is_dir() {
+            if scan_dir_for_japanese(&path, depth - 1, visited) {
+                return true;
+            }
+        } else if matches!(
+            path.extension().and_then(|e| e.to_str()),
+            Some("md" | "mdx" | "txt" | "rst" | "adoc")
+        ) {
+            *visited += 1;
+            if scan_file_for_japanese(&path) {
+                return true;
+            }
+        }
+    }
+    false
+}
 
-    if let Some(language) = language_flag {
-        return ResolvedLanguage {
+fn detect_artifact_language_from_docs(root: &Path) -> Option<String> {
+    let file_candidates = [
+        "README.md",
+        "CONTRIBUTING.md",
+        "AGENTS.md",
+        "CLAUDE.md",
+        ".github/copilot-instructions.md",
+    ];
+    for rel in file_candidates {
+        if scan_file_for_japanese(&root.join(rel)) {
+            return Some("ja".to_string());
+        }
+    }
+    let mut visited = 0;
+    for rel in ["docs", "specs", ".mochiflow/specs"] {
+        if scan_dir_for_japanese(&root.join(rel), 3, &mut visited) {
+            return Some("ja".to_string());
+        }
+    }
+    None
+}
+
+fn display_language(artifact_language: &str, conversation_language: &str) -> String {
+    if conversation_language == "auto" {
+        artifact_language.to_string()
+    } else {
+        conversation_language.to_string()
+    }
+}
+
+fn present_source_from_i18n(source: I18nValueSource) -> crate::present::InitLanguageSource {
+    match source {
+        I18nValueSource::I18n => crate::present::InitLanguageSource::ExistingConfig,
+        I18nValueSource::LegacyLanguage => crate::present::InitLanguageSource::LegacyConfig,
+        I18nValueSource::Default => crate::present::InitLanguageSource::Default,
+    }
+}
+
+fn resolve_i18n(
+    root: &Path,
+    config_path: &Path,
+    artifact_language_flag: Option<&str>,
+    conversation_language_flag: Option<&str>,
+) -> Result<ResolvedI18n, String> {
+    let existing = if config_path.exists() {
+        load_config(config_path).ok()
+    } else {
+        None
+    };
+
+    let artifact_language = if let Some(language) = artifact_language_flag {
+        if !is_valid_artifact_language(language) {
+            return Err(format!(
+                "invalid --artifact-language `{language}`; expected a BCP 47-style tag and not `auto`"
+            ));
+        }
+        ResolvedLanguage {
             value: language.to_string(),
             source: crate::present::InitLanguageSource::Flag,
-        };
-    }
-
-    let default = locale_language_default();
-    if !yes && !json && std::io::stdin().is_terminal() {
-        ResolvedLanguage {
-            value: prompt_language(&default.value),
-            source: crate::present::InitLanguageSource::Prompt,
+        }
+    } else if let Some(cfg) = existing.as_ref() {
+        match cfg.i18n_meta.artifact_source {
+            I18nValueSource::I18n | I18nValueSource::LegacyLanguage => ResolvedLanguage {
+                value: cfg.i18n.artifact_language.clone(),
+                source: present_source_from_i18n(cfg.i18n_meta.artifact_source),
+            },
+            I18nValueSource::Default => detect_artifact_language_from_docs(root)
+                .map(|value| ResolvedLanguage {
+                    value,
+                    source: crate::present::InitLanguageSource::Docs,
+                })
+                .unwrap_or_else(|| ResolvedLanguage {
+                    value: "en".to_string(),
+                    source: crate::present::InitLanguageSource::Default,
+                }),
         }
     } else {
-        default
-    }
+        detect_artifact_language_from_docs(root)
+            .map(|value| ResolvedLanguage {
+                value,
+                source: crate::present::InitLanguageSource::Docs,
+            })
+            .unwrap_or_else(|| ResolvedLanguage {
+                value: "en".to_string(),
+                source: crate::present::InitLanguageSource::Default,
+            })
+    };
+
+    let conversation_language = if let Some(language) = conversation_language_flag {
+        if !is_valid_conversation_language(language) {
+            return Err(format!(
+                "invalid --conversation-language `{language}`; expected `auto` or a BCP 47-style tag"
+            ));
+        }
+        ResolvedLanguage {
+            value: language.to_string(),
+            source: crate::present::InitLanguageSource::Flag,
+        }
+    } else if let Some(cfg) = existing.as_ref()
+        && cfg.i18n_meta.conversation_source == I18nValueSource::I18n
+    {
+        ResolvedLanguage {
+            value: cfg.i18n.conversation_language.clone(),
+            source: crate::present::InitLanguageSource::ExistingConfig,
+        }
+    } else {
+        ResolvedLanguage {
+            value: "auto".to_string(),
+            source: crate::present::InitLanguageSource::Default,
+        }
+    };
+
+    Ok(ResolvedI18n {
+        artifact_language,
+        conversation_language,
+    })
 }
 
 /// Find the engine source directory on the filesystem (fallback).
@@ -470,11 +550,11 @@ fn find_engine_source() -> Option<PathBuf> {
     None
 }
 
-/// Write `{install_dir}/.gitignore` so local runtime state is never tracked.
-/// The vendored engine is project state and is tracked by default. Returns
-/// `Ok(true)` when written, `Ok(false)` when an existing file is kept (no
-/// `--force`). Never touches the project's top-level `.gitignore` (init's
-/// source-tree-inviolable rule).
+/// Write `{install_dir}/.gitignore` so the vendored engine copy and runtime
+/// state are never tracked, guaranteeing the ignore that delivery-artifact
+/// relocation relies on. Returns `Ok(true)` when written, `Ok(false)` when an
+/// existing file is kept (no `--force`). Never touches the project's top-level
+/// `.gitignore` (init's source-tree-inviolable rule).
 fn write_install_gitignore(install_dir: &Path, force: bool) -> std::io::Result<bool> {
     let path = install_dir.join(".gitignore");
     if path.exists() && !force {
@@ -482,7 +562,7 @@ fn write_install_gitignore(install_dir: &Path, force: bool) -> std::io::Result<b
     }
     std::fs::write(
         &path,
-        "# Managed by mochiflow init. Local runtime-derived files — do not track.\nstate/\nconstitution.local.md\n",
+        "# Managed by mochiflow init. Regenerated, local, or runtime-derived — do not track.\nengine/\nstate/\nconstitution.local.md\n",
     )?;
     Ok(true)
 }
@@ -492,7 +572,8 @@ fn write_install_gitignore(install_dir: &Path, force: bool) -> std::io::Result<b
 pub fn run_init(
     target: &str,
     adapter_flags: &[String],
-    language_flag: Option<&str>,
+    artifact_language_flag: Option<&str>,
+    conversation_language_flag: Option<&str>,
     force: bool,
     dry_run: bool,
     json: bool,
@@ -515,14 +596,22 @@ pub fn run_init(
     let config_path = install_abs.join("config.toml");
 
     let adapter_tools = resolve_adapters(adapter_flags, yes);
-    let existing_config_language = if config_path.exists() && !force {
-        load_config(&config_path).ok().map(|cfg| cfg.language)
-    } else {
-        None
+    let resolved_i18n = match resolve_i18n(
+        &root,
+        &config_path,
+        artifact_language_flag,
+        conversation_language_flag,
+    ) {
+        Ok(i18n) => i18n,
+        Err(e) => {
+            log!("FAIL: {e}");
+            return 1;
+        }
     };
-    let resolved_language = resolve_language(language_flag, yes, json, existing_config_language);
-    let language = resolved_language.value.as_str();
-    let language_source = resolved_language.source;
+    let artifact_language = resolved_i18n.artifact_language.value.as_str();
+    let conversation_language = resolved_i18n.conversation_language.value.as_str();
+    let output_language = display_language(artifact_language, conversation_language);
+    let language = output_language.as_str();
     let mut done_items: Vec<String> = Vec::new();
     let mut confirmation_items: Vec<String> = Vec::new();
     let mut blocked_items: Vec<crate::present::InitBlockedItem> = Vec::new();
@@ -534,7 +623,8 @@ pub fn run_init(
     log!("target       : {}", root.display());
     log!("install_dir  : {install_dir}");
     log!("adapters     : {}", adapter_tools.join(", "));
-    log!("language     : {language}");
+    log!("artifact_language     : {artifact_language}");
+    log!("conversation_language : {conversation_language}");
     log!("config exists: {}", config_path.exists());
 
     if dry_run {
@@ -555,8 +645,11 @@ pub fn run_init(
                     status,
                     extra_confirmation_items: &dry_run_confirmation_items,
                     blocked_items: &[],
-                    language,
-                    language_source,
+                    artifact_language,
+                    conversation_language,
+                    display_language: language,
+                    artifact_language_source: resolved_i18n.artifact_language.source,
+                    conversation_language_source: resolved_i18n.conversation_language.source,
                 },)
             );
         } else {
@@ -568,8 +661,11 @@ pub fn run_init(
                 &dry_run_confirmation_items,
                 &[],
                 status,
+                artifact_language,
+                conversation_language,
                 language,
-                language_source,
+                resolved_i18n.artifact_language.source,
+                resolved_i18n.conversation_language.source,
                 false,
             );
         }
@@ -623,7 +719,12 @@ pub fn run_init(
             &format!("{} を保持", config_path.display()),
         ));
     } else {
-        let content = render_config(language, &adapter_tools, &report);
+        let content = render_config(
+            artifact_language,
+            conversation_language,
+            &adapter_tools,
+            &report,
+        );
         if let Err(e) = std::fs::write(&config_path, &content) {
             log!("FAIL: could not write {}: {e}", config_path.display());
             return 1;
@@ -769,8 +870,11 @@ pub fn run_init(
                 &confirmation_items,
                 &blocked_items,
                 status,
-                &cfg.language,
-                language_source,
+                &cfg.i18n.artifact_language,
+                &cfg.i18n.conversation_language,
+                cfg.conversation_output_language(),
+                resolved_i18n.artifact_language.source,
+                resolved_i18n.conversation_language.source,
                 json,
             );
             status.exit_code()
@@ -949,8 +1053,11 @@ fn present_results(
     confirmation_items: &[String],
     blocked_items: &[crate::present::InitBlockedItem],
     status: crate::present::InitStatus,
-    language: &str,
-    language_source: crate::present::InitLanguageSource,
+    artifact_language: &str,
+    conversation_language: &str,
+    display_language: &str,
+    artifact_language_source: crate::present::InitLanguageSource,
+    conversation_language_source: crate::present::InitLanguageSource,
     json: bool,
 ) {
     use crate::present::{ColorChoice, OutputMode, render_init_json, render_init_summary};
@@ -967,8 +1074,11 @@ fn present_results(
                 status,
                 extra_confirmation_items: confirmation_items,
                 blocked_items,
-                language,
-                language_source,
+                artifact_language,
+                conversation_language,
+                display_language,
+                artifact_language_source,
+                conversation_language_source,
             })
         );
         return;
@@ -991,8 +1101,11 @@ fn present_results(
             status,
             mode,
             color,
-            language,
-            language_source,
+            artifact_language,
+            conversation_language,
+            display_language,
+            artifact_language_source,
+            conversation_language_source,
         )
     );
 }
@@ -1066,20 +1179,20 @@ mod tests {
 
     #[test]
     fn render_config_contains_todo_when_no_verify_detected() {
-        let out = render_config("en", &tools(&["agents"]), &empty_report());
+        let out = render_config("en", "auto", &tools(&["agents"]), &empty_report());
         assert!(out.contains("TODO: define test command"), "{out}");
     }
 
     #[test]
     fn render_config_clean_report_has_no_confirm_markers() {
-        let out = render_config("en", &tools(&["agents"]), &clean_report());
+        let out = render_config("en", "auto", &tools(&["agents"]), &clean_report());
         assert!(!out.contains("# mochiflow: confirm"), "{out}");
     }
 
     #[test]
     fn render_config_empty_report_adds_confirm_markers() {
         // AC-02: undetected verify + fallback write scope → confirm markers.
-        let out = render_config("en", &tools(&["agents"]), &empty_report());
+        let out = render_config("en", "auto", &tools(&["agents"]), &empty_report());
         assert!(out.contains("# mochiflow: confirm"), "{out}");
     }
 
@@ -1088,7 +1201,7 @@ mod tests {
         // AC-03: a detected github remote never auto-switches provider.
         let mut report = clean_report();
         report.git.provider = "github".into();
-        let out = render_config("en", &tools(&["agents"]), &report);
+        let out = render_config("en", "auto", &tools(&["agents"]), &report);
         let parsed: toml::Value = toml::from_str(&out).unwrap();
         assert_eq!(parsed["git"]["provider"].as_str(), Some("none"), "{out}");
         assert!(out.contains("# mochiflow: confirm"), "{out}");
@@ -1097,26 +1210,26 @@ mod tests {
 
     #[test]
     fn render_config_threads_parameters() {
-        let out = render_config("ja", &tools(&["agents"]), &clean_report());
+        let out = render_config("ja", "auto", &tools(&["agents"]), &clean_report());
         assert!(!out.contains("engine_version"), "{out}");
-        assert!(out.contains("language = \"ja\""), "{out}");
+        assert!(out.contains("[i18n]"), "{out}");
+        assert!(out.contains("artifact_language = \"ja\""), "{out}");
+        assert!(out.contains("conversation_language = \"auto\""), "{out}");
+        assert!(!out.contains("\nlanguage = "), "{out}");
         assert!(out.contains("tools = [\"agents\"]"), "{out}");
     }
 
     #[test]
     fn render_config_emits_multiple_tools() {
-        let out = render_config("en", &tools(&["agents", "kiro"]), &clean_report());
-        let parsed: toml::Value = toml::from_str(&out).unwrap();
-        let tools = parsed["adapter"]["tools"].as_array().unwrap();
-        assert_eq!(tools[0].as_str(), Some("agents"), "{out}");
-        assert_eq!(tools[1].as_str(), Some("kiro"), "{out}");
+        let out = render_config("en", "auto", &tools(&["agents", "kiro"]), &clean_report());
+        assert!(out.contains("tools = [\"agents\", \"kiro\"]"), "{out}");
     }
 
     #[test]
     fn render_config_is_schema_valid_toml() {
         // Both clean and confirm-marked output must still parse as valid TOML.
         for report in [clean_report(), empty_report()] {
-            let out = render_config("en", &tools(&["agents"]), &report);
+            let out = render_config("en", "auto", &tools(&["agents"]), &report);
             let parsed: toml::Value = toml::from_str(&out).unwrap();
             assert_eq!(parsed["schema_version"].as_integer(), Some(1));
             assert_eq!(parsed["git"]["provider"].as_str(), Some("none"));
@@ -1129,45 +1242,62 @@ mod tests {
     }
 
     #[test]
-    fn render_config_escapes_toml_values_and_keys() {
+    fn render_config_escapes_toml_values() {
+        let language = "ja\"bad\\lang\nnext";
+        let adapter = "agent\"s\\next\nline";
+        let surface_name = "front.end app]";
+        let description = "A \"quoted\" app\nwith \\ path";
+        let verify = "echo \"ok\"\nprintf '\\n'";
+        let allow = "frontend app/\"module\n/**";
+        let deny = "**/secret\\file\"";
+        let base_branch = "main\"bad\\branch\nnext";
         let report = DetectionReport {
             surfaces: vec![DetectedSurface {
-                name: "web|ui".into(),
-                description: "quotes \" slash \\ hash # bracket ] pipe | newline\nok".into(),
-                verify: "npm run \"test\" -- --grep a\\b # not comment ]\nnext".into(),
+                name: surface_name.into(),
+                description: description.into(),
+                verify: verify.into(),
                 confidence: Confidence::High,
             }],
             git: DetectedGit {
-                provider: "github".into(),
-                base_branch: "main\"; bad = true\nnext".into(),
+                provider: "none".into(),
+                base_branch: base_branch.into(),
                 branch_confidence: Confidence::High,
             },
             write_scope: DetectedWriteScope {
-                allow: vec!["src|weird/**".into(), "README.md".into()],
-                deny: vec![".git/**".into()],
+                allow: vec![allow.into()],
+                deny: vec![deny.into()],
                 confidence: Confidence::High,
             },
         };
-        let out = render_config("en", &tools(&["agents|kiro"]), &report);
+
+        let out = render_config(language, "auto", &tools(&["agents", adapter]), &report);
         let parsed: toml::Value = toml::from_str(&out).unwrap();
+
         assert_eq!(
-            parsed["git"]["base_branch"].as_str(),
-            Some("main\"; bad = true\nnext")
+            parsed["i18n"]["artifact_language"].as_str(),
+            Some(language),
+            "{out}"
         );
         assert_eq!(
-            parsed["surfaces"]["web|ui"]["description"].as_str(),
-            Some("quotes \" slash \\ hash # bracket ] pipe | newline\nok")
+            parsed["i18n"]["conversation_language"].as_str(),
+            Some("auto"),
+            "{out}"
         );
-        assert_eq!(
-            parsed["surfaces"]["web|ui"]["verify"]["default"].as_str(),
-            Some("npm run \"test\" -- --grep a\\b # not comment ]\nnext")
-        );
-        assert_eq!(parsed["adapter"]["tools"][0].as_str(), Some("agents|kiro"));
+        assert_eq!(parsed["git"]["base_branch"].as_str(), Some(base_branch));
+        let tools = parsed["adapter"]["tools"].as_array().unwrap();
+        assert_eq!(tools[1].as_str(), Some(adapter), "{out}");
+        let allow_items = parsed["write"]["allow"].as_array().unwrap();
+        assert_eq!(allow_items[0].as_str(), Some(allow), "{out}");
+        let deny_items = parsed["write"]["deny"].as_array().unwrap();
+        assert_eq!(deny_items[0].as_str(), Some(deny), "{out}");
+        let surface = &parsed["surfaces"][surface_name];
+        assert_eq!(surface["description"].as_str(), Some(description), "{out}");
+        assert_eq!(surface["verify"]["default"].as_str(), Some(verify), "{out}");
     }
 
     #[test]
     fn render_config_emits_guidance_layer_tables() {
-        let out = render_config("en", &tools(&["agents"]), &clean_report());
+        let out = render_config("en", "auto", &tools(&["agents"]), &clean_report());
         assert!(out.contains("[constitution]"), "{out}");
         assert!(out.contains("[context]"), "{out}");
         assert!(out.contains("[adr]"), "{out}");

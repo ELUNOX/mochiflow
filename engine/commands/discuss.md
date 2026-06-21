@@ -42,16 +42,16 @@ Reach agreement on the why / what / key design decisions through investigation a
 3. Organize the UI / data model / API / migration / error handling / testing decision tree internally and resolve it dependency-first.
 4. One question at a time, each with a recommended answer, rationale, why the main alternatives are rejected, and impact.
 5. Ask for specifics when answers are vague ("make it nice", "your call").
-6. When every branch is resolved, present the agreement in the project language
+6. When every branch is resolved, present the agreement in the conversation language
    using plain labels for purpose / background / scope / decisions / assumptions
    / open questions / change impact. Internally this is the Decision summary;
    do not lead with internal headings. Guide the user toward creating the plan,
-   mentioning `spec-plan` only as the command if useful.
+   mentioning `mochiflow-plan` or `{slug} plan` only as the command if useful.
 
 ## Stop conditions
 
 - Do not move to the next branch while scope is undefined, contradictory, or unjustified.
-- Do not proceed to `spec-plan` with Open Questions unresolved (carrying them into plan as `[NEEDS-CLARIFICATION]` is allowed; resolve before `approved`).
+- Do not proceed to `mochiflow-plan` with Open Questions unresolved (carrying them into plan as `[NEEDS-CLARIFICATION]` is allowed; resolve before `approved`).
 - Do not delete a backlog seed in discuss alone (deletion happens in plan).
 - Keep transient notes in the conversation only; do not create or update spec files.
 - Do not touch implementation code / branch / PR.
