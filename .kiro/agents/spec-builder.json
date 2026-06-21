@@ -39,6 +39,7 @@
     "write": {
       "allowedPaths": [
   ".mochiflow/specs/**",
+  ".mochiflow/state/**",
   ".mochiflow/constitution.md",
   ".mochiflow/constitution.local.md",
   ".mochiflow/context/product.md",
