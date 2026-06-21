@@ -552,6 +552,25 @@ fn cmd_ready(cfg: &mochiflow_core::config::Config, spec_arg: &str) -> i32 {
                 );
                 return 1;
             }
+            for surface in meta.surfaces() {
+                let command = match cfg.verify_command(surface, "default", None) {
+                    Ok(command) => command,
+                    Err(e) => {
+                        println!(
+                            "FAIL: {}: verification command for surface `{surface}` is not runnable: {e}",
+                            meta.path.display()
+                        );
+                        return 1;
+                    }
+                };
+                if command.trim_start().starts_with("TODO:") {
+                    println!(
+                        "FAIL: {}: verification command for surface `{surface}` is not runnable: {command}",
+                        meta.path.display()
+                    );
+                    return 1;
+                }
+            }
             println!(
                 "READY: {} ({}, risk={})",
                 meta.slug(),

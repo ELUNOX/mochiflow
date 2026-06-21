@@ -506,8 +506,7 @@ fn router_plan_can_resolve_ready_backlog_handoff() {
         "router must allow plan from ready-for-plan backlog handoffs"
     );
     assert!(
-        router.contains("maturity: seed")
-            && router.contains("guide back to `{slug} discuss`"),
+        router.contains("maturity: seed") && router.contains("guide back to `{slug} discuss`"),
         "router must route raw backlog seeds back to discuss"
     );
     assert!(
@@ -537,6 +536,67 @@ fn branch_placeholders_use_prefix_slug() {
     assert!(
         !git.contains("git branch -d {type}/{slug}"),
         "post-merge cleanup must not delete the unmapped branch placeholder"
+    );
+}
+
+#[test]
+fn pr_feedback_restore_is_related_dirty_only_for_same_spec() {
+    let ship = read_repo_file("engine/commands/ship.md");
+    let build = read_repo_file("engine/commands/build.md");
+    let git = read_repo_file("engine/reference/git.md");
+
+    assert!(
+        ship.contains("related lifecycle change")
+            && ship.contains("{specs_dir}/{slug}/**")
+            && ship.contains("{specs_dir}/_done/{slug}/**")
+            && ship.contains("Any other dirt still stops"),
+        "ship PR Feedback Loop must treat only active + archived same-spec paths as related"
+    );
+    assert!(
+        build.contains("when build resumes from `ship.md ## PR Feedback Loop`")
+            && build.contains("{specs_dir}/_done/{slug}/**")
+            && build.contains("any other dirt still stops"),
+        "build dirty check must allow the archived same-spec path only for PR feedback resumes"
+    );
+    assert!(
+        git.contains("Exception: only when returning from `ship.md ## PR Feedback Loop`")
+            && git.contains("exactly `{specs_dir}/{slug}/**` and `{specs_dir}/_done/{slug}/**`")
+            && git.contains("Other slugs")
+            && git
+                .contains("under `_done/`, other specs, source changes, and `state/` files remain"),
+        "git dirty rules must keep the feedback-loop exception narrow"
+    );
+}
+
+#[test]
+fn ship_defers_context_refresh_until_after_pr_or_merge() {
+    let ship = read_repo_file("engine/commands/ship.md");
+    let git = read_repo_file("engine/reference/git.md");
+    let refresh = read_repo_file("engine/commands/refresh-context.md");
+
+    assert!(
+        ship.contains("post-ship `refresh-context` follow-up after PR creation or after merge")
+            && ship.contains("Do **not** run or trigger `refresh-context` before the close-out commit or `mochiflow pr`")
+            && ship.contains("would dirty the tree before PR pre-flight"),
+        "ship must defer context refresh instead of prompting pre-PR execution"
+    );
+    assert!(
+        !ship.contains("prompt the human to run `refresh-context`"),
+        "ship must not tell users to run refresh-context during close-out"
+    );
+    assert!(
+        git.contains("flag a post-ship")
+            && git.contains("follow-up instead of editing it")
+            && git.contains("running it during close-out")
+            && git.contains("separate work after PR creation / merge"),
+        "git fold guidance must make context refresh a separate follow-up"
+    );
+    assert!(
+        refresh.contains("Refresh does not auto-commit")
+            && refresh.contains("after PR creation / merge")
+            && refresh.contains("as separate follow-up")
+            && refresh.contains("trigger this during close-out"),
+        "refresh-context must remain no-auto-commit and safe outside ship close-out"
     );
 }
 
@@ -615,7 +675,10 @@ fn discuss_persists_ready_for_plan_handoff() {
         "## Change Impact",
         "## Evidence",
     ] {
-        assert!(handoff.contains(heading), "handoff template missing {heading}");
+        assert!(
+            handoff.contains(heading),
+            "handoff template missing {heading}"
+        );
     }
 }
 
@@ -663,6 +726,16 @@ fn ad_hoc_review_is_report_only() {
     assert!(
         !review.contains("fix inline and re-run") && !risk.contains("fix inline and re-run"),
         "review docs must not auto-fix from ad-hoc review"
+    );
+}
+
+#[test]
+fn workflow_todo_verify_is_not_runnable() {
+    let workflow = read_repo_file("engine/reference/workflow.md");
+    assert!(
+        workflow.contains("`TODO:` placeholder is not yet runnable")
+            && workflow.contains("define\nits command before building that surface"),
+        "workflow must say TODO verification is not runnable before build"
     );
 }
 
@@ -1490,6 +1563,103 @@ fn behavioral_lint_and_ready() {
 
     let (code, out) = run_cli(&cfg, &["ready", "sample-spec"]);
     assert_eq!(code, 0);
+    assert!(
+        out.contains("READY") && out.contains("sample-spec"),
+        "{out}"
+    );
+}
+
+#[test]
+fn behavioral_ready_fails_when_spec_verify_is_todo() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg = materialize_full(tmp.path());
+    let config = std::fs::read_to_string(&cfg).unwrap().replace(
+        "default = \"echo test-pass\"",
+        "default = \"TODO: define test command\"",
+    );
+    std::fs::write(&cfg, config).unwrap();
+
+    let (code, out) = run_cli(&cfg, &["ready", "sample-spec"]);
+    assert_eq!(code, 1);
+    assert!(out.contains("FAIL"), "{out}");
+    assert!(
+        out.contains("verification command for surface `app`"),
+        "{out}"
+    );
+    assert!(out.contains("TODO: define test command"), "{out}");
+    assert!(!out.contains("READY"), "{out}");
+}
+
+#[test]
+fn behavioral_ready_fails_when_spec_verify_default_is_missing() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg = materialize_full(tmp.path());
+    let config = std::fs::read_to_string(&cfg)
+        .unwrap()
+        .replace("default = \"echo test-pass\"\n", "");
+    std::fs::write(&cfg, config).unwrap();
+
+    let (code, out) = run_cli(&cfg, &["ready", "sample-spec"]);
+    assert_eq!(code, 1);
+    assert!(out.contains("FAIL"), "{out}");
+    assert!(
+        out.contains("verification command for surface `app`"),
+        "{out}"
+    );
+    assert!(out.contains("has no verify profile: default"), "{out}");
+    assert!(!out.contains("READY"), "{out}");
+}
+
+#[test]
+fn behavioral_ready_fails_when_any_spec_surface_verify_is_not_runnable() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg = materialize_full(tmp.path());
+    let mut config = std::fs::read_to_string(&cfg).unwrap();
+    config.push_str(
+        "\n[surfaces.api]\n\
+         description = \"api\"\n\n\
+         [surfaces.api.verify]\n\
+         default = \"TODO: define test command\"\n",
+    );
+    std::fs::write(&cfg, config).unwrap();
+
+    let spec_dir = cfg.parent().unwrap().join("specs").join("sample-spec");
+    std::fs::write(
+        spec_dir.join("spec.yaml"),
+        "version: 1\nslug: sample-spec\ntitle: Sample Spec\ntype: feature\nsurfaces:\n  - app\n  - api\nintegration: none\nrisk: standard\nstatus: approved\n",
+    )
+    .unwrap();
+    std::fs::write(
+        spec_dir.join("design.md"),
+        "# Design\n\n## Integration Log\n\n- Multi-surface verification guard.\n",
+    )
+    .unwrap();
+
+    let (code, out) = run_cli(&cfg, &["ready", "sample-spec"]);
+    assert_eq!(code, 1);
+    assert!(out.contains("FAIL"), "{out}");
+    assert!(
+        out.contains("verification command for surface `api`"),
+        "{out}"
+    );
+    assert!(!out.contains("READY"), "{out}");
+}
+
+#[test]
+fn behavioral_ready_ignores_todo_verify_on_unused_surface() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg = materialize_full(tmp.path());
+    let mut config = std::fs::read_to_string(&cfg).unwrap();
+    config.push_str(
+        "\n[surfaces.unused]\n\
+         description = \"unused\"\n\n\
+         [surfaces.unused.verify]\n\
+         default = \"TODO: define test command\"\n",
+    );
+    std::fs::write(&cfg, config).unwrap();
+
+    let (code, out) = run_cli(&cfg, &["ready", "sample-spec"]);
+    assert_eq!(code, 0, "{out}");
     assert!(
         out.contains("READY") && out.contains("sample-spec"),
         "{out}"

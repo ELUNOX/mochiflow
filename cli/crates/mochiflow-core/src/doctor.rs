@@ -175,10 +175,10 @@ pub fn validate_config(cfg: &Config) -> Vec<DoctorIssue> {
     issues
 }
 
-/// WARN when `{install_dir}/state/` is not gitignored. PR handoff artifacts and
-/// generated caches live in state, so `init` writes `{install_dir}/.gitignore`
-/// for fresh projects, and this catches drift or older projects. Skipped when
-/// the project is not a git repo (cannot decide).
+/// FAIL when `{install_dir}/state/` is not gitignored. PR/QA delivery artifacts
+/// are written under state/, and `mochiflow pr` requires a clean working tree.
+/// `init` writes `{install_dir}/.gitignore` for fresh projects; this catches
+/// drift or older projects. Skipped when the project is not a git repo.
 pub fn check_state_ignored(cfg: &Config) -> Vec<DoctorIssue> {
     use std::process::Command;
     let root = &cfg.repo_root;
@@ -192,10 +192,11 @@ pub fn check_state_ignored(cfg: &Config) -> Vec<DoctorIssue> {
         return Vec::new();
     }
     let state = cfg.state_dir();
+    let state_probe = state.join(".gitignore-probe");
     let ignored = Command::new("git")
         .arg("check-ignore")
         .arg("-q")
-        .arg(&state)
+        .arg(&state_probe)
         .current_dir(root)
         .status()
         .map(|s| s.success())
@@ -204,7 +205,7 @@ pub fn check_state_ignored(cfg: &Config) -> Vec<DoctorIssue> {
         Vec::new()
     } else {
         vec![DoctorIssue {
-            severity: "WARN".into(),
+            severity: "FAIL".into(),
             message: format!(
                 "{} is not gitignored; add `state/` to {}/.gitignore (init does this for new projects)",
                 state.display(),

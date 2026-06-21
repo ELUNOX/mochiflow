@@ -397,6 +397,29 @@ fn join_blocks_handwritten_structured_adapter_and_writes_candidate() {
 }
 
 #[test]
+fn kiro_adapter_allows_delivery_state_paths() {
+    let dir = tempfile::tempdir().unwrap();
+    bin()
+        .args([
+            "init",
+            "--adapter",
+            "kiro",
+            "--target",
+            dir.path().to_str().unwrap(),
+        ])
+        .write_stdin("")
+        .assert()
+        .success();
+
+    let builder = dir.path().join(".kiro/agents/spec-builder.json");
+    let body = fs::read_to_string(&builder).unwrap();
+    assert!(
+        body.contains("\".mochiflow/state/**\""),
+        "Kiro allowedPaths must include delivery state:\n{body}"
+    );
+}
+
+#[test]
 fn join_dry_run_does_not_write_shared_files() {
     let dir = tempfile::tempdir().unwrap();
     prepare_join_project(&dir);
@@ -2177,10 +2200,10 @@ fn config_error_exits_2() {
         .code(2);
 }
 
-/// AC-06: `doctor config` WARNs (exit 0) when {install_dir}/state/ is not
-/// gitignored, and stays silent once it is ignored (init writes the rule).
+/// AC-06: `doctor config` FAILs when {install_dir}/state/ is not gitignored,
+/// and stays silent once it is ignored (init writes the rule).
 #[test]
-fn doctor_warns_when_state_not_gitignored() {
+fn doctor_fails_when_state_not_gitignored() {
     let dir = tempfile::tempdir().unwrap();
     let root = dir.path();
     std::process::Command::new("git")
@@ -2206,15 +2229,17 @@ fn doctor_warns_when_state_not_gitignored() {
         "state should be ignored after init:\n{out}"
     );
 
-    // Drop the ignore rule → WARN, still exit 0 (WARN is not a failure).
+    // Drop the ignore rule → FAIL because ship/pr delivery state must be ignored.
     fs::write(root.join(".mochiflow/.gitignore"), "").unwrap();
-    let warned = bin()
+    let failed = bin()
         .args(["--config", config.to_str().unwrap(), "doctor", "config"])
         .assert()
-        .success();
-    let out2 = String::from_utf8_lossy(&warned.get_output().stdout).into_owned();
+        .failure()
+        .code(1);
+    let out2 = String::from_utf8_lossy(&failed.get_output().stdout).into_owned();
+    assert!(out2.contains("FAIL"), "expected state-ignore FAIL:\n{out2}");
     assert!(
         out2.contains("not gitignored"),
-        "expected state-ignore WARN:\n{out2}"
+        "expected state-ignore FAIL:\n{out2}"
     );
 }

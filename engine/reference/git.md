@@ -15,7 +15,11 @@ mechanics and the living-spec fold.
 - "Unrelated changes" is precise: any uncommitted change **other than this
   spec's own `{specs_dir}/{slug}/**`**. The spec files just authored by `plan`
   are *related* and expected to be present at build start — they never block.
-  Any other dirt → stop instead of switching.
+  Exception: only when returning from `ship.md ## PR Feedback Loop`, the restore
+  from the archived shipped spec is also related, so the allowed dirty paths are
+  exactly `{specs_dir}/{slug}/**` and `{specs_dir}/_done/{slug}/**`. Other slugs
+  under `_done/`, other specs, source changes, and `state/` files remain
+  unrelated dirt. Any other dirt → stop instead of switching.
 - Create from `origin/{[git].base_branch}` when the branch does not exist.
   Create the branch first and let `git switch -c` carry the uncommitted
   `{specs_dir}/{slug}/**` onto it (a fresh branch has no conflict; no stash
@@ -162,8 +166,11 @@ now", "where things live"). The context layer (`[context].product` /
 `[context].structure` / `[context].tech`) is **not** a fold target — it is a current-state
 orientation map regenerated from code via onboard / `refresh-context`, never
 appended to during fold. For coarse code-layout changes (new module,
-responsibility move, technology/verification change), run `refresh-context` (`commands/refresh-context.md`)
-instead of editing it inline; code remains the source of truth.
+responsibility move, technology/verification change), flag a post-ship
+`refresh-context` (`commands/refresh-context.md`) follow-up instead of editing it
+inline or running it during close-out; code remains the source of truth. Context
+refresh is separate work after PR creation / merge unless the human explicitly
+runs and commits it as a separate change later.
 
 Fold is skipped when the change yields no new rationale or pitfall (e.g. a trivial
 display fix). Do not archive until the fold (or the decision that none is needed)

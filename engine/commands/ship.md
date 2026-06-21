@@ -59,16 +59,11 @@ living-spec fold, and archive.
 
 ### Close-out
 
-5. Fold, archive, and close out on the feature branch before `mochiflow pr`.
-    - Fold per `reference/git.md ## Living-spec fold`: append why/history that
-      code cannot reproduce to `[adr].decisions` and operational pitfalls to
-      `[adr].pitfalls`. Do not fold current-state prose.
-    - If the change introduced a coarse structural shift that makes foundational
-      context stale, prompt the human to run `refresh-context`; do not regenerate
-      or commit context automatically here.
-    - Archive `{specs_dir}/{slug}/` to `{specs_dir}/_done/{slug}/` and
-      regenerate `{index}` with `mochiflow index`.
-    - Make the single close-out commit per `reference/git.md ## Auto-commit and staging ### Ship close-out commit`.
+5. Fold, archive, and close out — on the feature branch, before `mochiflow pr`.
+   - Fold per `reference/git.md ## Living-spec fold`: append the *why* that code cannot reproduce (decision rationale, rejected options) to `[adr].decisions` with a date, and operational pitfalls to `[adr].pitfalls` using the active guardrail format. Do not fold prose that describes current state. Skip when there is no new rationale or pitfall.
+   - **Foundational context refresh check (not a fold)**: if the change introduced a coarse structural shift (new module / surface / moved entry point / technology or verification responsibility) that makes `[context].product` / `[context].structure` / `[context].tech` stale, record/report a post-ship `refresh-context` follow-up after PR creation or after merge. Do **not** run or trigger `refresh-context` before the close-out commit or `mochiflow pr`; it writes context files and does not auto-commit, which would dirty the tree before PR pre-flight. The context layer is refreshed from code under human confirmation, never folded.
+   - Archive: move `{specs_dir}/{slug}/` → `{specs_dir}/_done/{slug}/` and regenerate `{index}` (`mochiflow index`).
+   - Make the **single close-out commit** per `reference/git.md ## Auto-commit and staging ### Ship close-out commit`: stage exactly `status: done` + the AC Verification Matrix + the fold (`[adr]`) + the `_done/{slug}/` move + `{index}`, with an external-reviewer message (no spec slug, no AC IDs, no mochiflow vocabulary). Nothing is pushed to the base branch here.
 
 ### PR
 
@@ -88,9 +83,12 @@ requires code changes before merge:
 1. Do not use `patch` unless the change is unrelated to the shipped spec.
 2. Move `{specs_dir}/_done/{slug}/` back to `{specs_dir}/{slug}/`.
 3. Set `spec.yaml` status from `done` back to `approved` and update `updated`.
-4. Apply the requested changes through `build`.
-5. Re-run verification and update the AC Verification Matrix.
-6. Re-run `ship` close-out: set `done`, archive again, regenerate `INDEX`, and
+4. Treat this restore as a related lifecycle change for the same shipped spec:
+   only `{specs_dir}/{slug}/**` and `{specs_dir}/_done/{slug}/**` may be dirty
+   when build resumes from this PR Feedback Loop. Any other dirt still stops.
+5. Apply the requested changes through `build`.
+6. Re-run verification and update the AC Verification Matrix.
+7. Re-run `ship` close-out: set `done`, archive again, regenerate `INDEX`, and
    update the PR body when needed.
 
 ### Post-merge

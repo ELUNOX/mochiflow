@@ -46,6 +46,7 @@ fn subs(cfg: &Config, tool: &str) -> BTreeMap<String, String> {
     let engine = format!("{}/engine", cfg.install_dir);
     let mut allow: Vec<String> = vec![
         format!("{}/**", cfg.specs_dir),
+        format!("{}/state/**", cfg.install_dir),
         cfg.constitution.project.clone(),
         cfg.constitution.local.clone(),
         cfg.context.product.clone(),
@@ -643,10 +644,11 @@ mod tests {
         // legacy flat tokens are gone
         assert!(!m.contains_key("paths.architecture"));
         assert!(!m.contains_key("paths.structure"));
-        // write allow lists all four living-spec paths + index
+        // write allow lists living-spec paths, delivery state, and shared guidance files
         assert!(m.contains_key("allow_json"), "allow_json missing");
         let allow = m.get("allow_json").map(String::as_str).unwrap_or("");
         for p in [
+            ".mochiflow/state/**",
             ".mochiflow/constitution.md",
             ".mochiflow/constitution.local.md",
             ".mochiflow/context/product.md",

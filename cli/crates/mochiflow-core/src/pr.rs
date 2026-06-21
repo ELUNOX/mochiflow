@@ -191,7 +191,13 @@ pub fn run_pr(
 
     // Agnostic pre-flight runs BEFORE writing any artifact, so mochiflow's own
     // pr-request.json does not dirty the tree and trip its own clean check.
-    if let Some(code) = preflight(root, &head, &base) {
+    if let Some(code) = preflight(
+        root,
+        &head,
+        &base,
+        &cfg.state_dir(),
+        &cfg.install_dir_path(),
+    ) {
         return code;
     }
 
@@ -259,12 +265,36 @@ fn backend_label(b: &Backend) -> String {
 }
 
 /// Returns Some(exit_code) on failure, None when all checks pass.
-fn preflight(root: &Path, head: &str, base: &str) -> Option<i32> {
-    let dirty = git_capture(root, &["status", "--porcelain"])
-        .map(|s| !s.is_empty())
-        .unwrap_or(true);
+fn preflight(
+    root: &Path,
+    head: &str,
+    base: &str,
+    state_dir: &Path,
+    install_dir: &Path,
+) -> Option<i32> {
+    let status = git_capture(root, &["status", "--porcelain"]).unwrap_or_default();
+    let dirty = !status.is_empty();
+    let state_rel = state_dir
+        .strip_prefix(root)
+        .unwrap_or(state_dir)
+        .to_string_lossy()
+        .replace('\\', "/");
+    let install_rel = install_dir
+        .strip_prefix(root)
+        .unwrap_or(install_dir)
+        .to_string_lossy()
+        .replace('\\', "/");
+    let state_dirty = status.lines().any(|line| {
+        line.get(3..)
+            .is_some_and(|path| path.starts_with(&state_rel))
+    });
     if dirty {
         eprintln!("pre-flight FAIL: working tree not clean.");
+        if state_dirty {
+            eprintln!(
+                "pre-flight hint: {state_rel}/ is runtime state; add `state/` to {install_rel}/.gitignore."
+            );
+        }
         return Some(EXIT_PREFLIGHT_FAIL);
     }
     if head == base {
