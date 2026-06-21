@@ -778,6 +778,57 @@ fn walkdir(root: &Path) -> Vec<PathBuf> {
     result
 }
 
+fn is_explicit_spec_path(target: &str) -> bool {
+    let path = Path::new(target);
+    path.is_absolute() || path.exists() || path.components().count() > 1
+}
+
+fn resolve_lint_targets(cfg: &Config, target: &str) -> Result<Vec<PathBuf>, Issue> {
+    if is_explicit_spec_path(target) {
+        let path = PathBuf::from(target);
+        let spec_dir = if path.is_file() {
+            path.parent().unwrap_or(&path).to_path_buf()
+        } else {
+            path
+        };
+        if spec_dir.join("spec.yaml").exists() {
+            return Ok(vec![spec_dir]);
+        }
+        return Err(Issue {
+            severity: "FAIL".into(),
+            path: spec_dir.join("spec.yaml"),
+            message: format!("spec not found: {target}"),
+        });
+    }
+
+    let active = cfg.specs_dir_path().join(target);
+    let archived = cfg.specs_dir_path().join("_done").join(target);
+    let mut matches = Vec::new();
+    for candidate in [&active, &archived] {
+        if candidate.join("spec.yaml").exists() {
+            matches.push(candidate.to_path_buf());
+        }
+    }
+
+    match matches.len() {
+        0 => Err(Issue {
+            severity: "FAIL".into(),
+            path: active.join("spec.yaml"),
+            message: format!("spec not found: {target}"),
+        }),
+        1 => Ok(matches),
+        _ => Err(Issue {
+            severity: "FAIL".into(),
+            path: active.join("spec.yaml"),
+            message: format!(
+                "spec target is ambiguous: {target} matches {} and {}",
+                active.display(),
+                archived.display()
+            ),
+        }),
+    }
+}
+
 /// Run lint, print issues, return exit code (0=pass, 1=fail).
 pub fn run_lint(cfg: &Config, spec_slug: Option<&str>, log_to_stderr: bool) -> i32 {
     macro_rules! report_ln {
@@ -786,25 +837,22 @@ pub fn run_lint(cfg: &Config, spec_slug: Option<&str>, log_to_stderr: bool) -> i
         };
     }
     let allowed: HashSet<String> = cfg.surface_names().into_iter().collect();
-    let paths = if let Some(slug) = spec_slug {
-        vec![cfg.specs_dir_path().join(slug)]
+    let mut all_issues = Vec::new();
+    let paths = if let Some(target) = spec_slug {
+        match resolve_lint_targets(cfg, target) {
+            Ok(paths) => paths,
+            Err(issue) => {
+                all_issues.push(issue);
+                Vec::new()
+            }
+        }
     } else {
         vec![cfg.specs_dir_path()]
     };
 
-    let mut all_issues = Vec::new();
     let mut seen = HashSet::new();
     for root in &paths {
         let spec_dirs = discover_spec_dirs(root);
-        if let Some(slug) = spec_slug
-            && spec_dirs.is_empty()
-        {
-            all_issues.push(Issue {
-                severity: "FAIL".into(),
-                path: root.join("spec.yaml"),
-                message: format!("spec not found: {slug}"),
-            });
-        }
         for spec_dir in spec_dirs {
             if seen.contains(&spec_dir) {
                 continue;

@@ -1521,10 +1521,15 @@ fn materialize_full(root: &Path) -> PathBuf {
 }
 
 fn run_cli(config: &Path, args: &[&str]) -> (i32, String) {
+    run_cli_in_dir(config, Path::new("."), args)
+}
+
+fn run_cli_in_dir(config: &Path, cwd: &Path, args: &[&str]) -> (i32, String) {
     let mut full = vec!["--config", config.to_str().unwrap()];
     full.extend_from_slice(args);
     let out = assert_cmd::Command::cargo_bin("mochiflow")
         .unwrap()
+        .current_dir(cwd)
         .args(&full)
         .output()
         .unwrap();
@@ -1532,6 +1537,23 @@ fn run_cli(config: &Path, args: &[&str]) -> (i32, String) {
         out.status.code().unwrap_or(-1),
         String::from_utf8_lossy(&out.stdout).into_owned(),
     )
+}
+
+fn write_done_spec(specs_dir: &Path, slug: &str) {
+    let spec_dir = specs_dir.join("_done").join(slug);
+    std::fs::create_dir_all(&spec_dir).unwrap();
+    std::fs::write(
+        spec_dir.join("spec.yaml"),
+        format!(
+            "version: 1\nslug: {slug}\ntitle: Archived Spec\ntype: feature\nsurfaces:\n  - app\nintegration: none\nrisk: standard\nstatus: done\n"
+        ),
+    )
+    .unwrap();
+    std::fs::write(
+        spec_dir.join("spec.md"),
+        "# Archived Spec\n\n## 受入基準\n\n- AC-01: THE SYSTEM SHALL do the thing.\n\n## AC Verification Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | PASS |\n",
+    )
+    .unwrap();
 }
 
 #[test]
@@ -1674,6 +1696,57 @@ fn behavioral_lint_spec_missing_fails() {
     let (code, out) = run_cli(&cfg, &["lint", "--spec", "missing-spec"]);
     assert_eq!(code, 1);
     assert!(out.contains("spec not found: missing-spec"), "{out}");
+}
+
+#[test]
+fn behavioral_lint_archived_spec_by_slug_passes() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg = materialize_full(tmp.path());
+    write_done_spec(&tmp.path().join(".mochiflow/specs"), "archived-spec");
+
+    let (code, out) = run_cli(&cfg, &["lint", "--spec", "archived-spec"]);
+    assert_eq!(code, 0, "{out}");
+}
+
+#[test]
+fn behavioral_lint_spec_slug_ambiguity_fails() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg = materialize_full(tmp.path());
+    write_done_spec(&tmp.path().join(".mochiflow/specs"), "sample-spec");
+
+    let (code, out) = run_cli(&cfg, &["lint", "--spec", "sample-spec"]);
+    assert_eq!(code, 1);
+    assert!(
+        out.contains("spec target is ambiguous: sample-spec"),
+        "{out}"
+    );
+    assert!(out.contains(".mochiflow/specs/sample-spec"), "{out}");
+    assert!(out.contains(".mochiflow/specs/_done/sample-spec"), "{out}");
+}
+
+#[test]
+fn behavioral_lint_spec_path_to_done_passes() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg = materialize_full(tmp.path());
+    write_done_spec(&tmp.path().join(".mochiflow/specs"), "archived-spec");
+
+    let (code, out) = run_cli_in_dir(
+        &cfg,
+        tmp.path(),
+        &["lint", "--spec", ".mochiflow/specs/_done/archived-spec"],
+    );
+    assert_eq!(code, 0, "{out}");
+
+    let (code, out) = run_cli_in_dir(
+        &cfg,
+        tmp.path(),
+        &[
+            "lint",
+            "--spec",
+            ".mochiflow/specs/_done/archived-spec/spec.yaml",
+        ],
+    );
+    assert_eq!(code, 0, "{out}");
 }
 
 #[test]
