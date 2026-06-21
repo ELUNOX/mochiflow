@@ -48,9 +48,9 @@ body (optional)
 
 The AI auto-commits in all flows. Commit only after verification PASS; never
 commit on verification FAIL. When `risk.md` requires a reviewer verdict,
-reviewer PASS is a phase-completion / ship-acceptance gate, not a pre-commit
-gate. If reviewer FAIL findings require changes, fix them, verify, and commit
-the follow-up before build completes.
+reviewer PASS is a phase-completion / ship-acceptance gate, not a pre-commit gate.
+If reviewer FAIL findings require changes, fix them, verify, and commit the
+follow-up before build completes.
 
 - Stage only files in the change plan / task plus tests added for verification.
 - Stage this spec's own files under `{specs_dir}/{slug}/**` together with the

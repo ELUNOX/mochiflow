@@ -345,7 +345,12 @@ fn parse_matrix_rows(text: &str) -> Vec<MatrixRow> {
 }
 
 fn is_canonical_matrix_result(result: &str) -> bool {
-    matches!(result, "PASS" | "PENDING_HUMAN" | "人間確認済み" | "FAIL")
+    matches!(
+        result,
+        "UNVERIFIED" | "PASS" | "PENDING_HUMAN" | "人間確認済み" | "FAIL"
+    ) || result
+        .strip_prefix("N/A: ")
+        .is_some_and(|reason| !reason.trim().is_empty())
         || result
             .strip_prefix("対象外（")
             .and_then(|s| s.strip_suffix('）'))
@@ -614,7 +619,7 @@ fn lint_spec_dir(spec_dir: &Path, allowed_surfaces: &HashSet<String>) -> Vec<Iss
                     severity: "FAIL".into(),
                     path: matrix_path.clone(),
                     message: format!(
-                        "AC Matrix result for {} must be one of PASS, PENDING_HUMAN, 人間確認済み, 対象外（<reason>）, FAIL",
+                        "AC Matrix result for {} must be one of UNVERIFIED, PASS, PENDING_HUMAN, 人間確認済み, N/A: <reason>, 対象外（<reason>）, FAIL",
                         row.ac
                     ),
                 });
@@ -645,7 +650,9 @@ fn lint_spec_dir(spec_dir: &Path, allowed_surfaces: &HashSet<String>) -> Vec<Iss
             issues.push(Issue {
                 severity: "FAIL".into(),
                 path: spec_dir.join("spec.yaml"),
-                message: "status is done but AC Matrix is missing".into(),
+                message:
+                    "status is done but AC Verification Matrix is missing; AC Matrix is missing"
+                        .into(),
             });
         } else {
             for row in &matrix_rows {
@@ -725,7 +732,9 @@ fn lint_spec_dir(spec_dir: &Path, allowed_surfaces: &HashSet<String>) -> Vec<Iss
         }
     }
 
-    if let Some(ref tt) = tasks_text {
+    if let Some(ref tt) = tasks_text
+        && (meta.status() != "done" || !task_ids(tt).is_empty())
+    {
         for message in lint_task_structure(tt) {
             issues.push(Issue {
                 severity: "FAIL".into(),
