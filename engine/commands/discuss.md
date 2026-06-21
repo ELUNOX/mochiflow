@@ -15,7 +15,7 @@ triggers:
 trigger_patterns:
   - "{slug} discuss"
 artifacts:
-  - Decision summary only (captured into spec.md ## Background and Decisions by plan)
+  - Decision summary only (captured into spec.md Background and Design Rationale by plan)
 prerequisites: []
 execution: inline
 allowed_writes: []

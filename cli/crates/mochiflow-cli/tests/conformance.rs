@@ -43,6 +43,18 @@ fn read_repo_file(path: &str) -> String {
     std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()))
 }
 
+fn collect_files(dir: &Path, out: &mut Vec<PathBuf>) {
+    for entry in std::fs::read_dir(dir).unwrap_or_else(|e| panic!("read {}: {e}", dir.display())) {
+        let entry = entry.unwrap();
+        let path = entry.path();
+        if path.is_dir() {
+            collect_files(&path, out);
+        } else if path.is_file() {
+            out.push(path);
+        }
+    }
+}
+
 fn load_schema(name: &str) -> jsonschema::Validator {
     let schema = read_json(&contracts_dir().join(name));
     jsonschema::validator_for(&schema).unwrap_or_else(|e| panic!("compile schema {name}: {e}"))
@@ -585,9 +597,107 @@ fn design_template_optional_residue_guard() {
         "plan must require optional design sections to be removed at creation time"
     );
     assert!(
-        design.matches("見出しごと削除").count() >= 4,
+        design.matches("Delete this heading").count() >= 4,
         "design template optional sections must instruct agents to delete inapplicable headings"
     );
+}
+
+#[test]
+fn engine_templates_are_english_source() {
+    let templates_dir = repo_root().join("engine/templates");
+    let mut files = Vec::new();
+    collect_files(&templates_dir, &mut files);
+
+    for path in files {
+        let text = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+        let has_japanese = text.chars().any(|c| {
+            ('\u{3040}'..='\u{30ff}').contains(&c) || ('\u{4e00}'..='\u{9fff}').contains(&c)
+        });
+        assert!(
+            !has_japanese,
+            "engine source templates must stay English-only: {}",
+            path.strip_prefix(repo_root()).unwrap_or(&path).display()
+        );
+    }
+}
+
+#[test]
+fn english_template_headings_are_present() {
+    let spec = read_repo_file("engine/templates/spec/spec.md");
+    let design = read_repo_file("engine/templates/spec/design.md");
+    let tasks = read_repo_file("engine/templates/spec/tasks.md");
+    let qa = read_repo_file("engine/templates/delivery/qa-instructions.md");
+
+    for heading in [
+        "## Background and Design Rationale",
+        "## User Story",
+        "## Scope",
+        "## Acceptance Criteria (EARS)",
+        "## QA Scenarios",
+        "## Completion Conditions",
+    ] {
+        assert!(spec.contains(heading), "spec template missing {heading}");
+    }
+    for heading in [
+        "## Design Decisions",
+        "## Architecture",
+        "## Data Model / Interfaces",
+        "## Error Handling",
+        "## Test Strategy",
+        "## Integration Log",
+    ] {
+        assert!(
+            design.contains(heading),
+            "design template missing {heading}"
+        );
+    }
+    for heading in [
+        "Implementation Summary:",
+        "Critical Stop Conditions:",
+        "Covers AC:",
+        "Planned Change Areas:",
+        "Additional Stop Conditions:",
+    ] {
+        assert!(tasks.contains(heading), "tasks template missing {heading}");
+    }
+    for heading in [
+        "# QA Instructions:",
+        "## Legend",
+        "## Preparation",
+        "## Scenario List",
+        "## Detailed Steps",
+        "## Report Formats",
+    ] {
+        assert!(qa.contains(heading), "QA template missing {heading}");
+    }
+}
+
+#[test]
+fn engine_references_do_not_use_removed_japanese_template_headings() {
+    let engine_dir = repo_root().join("engine");
+    let mut files = Vec::new();
+    collect_files(&engine_dir, &mut files);
+    let removed = ["背景と設計判断", "設計判断", "統合ログ", "対応 AC"];
+
+    for path in files {
+        let rel = path
+            .strip_prefix(repo_root())
+            .unwrap_or(&path)
+            .to_string_lossy()
+            .replace('\\', "/");
+        if rel == "engine/MANIFEST.json" {
+            continue;
+        }
+        let text = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+        for token in removed {
+            assert!(
+                !text.contains(token),
+                "{rel} must not reference removed Japanese template heading token {token}"
+            );
+        }
+    }
 }
 
 // --- (f) Behavioral / property tests: lint rules pinned without golden --------
@@ -671,6 +781,16 @@ fn lint_passes_valid_approved_spec() {
     let md = "# S\n\n## Requirements / Acceptance Criteria\n\n| AC | Type | Priority | Requirement | Verification |\n| --- | --- | --- | --- | --- |\n| AC-01 | functional | Must | THE SYSTEM SHALL do the thing. | automated |\n\n## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | UNVERIFIED |\n";
     let (code, _out) = run_lint_case(GOOD_YAML, md, None, None);
     assert_eq!(code, 0, "a well-formed approved spec must lint clean");
+}
+
+#[test]
+fn lint_passes_english_template_headings_and_covers_ac() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: done");
+    let md = "# S\n\n## Acceptance Criteria (EARS)\n\n- AC-01: THE SYSTEM SHALL do the thing.\n";
+    let tasks = "# Tasks\n\n## Task 1\n\nCovers AC: AC-01\n\n\
+                 ## AC Verification Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | PASS |\n";
+    let (code, out) = run_lint_case(&yaml, md, None, Some(tasks));
+    assert_eq!(code, 0, "{out}");
 }
 
 #[test]

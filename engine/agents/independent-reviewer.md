@@ -37,11 +37,9 @@ references:
 - `spec.yaml` metadata summary
 - full requirements / AC
 - full design
-- full tasks or Change Plan
+- full tasks or change plan
 - read access to all changed files, or the full diff
-- `design.md ## Integration Log` — provided when the `risk` row in
-  `reference/risk.md` requires an integration log; if optional and empty, review
-  from the diff and spec
+- `design.md ## Integration Log` when required by the `reference/risk.md` integration-log column; when optional or empty, judge from the diff and spec
 - Verification results when available
 
 ## Operating rules

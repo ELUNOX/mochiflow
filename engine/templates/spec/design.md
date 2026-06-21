@@ -1,47 +1,48 @@
-# {タイトル} — 設計
+# {title} — Design
 
-> `design.md` は risk≥elevated / integration≠none / surfaces>1 の時に作る。
-> 判断と契約のみを書く。具象 class/struct 定義は書かない（実装時に source を読む）。
+> Create `design.md` only for risk>=elevated, integration!=none, or surfaces>1.
+> Write decisions and contracts only. Do not define concrete classes or structs
+> here; read source during build.
 
-## 設計判断
+## Design Decisions
 
-- 判断 / 理由
+- Decision / rationale
 
-## アーキテクチャ
-
-- 
-
-## データモデル / インターフェース（signature レベル）
+## Architecture
 
 - 
 
-## エラーハンドリング
+## Data Model / Interfaces
 
 - 
 
-## テスト戦略
+## Error Handling
+
+- 
+
+## Test Strategy
 
 - 
 
 ## Workstreams
 
-<!-- 複数 workstream / cross-surface のときのみ。該当しない場合は見出しごと削除する。 -->
+<!-- Keep only for multiple workstreams or cross-surface work. Delete this heading when it does not apply. -->
 
-| Workstream | Surface | 責務 | 依存 | 検証 |
+| Workstream | Surface | Responsibility | Depends on | Verification |
 | --- | --- | --- | --- | --- |
 |  |  |  |  |  |
 
 ## Integration Contract
 
-<!-- integration ≠ none のときのみ。該当しない場合は見出しごと削除する。 -->
+<!-- Keep only when integration != none. Delete this heading when it does not apply. -->
 
 - Contract owner / Request / Response / Error / Auth / Compatibility / Failure handling / Verification
 
 ## Review Results
 
-<!-- risk≥elevated の mandatory reviewer run を記録。該当しない場合は見出しごと削除する。Reviewer mode: delegated | inline / Verdict: pass | pass-with-comments | fail -->
+<!-- Record mandatory reviewer runs for risk>=elevated. Delete this heading when it does not apply. Reviewer mode: delegated | inline / Verdict: pass | pass-with-comments | fail -->
 
-## 統合ログ
+## Integration Log
 
-<!-- build 中に append-only。不要な場合は見出しごと削除する。design からの seam 乖離・所有権境界・dead code 扱い・次セッション申し送り。
-     plan で確定済みの内容や commit log で足りる情報は書かない。 -->
+<!-- Append during build only. Delete this heading when it is not needed. Record seam drift from the design, ownership boundaries, dead-code handling, and next-session handoff notes.
+     Do not repeat plan decisions or commit-log information. -->

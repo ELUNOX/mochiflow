@@ -45,7 +45,7 @@ display, local refactors) where no tool / framework idiom is in question.
 
 For each in-scope decision, record the chosen approach **and its primary
 source** (official doc URL + version or date) where that decision already lives:
-`spec.md ## Background and Decisions` / `design.md ## Design Decisions` /
+`spec.md` Background and Design Rationale / `design.md` Design Decisions /
 build's `## Integration Log` for fixes.
 A decision without a verifiable basis is not done.
 

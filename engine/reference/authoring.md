@@ -1,7 +1,7 @@
 # Authoring Reference
 
-How to write `spec.yaml`, `spec.md`, `design.md`, and `tasks.md`. Used by
-`plan`, `build`, and `ship`.
+How to write `spec.yaml`, `spec.md`, `design.md`, `tasks.md`. Used by `plan` and
+`build`.
 
 ## spec.yaml schema
 
@@ -15,7 +15,7 @@ title: Measurement Sync
 type: feature        # feature | fix | refactor | docs | chore
 module: InspectionFeature   # optional
 surfaces:
-  - app              # surface names come from config.toml [surfaces.*]
+  - ios              # ios | api | web
 integration: none    # none | contract | workflow
 risk: standard       # standard | elevated | critical (ordered enum)
 status: draft        # draft | approved | done
@@ -32,104 +32,93 @@ Fix each fact in one place; reference by ID elsewhere.
 
 | fact | source of truth | elsewhere |
 | --- | --- | --- |
-| AC (pass/fail criteria) | `spec.md` | tasks references use IDs only |
-| AC Matrix | `spec.md` | commands update rows, not duplicate tables |
+| AC (pass/fail criteria) | `spec.md` | tasks header `Covers AC: AC-01` (ID only) |
 | surface / risk / type / status | `spec.yaml` | not repeated |
 | QA scenarios | `spec.md` | `qa-instructions.md` references, does not copy |
-| reviewer / git / journal cadence | `risk.md` / `git.md` | not repeated |
+| reviewer / git / journal cadence | `risk.md` | not repeated |
 | user-authored standing rules | `[constitution]` (project / local), written by the user | always-loaded; never generated from code |
-| current-state orientation | code/config, mapped into `[context]` via onboard / `refresh-context` | always-loaded; never folded |
-| design rationale / pitfalls history | `[adr]`, appended by ship's fold | on-demand / phase load |
+| current-state orientation (purpose / layout / tech) | code/config, mapped into `[context]` (product / structure / tech) via onboard / `refresh-context` | always-loaded; never folded |
+| design rationale (*why*) / pitfalls history | `[adr]` (decisions / pitfalls), appended by ship's fold | on-demand / phase load |
 
 The three durable guidance layers differ by lifecycle: `[constitution]` is
 user-authored standing guidance, `[context]` is a code-derived current-state map
-refreshed forward, and `[adr]` is dated history folded at ship. Code is always
-the source of truth for current state; prose is not.
+*refreshed* forward (onboard / `refresh-context`), and `[adr]` is dated history
+*folded* at ship (`reference/git.md ## Living-spec fold`). Code is always the
+source of truth for current state; prose is not.
 
 ## Durable vs ephemeral artifacts
 
-A spec folder holds durable artifacts, including the reviewer-facing QA
-instructions. PR handoff scaffolding is ephemeral and lives under
-`{install_dir}/state/{slug}/`.
+A spec folder holds only **durable** artifacts; delivery scaffolding is
+**ephemeral** and lives under `{install_dir}/state/{slug}/` (gitignored, swept
+post-merge per `reference/git.md ## Post-merge local cleanup`).
 
 | class | artifacts | home | archived |
 | --- | --- | --- | --- |
-| durable | `spec.yaml` · `spec.md` (incl. AC Matrix) · `design.md` · `tasks.md` · `qa-instructions.md` | `{specs_dir}/{slug}/` → `_done/` | yes |
-| ephemeral | PR body file (`pr-body.md`) · `pr-request.json` (pr_driver only) | `{install_dir}/state/{slug}/` | no |
+| durable | `spec.yaml` · `spec.md` (incl. AC Verification Matrix) · `design.md` · `tasks.md` | `{specs_dir}/{slug}/` → `_done/` | yes |
+| ephemeral | PR body file (`pr-body.md`) · `pr-request.json` (pr_driver only) · `qa-instructions.md` | `{install_dir}/state/{slug}/` | no |
 
-QA role split: `spec.md` QA scenarios are the source of truth for what to test;
-`qa-instructions.md` is the durable reviewer-facing guide for how to run and
-where to capture evidence; the AC Matrix is the results ledger.
+Ephemeral artifacts are regenerable from the durable spec; their durable record
+is the merged PR (delivery) or the AC Verification Matrix (QA results). Rationale:
+they are inter-process handoffs / working sheets, not knowledge, so keeping them
+in the tracked tree pollutes history and the archive.
+
+QA role split: `spec.md` QA scenarios are the source of truth for *what* to test;
+`qa-instructions.md` is the ship-time worksheet for *how* to run and where to
+capture evidence; the **AC Verification Matrix** is the results ledger (result +
+evidence pointers). The human follows `qa-instructions.md` during ship and never
+reads the AC Matrix as an instruction sheet.
 
 ## spec.md
 
-`spec.md` is the product contract. It carries:
+Single document carrying the **why** and the acceptance contract:
 
-- Problem / Goal with explicit non-goals.
-- Users / Actors and User Stories.
-- Scope In / Out.
-- Requirements / Acceptance Criteria table with stable `AC-01` IDs, Type,
-  Priority, Requirement, and Verification.
-- Business Rules when needed.
-- Examples / QA Scenarios with stable `QA-01` IDs and AC references.
-- Non-functional Requirements with stable `NFR-01` IDs when risk requires them.
-- Open Questions as `[NEEDS-CLARIFICATION: ...]`.
-- Verification Plan / AC Matrix created during plan.
+- Background and design rationale (the decisions and *why*; absorbs the old Decision Brief)
+- User story (who / what / why)
+- Scope boundary (in / out)
+- Edge cases
+- Acceptance criteria in **EARS** (`THE SYSTEM SHALL` / `WHEN` / `WHILE` / `IF...THEN` / `WHERE`), each third-party Yes/No decidable, IDs `AC-01`...
+- QA scenarios (operation steps, with a `Scope` column: `ios`/`api`/`web`/`cross-surface`/`human`)
+- Open items as `[NEEDS-CLARIFICATION: ...]` (lint warns; resolve before `approved`)
 
-Each AC must be independently checkable and should use EARS-style wording when
-practical (`THE SYSTEM SHALL`, `WHEN`, `WHILE`, `IF...THEN`, `WHERE`). Prefer
-observable behavior over implementation detail.
-
-For a trivial change, `spec.md` may be concise, but it still needs ACs and the
-AC Matrix if it goes through the spec lane.
+For a trivial change `spec.md` may be a few lines (problem / cause / change / verification).
 
 ## design.md
 
-Write only when required (`risk.md ## design.md required condition`). It is the
-technical contract and carries:
+Write only when required (`risk.md ## design.md required condition`). Carries:
 
-- Decision Summary with alternatives and consequences.
-- Current State Scan limited to relevant files, patterns, and constraints.
-- Proposed Design components and Integration Contract.
-- Failure Modes.
-- Migration / Rollout / Rollback and backward compatibility.
-- Observability when relevant.
-- Test Strategy mapped to AC/NFR IDs.
-- Review Results for mandatory reviewer runs.
-- Integration Log appended during build when the risk table calls for it.
+- Design decisions and rationale
+- Architecture, data model / interface at signature level
+- Error handling, test strategy
+- `## Workstreams` table (surface · responsibility · depends · verification) when multi-workstream
+- `## Integration Contract` when `integration ≠ none`
+- `## Review Results` for mandatory reviewer runs when `risk ≥ elevated` (`Reviewer mode: delegated | inline`, `Verdict: pass | pass-with-comments | fail`)
+- Optional `## Integration Log` appended during build when the risk table calls for it (seam decisions, ownership, dead-code handling, handoff). Replaces the old separate journal file.
 
-Do not write AC tables here, duplicate spec scope, or define concrete
-classes/structs that implementation must rediscover from source.
+Do not write: AC tables (use tasks `Covers AC` + AC Matrix), concrete class/struct
+definitions (read source during build).
 
 ## tasks.md
 
-Write when the change is multi-step. It is the executable checklist and carries:
+Write when the change is multi-step. Carries:
 
-- Execution Rules.
-- Defaults (verify command and common stop conditions).
-- Dependency-ordered waves.
-- Top-level checkbox tasks with `T-001` IDs.
-- Each task references AC, NFR, or chore reason.
-- Each task has Type, Depends on, Files, Done, and Stop blocks.
-- `[P]` parallel marks only when tasks do not share files or dependencies.
-- Finalization tasks `T-900+` for Matrix completion and required review.
+- Header: one-line scope · risk · critical stop conditions (1–3 spec-specific)
+- `## Defaults` preamble (shared verification command + stop conditions)
+- Dependency-ordered tasks; each: `Covers AC`, change area, task-specific stop conditions
+- `[P]` parallel marks: `[P]` tasks run parallel to the previous `[P]` block; no `[P]` depends on the previous task; never `[P]` two tasks editing the same file
 
-Mark a task `[x]` only after implementation, verification, and AC Matrix updates
-are ready to be committed in the current commit unit. Include the checkbox
-update in that same commit whenever practical.
+## Consistency check (plan, once)
 
-## Consistency check (plan)
+After authoring, verify once against the spec's own intent before `approved`:
+Open Questions closed (or kept as `[NEEDS-CLARIFICATION]`), design decisions not
+contradicting the rationale in `spec.md`, tasks `Covers AC` covering `spec.md` AC,
+no dependency cycle in Workstreams. No per-document self-review loop (deep defects
+are caught by `independent-reviewer` during build).
 
-After authoring, verify once against the spec's own intent before approval:
+Before asking for approval, remove all template residue:
 
-- Open Questions are closed; unresolved `[NEEDS-CLARIFICATION: ...]` blocks approval.
-- Every AC has a Verification value.
-- Every AC appears in the AC Matrix.
-- Every AC is covered by at least one task, QA scenario, or explicit QA-only row.
-- Every QA scenario references valid AC IDs.
-- Every task references AC, NFR, or chore reason.
-- Every task has Depends on, Files, Done, and Stop.
-- `design.md` decisions do not contradict `spec.md`.
-- Required artifacts match risk, integration, and surfaces.
-- `spec.yaml` metadata is consistent with artifact content.
-- Generated prose follows artifact language; machine-readable IDs/enums remain English tokens.
+- no `{...}` placeholder remains;
+- no example-only row remains;
+- no `TBD` remains except in AC Verification Matrix fields intentionally owned by
+  `build`;
+- no template-only HTML comment remains;
+- no "None" is used for a required section without a concrete reason.
