@@ -477,12 +477,57 @@ fn router_merged_event_is_cleanup_only() {
         "merged-event routing must resume cleanup only; got: {merged_line}"
     );
     assert!(
+        merged_line.contains("{specs_dir}/_done/{slug}/"),
+        "merged-event routing must resolve archived specs first; got: {merged_line}"
+    );
+    assert!(
         merged_line.contains("Fold/archive already happened"),
         "merged-event routing must state fold/archive already happened before PR; got: {merged_line}"
     );
     assert!(
         !merged_line.contains("fold → archive") && !merged_line.contains("fold -> archive"),
         "merged-event routing must not instruct fold/archive after merge; got: {merged_line}"
+    );
+}
+
+#[test]
+fn branch_placeholders_use_prefix_slug() {
+    let qa = read_repo_file("engine/templates/delivery/qa-instructions.md");
+    let git = read_repo_file("engine/reference/git.md");
+
+    assert!(
+        qa.contains("**branch**: `{prefix}/{slug}`"),
+        "QA template must display the real branch placeholder"
+    );
+    assert!(
+        !qa.contains("{type}/{slug}"),
+        "QA template must not use the unmapped branch placeholder"
+    );
+    assert!(
+        git.contains("git branch -d {prefix}/{slug}"),
+        "post-merge cleanup must delete the real branch placeholder"
+    );
+    assert!(
+        !git.contains("git branch -d {type}/{slug}"),
+        "post-merge cleanup must not delete the unmapped branch placeholder"
+    );
+}
+
+#[test]
+fn auto_commit_gate_is_verification_not_reviewer() {
+    let git = read_repo_file("engine/reference/git.md");
+
+    assert!(
+        git.contains("Commit only after verification PASS"),
+        "auto-commit rules must keep verification as the commit gate"
+    );
+    assert!(
+        git.contains("not a pre-commit gate"),
+        "auto-commit rules must state reviewer verdict gates completion, not commits"
+    );
+    assert!(
+        !git.contains("reviewer PASS when `risk.md` requires it"),
+        "auto-commit rules must not require reviewer PASS before each commit"
     );
 }
 

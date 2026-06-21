@@ -1,7 +1,7 @@
 # QA Instructions: {spec-title}
 
 **spec**: `{slug}`
-**branch**: `{type}/{slug}`
+**branch**: `{prefix}/{slug}`
 **module**: {module}
 **created**: {date}
 

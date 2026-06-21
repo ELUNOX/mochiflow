@@ -42,10 +42,10 @@ body (optional)
 ## Auto-commit and staging
 
 The AI auto-commits in all flows. Commit only after verification PASS; never
-commit on verification FAIL. Mandatory reviewer PASS is a build-completion gate,
-not a prerequisite for every earlier verified commit unit. If reviewer FAIL
-findings require changes, fix them, verify, and commit the follow-up before
-build completes.
+commit on verification FAIL. When `risk.md` requires a reviewer verdict,
+reviewer PASS is a phase-completion / ship-acceptance gate, not a pre-commit
+gate. If reviewer FAIL findings require changes, fix them, verify, and commit
+the follow-up before build completes.
 
 - Stage only files in the change plan / task plus tests added for verification.
 - Stage this spec's own files under `{specs_dir}/{slug}/**` together with the
@@ -182,7 +182,7 @@ PR's close-out commit):
 1. `git status --short` clean — else stop.
 2. `git switch {[git].base_branch}`
 3. `git pull --ff-only origin {[git].base_branch}` — stop if ff-only fails (divergent local).
-4. `git branch -d {branch}` (safe delete; fails if unmerged → leave it, ask human).
+4. `git branch -d {prefix}/{slug}` (safe delete; fails if unmerged → leave it, ask human). Resolve `prefix` from `type`: `feature` → `feat`; all other types use `type` as-is.
 5. Do not touch the remote branch.
 6. Remove the spec's ephemeral delivery scratch: `rm -rf {install_dir}/state/{slug}/` (gitignored — PR body / `pr-request.json` are not archived).
 
