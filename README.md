@@ -102,6 +102,27 @@ mochiflow join
 missing `.mochiflow/engine/` for older or broken worktrees, and refreshes the
 AI-tool entrypoints and `INDEX.md` when needed.
 
+## CLI commands
+
+MochiFlow's public CLI commands are:
+
+| Command | Purpose |
+| --- | --- |
+| `mochiflow init` | Bootstrap MochiFlow into a project. |
+| `mochiflow join` | Restore local generated state for an existing MochiFlow project. |
+| `mochiflow detach` | Remove generated integration while preserving project knowledge by default. |
+| `mochiflow guide` | Print the usage-vocabulary card for the AI workflow. |
+| `mochiflow config` | Inspect or validate project configuration. |
+| `mochiflow lint` | Check specs for consistency. |
+| `mochiflow doctor` | Run quality gates for config, specs, adapters, and engine integrity. |
+| `mochiflow adapter` | Generate AI-tool adapter entrypoints. |
+| `mochiflow index` | Regenerate or check `INDEX.md` and state index output. |
+| `mochiflow ready` | Check whether a spec can enter implementation. |
+| `mochiflow backlog` | List, show, or validate backlog seeds. |
+| `mochiflow upgrade` | Replace the installed engine while preserving project data. |
+| `mochiflow pr` | Run PR pre-flight, push, and provider/manual PR handoff. |
+| `mochiflow completions` | Generate shell completion scripts. |
+
 ## What `init` creates
 
 `mochiflow init` adds a `.mochiflow/` workspace and generates the entrypoint

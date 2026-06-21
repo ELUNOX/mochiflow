@@ -70,7 +70,8 @@ Use these examples as meaning guides, not as a fixed dictionary:
 
 ## Stable Identifiers
 
-Machine-readable identifiers remain English and must not be localized:
+Machine-readable identifiers and fixed workflow values remain stable and must
+not be reworded or translated after selection:
 
 - filenames and paths
 - command names
@@ -79,8 +80,8 @@ Machine-readable identifiers remain English and must not be localized:
 - branch prefixes
 - adapter names
 - canonical IDs such as `AC-01`, `QA-01`, `T-001`, `NFR-01`
-- canonical result values: `UNVERIFIED`, `PASS`, `PENDING_HUMAN`,
-  `HUMAN_CONFIRMED`, `N/A: <reason>`, `FAIL`
+- AC Verification Matrix result values from `workflow.md`: `PASS`,
+  `人間確認済み`, `対象外（理由）`, `FAIL`
 - lifecycle and metadata enum values such as `draft`, `approved`, `done`,
   `feature`, `fix`, `refactor`, `docs`, `chore`, `standard`, `elevated`,
   `critical`

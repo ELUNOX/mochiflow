@@ -38,6 +38,11 @@ fn read_json(path: &Path) -> serde_json::Value {
     serde_json::from_str(&text).unwrap_or_else(|e| panic!("parse {}: {e}", path.display()))
 }
 
+fn read_repo_file(path: &str) -> String {
+    let path = repo_root().join(path);
+    std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()))
+}
+
 fn load_schema(name: &str) -> jsonschema::Validator {
     let schema = read_json(&contracts_dir().join(name));
     jsonschema::validator_for(&schema).unwrap_or_else(|e| panic!("compile schema {name}: {e}"))
@@ -445,7 +450,147 @@ fn version_gate_hash_matches_committed_lock() {
     );
 }
 
-// --- (e) Behavioral / property tests: lint rules pinned without golden --------
+// --- (e) Engine prose/template drift guards ----------------------------------
+
+#[test]
+fn router_merged_event_is_cleanup_only() {
+    let router = read_repo_file("engine/router.md");
+    let merged_line = router
+        .lines()
+        .find(|line| line.contains("Event patterns `{slug} merged`"))
+        .expect("router merged-event routing line exists");
+
+    assert!(
+        merged_line.contains("post-merge local cleanup only"),
+        "merged-event routing must resume cleanup only; got: {merged_line}"
+    );
+    assert!(
+        merged_line.contains("Fold/archive already happened"),
+        "merged-event routing must state fold/archive already happened before PR; got: {merged_line}"
+    );
+    assert!(
+        !merged_line.contains("fold → archive") && !merged_line.contains("fold -> archive"),
+        "merged-event routing must not instruct fold/archive after merge; got: {merged_line}"
+    );
+}
+
+#[test]
+fn workflow_gate_2_uses_mochiflow_pr() {
+    let workflow = read_repo_file("engine/reference/workflow.md");
+    let gate_2 = workflow
+        .lines()
+        .find(|line| line.contains("**approve-PR**"))
+        .expect("workflow approve-PR gate line exists");
+
+    assert!(
+        gate_2.contains("before `mochiflow pr` runs"),
+        "gate 2 must point to mochiflow pr; got: {gate_2}"
+    );
+    assert!(
+        !gate_2.contains("[git].pr_command"),
+        "gate 2 must not point to deprecated [git].pr_command; got: {gate_2}"
+    );
+}
+
+#[test]
+fn readme_lists_public_cli_commands() {
+    let readme = read_repo_file("README.md");
+    let commands = [
+        "init",
+        "join",
+        "detach",
+        "guide",
+        "config",
+        "lint",
+        "doctor",
+        "adapter",
+        "index",
+        "ready",
+        "backlog",
+        "upgrade",
+        "pr",
+        "completions",
+    ];
+
+    for command in commands {
+        let needle = format!("`mochiflow {command}`");
+        assert!(
+            readme.contains(&needle),
+            "README.md must list public CLI command {needle}"
+        );
+    }
+}
+
+#[test]
+fn micro_template_has_no_ac_verification_matrix() {
+    let template = read_repo_file("engine/templates/spec/spec.micro.md");
+
+    assert!(
+        !template.contains("AC Verification Matrix"),
+        "micro spec template must not include the build/ship-owned AC Verification Matrix"
+    );
+    assert!(
+        !template.contains("UNVERIFIED"),
+        "UNVERIFIED is not part of the AC result enum and must not appear in the micro template"
+    );
+}
+
+#[test]
+fn language_reference_uses_current_ac_results() {
+    let language = read_repo_file("engine/reference/language.md");
+
+    for stale in ["UNVERIFIED", "PENDING_HUMAN", "HUMAN_CONFIRMED"] {
+        assert!(
+            !language.contains(stale),
+            "language reference must not preserve stale AC result token {stale}"
+        );
+    }
+    for current in ["`PASS`", "`人間確認済み`", "`対象外（理由）`", "`FAIL`"] {
+        assert!(
+            language.contains(current),
+            "language reference must list current AC result value {current}"
+        );
+    }
+}
+
+#[test]
+fn templates_do_not_use_fixed_ios_surface() {
+    for path in [
+        "engine/templates/spec/spec.yaml",
+        "engine/templates/backlog/seed.md",
+    ] {
+        let template = read_repo_file(path);
+        assert!(
+            !template.contains("surface: ios"),
+            "{path} must not hard-code surface: ios"
+        );
+        assert!(
+            !template.contains("- ios"),
+            "{path} must not hard-code an ios list item"
+        );
+        assert!(
+            template.contains("{surface}"),
+            "{path} must expose a surface placeholder"
+        );
+    }
+}
+
+#[test]
+fn design_template_optional_residue_guard() {
+    let plan = read_repo_file("engine/commands/plan.md");
+    let design = read_repo_file("engine/templates/spec/design.md");
+
+    assert!(
+        plan.contains("delete optional sections at creation time"),
+        "plan must require optional design sections to be removed at creation time"
+    );
+    assert!(
+        design.matches("見出しごと削除").count() >= 4,
+        "design template optional sections must instruct agents to delete inapplicable headings"
+    );
+}
+
+// --- (f) Behavioral / property tests: lint rules pinned without golden --------
 
 /// Materialize a minimal project (config + memory + specs) and write a single
 /// spec under slug `s`. Returns (exit_code, stdout) of `lint --spec s`.

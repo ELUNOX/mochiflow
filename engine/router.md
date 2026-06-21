@@ -48,7 +48,7 @@ loads this as a standing instruction. Do not load it from planning / reviewer ro
 6. With no trigger but clear mochiflow intent, propose the verb or non-phase command in one line and wait for approval.
 7. With ambiguous intent, do not activate mochiflow.
 8. Once committed to a verb or non-phase command, before starting, consult the matching `commands/{verb}.md` and its frontmatter `references` (reference / templates). If they are not in standing context, lazy-load them from the engine root with read.
-9. For user-facing speech, follow `reference/language.md ## User-facing communication`: use project-language plain wording first, and keep internal MochiFlow vocabulary only for commands, file names, metadata, or a short `MochiFlow:` note.
+9. For user-facing speech, follow `reference/language.md ## User-facing communication`: use conversation-language plain wording first, and keep internal MochiFlow vocabulary only for commands, file names, metadata, or a short `MochiFlow:` note.
 
 ## Active Spec Resolution
 
