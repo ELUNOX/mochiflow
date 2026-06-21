@@ -62,8 +62,10 @@ Stage 2 / verdict format, and record `Reviewer mode: inline`. While in reviewer
 role, the agent is read-only: do not edit files, update status, stage, commit,
 or create PR metadata. Review inputs are spec artifacts, full diff / changed
 files, integration log, and verification results — never conversation history as
-evidence. After the verdict is produced, return to builder role before fixing
-findings or resuming the flow.
+evidence. For mandatory risk-cadence review during `build`, after the verdict is
+produced, return to builder role before fixing findings or resuming the flow.
+For ad-hoc review, do not fix findings inline; report them and ask whether to
+enter the appropriate build/fix flow.
 
 ## design.md required condition
 
@@ -86,11 +88,10 @@ run `agents/independent-reviewer.md` via `## Review transport` regardless of
 risk level. Ad-hoc review is report-only and read-only.
 
 - Target: the active spec's latest artifacts (spec.md, design.md, tasks.md as applicable).
-- On HIGH / Critical findings: report the findings and the recommended follow-up
-  route (`build` in an active approved spec context, or `patch` for an eligible
-  small fix). Do not fix inline during ad-hoc review.
+- On High or Critical findings: report findings only, then ask whether to enter
+  the appropriate build/fix flow. Do not edit files as part of ad-hoc review.
 - On PASS / pass-with-comments: report the result and resume the interrupted flow.
-- Does not change `status`, create commits, or block approval by itself.
+- Does not edit files, change `status`, create commits, or block approval by itself.
 
 This is independent of the risk-cadence table above. Risk-cadence review is
 automatic and mandatory; ad-hoc review is user-triggered and optional.

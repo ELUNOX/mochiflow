@@ -20,9 +20,10 @@ mechanics and the living-spec fold.
   Create the branch first and let `git switch -c` carry the uncommitted
   `{specs_dir}/{slug}/**` onto it (a fresh branch has no conflict; no stash
   needed), so the base branch HEAD is never dirtied by the spec scaffold.
-- Trivial `risk: standard` changes MAY commit on the current branch with no new
-  branch and no PR, only when the user opts in (no-PR fast path). Default is a
-  feature branch + PR.
+- Trivial `risk: standard` changes MAY use the current branch with no new branch
+  and no PR only when the user explicitly opts in (no-PR fast path). Default is
+  a feature branch + PR. no-PR skips PR creation and the approve-PR gate, but it
+  still runs `ship` acceptance and the close-out commit.
 
 ## Commit
 
@@ -84,7 +85,6 @@ dirty before the patch, do not commit; report the files and verification result.
 
 - `spec.yaml` `status: done` (+ `updated`);
 - the AC Matrix rows added at ship (build already recorded the rest);
-- `qa-instructions.md`, the reviewer-facing QA guide generated at ship;
 - the ADR fold (`[adr].decisions` / `[adr].pitfalls`);
 - the archive move `{specs_dir}/{slug}/` → `{specs_dir}/_done/{slug}/`;
 - the regenerated `{index}`.
@@ -99,10 +99,12 @@ commit on the current branch, with no push.
 
 ## PR
 
-The PR title/body (per `templates/delivery/pr-description.md`: artifact language,
-external-reviewer facing, no spec-internal references, no spec slug, no AC IDs,
-no mochiflow vocabulary) are always generated after delivery approval gate 2
-(`workflow.md`).
+On the normal PR path, the PR title/body (per
+`templates/delivery/pr-description.md`: artifact language, external-reviewer
+facing, no spec-internal references, no spec slug, no AC IDs, no mochiflow
+vocabulary) are generated after human gate 2 (`workflow.md`). On the explicit
+no-PR fast path, skip PR title/body generation and `mochiflow pr`; `ship`
+acceptance and the close-out commit still happen.
 
 PR creation goes through **`mochiflow pr`** — the single command that owns
 pre-flight (working tree clean / current branch is the source / source ≠ target),

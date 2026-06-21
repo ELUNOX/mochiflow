@@ -47,6 +47,7 @@ Human completes when needed:
 **Runner**: Automated / Human-operated / Visual confirmation
 **Verification method**: automated test / AI records the result after human operation / human visual confirmation
 **Result**: Not run / PASS / FAIL / Human confirmed / Not applicable (reason)
+**Matrix token**: AI records `PASS`, `FAIL`, `人間確認済み`, or `対象外（<reason>）` in the AC Verification Matrix; `Human confirmed` is worksheet prose only.
 **Evidence**: {screenshot path, log path, or human confirmation comment}
 
 Human steps:

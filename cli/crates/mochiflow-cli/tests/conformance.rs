@@ -532,6 +532,82 @@ fn auto_commit_gate_is_verification_not_reviewer() {
 }
 
 #[test]
+fn ac_matrix_pending_human_is_canonical_provisional_token() {
+    let workflow = read_repo_file("engine/reference/workflow.md");
+    let build = read_repo_file("engine/commands/build.md");
+    let language = read_repo_file("engine/reference/language.md");
+    let qa = read_repo_file("engine/templates/delivery/qa-instructions.md");
+
+    assert!(workflow.contains("`PENDING_HUMAN`"), "{workflow}");
+    assert!(
+        workflow.contains("not done-eligible"),
+        "workflow must mark provisional results as not done-eligible"
+    );
+    assert!(
+        build.contains("`PENDING_HUMAN`") && !build.contains("\"pending human verification\""),
+        "build must use the canonical provisional token"
+    );
+    assert!(
+        language.contains("`PENDING_HUMAN`"),
+        "language reference must preserve the provisional token"
+    );
+    assert!(
+        qa.contains("Human confirmed` is worksheet prose only") && qa.contains("`人間確認済み`"),
+        "QA worksheet must map prose confirmation to the Matrix token"
+    );
+}
+
+#[test]
+fn ad_hoc_review_is_report_only() {
+    let review = read_repo_file("engine/commands/review.md");
+    let risk = read_repo_file("engine/reference/risk.md");
+
+    assert!(
+        review.contains("Reports findings only")
+            && review.contains("Do not fix inline as part of ad-hoc review"),
+        "ad-hoc review command must be report-only"
+    );
+    assert!(
+        risk.contains("For mandatory risk-cadence review during `build`")
+            && risk.contains("For ad-hoc review, do not fix findings inline"),
+        "risk reference must separate build review fixes from ad-hoc review reporting"
+    );
+    assert!(
+        !review.contains("fix inline and re-run") && !risk.contains("fix inline and re-run"),
+        "review docs must not auto-fix from ad-hoc review"
+    );
+}
+
+#[test]
+fn no_pr_fast_path_skips_pr_gate_but_still_ships() {
+    let workflow = read_repo_file("engine/reference/workflow.md");
+    let git = read_repo_file("engine/reference/git.md");
+    let ship = read_repo_file("engine/commands/ship.md");
+    let build = read_repo_file("engine/commands/build.md");
+
+    assert!(
+        workflow.contains("skips")
+            && workflow.contains("**approve-PR**")
+            && workflow.contains("still runs `ship`"),
+        "workflow must describe the no-PR gate exception"
+    );
+    assert!(
+        git.contains("no-PR skips PR creation and the approve-PR gate")
+            && git.contains("still runs `ship` acceptance"),
+        "git reference must keep no-PR tied to ship acceptance"
+    );
+    assert!(
+        ship.contains("On the explicit no-PR fast path, skip this PR section")
+            && ship.contains("same close-out commit"),
+        "ship must skip PR work only after close-out"
+    );
+    assert!(
+        build.contains("no-PR fast path branch choice") && !build.contains("no-PR fast commit"),
+        "build must not imply no-PR completes at build commit"
+    );
+}
+
+#[test]
 fn workflow_gate_2_uses_mochiflow_pr() {
     let workflow = read_repo_file("engine/reference/workflow.md");
     let gate_2 = workflow
@@ -596,13 +672,19 @@ fn micro_template_has_no_ac_verification_matrix() {
 fn language_reference_uses_current_ac_results() {
     let language = read_repo_file("engine/reference/language.md");
 
-    for stale in ["UNVERIFIED", "PENDING_HUMAN", "HUMAN_CONFIRMED"] {
+    for stale in ["UNVERIFIED", "HUMAN_CONFIRMED"] {
         assert!(
             !language.contains(stale),
             "language reference must not preserve stale AC result token {stale}"
         );
     }
-    for current in ["`PASS`", "`人間確認済み`", "`対象外（理由）`", "`FAIL`"] {
+    for current in [
+        "`PASS`",
+        "`人間確認済み`",
+        "`対象外（<reason>）`",
+        "`FAIL`",
+        "`PENDING_HUMAN`",
+    ] {
         assert!(
             language.contains(current),
             "language reference must list current AC result value {current}"
@@ -654,8 +736,11 @@ fn engine_templates_are_english_source() {
     collect_files(&templates_dir, &mut files);
 
     for path in files {
-        let text = std::fs::read_to_string(&path)
+        let mut text = std::fs::read_to_string(&path)
             .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+        for token in ["人間確認済み", "対象外"] {
+            text = text.replace(token, "");
+        }
         let has_japanese = text.chars().any(|c| {
             ('\u{3040}'..='\u{30ff}').contains(&c) || ('\u{4e00}'..='\u{9fff}').contains(&c)
         });
@@ -854,7 +939,61 @@ fn lint_done_fails_when_matrix_contains_fail() {
               ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | FAIL |\n";
     let (code, out) = run_lint_case(&yaml, md, None, None);
     assert_eq!(code, 1);
-    assert!(out.contains("contains FAIL"), "{out}");
+    assert!(out.contains("invalid result `FAIL`"), "{out}");
+}
+
+#[test]
+fn lint_done_passes_with_canonical_final_matrix_results() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: done");
+    let md = "# S\n\n## 受入基準\n\n\
+              - AC-01: THE SYSTEM SHALL x.\n\
+              - AC-02: WHEN y, THE SYSTEM SHALL z.\n\
+              - AC-03: WHERE q, THE SYSTEM SHALL r.\n\n\
+              ## AC Verification Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | PASS |\n| AC-02 | 人間確認済み |\n| AC-03 | 対象外（not relevant for CLI） |\n";
+    let (code, out) = run_lint_case(&yaml, md, None, None);
+    assert_eq!(code, 0, "{out}");
+}
+
+#[test]
+fn lint_done_fails_when_matrix_contains_pending_or_unknown_result() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: done");
+    for result in [
+        "PENDING_HUMAN",
+        "pending human verification",
+        "Human confirmed",
+    ] {
+        let md = format!(
+            "# S\n\n## 受入基準\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
+             ## AC Verification Matrix\n\n| AC | 結果 |\n| --- | --- |\n| AC-01 | {result} |\n"
+        );
+        let (code, out) = run_lint_case(&yaml, &md, None, None);
+        assert_eq!(code, 1, "{result}: {out}");
+        assert!(out.contains(&format!("invalid result `{result}`")), "{out}");
+    }
+}
+
+#[test]
+fn lint_done_fails_when_matrix_result_is_empty() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: done");
+    let md = "# S\n\n## 受入基準\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
+              ## AC Verification Matrix\n\n| AC | 結果 |\n| --- | --- |\n| AC-01 |  |\n";
+    let (code, out) = run_lint_case(&yaml, md, None, None);
+    assert_eq!(code, 1);
+    assert!(out.contains("invalid result `<empty>`"), "{out}");
+}
+
+#[test]
+fn lint_done_fails_when_not_applicable_reason_is_placeholder_or_empty() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: done");
+    for result in ["対象外（）", "対象外（理由）"] {
+        let md = format!(
+            "# S\n\n## 受入基準\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
+             ## AC Verification Matrix\n\n| AC | 結果 |\n| --- | --- |\n| AC-01 | {result} |\n"
+        );
+        let (code, out) = run_lint_case(&yaml, &md, None, None);
+        assert_eq!(code, 1, "{result}: {out}");
+        assert!(out.contains(&format!("invalid result `{result}`")), "{out}");
+    }
 }
 
 #[test]

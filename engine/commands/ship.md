@@ -18,7 +18,7 @@ trigger_patterns:
   - "{slug} マージ済み"
   - "{slug} 完了"
 artifacts:
-  - "{specs_dir}/{slug}/qa-instructions.md"
+  - "{install_dir}/state/{slug}/qa-instructions.md"
   - "{install_dir}/state/{slug}/pr-body.md"
   - "{install_dir}/state/{slug}/pr-request.json (pr_driver backend only)"
   - "{specs_dir}/_done/{slug}/"
@@ -52,58 +52,33 @@ living-spec fold, and archive.
 
 ### Acceptance
 
-1. Confirm the AC Matrix exists in `spec.md`, and every AC has at least one row.
-2. Confirm required tasks in `tasks.md` are `[x]`. Required finalization tasks
-   are `[x]` or explicitly not applicable with reason.
-3. Confirm `design.md` is present when required by risk / integration /
-   surfaces / migration / contract / security / privacy / performance /
-   accessibility / reviewer policy.
-4. Confirm migration and rollback notes are present when required.
-5. Build `qa-instructions.md` into `{specs_dir}/{slug}/` from the QA scenarios
-   in `spec.md` (reference, do not copy). Pick the adapter via
-   `reference/workflow.md ## Acceptance adapters`.
-6. Run the final verification command and record the result.
-7. Request QA that needs human operation / visual checking here exactly once.
-   The human follows `qa-instructions.md`; record results and evidence in the
-   AC Matrix.
-8. Block ship if any AC Matrix row has:
-   - `UNVERIFIED`
-   - `PENDING_HUMAN`
-   - `FAIL`
-   - `N/A` without the required `N/A: <reason>` form
-9. Block ship if required QA evidence is missing, or if required reviewer results
-   are missing. High/Critical reviewer findings must be resolved or explicitly
-   blocked by existing policy before ship.
-10. When all acceptance conditions in `reference/workflow.md ## AC Matrix` hold,
-    set `spec.yaml` `status: done` / `updated` mechanically. This is not a gate
-    and uses no approval word; `ship` is the only path that sets `done`.
+1. Build `qa-instructions.md` into `{install_dir}/state/{slug}/` from the QA scenarios in `spec.md` (reference, do not copy — `spec.md` is the source of truth for *what* to test). Pick the adapter via `reference/workflow.md ## Acceptance adapters`. This is a ship-time working sheet (ephemeral, gitignored, not archived per `reference/authoring.md ## Durable vs ephemeral`).
+2. Run the final verification command and record the result.
+3. Request QA that needs human operation / visual checking here **exactly once**. The human follows `qa-instructions.md`; record results and evidence in the **AC Verification Matrix** (the durable ledger — the matrix is the record, not an instruction sheet). Translate worksheet prose into canonical Matrix tokens: `Human confirmed` → `人間確認済み`, `Not applicable (reason)` → `対象外（<reason>）`, and failures → `FAIL`. Evidence pointers live in the matrix so the ephemeral worksheet can be discarded.
+4. When the acceptance conditions in `reference/workflow.md ## AC Verification Matrix` all hold (matrix complete, every result is done-eligible, and the reviewer verdict recorded when `risk ≥ elevated`), set `spec.yaml` `status: done` / `updated` mechanically. This is not a gate and uses no approval word; `ship` is the only path that sets `done`.
 
 ### Close-out
 
-11. Fold, archive, and close out on the feature branch before `mochiflow pr`.
+5. Fold, archive, and close out on the feature branch before `mochiflow pr`.
     - Fold per `reference/git.md ## Living-spec fold`: append why/history that
       code cannot reproduce to `[adr].decisions` and operational pitfalls to
       `[adr].pitfalls`. Do not fold current-state prose.
     - If the change introduced a coarse structural shift that makes foundational
       context stale, prompt the human to run `refresh-context`; do not regenerate
       or commit context automatically here.
-    - Archive `{specs_dir}/{slug}/` (including `qa-instructions.md`) to
-      `{specs_dir}/_done/{slug}/` and regenerate `{index}` with `mochiflow index`.
+    - Archive `{specs_dir}/{slug}/` to `{specs_dir}/_done/{slug}/` and
+      regenerate `{index}` with `mochiflow index`.
     - Make the single close-out commit per `reference/git.md ## Auto-commit and staging ### Ship close-out commit`.
 
 ### PR
 
-12. Generate the PR title / description per `templates/delivery/pr-description.md`
-    after archive, write the body to `{install_dir}/state/{slug}/pr-body.md`,
-    present it, and wait for human approval (delivery approval gate 2).
-13. After approval, run
-    `mochiflow pr --spec {slug} --title "<title>" --body-file {install_dir}/state/{slug}/pr-body.md`
-    (add `--draft` if applicable). Read its exit code:
-    - `0` — PR created; capture the printed URL.
-    - `10` — manual handoff; the branch is pushed and the human creates the PR.
-    - `3` — pre-flight failed; fix and re-run.
-    - `1`/`2` — backend / config failure; stop and diagnose.
-    Do not call `az` / `gh` / `git push` directly.
+6. On the normal PR path, generate the PR title / description per `templates/delivery/pr-description.md` (the spec now lives under `_done/{slug}/`), write the body to `{install_dir}/state/{slug}/pr-body.md` (ephemeral, gitignored — **never** the spec dir), present it, and wait for human approval (gate 2). The PR title/body are always produced on the PR path — the automatable, provider-independent part. On the explicit no-PR fast path, skip this PR section after the close-out commit.
+7. After approval on the PR path, run `mochiflow pr --spec {slug} --title "<title>" --body-file {install_dir}/state/{slug}/pr-body.md` (add `--draft` if applicable). ship is the sole producer of the body file; `mochiflow pr` only reads it (and writes `pr-request.json` under `state/{slug}/` for the `pr_driver` backend only). The working tree is clean because the close-out commit (step 5) already captured every tracked change. The CLI owns pre-flight (clean tree / branch / base≠head), the single `git push`, and backend resolution per `reference/git.md ## PR` (`pr_driver` > `provider` built-in > legacy `pr_command` > manual). Read its exit code:
+   - `0` — PR created; capture the printed URL.
+   - `10` — manual handoff: the branch is pushed; create the PR with the presented content via your provider UI/CLI, then report the URL / merge.
+   - `3` — pre-flight failed; fix and re-run. Do not force past it.
+   - `1`/`2` — backend / config failure; stop and diagnose.
+   Do not call `az` / `gh` / `git push` directly — `mochiflow pr` is the only path.
 
 ## PR Feedback Loop
 
@@ -120,7 +95,7 @@ requires code changes before merge:
 
 ### Post-merge
 
-14. After the human reports the merge, run
+8. After the human reports the merge, run
     `reference/git.md ## Post-merge local cleanup`: switch to base, pull
     fast-forward only, safe-delete the local branch, and remove
     `{install_dir}/state/{slug}/`. The fold + archive are already merged via the
@@ -140,11 +115,9 @@ requires code changes before merge:
 
 ## Stop conditions
 
-- Do not proceed to ship while implementation, required tasks, review,
-  verification, or AC Matrix evidence are incomplete.
-- Do not proceed if any AC Matrix result is `UNVERIFIED`, `PENDING_HUMAN`, or
-  `FAIL`, or if any `N/A` result lacks a reason.
-- Do not run `mochiflow pr` before human approval of the PR content.
+- Do not proceed to ship while implementation and verification are incomplete.
+- On the PR path, do not run `mochiflow pr` before human approval of the PR content (gate 2). On the explicit no-PR fast path, do not run `mochiflow pr`.
+- Do not proceed if AC Matrix evidence is incomplete, any required task/review is missing, any result is `PENDING_HUMAN` or `FAIL`, or any not-applicable result lacks a reason.
 - Do not force past a pre-flight FAIL (`mochiflow pr` exit 3); fix and re-run.
 - Do not call `git push` / `gh` / `az` directly; `mochiflow pr` owns push and creation.
 - Do not build the close-out commit before `status: done` holds (acceptance conditions met). Skip the fold only when there is genuinely no new rationale or pitfall; archive (the `_done` move + `INDEX`) still happens.

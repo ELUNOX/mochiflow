@@ -6,7 +6,7 @@ description: |
   verify, self-review), maintain the integration log per risk, run only
   read-only review through independent-reviewer transport, commit, and produce the AC
   Verification Matrix. A trivial standard-risk spec may run with spec.md only
-  and a no-PR fast commit. Activate on the explicit
+  and a no-PR fast path branch choice. Activate on the explicit
   command `mochiflow-build`, or natural phrasing like "実装して" / "進めて" /
   "ビルドして". Does not create PRs, set `done`, or archive (that is ship).
 triggers:
@@ -55,7 +55,7 @@ Implement the approved spec and produce verification and the AC Verification Mat
    - 3e. Follow the reviewer cadence in `reference/risk.md`; when required, run `agents/independent-reviewer.md` read-only via `reference/risk.md ## Review transport` (delegated subagent when available, otherwise inline reviewer role) and append the reviewer mode + verdict to `design.md ## Review Results`. For `critical`, this happens after each task.
 4. After all tasks complete, run final verification once more. Fix any FAIL and re-run to PASS.
 5. For `elevated`, run the required independent-reviewer once after all tasks using the same review transport. Record `Reviewer mode: delegated | inline` with the verdict in `design.md ## Review Results`.
-6. Record the AC Verification Matrix (at the end of tasks.md if present, else end of spec.md). Settle automated AC as PASS / FAIL / 対象外, and record AC needing human checking as "pending human verification" without requesting that QA here (the request is made once, in ship).
+6. Record the AC Verification Matrix (at the end of tasks.md if present, else end of spec.md). Settle automated AC as `PASS` / `FAIL` / `対象外（<reason>）`, and record AC needing human/visual checking as `PENDING_HUMAN` without requesting that QA here (the request is made once, in ship).
 7. Include the build-time AC Verification Matrix update in the final build commit for this phase, then stop. `ship` only commits Matrix rows or evidence changed by final verification / human QA, as part of the close-out commit.
 
 ## Presentation
@@ -72,6 +72,6 @@ Implement the approved spec and produce verification and the AC Verification Mat
 
 - Do not implement when `status` is not `approved` or `spec.yaml` is missing.
 - Stop when an out-of-scope change or a new design decision is needed.
-- Do not commit while verification / reviewer is FAIL.
+- Do not finish build while verification or a required reviewer verdict is FAIL.
 - `build` never sets `status: done`. Setting `done` is ship's responsibility, on the acceptance conditions in `reference/workflow.md ## AC Verification Matrix`. At build's end the status stays `approved`.
 - Do not create the PR / move to `_done/` / request human checking (those are ship's responsibility).

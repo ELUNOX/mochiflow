@@ -312,12 +312,21 @@ fn parse_matrix_rows(text: &str) -> Vec<MatrixRow> {
 }
 
 fn is_canonical_matrix_result(result: &str) -> bool {
-    matches!(
-        result,
-        "UNVERIFIED" | "PASS" | "PENDING_HUMAN" | "HUMAN_CONFIRMED" | "FAIL"
-    ) || result
-        .strip_prefix("N/A: ")
-        .is_some_and(|reason| !reason.trim().is_empty())
+    matches!(result, "PASS" | "PENDING_HUMAN" | "人間確認済み" | "FAIL")
+        || result
+            .strip_prefix("対象外（")
+            .and_then(|s| s.strip_suffix('）'))
+            .is_some_and(|reason| !reason.trim().is_empty() && reason.trim() != "理由")
+}
+
+fn is_done_matrix_result(result: &str) -> bool {
+    if result == "PASS" || result == "人間確認済み" {
+        return true;
+    }
+    result
+        .strip_prefix("対象外（")
+        .and_then(|s| s.strip_suffix('）'))
+        .is_some_and(|reason| !reason.trim().is_empty() && reason.trim() != "理由")
 }
 
 fn design_required(meta: &SpecMeta) -> bool {
@@ -572,7 +581,7 @@ fn lint_spec_dir(spec_dir: &Path, allowed_surfaces: &HashSet<String>) -> Vec<Iss
                     severity: "FAIL".into(),
                     path: matrix_path.clone(),
                     message: format!(
-                        "AC Matrix result for {} must be one of UNVERIFIED, PASS, PENDING_HUMAN, HUMAN_CONFIRMED, N/A: <reason>, FAIL",
+                        "AC Matrix result for {} must be one of PASS, PENDING_HUMAN, 人間確認済み, 対象外（<reason>）, FAIL",
                         row.ac
                     ),
                 });
@@ -607,34 +616,19 @@ fn lint_spec_dir(spec_dir: &Path, allowed_surfaces: &HashSet<String>) -> Vec<Iss
             });
         } else {
             for row in &matrix_rows {
-                if row.result == "FAIL" {
+                if !is_done_matrix_result(&row.result) {
+                    let shown = if row.result.is_empty() {
+                        "<empty>"
+                    } else {
+                        row.result.as_str()
+                    };
                     issues.push(Issue {
                         severity: "FAIL".into(),
                         path: spec_dir.join("spec.yaml"),
-                        message: "status is done but AC Matrix contains FAIL".into(),
-                    });
-                }
-                if row.result == "UNVERIFIED" {
-                    issues.push(Issue {
-                        severity: "FAIL".into(),
-                        path: spec_dir.join("spec.yaml"),
-                        message: "status is done but AC Matrix contains UNVERIFIED".into(),
-                    });
-                }
-                if row.result == "PENDING_HUMAN" {
-                    issues.push(Issue {
-                        severity: "FAIL".into(),
-                        path: spec_dir.join("spec.yaml"),
-                        message: "status is done but AC Matrix contains PENDING_HUMAN".into(),
-                    });
-                }
-                if row.result == "N/A"
-                    || row.result.starts_with("N/A:") && row.result.trim() == "N/A:"
-                {
-                    issues.push(Issue {
-                        severity: "FAIL".into(),
-                        path: spec_dir.join("spec.yaml"),
-                        message: "AC Matrix N/A result must be written as N/A: <reason>".into(),
+                        message: format!(
+                            "status is done but AC Matrix row {} has invalid result `{shown}`; expected PASS, 人間確認済み, or 対象外（<reason>）",
+                            row.ac
+                        ),
                     });
                 }
             }

@@ -81,7 +81,7 @@ not be reworded or translated after selection:
 - adapter names
 - canonical IDs such as `AC-01`, `QA-01`, `T-001`, `NFR-01`
 - AC Verification Matrix result values from `workflow.md`: `PASS`,
-  `人間確認済み`, `対象外（理由）`, `FAIL`
+  `人間確認済み`, `対象外（<reason>）`, `FAIL`, `PENDING_HUMAN`
 - lifecycle and metadata enum values such as `draft`, `approved`, `done`,
   `feature`, `fix`, `refactor`, `docs`, `chore`, `standard`, `elevated`,
   `critical`
