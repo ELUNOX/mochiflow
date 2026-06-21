@@ -163,16 +163,28 @@ needed QA scenario and evidence expectation.
 
 ## Backlog seeds
 
-`{specs_dir}/_backlog/{slug}.md` is a single-file seed inbox: raw input for
-`discuss`, not a spec. Use `templates/backlog/seed.md`. Frontmatter:
-`slug,title,maturity,source,created,updated` (+ optional
-`module,surface,type_hint,source_spec,source_phase`). Body: `## Signal`,
-`## Why It Matters`, `## Evidence`, `## Open Questions`.
+`{specs_dir}/_backlog/{slug}.md` is a single-file inbox for either raw ideas or
+discuss-to-plan handoff artifacts. It is not a spec.
 
-Lifecycle: create seed → `discuss` reads it as input (seed kept) → `plan`
-creates `{specs_dir}/{slug}/` and deletes the seed, recording origin in
-`spec.md`. Interrupted discuss keeps the seed. Do not put AC, QA, design, tasks,
-or final classification in a seed.
+- Raw seed: `maturity: seed`, created from `templates/backlog/seed.md`, and used
+  as raw input for `discuss`. Body: `## Signal`, `## Why It Matters`,
+  `## Evidence`, `## Open Questions`.
+- Ready-for-plan handoff: `maturity: ready-for-plan`, created by `discuss` from
+  `templates/backlog/discuss-handoff.md`, and used by `plan` as the durable
+  Decision summary when the conversation is not available. Body:
+  `## Decision Summary`, `## Decisions`, `## Assumptions`, `## Open Questions`,
+  `## Change Impact`, `## Evidence`.
+
+Shared frontmatter: `slug,title,maturity,source,created,updated` (+ optional
+`module,surface,type_hint,source_spec,source_phase`). A ready-for-plan handoff
+also sets `source: conversation` and `source_phase: discuss`.
+
+Lifecycle: create raw seed → `discuss` reads it as input and may update the same
+file to `maturity: ready-for-plan` when agreement is reached → `plan` creates
+`{specs_dir}/{slug}/` and deletes the seed/handoff
+(`rm {specs_dir}/_backlog/{slug}.md`), recording origin in `spec.md`.
+Interrupted discuss keeps the seed/handoff file. Do not put AC, QA, design,
+tasks, or final classification in backlog files.
 
 Legacy `_backlog/{slug}/` spec-format directories are deprecated and no longer
 rendered by tooling; they remain on disk read-only.

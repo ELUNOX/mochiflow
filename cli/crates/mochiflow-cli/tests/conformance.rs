@@ -491,6 +491,33 @@ fn router_merged_event_is_cleanup_only() {
 }
 
 #[test]
+fn router_plan_can_resolve_ready_backlog_handoff() {
+    let router = read_repo_file("engine/router.md");
+
+    assert!(
+        router.contains("Exception: `{slug} discuss` resolves against a seed"),
+        "router must retain the backlog discuss exception"
+    );
+    assert!(
+        router.contains("Exception: `{slug} plan`")
+            && router.contains("{specs_dir}/_backlog/{slug}.md")
+            && router.contains("maturity: ready-for-plan")
+            && router.contains("plan creates the active spec directory"),
+        "router must allow plan from ready-for-plan backlog handoffs"
+    );
+    assert!(
+        router.contains("maturity: seed")
+            && router.contains("guide back to `{slug} discuss`"),
+        "router must route raw backlog seeds back to discuss"
+    );
+    assert!(
+        router.contains("Event patterns `{slug} merged`")
+            && router.contains("{specs_dir}/_done/{slug}/"),
+        "router must retain the merged-event _done exception"
+    );
+}
+
+#[test]
 fn branch_placeholders_use_prefix_slug() {
     let qa = read_repo_file("engine/templates/delivery/qa-instructions.md");
     let git = read_repo_file("engine/reference/git.md");
@@ -552,6 +579,44 @@ fn spec_templates_require_done_eligible_matrix_results() {
         !git.contains("right after verification"),
         "no-PR close-out must be tied to ship acceptance, not raw verification"
     );
+}
+
+#[test]
+fn discuss_persists_ready_for_plan_handoff() {
+    let discuss = read_repo_file("engine/commands/discuss.md");
+    let workflow = read_repo_file("engine/reference/workflow.md");
+    let plan = read_repo_file("engine/commands/plan.md");
+    let handoff = read_repo_file("engine/templates/backlog/discuss-handoff.md");
+
+    assert!(
+        discuss.contains("{specs_dir}/_backlog/{slug}.md")
+            && discuss.contains("maturity: ready-for-plan")
+            && discuss.contains("templates/backlog/discuss-handoff.md"),
+        "discuss must persist a ready-for-plan handoff under _backlog"
+    );
+    assert!(
+        plan.contains("maturity: ready-for-plan")
+            && plan.contains("maturity: seed")
+            && plan.contains("{slug} discuss")
+            && plan.contains("rather than inventing decisions"),
+        "plan must distinguish agreed handoffs from raw seeds"
+    );
+    assert!(
+        workflow.contains("Raw seed: `maturity: seed`")
+            && workflow.contains("Ready-for-plan handoff: `maturity: ready-for-plan`")
+            && workflow.contains("durable\n  Decision summary"),
+        "workflow must document both backlog artifact types"
+    );
+    for heading in [
+        "## Decision Summary",
+        "## Decisions",
+        "## Assumptions",
+        "## Open Questions",
+        "## Change Impact",
+        "## Evidence",
+    ] {
+        assert!(handoff.contains(heading), "handoff template missing {heading}");
+    }
 }
 
 #[test]

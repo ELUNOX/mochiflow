@@ -6,7 +6,8 @@ description: |
   interactive interview, and reach an agreed why/what. Activate on the explicit
   command `mochiflow-discuss`, or natural phrasing like "ブレストして" / "壁打ちして"
   / "相談したい". Writes no spec documents or implementation code; the agreed
-  decisions are captured into spec.md by plan.
+  decisions are persisted as a ready-for-plan handoff under `_backlog/` and
+  captured into spec.md by plan.
 triggers:
   - mochiflow-discuss
   - ブレストして
@@ -15,25 +16,30 @@ triggers:
 trigger_patterns:
   - "{slug} discuss"
 artifacts:
-  - Decision summary only (captured into spec.md Background and Design Rationale by plan)
+  - "{specs_dir}/_backlog/{slug}.md (maturity: ready-for-plan handoff)"
 prerequisites: []
 execution: inline
-allowed_writes: []
+allowed_writes:
+  - "{specs_dir}/_backlog/{slug}.md"
 forbidden_writes:
-  - "{specs_dir}/**"
+  - "{specs_dir}/{slug}/**"
+  - "{specs_dir}/_done/**"
   - "{write.allow}"
   - .git/**
 references:
   - reference/workflow.md
   - reference/language.md
   - reference/engineering-standards.md
+  - templates/backlog/discuss-handoff.md
 ---
 
 # spec-discuss
 
 ## Purpose
 
-Reach agreement on the why / what / key design decisions through investigation and discussion. Write no spec documents and no implementation code.
+Reach agreement on the why / what / key design decisions through investigation
+and discussion. Write no spec documents and no implementation code; persist only
+the ready-for-plan handoff in `_backlog/{slug}.md`.
 
 ## Procedure
 
@@ -42,7 +48,14 @@ Reach agreement on the why / what / key design decisions through investigation a
 3. Organize the UI / data model / API / migration / error handling / testing decision tree internally and resolve it dependency-first.
 4. One question at a time, each with a recommended answer, rationale, why the main alternatives are rejected, and impact.
 5. Ask for specifics when answers are vague ("make it nice", "your call").
-6. When every branch is resolved, present the agreement in the conversation language
+6. When every branch is resolved, write or update `{specs_dir}/_backlog/{slug}.md`
+   from `templates/backlog/discuss-handoff.md` with `maturity: ready-for-plan`,
+   `source: conversation`, and `source_phase: discuss`. Required frontmatter:
+   `slug`, `title`, `maturity`, `source`, `source_phase`, `created`, `updated`;
+   keep optional `surface`, `type_hint`, and `module` when known. Required body
+   headings: `## Decision Summary`, `## Decisions`, `## Assumptions`,
+   `## Open Questions`, `## Change Impact`, and `## Evidence`.
+7. Present the agreement in the conversation language
    using plain labels for purpose / background / scope / decisions / assumptions
    / open questions / change impact. Internally this is the Decision summary;
    do not lead with internal headings. Guide the user toward creating the plan,
@@ -53,5 +66,6 @@ Reach agreement on the why / what / key design decisions through investigation a
 - Do not move to the next branch while scope is undefined, contradictory, or unjustified.
 - Do not proceed to `mochiflow-plan` with Open Questions unresolved (carrying them into plan as `[NEEDS-CLARIFICATION]` is allowed; resolve before `approved`).
 - Do not delete a backlog seed in discuss alone (deletion happens in plan).
-- Keep transient notes in the conversation only; do not create or update spec files.
+- Keep scratch notes in the conversation only; persist the final agreement in
+  `_backlog/{slug}.md`. Do not create or update spec files.
 - Do not touch implementation code / branch / PR.

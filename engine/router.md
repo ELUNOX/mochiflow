@@ -40,6 +40,7 @@ loads this as a standing instruction. Do not load it from planning / reviewer ro
 2. On an explicit command (`mochiflow-<verb>`) match, declare the command in one line and activate.
 3. Match `{slug}` in `trigger_patterns` only against a spec slug that exists under `{specs_dir}/{slug}/`; on a match, declare the verb in one line and activate.
    - Exception: `{slug} discuss` resolves against a seed at `{specs_dir}/_backlog/{slug}.md` when the slug exists only there; if `{specs_dir}/{slug}/` already exists, re-open that spec instead.
+   - Exception: `{slug} plan` may resolve against `{specs_dir}/_backlog/{slug}.md` only when `{specs_dir}/{slug}/` does not exist and the backlog frontmatter has `maturity: ready-for-plan`; declare `plan` and activate because plan creates the active spec directory. If the backlog file has `maturity: seed` or any other value, do not activate plan — guide back to `{slug} discuss`.
    - Event patterns `{slug} merged` / `{slug} マージ済み` / `{slug} 完了` are the only trigger-pattern exception for completed specs: resolve `{slug}` against `{specs_dir}/_done/{slug}/` first, then resume ship's post-merge local cleanup only, not a fresh ship. Fold/archive already happened in the feature branch close-out commit before PR.
 4. With no active spec context, route concrete small-edit requests ("直して" / "fix this" / "仕様書なしで" / "quick fix") through the `commands/patch.md ## Eligibility` check before proposing a spec verb.
    - If eligible, declare `patch` in one line and proceed.
