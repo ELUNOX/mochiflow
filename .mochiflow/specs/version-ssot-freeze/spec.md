@@ -187,14 +187,14 @@ integrity hashes.
 
 | AC | Scope | Verification method | Planned test/QA | Implementation | Result | Evidence | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| AC-01 | cli | automated | `cargo test --manifest-path cli/Cargo.toml` (version-gate + freeze tests) | `cli/crates/mochiflow-core/src/freeze.rs` | UNVERIFIED |  | SSOT = Cargo.toml workspace version |
-| AC-02 | cli | automated | freeze writes-all test + QA-02 | `cli/crates/mochiflow-core/src/freeze.rs`, `cli/crates/mochiflow-cli/src/main.rs` | UNVERIFIED |  |  |
-| AC-03 | cli | automated | unit test: freeze reads Cargo.toml at runtime | `cli/crates/mochiflow-core/src/freeze.rs` | UNVERIFIED |  |  |
-| AC-04 | cli | automated | `freeze --check` staleness test + QA-04 | `cli/crates/mochiflow-core/src/freeze.rs` | UNVERIFIED |  |  |
-| AC-05 | cli | automated | idempotency test + QA-03 | `cli/crates/mochiflow-core/src/freeze.rs` | UNVERIFIED |  |  |
-| AC-06 | cli | automated | conformance test calls core hash fn | `cli/crates/mochiflow-core/src/freeze.rs`, `cli/crates/mochiflow-cli/tests/conformance.rs` | UNVERIFIED |  | single hash impl |
-| AC-07 | cli | automated | `engine manifest` removed test + QA-05 | `cli/crates/mochiflow-cli/src/main.rs` | UNVERIFIED |  |  |
-| AC-08 | cli | automated | refactored `version_gate_consistent` + negative-case fixture test (mismatched version triple fails) | `cli/crates/mochiflow-cli/tests/conformance.rs`, `cli/crates/mochiflow-core/src/freeze.rs` | UNVERIFIED |  | escape hatch deleted; mismatch must fail |
-| AC-09 | cli | automated | dynamic version test (replaces `version_is_1_1_3`) | `cli/crates/mochiflow-cli/tests/cli.rs` | UNVERIFIED |  |  |
-| AC-10 | cli | automated | CI step present + green | `.github/workflows/ci.yml` | UNVERIFIED |  |  |
-| AC-11 | cli | AI-observed | docs review | `contracts/VERSIONING.md`, `docs/versioning.md`, `CONTRIBUTING.md`, `.kiro/steering/release.md`, `.github/PULL_REQUEST_TEMPLATE.md` | UNVERIFIED |  | drift warning removed |
+| AC-01 | cli | automated | `cargo test --manifest-path cli/Cargo.toml` (version-gate + freeze tests) | `cli/crates/mochiflow-core/src/freeze.rs` | PASS | 259 tests pass; `version_gate_consistent` asserts workspace version == engine/VERSION == lock version | SSOT = Cargo.toml workspace version |
+| AC-02 | cli | automated | freeze writes-all test + QA-02 | `cli/crates/mochiflow-core/src/freeze.rs`, `cli/crates/mochiflow-cli/src/main.rs` | PASS | `freeze_write_idempotent_in_fixture` writes all three files; `freeze --check` passes on real tree |  |
+| AC-03 | cli | automated | unit test: freeze reads Cargo.toml at runtime | `cli/crates/mochiflow-core/src/freeze.rs` | PASS | `read_workspace_version_parses_real_cargo_toml` test; code reads file at runtime not env! |  |
+| AC-04 | cli | automated | `freeze --check` staleness test + QA-04 | `cli/crates/mochiflow-core/src/freeze.rs` | PASS | `freeze_check_detects_staleness` test; exits non-zero, names stale file |  |
+| AC-05 | cli | automated | idempotency test + QA-03 | `cli/crates/mochiflow-core/src/freeze.rs` | PASS | `freeze_write_idempotent_in_fixture`: second run writes nothing |  |
+| AC-06 | cli | automated | conformance test calls core hash fn | `cli/crates/mochiflow-core/src/freeze.rs`, `cli/crates/mochiflow-cli/tests/conformance.rs` | PASS | `compute_contracts_hash_matches_committed_lock`; conformance delegates to `mochiflow_core::freeze::compute_contracts_hash` | single hash impl |
+| AC-07 | cli | automated | `engine manifest` removed test + QA-05 | `cli/crates/mochiflow-cli/src/main.rs` | PASS | `engine_manifest_subcommand_is_removed` test asserts failure |  |
+| AC-08 | cli | automated | refactored `version_gate_consistent` + negative-case fixture test (mismatched version triple fails) | `cli/crates/mochiflow-cli/tests/conformance.rs`, `cli/crates/mochiflow-core/src/freeze.rs` | PASS | `freeze_version_triple_mismatch_fails_gate` proves escape-hatch removal | escape hatch deleted; mismatch must fail |
+| AC-09 | cli | automated | dynamic version test (replaces `version_is_1_1_3`) | `cli/crates/mochiflow-cli/tests/cli.rs` | PASS | `version_matches_cargo_pkg` uses `env!("CARGO_PKG_VERSION")` |  |
+| AC-10 | cli | automated | CI step present + green | `.github/workflows/ci.yml` | PASS | `freeze --check` step added after test/fmt/clippy |  |
+| AC-11 | cli | AI-observed | docs review | `contracts/VERSIONING.md`, `docs/versioning.md`, `CONTRIBUTING.md`, `.kiro/steering/release.md`, `.github/PULL_REQUEST_TEMPLATE.md` | PASS | All docs updated; drift warning removed; independent reviewer confirmed | drift warning removed |

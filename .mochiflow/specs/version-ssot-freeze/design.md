@@ -152,5 +152,7 @@ mutate only the fixture. The only check against the real tree is the final-gate
 
 ## Review Results
 
-<!-- Reviewer mode: delegated | inline / Verdict: pass | pass-with-comments | fail -->
-- Pending build (risk elevated → independent-reviewer once, after all tasks).
+- Reviewer mode: delegated
+- Verdict: pass-with-comments
+- Findings: 2 Low (CONTRIBUTING.ja.md and .mochiflow/context/structure.md
+  still referenced removed `engine manifest` command — fixed in follow-up commit).
