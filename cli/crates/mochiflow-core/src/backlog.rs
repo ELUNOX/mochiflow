@@ -107,8 +107,12 @@ fn validate_seed_text(text: &str) -> Vec<String> {
     let maturity = fields.get("maturity").map(String::as_str).unwrap_or("");
     match maturity {
         "seed" => {
-            for required in ["## Signal", "## Why It Matters", "## Evidence", "## Open Questions"]
-            {
+            for required in [
+                "## Signal",
+                "## Why It Matters",
+                "## Evidence",
+                "## Open Questions",
+            ] {
                 if !headings.iter().any(|h| h == required) {
                     failures.push(format!("seed is missing required heading {required}"));
                 }
@@ -186,7 +190,6 @@ fn body_headings(text: &str) -> Vec<String> {
         .collect()
 }
 
-
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
@@ -238,7 +241,9 @@ updated: \"2026-06-21\"\n\
         let text = VALID_SEED.replace("maturity: \"seed\"", "maturity: \"triaged\"");
         let failures = validate_seed_text(&text);
         assert!(
-            failures.iter().any(|f| f.contains("maturity must be one of")),
+            failures
+                .iter()
+                .any(|f| f.contains("maturity must be one of")),
             "{failures:?}"
         );
     }
@@ -258,9 +263,7 @@ updated: \"2026-06-21\"\n\
         let text = VALID_HANDOFF.replace("source_phase: \"discuss\"\n", "");
         let failures = validate_seed_text(&text);
         assert!(
-            failures
-                .iter()
-                .any(|f| f.contains("missing source_phase")),
+            failures.iter().any(|f| f.contains("missing source_phase")),
             "{failures:?}"
         );
     }

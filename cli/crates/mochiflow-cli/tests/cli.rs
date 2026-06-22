@@ -2289,7 +2289,11 @@ fn index_orders_same_day_done_by_completion_time() {
         .success();
 
     let index = fs::read_to_string(dir.path().join(".mochiflow/INDEX.md")).unwrap();
-    let pos = |slug: &str| index.find(slug).unwrap_or_else(|| panic!("{slug} missing:\n{index}"));
+    let pos = |slug: &str| {
+        index
+            .find(slug)
+            .unwrap_or_else(|| panic!("{slug} missing:\n{index}"))
+    };
     assert!(
         pos("zzz-late") < pos("aaa-early"),
         "later completion must lead the day:\n{index}"
