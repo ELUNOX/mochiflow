@@ -38,10 +38,7 @@ fn status_emoji(status: &str) -> &str {
         "approved" => "🟢",
         "done" => "✅",
         "seed" => "🌱",
-        "triaged" => "📌",
-        "ready-for-think" => "💭",
-        "parked" => "⏸️",
-        "spec-ready" => "📥",
+        "ready-for-plan" => "📥",
         _ => "❓",
     }
 }

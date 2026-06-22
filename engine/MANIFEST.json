@@ -28,12 +28,12 @@
     "commands/refresh-context.md": "sha256:2840fd557d9367d7f539978d87d858d4dc5fcfdc10fe1e7755da7d147474cfc6",
     "commands/review.md": "sha256:4f66189df83abbd7bf1509709dc4db0b25a22693a9e550541e7833364cd2e33d",
     "commands/ship.md": "sha256:944140ed22d18e54c88845ee543ab6312e5117b1f882abd0875c1db2d7c31a59",
-    "reference/authoring.md": "sha256:6f3a72d1bebf6565b3d155024a73b4e4ce7ccecee05ec90bbee5009e02fa79b9",
+    "reference/authoring.md": "sha256:e8b8fda96dd9b47a5dc0d9ac39424498d53de3eb1c4aba2fc68ff61fc56677e9",
     "reference/engineering-standards.md": "sha256:2f414d1f3bc71c6c47332867541313c9c1a00377fc1c9ff5021fdaaf37c5ea02",
     "reference/git.md": "sha256:775359ef48c4b09e80caa9dc92140b8dd5a2c1a1cb21710bd24b05cf9199212f",
     "reference/language.md": "sha256:96fc404c1e70be078b7a8f1cfc7fd3227dad24e59106df17a69fb2d6bd96888f",
     "reference/risk.md": "sha256:60a672fcfe92bb0108429ab82dc2ff5721737f086b2df2d5fd8012010f8b1339",
-    "reference/workflow.md": "sha256:ca4fb2d5d9bc73bb1c28cd7a352f30a80cec19d5ad683d8d1a1bdd604aab49b2",
+    "reference/workflow.md": "sha256:be845d58b1ec68702ed92a47a0862cfbe3af987f02d4da6f210c351e9de785ef",
     "router.md": "sha256:50dd09a921956ae5e18fa9a2cef8b8b6fdef17d1e2a33269871014f459b5f338",
     "templates/backlog/discuss-handoff.md": "sha256:93d5872d0e090ce0f3fbbe275578fc92ad51c8d1ef8d5b3b7202300d8836b78d",
     "templates/backlog/seed.md": "sha256:e8f5626b4dc91e953184a1a2ccad0072647ce18fca79bebe21883a2c98e5bc60",
@@ -48,7 +48,7 @@
     "templates/spec/spec.micro.md": "sha256:a599bb82764d746b8f344febc2aa0f0a6cbb3cff7526ab4cc93243303ad02f51",
     "templates/spec/spec.standard.md": "sha256:e102e46e989cd5bc391747723a1ca278da157de4d4f2141ab1d569e9a79b6743",
     "templates/spec/spec.yaml": "sha256:984ce5f045a9886475405f7ad99f4da884acc3a4c993688f7c84a972fbf87b97",
-    "templates/spec/tasks.md": "sha256:9ce06d7c5b0e9d892785e2b71a9779eff8c905faed449c54ccc98fbcf849de73"
+    "templates/spec/tasks.md": "sha256:7fbb5d310f694ba30a2d09428fc87e69785d03a480302d2c165fe8cb6e816fbd"
   },
   "version": "1.1.3"
 }

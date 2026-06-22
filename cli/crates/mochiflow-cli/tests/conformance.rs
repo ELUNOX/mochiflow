@@ -946,9 +946,13 @@ fn english_template_headings_are_present() {
     for heading in [
         "Implementation Summary:",
         "Critical Stop Conditions:",
-        "Covers AC:",
-        "Planned Change Areas:",
-        "Additional Stop Conditions:",
+        "## Defaults",
+        "## Tasks",
+        "- [ ] T-001 [AC-01]",
+        "Depends on:",
+        "Files:",
+        "Done:",
+        "Stop:",
     ] {
         assert!(tasks.contains(heading), "tasks template missing {heading}");
     }
@@ -1500,7 +1504,7 @@ fn materialize_full(root: &Path) -> PathBuf {
     std::fs::create_dir_all(&backlog).unwrap();
     std::fs::write(
         backlog.join("sample-seed.md"),
-        "---\nslug: sample-seed\ntitle: Sample Seed\nmaturity: seed\nsource: conversation\ncreated: 2026-03-10\n---\n\n## Signal\n\nAn idea.\n",
+        "---\nslug: sample-seed\ntitle: Sample Seed\nmaturity: seed\nsource: conversation\ncreated: 2026-03-10\nupdated: 2026-03-10\n---\n\n## Signal\n\nAn idea.\n\n## Why It Matters\n\nIt could help.\n\n## Evidence\n\n- Observed somewhere.\n\n## Open Questions\n\n- What scope?\n",
     )
     .unwrap();
 
@@ -1764,6 +1768,17 @@ fn behavioral_backlog() {
 
     let (code, _out) = run_cli(&cfg, &["backlog", "validate", "sample-seed"]);
     assert_eq!(code, 0);
+
+    // A malformed seed (bad maturity, missing headings) must fail validation.
+    let backlog = tmp.path().join(".mochiflow/specs/_backlog");
+    std::fs::write(
+        backlog.join("broken-seed.md"),
+        "---\nslug: broken-seed\ntitle: Broken\nmaturity: triaged\nsource: conversation\ncreated: 2026-03-10\nupdated: 2026-03-10\n---\n\n## Signal\n\nx\n",
+    )
+    .unwrap();
+    let (code, out) = run_cli(&cfg, &["backlog", "validate", "broken-seed"]);
+    assert_eq!(code, 1, "{out}");
+    assert!(out.contains("maturity must be one of"), "{out}");
 }
 
 #[test]

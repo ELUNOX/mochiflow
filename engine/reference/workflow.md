@@ -41,7 +41,9 @@ gate 1 and never creates a PR before delivery approval gate 2. Setup, context
 refresh, and QA evidence may require human confirmations, but those confirmations
 are not delivery approval gates and do not change spec lifecycle state except
 where explicitly defined. `done` is not a gate: it is an acceptance state that
-`ship` sets mechanically when the acceptance conditions below hold.
+`ship` sets directly (editing `spec.yaml` `status: done`, then re-running `lint`
+to confirm; there is no CLI transition command) when the acceptance conditions
+below hold.
 
 The no-PR fast path exists only after explicit human opt-in. It skips
 **approve-PR** because no PR is created, but it still runs `ship`; `ship` still
