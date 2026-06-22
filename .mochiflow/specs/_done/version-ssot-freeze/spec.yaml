@@ -6,6 +6,7 @@ surfaces:
   - "cli"
 integration: "none"
 risk: "elevated"
-status: "approved"
+status: "done"
 created: "2026-06-22"
 updated: "2026-06-22"
+completed: "2026-06-22T15:00:00Z"
