@@ -27,6 +27,6 @@
 - [ ] Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/)
 - [ ] I edited the engine **source** (`engine/`), not the vendored copy (`.mochiflow/engine/`)
 - [ ] Generated adapters were regenerated via `mochiflow adapter generate` (not hand-edited), if templates changed
-- [ ] If a schema or other locked file changed: `contracts.lock` was regenerated **and** `engine/VERSION` was bumped **in this PR**
+- [ ] If a schema or other locked file changed: bumped `cli/Cargo.toml` version and ran `mochiflow freeze`
 - [ ] Docs updated (including **both** `README.md` and `README.ja.md` if user-facing)
 - [ ] No secrets (`.env`, credentials) are included

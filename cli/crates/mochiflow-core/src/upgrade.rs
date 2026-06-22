@@ -208,44 +208,10 @@ pub fn write_manifest(cfg: &Config) -> std::io::Result<()> {
 
 /// Write MANIFEST.json for an explicit engine directory.
 pub fn write_manifest_for_engine_dir(engine_dir: &Path) -> std::io::Result<()> {
-    use sha2::{Digest, Sha256};
-    use std::collections::BTreeMap;
-
-    let mut files = BTreeMap::new();
-    for entry in walkdir_files(engine_dir) {
-        let rel = entry.strip_prefix(engine_dir).unwrap_or(&entry);
-        let rel_str = rel.to_string_lossy().replace('\\', "/");
-        if rel_str.contains("__pycache__") || rel_str == "MANIFEST.json" {
-            continue;
-        }
-        if let Ok(bytes) = std::fs::read(&entry) {
-            let hash = Sha256::digest(&bytes);
-            files.insert(rel_str, format!("sha256:{hash:x}"));
-        }
-    }
     let version = read_engine_version(engine_dir).map_err(std::io::Error::other)?;
-    let manifest = serde_json::json!({
-        "version": version,
-        "files": files,
-    });
-    let path = engine_dir.join("MANIFEST.json");
-    let content = serde_json::to_string_pretty(&manifest).map_err(std::io::Error::other)? + "\n";
-    std::fs::write(&path, content)
-}
-
-fn walkdir_files(dir: &Path) -> Vec<std::path::PathBuf> {
-    let mut result = Vec::new();
-    if let Ok(entries) = std::fs::read_dir(dir) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.is_dir() {
-                result.extend(walkdir_files(&path));
-            } else if path.is_file() {
-                result.push(path);
-            }
-        }
-    }
-    result
+    let content =
+        crate::freeze::build_manifest(engine_dir, &version).map_err(std::io::Error::other)?;
+    std::fs::write(engine_dir.join("MANIFEST.json"), content)
 }
 
 pub(crate) fn stage_source_engine(src: &Path, staging: &Path) -> std::io::Result<()> {

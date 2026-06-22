@@ -385,80 +385,47 @@ fn doctor_engine_warns_when_dogfood_source_engine_differs() {
 /// then sorted `golden/**` file bytes.
 ///
 /// The frozen surface is intentionally limited to the consumer-facing contracts
-/// — JSON schemas and golden output. The `engine/MANIFEST.json` files map
-/// (every engine file's content hash) is deliberately NOT part of this hash:
-/// engine prose edits are not a compatibility change, and including them forced
-/// a lock regeneration on every doc tweak. Engine-file integrity is covered
-/// separately by `doctor engine` MANIFEST drift detection, which is an integrity
-/// check, not a versioning gate.
+/// — JSON schemas and golden output. Delegates to the single implementation in
+/// `mochiflow_core::freeze::compute_contracts_hash`.
 fn compute_contracts_hash() -> String {
-    use sha2::{Digest, Sha256};
-    let mut hasher = Sha256::new();
-
-    let contracts = contracts_dir();
-    let mut schema_files: Vec<PathBuf> = std::fs::read_dir(&contracts)
-        .unwrap()
-        .flatten()
-        .map(|e| e.path())
-        .filter(|p| p.extension().is_some_and(|e| e == "json") && p.is_file())
-        .collect();
-    schema_files.sort();
-    for f in &schema_files {
-        hasher.update(std::fs::read(f).unwrap());
-    }
-
-    let golden = repo_root().join("tests/conformance/golden");
-    let mut golden_files: Vec<PathBuf> = Vec::new();
-    fn collect(dir: &Path, out: &mut Vec<PathBuf>) {
-        for e in std::fs::read_dir(dir).unwrap().flatten() {
-            let p = e.path();
-            if p.is_dir() {
-                collect(&p, out);
-            } else if p.is_file() {
-                out.push(p);
-            }
-        }
-    }
-    collect(&golden, &mut golden_files);
-    golden_files.sort();
-    for f in &golden_files {
-        hasher.update(std::fs::read(f).unwrap());
-    }
-
-    format!("{:x}", hasher.finalize())
+    mochiflow_core::freeze::compute_contracts_hash(&repo_root()).unwrap()
 }
 
 #[test]
 fn version_gate_consistent() {
+    let root = repo_root();
     let lock = read_json(&contracts_dir().join("contracts.lock"));
     let lock_hash = lock["hash"].as_str().unwrap();
     let lock_version = lock["version"].as_str().unwrap();
     let current = compute_contracts_hash();
-    let engine_version = std::fs::read_to_string(repo_root().join("engine/VERSION"))
+    let workspace_version = mochiflow_core::freeze::read_workspace_version(&root).unwrap();
+    let engine_version = std::fs::read_to_string(root.join("engine/VERSION"))
         .unwrap()
         .trim()
         .to_string();
 
-    // Gate (parity with the former Python check): consistent when the hash
-    // matches the lock, or when a frozen surface changed AND VERSION was bumped.
-    let pass = current == lock_hash || engine_version != lock_version;
-    assert!(
-        pass,
-        "frozen contract surface changed (lock {lock_hash:.12}… → {current:.12}…) \
-         but engine/VERSION ({engine_version}) was not bumped past lock.version ({lock_version})"
+    // Single rule: all three versions must agree AND hash must match.
+    assert_eq!(
+        current, lock_hash,
+        "frozen-surface hash mismatch (lock {lock_hash:.12}… ≠ computed {current:.12}…); run `mochiflow freeze`"
+    );
+    assert_eq!(
+        lock_version, workspace_version,
+        "contracts.lock version ({lock_version}) ≠ workspace version ({workspace_version}); run `mochiflow freeze`"
+    );
+    assert_eq!(
+        engine_version, workspace_version,
+        "engine/VERSION ({engine_version}) ≠ workspace version ({workspace_version}); run `mochiflow freeze`"
     );
 }
 
 #[test]
 fn version_gate_hash_matches_committed_lock() {
-    // Byte-parity guard: the computed frozen-surface hash must equal the
-    // committed contracts.lock hash. The frozen surface is schemas + golden only
-    // (see compute_contracts_hash); regenerate the lock when either changes.
     let lock = read_json(&contracts_dir().join("contracts.lock"));
     assert_eq!(
         compute_contracts_hash(),
         lock["hash"].as_str().unwrap(),
-        "computed frozen-surface hash must equal contracts.lock; regenerate the lock if a frozen surface changed"
+        "computed frozen-surface hash must equal contracts.lock; run `mochiflow freeze` if a frozen surface changed"
     );
 }
 
@@ -802,6 +769,7 @@ fn readme_lists_public_cli_commands() {
         "ready",
         "backlog",
         "upgrade",
+        "freeze",
         "pr",
         "completions",
     ];

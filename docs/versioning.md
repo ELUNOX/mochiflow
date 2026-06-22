@@ -10,8 +10,9 @@ users normally care about when installing or reporting issues.
 
 ## Engine version
 
-`engine/VERSION` is the source engine and contract-surface semver. It changes
-when the project-agnostic workflow engine or frozen contract surface changes.
+`cli/Cargo.toml` `[workspace.package].version` is the single source of truth
+for the engine and contract-surface semver. `mochiflow freeze` derives
+`engine/VERSION`, `engine/MANIFEST.json`, and `contracts/contracts.lock` from it.
 
 Inside an initialized project, `.mochiflow/engine/VERSION` records the installed
 engine copy used by adapters, `config show`, and `doctor engine`.

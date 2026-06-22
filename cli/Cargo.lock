@@ -692,7 +692,6 @@ dependencies = [
  "mochiflow-core",
  "predicates",
  "serde_json",
- "sha2",
  "tempfile",
  "toml",
 ]

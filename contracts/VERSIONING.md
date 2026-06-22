@@ -6,14 +6,14 @@ MochiFlow uses a 2-axis versioning scheme.
 
 | Axis | Location | Meaning | Bump trigger |
 |:-----|:---------|:--------|:-------------|
-| **engine semver** | `engine/VERSION` | Release version (X.Y.Z) | Any release: X=breaking, Y=feature, Z=fix |
+| **engine semver** | `cli/Cargo.toml` `[workspace.package].version` (SSOT) | Release version (X.Y.Z) | Any release: X=breaking, Y=feature, Z=fix |
 | **schema_version** | consumer `config.toml` field | File format compat signal to consumers | Only when config.toml/spec.yaml format breaks |
 
 The installed engine is self-contained: `{install_dir}/engine/VERSION` is the
 active engine version for that project, and `{install_dir}/engine/MANIFEST.json`
 records the integrity baseline for that same installed copy. `config.toml` does
-not own engine version. A legacy `engine_version` field may remain in old
-configs, but tooling ignores it.
+not own engine version. `mochiflow freeze` derives `engine/VERSION`,
+`engine/MANIFEST.json`, and `contracts/contracts.lock` from `cli/Cargo.toml`.
 
 Users do not edit `schema_version` for normal product upgrades. After updating
 the CLI, they run `mochiflow upgrade`; the command installs the engine bundled
@@ -41,15 +41,16 @@ drift detection — an integrity check for vendored engines, not a version gate.
 
 When a frozen surface changes (schema edit or golden update):
 
-1. Bump `engine/VERSION` (semver rules) if the change is consumer-facing.
+1. Bump `cli/Cargo.toml` `[workspace.package].version` (semver rules).
 2. Add a section to `CHANGELOG.md` for the new version.
-3. Regenerate `contracts/contracts.lock` (re-run `compute_contracts_hash()`).
+3. Run `mochiflow freeze` (regenerates `engine/VERSION`, `engine/MANIFEST.json`,
+   and `contracts/contracts.lock`).
 4. Conformance runner verifies all three are consistent.
 
 Editing engine docs (`commands/**`, `reference/**`, templates) does **not** trip
-the version gate; it only updates `engine/MANIFEST.json` (drift baseline). If any
-step above is missing for a real frozen-surface change, the `cargo test`
-version-gate check **fails**.
+the version gate; it only updates `engine/MANIFEST.json` (drift baseline, via
+`mochiflow freeze`). If any step above is missing for a real frozen-surface
+change, the `cargo test` version-gate check **fails**.
 
 ## Consumer drift detection
 

@@ -40,9 +40,10 @@ Knowing which tree owns a file prevents the most common mistakes:
   `templates/`, `agents/`, `adapters/`). This is the project-agnostic core.
   Engine docs are written in **English** and carry no project-specific values;
   project specifics belong in `config.toml`.
-- **Generated `MANIFEST.json`** — after editing any engine file, regenerate the
-  manifest with `mochiflow engine manifest` (it is a generated hash map, not
-  hand-edited).
+- **Generated `MANIFEST.json`** — after editing any engine file, regenerate
+  derived files with `mochiflow freeze` (it updates `engine/VERSION`,
+  `engine/MANIFEST.json`, and `contracts/contracts.lock` from the workspace
+  version).
 - **Vendored engine copy (never edit)** — `.mochiflow/engine/` is a gitignored
   install snapshot used by the dogfood run. It is synced from repo-root `engine/`
   via `mochiflow upgrade`; it is **not** the source.
@@ -59,8 +60,8 @@ The contract surface is frozen by `contracts/contracts.lock`. If your change
 touches a schema (`contracts/*.json`) or any other locked file, you must, **in
 the same commit**:
 
-1. regenerate `contracts.lock`, and
-2. bump `engine/VERSION`.
+1. bump `cli/Cargo.toml` `[workspace.package].version`, and
+2. run `mochiflow freeze`.
 
 This keeps the version gate honest — a schema change is never silently
 unversioned. `schema_version` in `config.toml` breaks only on consumer-facing

@@ -151,11 +151,11 @@ enum Commands {
         #[arg(long)]
         dry_run: bool,
     },
-    /// Developer engine maintenance commands
-    #[command(hide = true)]
-    Engine {
-        #[command(subcommand)]
-        command: EngineCommand,
+    /// Regenerate derived version/integrity files (engine/VERSION, MANIFEST.json, contracts.lock)
+    Freeze {
+        /// Report staleness without writing
+        #[arg(long)]
+        check: bool,
     },
 }
 
@@ -182,16 +182,6 @@ enum BacklogCommand {
     List,
     Show { slug: String },
     Validate { slug: String },
-}
-
-#[derive(Subcommand)]
-enum EngineCommand {
-    /// Regenerate MANIFEST.json for an engine directory
-    Manifest {
-        /// Engine directory to hash
-        #[arg(long, default_value = "engine")]
-        engine_dir: String,
-    },
 }
 
 #[derive(Clone, Copy, ValueEnum)]
@@ -442,21 +432,43 @@ fn main() -> Result<()> {
                 dry_run,
             )
         }
-        Commands::Engine { command } => match command {
-            EngineCommand::Manifest { engine_dir } => {
-                let engine_dir = std::path::PathBuf::from(engine_dir);
-                match mochiflow_core::upgrade::write_manifest_for_engine_dir(&engine_dir) {
-                    Ok(()) => {
-                        println!("wrote {}", engine_dir.join("MANIFEST.json").display());
+        Commands::Freeze { check } => {
+            let cwd = std::env::current_dir()?;
+            let repo_root = match mochiflow_core::freeze::resolve_repo_root(&cwd) {
+                Ok(r) => r,
+                Err(e) => {
+                    println!("{e}");
+                    std::process::exit(1);
+                }
+            };
+            match mochiflow_core::freeze::freeze(&repo_root, check) {
+                Ok(report) => {
+                    if check {
+                        if report.stale.is_empty() {
+                            println!("freeze: all derived files are up to date");
+                            0
+                        } else {
+                            for entry in &report.stale {
+                                println!("STALE: {}", entry.path.display());
+                            }
+                            1
+                        }
+                    } else {
+                        for path in &report.written {
+                            println!("wrote: {}", path.display());
+                        }
+                        if report.written.is_empty() {
+                            println!("freeze: nothing to update");
+                        }
                         0
                     }
-                    Err(e) => {
-                        println!("FAIL: could not write {}: {e}", engine_dir.display());
-                        1
-                    }
+                }
+                Err(e) => {
+                    println!("FAIL: {e}");
+                    1
                 }
             }
-        },
+        }
     };
 
     std::process::exit(exit_code);

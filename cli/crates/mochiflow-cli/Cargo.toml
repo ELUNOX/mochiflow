@@ -28,5 +28,4 @@ assert_cmd = { workspace = true }
 predicates = { workspace = true }
 tempfile = { workspace = true }
 jsonschema = { workspace = true }
-sha2 = { workspace = true }
 toml = { workspace = true }

@@ -1944,10 +1944,13 @@ fn completions_bash_prints_script_without_config() {
 }
 
 #[test]
-fn version_is_1_1_3() {
+fn version_matches_cargo_pkg() {
     let result = bin().arg("--version").assert().success();
     let stdout = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
-    assert_eq!(stdout.trim(), "mochiflow 1.1.3");
+    assert_eq!(
+        stdout.trim(),
+        format!("mochiflow {}", env!("CARGO_PKG_VERSION"))
+    );
 }
 
 /// Unknown doctor targets are rejected by clap instead of silently passing.
@@ -2033,13 +2036,12 @@ fn onboard_instructions_do_not_force_adapter_generation_by_default() {
 }
 
 #[test]
-fn engine_manifest_regenerates_manifest_for_engine_dir() {
+fn engine_manifest_subcommand_is_removed() {
     let dir = tempfile::tempdir().unwrap();
     let engine_dir = dir.path().join("engine");
     copy_dir_all(&repo_root().join("engine"), &engine_dir);
-    fs::write(engine_dir.join("VERSION"), "9.8.7\n").unwrap();
 
-    let result = bin()
+    bin()
         .args([
             "engine",
             "manifest",
@@ -2047,20 +2049,7 @@ fn engine_manifest_regenerates_manifest_for_engine_dir() {
             engine_dir.to_str().unwrap(),
         ])
         .assert()
-        .success();
-    let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
-    assert!(out.contains("MANIFEST.json"), "{out}");
-
-    let manifest_text = fs::read_to_string(engine_dir.join("MANIFEST.json")).unwrap();
-    let manifest: serde_json::Value = serde_json::from_str(&manifest_text).unwrap();
-    assert_eq!(manifest["version"].as_str(), Some("9.8.7"), "{manifest}");
-    assert!(
-        manifest["files"]
-            .as_object()
-            .unwrap()
-            .contains_key("VERSION"),
-        "{manifest}"
-    );
+        .failure();
 }
 
 /// Removed flag --minimal is rejected by clap.
