@@ -120,6 +120,7 @@ MochiFlow's public CLI commands are:
 | `mochiflow ready` | Check whether a spec can enter implementation. |
 | `mochiflow backlog` | List, show, or validate backlog seeds. |
 | `mochiflow upgrade` | Replace the installed engine while preserving project data. |
+| `mochiflow freeze` | Regenerate derived version/integrity files from the workspace version. |
 | `mochiflow pr` | Run PR pre-flight, push, and provider/manual PR handoff. |
 | `mochiflow completions` | Generate shell completion scripts. |
 

@@ -7,7 +7,7 @@ source of truth; this is a forward-placed map to avoid first-move mistakes.
 
 - **Engine source (SoT)**: repo-root `engine/` — edit here. It is embedded into
   the CLI binary and is also the source for dogfood updates. `engine/MANIFEST.json`
-  is generated with `mochiflow engine manifest`.
+  is generated with `mochiflow freeze`.
 - **Vendored engine copy**: `.mochiflow/engine/` — installed project-local copy
   used by generated adapters and dogfood runs, **not** the source. For this
   repo, sync it from repo-root `engine/` with `mochiflow upgrade --source engine`
@@ -43,5 +43,5 @@ source of truth; this is a forward-placed map to avoid first-move mistakes.
 
 - `mochiflow <command>` — `config`, `index`, `lint`, `doctor`, `adapter`,
   `upgrade`, `ready`, `backlog`, `init`, `join`, `detach`, `guide`,
-  `completions`, `pr`; hidden developer command: `engine manifest`.
+  `completions`, `freeze`, `pr`.
 - Verification surface: `cli` → `cargo test --manifest-path cli/Cargo.toml`.

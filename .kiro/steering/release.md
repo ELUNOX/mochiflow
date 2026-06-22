@@ -15,8 +15,9 @@ tag — **never push**. The human pushes the tag after a final review.
 
 1. Determine the next version from the changes since the last release.
 2. Update `CHANGELOG.md` with a new section.
-3. Update the version files (`engine/VERSION`, `cli/Cargo.toml`, and
-   `contracts/contracts.lock` if a frozen surface changed).
+3. Bump `cli/Cargo.toml` `[workspace.package].version` and run
+   `mochiflow freeze` (updates `engine/VERSION`, `engine/MANIFEST.json`,
+   and `contracts/contracts.lock`).
 4. Verify: `cargo build` then `cargo test`, then `mochiflow lint` and
    `mochiflow doctor`.
 5. Create the release commit.
@@ -27,21 +28,15 @@ tag — **never push**. The human pushes the tag after a final review.
 
 ### Find the current version
 
-The release version of record is `engine/VERSION` (see the versioning policy
-in `contracts/VERSIONING.md`). Cross-check:
+The single source of truth is `cli/Cargo.toml` `[workspace.package].version`.
+Cross-check:
 
 ```bash
-cat engine/VERSION                      # release version of record (X.Y.Z)
-grep '^version' cli/Cargo.toml          # workspace package version
-cat contracts/contracts.lock           # {version, hash} of frozen surface
+grep '^version' cli/Cargo.toml          # workspace package version (SSOT)
+cat engine/VERSION                      # derived by `mochiflow freeze`
+cat contracts/contracts.lock           # {version, hash} — derived by freeze
 git describe --tags --abbrev=0          # last released tag
 ```
-
-> **Known drift to watch for:** these can fall out of sync (e.g. `engine/VERSION`
-> = `1.1.0` while `cli/Cargo.toml` = `1.0.0-alpha.1`). Part of release prep is
-> reconciling them so the tag, `engine/VERSION`, `cli/Cargo.toml`, and
-> `CHANGELOG.md` all agree on one version. Flag the discrepancy to the user and
-> confirm the intended target version before proceeding.
 
 ### Decide the bump (semver)
 
@@ -82,10 +77,11 @@ Update every version location so they agree on the target version:
 
 | File | What to change |
 | --- | --- |
-| `engine/VERSION` | The single line `X.Y.Z` (release version of record). |
-| `cli/Cargo.toml` | `[workspace.package] version = "X.Y.Z"`. |
+| `cli/Cargo.toml` | `[workspace.package] version = "X.Y.Z"` (the SSOT). |
 | `CHANGELOG.md` | New section (Step 2). |
-| `contracts/contracts.lock` | **Only if a frozen surface changed** — see below. |
+
+Then run `mochiflow freeze` — it derives `engine/VERSION`,
+`engine/MANIFEST.json`, and `contracts/contracts.lock` automatically.
 
 `Cargo.lock` updates automatically on the next `cargo build`; do not hand-edit it.
 
@@ -100,10 +96,10 @@ The contract surface is frozen by `contracts/contracts.lock`. Per
 If this release **touches a schema or a golden fixture**, then in the **same
 commit** you must:
 
-1. Bump `engine/VERSION` (already done in Step 1/3).
+1. Bump `cli/Cargo.toml` `[workspace.package].version`.
 2. Add the `CHANGELOG.md` section (Step 2).
-3. Regenerate `contracts/contracts.lock` so its `version` matches the new
-   `engine/VERSION` and its `hash` matches the new surface.
+3. Run `mochiflow freeze` so `contracts/contracts.lock` `version` and `hash`
+   match the new surface.
 
 The `cargo test` version-gate check fails if these are inconsistent. Editing
 engine prose (`commands/**`, `reference/**`, templates) does **not** trip the
@@ -137,9 +133,9 @@ files line up.
 Stage the changed files explicitly (never `git add .`):
 
 ```bash
-git add engine/VERSION cli/Cargo.toml cli/Cargo.lock CHANGELOG.md
+git add cli/Cargo.toml cli/Cargo.lock engine/VERSION engine/MANIFEST.json contracts/contracts.lock CHANGELOG.md
 # include only if a frozen surface changed:
-git add contracts/contracts.lock contracts/*.json tests/conformance/golden
+git add contracts/*.json tests/conformance/golden
 git commit -m "chore: release vX.Y.Z"
 ```
 
@@ -172,7 +168,7 @@ Report:
 ## Done Checklist
 
 - Next version chosen and confirmed with the user (semver-correct).
-- `engine/VERSION`, `cli/Cargo.toml`, and the tag all agree on the version.
+- `cli/Cargo.toml`, `engine/VERSION`, and the tag all agree on the version.
 - `CHANGELOG.md` has a dated section summarizing user-facing changes.
 - If a frozen surface changed: `contracts/contracts.lock` regenerated in the
   same commit.

@@ -4,6 +4,7 @@ pub mod config;
 pub mod detach;
 pub mod detect;
 pub mod doctor;
+pub mod freeze;
 pub mod index;
 pub mod init;
 pub mod join;
