@@ -21,10 +21,12 @@ risk: standard       # standard | elevated | critical (ordered enum)
 status: draft        # draft | approved | done
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
+completed: YYYY-MM-DDTHH:MM:SSZ   # optional; set by ship at the done transition (orders the Done view)
 ```
 
 `status` flow is `draft → approved → done` (`workflow.md`). Whether `design.md` /
-`tasks.md` exist is expressed by file presence, not metadata.
+`tasks.md` exist is expressed by file presence, not metadata. `completed` is
+written only when status becomes `done`; it is absent on draft/approved specs.
 
 ## SSOT discipline
 
@@ -32,7 +34,7 @@ Fix each fact in one place; reference by ID elsewhere.
 
 | fact | source of truth | elsewhere |
 | --- | --- | --- |
-| AC (pass/fail criteria) | `spec.md` | tasks header `Covers AC: AC-01` (ID only) |
+| AC (pass/fail criteria) | `spec.md` | task line reference `[AC-01]` (ID only) |
 | surface / risk / type / status | `spec.yaml` | not repeated |
 | QA scenarios | `spec.md` | `qa-instructions.md` references, does not copy |
 | reviewer / git / journal cadence | `risk.md` | not repeated |
@@ -94,7 +96,7 @@ Write only when required (`risk.md ## design.md required condition`). Carries:
 - `## Review Results` for mandatory reviewer runs when `risk ≥ elevated` (`Reviewer mode: delegated | inline`, `Verdict: pass | pass-with-comments | fail`)
 - Optional `## Integration Log` appended during build when the risk table calls for it (seam decisions, ownership, dead-code handling, handoff). Replaces the old separate journal file.
 
-Do not write: AC tables (use tasks `Covers AC` + AC Matrix), concrete class/struct
+Do not write: AC tables (use task line `[AC-01]` references + AC Matrix), concrete class/struct
 definitions (read source during build).
 
 ## tasks.md
@@ -103,14 +105,24 @@ Write when the change is multi-step. Carries:
 
 - Header: one-line scope · risk · critical stop conditions (1–3 spec-specific)
 - `## Defaults` preamble (shared verification command + stop conditions)
-- Dependency-ordered tasks; each: `Covers AC`, change area, task-specific stop conditions
-- `[P]` parallel marks: `[P]` tasks run parallel to the previous `[P]` block; no `[P]` depends on the previous task; never `[P]` two tasks editing the same file
+- A `## Tasks` checklist of dependency-ordered checkbox tasks. Each task line is
+  `- [ ] T-### [AC-01] title` — the bracket reference is required and is an AC
+  (`[AC-01]`), an NFR (`[NFR-01]`), or a chore reason (`[chore: ...]`). Each task
+  body needs `Depends on:` (prior `T-###` IDs or `none`), `Files:`, `Done:`, and
+  `Stop:`.
+- `[P]` parallel marks: a task tagged `- [ ] T-### [P] ...` runs parallel to the
+  previous `[P]` block; no `[P]` depends on the previous task; never `[P]` two
+  tasks editing the same file
+
+`lint` enforces this structure (top-level `T-###` checkbox tasks with the four
+required blocks and a valid reference); authored tasks must match it or `plan`'s
+lint gate fails.
 
 ## Consistency check (plan, once)
 
 After authoring, verify once against the spec's own intent before `approved`:
 Open Questions closed (or kept as `[NEEDS-CLARIFICATION]`), design decisions not
-contradicting the rationale in `spec.md`, tasks `Covers AC` covering `spec.md` AC,
+contradicting the rationale in `spec.md`, task line `[AC-01]` references covering `spec.md` AC,
 no dependency cycle in Workstreams. No per-document self-review loop (deep defects
 are caught by `independent-reviewer` during build).
 

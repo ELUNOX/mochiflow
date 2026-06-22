@@ -946,9 +946,13 @@ fn english_template_headings_are_present() {
     for heading in [
         "Implementation Summary:",
         "Critical Stop Conditions:",
-        "Covers AC:",
-        "Planned Change Areas:",
-        "Additional Stop Conditions:",
+        "## Defaults",
+        "## Tasks",
+        "- [ ] T-001 [AC-01]",
+        "Depends on:",
+        "Files:",
+        "Done:",
+        "Stop:",
     ] {
         assert!(tasks.contains(heading), "tasks template missing {heading}");
     }
@@ -1072,6 +1076,37 @@ fn lint_passes_valid_approved_spec() {
     let md = "# S\n\n## Requirements / Acceptance Criteria\n\n| AC | Type | Priority | Requirement | Verification |\n| --- | --- | --- | --- | --- |\n| AC-01 | functional | Must | THE SYSTEM SHALL do the thing. | automated |\n\n## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | UNVERIFIED |\n";
     let (code, _out) = run_lint_case(GOOD_YAML, md, None, None);
     assert_eq!(code, 0, "a well-formed approved spec must lint clean");
+}
+
+const DONE_MATRIX_MD: &str = "# S\n\n## Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
+     ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | PASS |\n";
+
+#[test]
+fn lint_warns_when_done_spec_missing_completed() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: done");
+    let (code, out) = run_lint_case(&yaml, DONE_MATRIX_MD, None, None);
+    assert_eq!(code, 0, "missing completed is a WARN, not a FAIL: {out}");
+    assert!(out.contains("`completed` timestamp is missing"), "{out}");
+}
+
+#[test]
+fn lint_passes_done_spec_with_valid_completed() {
+    let yaml =
+        GOOD_YAML.replace("status: approved", "status: done") + "completed: 2026-06-21T22:16:03Z\n";
+    let (code, out) = run_lint_case(&yaml, DONE_MATRIX_MD, None, None);
+    assert_eq!(code, 0, "{out}");
+    assert!(!out.contains("`completed` timestamp is missing"), "{out}");
+}
+
+#[test]
+fn lint_fails_when_completed_is_malformed() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: done") + "completed: yesterday\n";
+    let (code, out) = run_lint_case(&yaml, DONE_MATRIX_MD, None, None);
+    assert_eq!(code, 1, "{out}");
+    assert!(
+        out.contains("must be an ISO 8601 date or timestamp"),
+        "{out}"
+    );
 }
 
 #[test]
@@ -1500,7 +1535,7 @@ fn materialize_full(root: &Path) -> PathBuf {
     std::fs::create_dir_all(&backlog).unwrap();
     std::fs::write(
         backlog.join("sample-seed.md"),
-        "---\nslug: sample-seed\ntitle: Sample Seed\nmaturity: seed\nsource: conversation\ncreated: 2026-03-10\n---\n\n## Signal\n\nAn idea.\n",
+        "---\nslug: sample-seed\ntitle: Sample Seed\nmaturity: seed\nsource: conversation\ncreated: 2026-03-10\nupdated: 2026-03-10\n---\n\n## Signal\n\nAn idea.\n\n## Why It Matters\n\nIt could help.\n\n## Evidence\n\n- Observed somewhere.\n\n## Open Questions\n\n- What scope?\n",
     )
     .unwrap();
 
@@ -1764,6 +1799,17 @@ fn behavioral_backlog() {
 
     let (code, _out) = run_cli(&cfg, &["backlog", "validate", "sample-seed"]);
     assert_eq!(code, 0);
+
+    // A malformed seed (bad maturity, missing headings) must fail validation.
+    let backlog = tmp.path().join(".mochiflow/specs/_backlog");
+    std::fs::write(
+        backlog.join("broken-seed.md"),
+        "---\nslug: broken-seed\ntitle: Broken\nmaturity: triaged\nsource: conversation\ncreated: 2026-03-10\nupdated: 2026-03-10\n---\n\n## Signal\n\nx\n",
+    )
+    .unwrap();
+    let (code, out) = run_cli(&cfg, &["backlog", "validate", "broken-seed"]);
+    assert_eq!(code, 1, "{out}");
+    assert!(out.contains("maturity must be one of"), "{out}");
 }
 
 #[test]

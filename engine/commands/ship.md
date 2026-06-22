@@ -55,14 +55,14 @@ living-spec fold, and archive.
 1. Build `qa-instructions.md` into `{install_dir}/state/{slug}/` from the QA scenarios in `spec.md` (reference, do not copy — `spec.md` is the source of truth for *what* to test). Pick the adapter via `reference/workflow.md ## Acceptance adapters`. This is a ship-time working sheet (ephemeral, gitignored, not archived per `reference/authoring.md ## Durable vs ephemeral`).
 2. Run the final verification command and record the result.
 3. Request QA that needs human operation / visual checking here **exactly once**. The human follows `qa-instructions.md`; record results and evidence in the **AC Verification Matrix** (the durable ledger — the matrix is the record, not an instruction sheet). Translate worksheet prose into canonical Matrix tokens: `Human confirmed` → `人間確認済み`, `Not applicable (reason)` → `対象外（<reason>）`, and failures → `FAIL`. Evidence pointers live in the matrix so the ephemeral worksheet can be discarded.
-4. When the acceptance conditions in `reference/workflow.md ## AC Verification Matrix` all hold (matrix complete, every result is done-eligible, and the reviewer verdict recorded when `risk ≥ elevated`), set `spec.yaml` `status: done` / `updated` mechanically. This is not a gate and uses no approval word; `ship` is the only path that sets `done`.
+4. When the acceptance conditions in `reference/workflow.md ## AC Verification Matrix` all hold (matrix complete, every result is done-eligible, and the reviewer verdict recorded when `risk ≥ elevated`), edit `spec.yaml` `status: done`, `updated`, and `completed` (the current UTC timestamp in ISO 8601, e.g. `2026-06-21T22:16:03Z`) directly (no approval word; there is no CLI transition command), then run `mochiflow lint --spec {slug}` to confirm the transition is valid. `completed` is the immutable completion time that orders the Done view in `INDEX.md`; set it (or overwrite it on a re-ship) each time status becomes `done`. This is not a gate; `ship` is the only path that sets `done`.
 
 ### Close-out
 
 5. Fold, archive, and close out — on the feature branch, before `mochiflow pr`.
    - Fold per `reference/git.md ## Living-spec fold`: append the *why* that code cannot reproduce (decision rationale, rejected options) to `[adr].decisions` with a date, and operational pitfalls to `[adr].pitfalls` using the active guardrail format. Do not fold prose that describes current state. Skip when there is no new rationale or pitfall.
    - **Foundational context refresh check (not a fold)**: if the change introduced a coarse structural shift (new module / surface / moved entry point / technology or verification responsibility) that makes `[context].product` / `[context].structure` / `[context].tech` stale, record/report a post-ship `refresh-context` follow-up after PR creation or after merge. Do **not** run or trigger `refresh-context` before the close-out commit or `mochiflow pr`; it writes context files and does not auto-commit, which would dirty the tree before PR pre-flight. The context layer is refreshed from code under human confirmation, never folded.
-   - Archive: move `{specs_dir}/{slug}/` → `{specs_dir}/_done/{slug}/` and regenerate `{index}` (`mochiflow index`).
+   - Archive: move `{specs_dir}/{slug}/` → `{specs_dir}/_done/{slug}/` with `git mv` (so the rename stages as a paired delete + add; nothing to stage when specs are gitignored) and regenerate `{index}` (`mochiflow index`).
    - Make the **single close-out commit** per `reference/git.md ## Auto-commit and staging ### Ship close-out commit`: stage exactly `status: done` + the AC Verification Matrix + the fold (`[adr]`) + the `_done/{slug}/` move + `{index}`, with an external-reviewer message (no spec slug, no AC IDs, no mochiflow vocabulary). Nothing is pushed to the base branch here.
 
 ### PR
@@ -88,8 +88,9 @@ requires code changes before merge:
    when build resumes from this PR Feedback Loop. Any other dirt still stops.
 5. Apply the requested changes through `build`.
 6. Re-run verification and update the AC Verification Matrix.
-7. Re-run `ship` close-out: set `done`, archive again, regenerate `INDEX`, and
-   update the PR body when needed.
+7. Re-run `ship` close-out: set `done` (re-stamping `completed` with the new
+   completion time), archive again, regenerate `INDEX`, and update the PR body
+   when needed.
 
 ### Post-merge
 

@@ -29,7 +29,14 @@ struct DoneEntry {
     title: String,
     spec_type: String,
     module: String,
+    /// Date shown in the table and used for month grouping (YYYY-MM-DD).
     updated: String,
+    /// Completion timestamp written at the `done` transition (ISO 8601), if any.
+    completed: Option<String>,
+    /// Ordering key: completed (full precision) → updated → mtime date.
+    /// Sorting by this descending yields chronological completion order, with
+    /// intra-day order preserved when `completed` carries a time component.
+    sort_key: String,
 }
 
 fn status_emoji(status: &str) -> &str {
@@ -38,10 +45,7 @@ fn status_emoji(status: &str) -> &str {
         "approved" => "🟢",
         "done" => "✅",
         "seed" => "🌱",
-        "triaged" => "📌",
-        "ready-for-think" => "💭",
-        "parked" => "⏸️",
-        "spec-ready" => "📥",
+        "ready-for-plan" => "📥",
         _ => "❓",
     }
 }
@@ -153,24 +157,49 @@ fn collect(cfg: &Config) -> (Vec<ActiveEntry>, Vec<DoneEntry>, Vec<SeedInfo>) {
         for entry in &done_dirs {
             let d = entry.path();
             if let Ok(m) = read_spec_metadata(&d) {
-                let updated = m.updated().unwrap_or("").to_string();
-                let updated = if updated.is_empty() {
-                    mtime_isodate(&d)
-                } else {
-                    updated
-                };
+                let completed = m.completed().map(str::to_string).filter(|s| !s.is_empty());
+                // Display/grouping date: prefer the completion date, then the
+                // updated date, then file mtime. Always reduced to YYYY-MM-DD.
+                let updated_field = m.updated().unwrap_or("").to_string();
+                let display_source = completed
+                    .clone()
+                    .filter(|s| !s.is_empty())
+                    .or_else(|| {
+                        if updated_field.is_empty() {
+                            None
+                        } else {
+                            Some(updated_field.clone())
+                        }
+                    })
+                    .unwrap_or_else(|| mtime_isodate(&d));
+                let updated = isodate_only(&display_source);
+                // Ordering key (full precision): completed → updated → mtime.
+                let sort_key = completed
+                    .clone()
+                    .filter(|s| !s.is_empty())
+                    .or_else(|| {
+                        if updated_field.is_empty() {
+                            None
+                        } else {
+                            Some(updated_field.clone())
+                        }
+                    })
+                    .unwrap_or_else(|| mtime_isodate(&d));
                 done.push(DoneEntry {
                     slug: entry.file_name().to_string_lossy().to_string(),
                     title: m.title().to_string(),
                     spec_type: m.spec_type().to_string(),
                     module: m.module().unwrap_or("—").to_string(),
                     updated,
+                    completed,
+                    sort_key,
                 });
             }
         }
-        // Sort: by slug asc first (stable), then by updated desc
+        // Sort: slug asc first (stable tiebreak), then completion key desc so the
+        // most recently completed spec leads each day. Equal keys keep slug asc.
         done.sort_by(|a, b| a.slug.cmp(&b.slug));
-        done.sort_by(|a, b| b.updated.cmp(&a.updated));
+        done.sort_by(|a, b| b.sort_key.cmp(&a.sort_key));
     }
 
     // Backlog seeds
@@ -196,6 +225,16 @@ fn collect(cfg: &Config) -> (Vec<ActiveEntry>, Vec<DoneEntry>, Vec<SeedInfo>) {
     }
 
     (active, done, seeds)
+}
+
+/// Reduce a date or ISO 8601 timestamp to its `YYYY-MM-DD` prefix for display
+/// and month grouping. Values shorter than 10 chars are returned unchanged.
+fn isodate_only(value: &str) -> String {
+    if value.len() >= 10 {
+        value[..10].to_string()
+    } else {
+        value.to_string()
+    }
 }
 
 fn mtime_isodate(path: &Path) -> String {
@@ -446,13 +485,17 @@ fn build_json(now: &str, active: &[ActiveEntry], done: &[DoneEntry], seeds: &[Se
     let done_json: Vec<Value> = done
         .iter()
         .map(|d| {
-            json!({
+            let mut obj = json!({
                 "slug": d.slug,
                 "title": d.title,
                 "type": d.spec_type,
                 "module": d.module,
                 "updated": d.updated,
-            })
+            });
+            if let Some(completed) = &d.completed {
+                obj["completed"] = json!(completed);
+            }
+            obj
         })
         .collect();
 

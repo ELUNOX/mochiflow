@@ -99,6 +99,12 @@ impl SpecMeta {
         self.get_str("updated")
     }
 
+    /// Completion timestamp (ISO 8601 UTC), set once when status becomes `done`.
+    /// Optional; legacy specs predate this field.
+    pub fn completed(&self) -> Option<&str> {
+        self.get_str("completed")
+    }
+
     fn get_str(&self, key: &str) -> Option<&str> {
         self.data.get(key).and_then(|v| v.as_str())
     }
@@ -271,5 +277,43 @@ created: 2026-01-01
         let surfaces = data.get("surfaces").and_then(|v| v.as_list()).unwrap();
         assert_eq!(surfaces.len(), 1);
         assert_eq!(surfaces[0].as_str(), Some("cli"));
+    }
+
+    #[test]
+    fn test_completed_accessor_present_and_absent() {
+        let with = "\
+version: 1
+slug: s
+title: S
+type: feature
+surfaces:
+  - cli
+integration: none
+risk: standard
+status: done
+completed: 2026-06-21T22:16:03Z
+";
+        let meta = SpecMeta {
+            path: PathBuf::from("s/spec.yaml"),
+            data: parse_yaml_subset(with).unwrap(),
+        };
+        assert_eq!(meta.completed(), Some("2026-06-21T22:16:03Z"));
+
+        let without = "\
+version: 1
+slug: s
+title: S
+type: feature
+surfaces:
+  - cli
+integration: none
+risk: standard
+status: done
+";
+        let meta = SpecMeta {
+            path: PathBuf::from("s/spec.yaml"),
+            data: parse_yaml_subset(without).unwrap(),
+        };
+        assert_eq!(meta.completed(), None);
     }
 }

@@ -90,7 +90,10 @@ dirty before the patch, do not commit; report the files and verification result.
 - `spec.yaml` `status: done` (+ `updated`);
 - the AC Matrix rows added at ship (build already recorded the rest);
 - the ADR fold (`[adr].decisions` / `[adr].pitfalls`);
-- the archive move `{specs_dir}/{slug}/` → `{specs_dir}/_done/{slug}/`;
+- the archive move `{specs_dir}/{slug}/` → `{specs_dir}/_done/{slug}/` (use
+  `git mv {specs_dir}/{slug}/ {specs_dir}/_done/{slug}/` so both the deletion and
+  the addition are staged as a rename; when specs are gitignored there is nothing
+  to stage);
 - the regenerated `{index}`.
 
 Stage exactly these paths (`git add .` is still forbidden). The message follows

@@ -22,9 +22,8 @@ decisions = ".mochiflow/adr/decisions.md"
 pitfalls = ".mochiflow/adr/pitfalls.md"
 
 [git]
-provider = "github"
+provider = "none"
 base_branch = "main"
-pr_command = "gh pr create --fill"
 
 [adapter]
 tools = ["agents", "kiro"]
