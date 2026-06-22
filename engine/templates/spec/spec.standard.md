@@ -35,4 +35,4 @@ As {user}, I want {capability}, so that {reason}.
 - Every AC appears in the AC Verification Matrix with a done-eligible result token (`PASS`, `人間確認済み`, or `対象外（<reason>）`).
 - Verification commands and results are recorded.
 
-<!-- After implementation, append ## AC Verification Matrix here, or at the end of tasks.md when design.md/tasks.md exist. -->
+<!-- Create the ## AC Verification Matrix during plan (one row per AC) so it is present at approval; record verification results during build. Put it here, or at the end of tasks.md when tasks.md exists. -->

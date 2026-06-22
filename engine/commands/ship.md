@@ -55,7 +55,7 @@ living-spec fold, and archive.
 1. Build `qa-instructions.md` into `{install_dir}/state/{slug}/` from the QA scenarios in `spec.md` (reference, do not copy — `spec.md` is the source of truth for *what* to test). Pick the adapter via `reference/workflow.md ## Acceptance adapters`. This is a ship-time working sheet (ephemeral, gitignored, not archived per `reference/authoring.md ## Durable vs ephemeral`).
 2. Run the final verification command and record the result.
 3. Request QA that needs human operation / visual checking here **exactly once**. The human follows `qa-instructions.md`; record results and evidence in the **AC Verification Matrix** (the durable ledger — the matrix is the record, not an instruction sheet). Translate worksheet prose into canonical Matrix tokens: `Human confirmed` → `人間確認済み`, `Not applicable (reason)` → `対象外（<reason>）`, and failures → `FAIL`. Evidence pointers live in the matrix so the ephemeral worksheet can be discarded.
-4. When the acceptance conditions in `reference/workflow.md ## AC Verification Matrix` all hold (matrix complete, every result is done-eligible, and the reviewer verdict recorded when `risk ≥ elevated`), edit `spec.yaml` `status: done` and `updated` directly (no approval word; there is no CLI transition command), then run `mochiflow lint --spec {slug}` to confirm the transition is valid. This is not a gate; `ship` is the only path that sets `done`.
+4. When the acceptance conditions in `reference/workflow.md ## AC Verification Matrix` all hold (matrix complete, every result is done-eligible, and the reviewer verdict recorded when `risk ≥ elevated`), edit `spec.yaml` `status: done`, `updated`, and `completed` (the current UTC timestamp in ISO 8601, e.g. `2026-06-21T22:16:03Z`) directly (no approval word; there is no CLI transition command), then run `mochiflow lint --spec {slug}` to confirm the transition is valid. `completed` is the immutable completion time that orders the Done view in `INDEX.md`; set it (or overwrite it on a re-ship) each time status becomes `done`. This is not a gate; `ship` is the only path that sets `done`.
 
 ### Close-out
 
@@ -88,8 +88,9 @@ requires code changes before merge:
    when build resumes from this PR Feedback Loop. Any other dirt still stops.
 5. Apply the requested changes through `build`.
 6. Re-run verification and update the AC Verification Matrix.
-7. Re-run `ship` close-out: set `done`, archive again, regenerate `INDEX`, and
-   update the PR body when needed.
+7. Re-run `ship` close-out: set `done` (re-stamping `completed` with the new
+   completion time), archive again, regenerate `INDEX`, and update the PR body
+   when needed.
 
 ### Post-merge
 

@@ -37,6 +37,15 @@ static VERDICT_RE: LazyLock<Regex> = LazyLock::new(|| {
 #[allow(clippy::expect_used)]
 static TASK_HEADING_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?m)^## Task\b").expect("TASK_HEADING_RE"));
+#[allow(clippy::expect_used)]
+static COMPLETED_RE: LazyLock<Regex> = LazyLock::new(|| {
+    // Date `YYYY-MM-DD`, optionally followed by a `T`/space time component.
+    Regex::new(r"^\d{4}-\d{2}-\d{2}([T ].*)?$").expect("COMPLETED_RE")
+});
+
+fn is_valid_completed(value: &str) -> bool {
+    COMPLETED_RE.is_match(value.trim())
+}
 
 pub struct Issue {
     pub severity: String,
@@ -484,6 +493,24 @@ fn lint_spec_dir(spec_dir: &Path, allowed_surfaces: &HashSet<String>) -> Vec<Iss
             path: meta.path.clone(),
             message: "status must be one of: draft, approved, done".into(),
         });
+    }
+    // `completed` is the completion timestamp recorded at the `done` transition.
+    // It drives chronological ordering in INDEX.md. Missing on a done spec is a
+    // WARN (legacy specs predate it); a present-but-malformed value is a FAIL.
+    match (meta.status(), meta.completed()) {
+        ("done", None) => issues.push(Issue {
+            severity: "WARN".into(),
+            path: meta.path.clone(),
+            message: "status is done but `completed` timestamp is missing; same-day INDEX ordering falls back to `updated`".into(),
+        }),
+        (_, Some(c)) if !is_valid_completed(c) => issues.push(Issue {
+            severity: "FAIL".into(),
+            path: meta.path.clone(),
+            message: format!(
+                "`completed` must be an ISO 8601 date or timestamp (YYYY-MM-DD[THH:MM:SSZ]), got `{c}`"
+            ),
+        }),
+        _ => {}
     }
 
     // spec.md

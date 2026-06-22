@@ -1078,6 +1078,34 @@ fn lint_passes_valid_approved_spec() {
     assert_eq!(code, 0, "a well-formed approved spec must lint clean");
 }
 
+const DONE_MATRIX_MD: &str = "# S\n\n## Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
+     ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | PASS |\n";
+
+#[test]
+fn lint_warns_when_done_spec_missing_completed() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: done");
+    let (code, out) = run_lint_case(&yaml, DONE_MATRIX_MD, None, None);
+    assert_eq!(code, 0, "missing completed is a WARN, not a FAIL: {out}");
+    assert!(out.contains("`completed` timestamp is missing"), "{out}");
+}
+
+#[test]
+fn lint_passes_done_spec_with_valid_completed() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: done")
+        + "completed: 2026-06-21T22:16:03Z\n";
+    let (code, out) = run_lint_case(&yaml, DONE_MATRIX_MD, None, None);
+    assert_eq!(code, 0, "{out}");
+    assert!(!out.contains("`completed` timestamp is missing"), "{out}");
+}
+
+#[test]
+fn lint_fails_when_completed_is_malformed() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: done") + "completed: yesterday\n";
+    let (code, out) = run_lint_case(&yaml, DONE_MATRIX_MD, None, None);
+    assert_eq!(code, 1, "{out}");
+    assert!(out.contains("must be an ISO 8601 date or timestamp"), "{out}");
+}
+
 #[test]
 fn lint_passes_english_template_headings_and_covers_ac() {
     let yaml = GOOD_YAML.replace("status: approved", "status: done");

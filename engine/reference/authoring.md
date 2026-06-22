@@ -21,10 +21,12 @@ risk: standard       # standard | elevated | critical (ordered enum)
 status: draft        # draft | approved | done
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
+completed: YYYY-MM-DDTHH:MM:SSZ   # optional; set by ship at the done transition (orders the Done view)
 ```
 
 `status` flow is `draft → approved → done` (`workflow.md`). Whether `design.md` /
-`tasks.md` exist is expressed by file presence, not metadata.
+`tasks.md` exist is expressed by file presence, not metadata. `completed` is
+written only when status becomes `done`; it is absent on draft/approved specs.
 
 ## SSOT discipline
 

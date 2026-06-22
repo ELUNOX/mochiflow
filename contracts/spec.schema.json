@@ -20,7 +20,8 @@
     "risk": { "type": "string", "enum": ["standard", "elevated", "critical"] },
     "status": { "type": "string", "enum": ["draft", "approved", "done"] },
     "created": { "type": "string" },
-    "updated": { "type": "string" }
+    "updated": { "type": "string" },
+    "completed": { "type": "string" }
   },
   "additionalProperties": false
 }

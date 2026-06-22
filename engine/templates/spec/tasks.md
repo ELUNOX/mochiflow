@@ -29,5 +29,5 @@ must be an AC (`[AC-01]`), an NFR (`[NFR-01]`), or a chore reason (`[chore: ...]
 Add `[P]` after the ID for a task that runs parallel to the previous `[P]` block;
 never `[P]` two tasks that edit the same file. Each task needs Depends on / Files /
 Done / Stop. `Depends on:` lists prior `T-###` IDs or `none`.
-After all tasks complete, append ## AC Verification Matrix here.
+Create the ## AC Verification Matrix here during plan (one row per AC) so it is present at approval; record verification results during build.
 -->

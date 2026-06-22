@@ -6,6 +6,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [1.1.3] - Unreleased
 
+### Added
+
+- `spec.yaml` gains an optional `completed` timestamp (ISO 8601), written by
+  `ship` at the `done` transition. The `INDEX.md` Done view now orders
+  same-day completions by completion time (latest first) instead of by slug,
+  falling back to `updated` for specs that predate the field. `lint` warns when
+  a done spec has no `completed` and fails on a malformed value.
+
 ### Changed
 
 - New projects track `.mochiflow/engine/` by default and ignore only local

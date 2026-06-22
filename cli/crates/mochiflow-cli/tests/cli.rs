@@ -1944,10 +1944,10 @@ fn completions_bash_prints_script_without_config() {
 }
 
 #[test]
-fn version_is_1_1_2() {
+fn version_is_1_1_3() {
     let result = bin().arg("--version").assert().success();
     let stdout = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
-    assert_eq!(stdout.trim(), "mochiflow 1.1.2");
+    assert_eq!(stdout.trim(), "mochiflow 1.1.3");
 }
 
 /// Unknown doctor targets are rejected by clap instead of silently passing.
@@ -2242,4 +2242,67 @@ fn doctor_fails_when_state_not_gitignored() {
         out2.contains("not gitignored"),
         "expected state-ignore FAIL:\n{out2}"
     );
+}
+
+/// Done specs completed on the same day are ordered by completion time
+/// (latest first), not by slug. `zzz` completed after `aaa` on the same day,
+/// so it must appear above `aaa` even though it sorts later alphabetically.
+/// A third spec without `completed` falls back to its `updated` date.
+#[test]
+fn index_orders_same_day_done_by_completion_time() {
+    let dir = tempfile::tempdir().unwrap();
+    bin()
+        .args([
+            "init",
+            "--artifact-language",
+            "en",
+            "--target",
+            dir.path().to_str().unwrap(),
+        ])
+        .write_stdin("")
+        .assert()
+        .success();
+
+    let done = dir.path().join(".mochiflow/specs/_done");
+    let write_done = |slug: &str, completed: Option<&str>, updated: &str| {
+        let d = done.join(slug);
+        fs::create_dir_all(&d).unwrap();
+        let mut yaml = format!(
+            "version: 1\nslug: {slug}\ntitle: {slug} title\ntype: feature\nsurfaces:\n  - cli\nintegration: none\nrisk: standard\nstatus: done\nupdated: {updated}\n"
+        );
+        if let Some(c) = completed {
+            yaml.push_str(&format!("completed: {c}\n"));
+        }
+        fs::write(d.join("spec.yaml"), yaml).unwrap();
+        fs::write(d.join("spec.md"), format!("# {slug} title\n")).unwrap();
+    };
+    // Same day 2026-03-15: aaa completed early, zzz completed late.
+    write_done("aaa-early", Some("2026-03-15T08:00:00Z"), "2026-03-15");
+    write_done("zzz-late", Some("2026-03-15T20:00:00Z"), "2026-03-15");
+    // Legacy spec without completed (same day) → falls back to updated date.
+    write_done("mmm-legacy", None, "2026-03-15");
+
+    let config = dir.path().join(".mochiflow/config.toml");
+    bin()
+        .args(["--config", config.to_str().unwrap(), "index"])
+        .assert()
+        .success();
+
+    let index = fs::read_to_string(dir.path().join(".mochiflow/INDEX.md")).unwrap();
+    let pos = |slug: &str| index.find(slug).unwrap_or_else(|| panic!("{slug} missing:\n{index}"));
+    assert!(
+        pos("zzz-late") < pos("aaa-early"),
+        "later completion must lead the day:\n{index}"
+    );
+    // All three grouped under the same month heading.
+    assert_eq!(count_occurrences(&index, "### 2026-03"), 1, "{index}");
+    // Display column shows the date, not the full timestamp.
+    assert!(index.contains("| 2026-03-15 |"), "{index}");
+    assert!(!index.contains("2026-03-15T20:00:00Z"), "{index}");
+
+    // index --check is deterministic (clean immediately after generation).
+    bin()
+        .args(["--config", config.to_str().unwrap(), "index", "--check"])
+        .assert()
+        .success();
 }
