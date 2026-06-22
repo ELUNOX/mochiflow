@@ -101,9 +101,22 @@ Canonical result values are exact tokens:
 - `FAIL` — failing result; not done-eligible.
 - `PENDING_HUMAN` — provisional build-time result for human/visual QA that has
   not been performed yet; not done-eligible.
+- `UNVERIFIED` — provisional build-time result for an automated/AI-observed AC
+  row not yet verified; not done-eligible. Resolve to `PASS` / `FAIL` /
+  `対象外（<reason>）` before `done`.
 
-`done` is an acceptance state, not a human approval. `ship` sets `status: done`
-mechanically once all of these conditions hold:
+The done-eligible tokens are exactly `PASS`, `人間確認済み`, and `対象外（<reason>）`.
+`PENDING_HUMAN` and `UNVERIFIED` are provisional build-time placeholders only.
+`N/A: <reason>` is the ASCII-input equivalent of `対象外（<reason>）` and is
+accepted by `lint`; prefer the canonical `対象外（<reason>）` token in authored
+artifacts. These provisional/ASCII forms are matrix-cell working values only —
+do not introduce them into templates, the AC heading prose, or stable-identifier
+lists in `reference/language.md`.
+
+`done` is an acceptance state, not a human approval. There is no CLI transition
+command: `ship` edits `spec.yaml` `status: done` (and `updated`) directly once
+all of these conditions hold, then re-runs `lint` to confirm — no approval word
+is involved:
 
 1. the AC Verification Matrix is present and complete — every spec AC appears as a row;
 2. every row has a done-eligible result token (`PASS`, `人間確認済み`, or `対象外（<reason>）`);
@@ -111,9 +124,9 @@ mechanically once all of these conditions hold:
    `risk.md ## Consequences`; referenced here, not redefined).
 
 For `status: done`, `lint` enforces matrix presence, AC↔task coverage, and final
-result tokens; `PENDING_HUMAN`, `FAIL`, empty cells, and unknown/free-text
-results fail. It also warns on `[NEEDS-CLARIFICATION]` and AC lines missing an
-EARS keyword (resolve before `approved`).
+result tokens; `PENDING_HUMAN`, `UNVERIFIED`, `FAIL`, empty cells, and
+unknown/free-text results fail. It also warns on `[NEEDS-CLARIFICATION]` and AC
+lines missing an EARS keyword (resolve before `approved`).
 
 `build` never sets `done`.
 

@@ -81,7 +81,7 @@ archived spec per `commands/ship.md ## PR Feedback Loop`, run the change through
 | --- | --- | --- |
 | discuss | inline | `commands/discuss.md` |
 | plan | inline | `commands/plan.md` |
-| build | main agent implements / verifies / commits inline; review uses independent-reviewer transport | `commands/build.md` |
+| build | main agent confirms eligibility (`mochiflow ready {slug}`), implements / verifies / commits inline; review uses independent-reviewer transport | `commands/build.md` |
 | ship | inline; through acceptance → close-out → PR → post-merge cleanup | `commands/ship.md` |
 | patch (non-phase) | inline; no spec artifacts; edit / verify / optional commit; escalate to plan when ineligible | `commands/patch.md` |
 | review (non-phase) | inline trigger; read-only review uses independent-reviewer transport; no state transition | `commands/review.md` |

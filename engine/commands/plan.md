@@ -71,8 +71,8 @@ and drive to human approval for implementation. Do not start implementation.
    command matters.
 8. Present readiness in conversation-language plain wording: what will change, what
    was checked, and what approval is needed to start implementation. On an
-   approval word (`reference/workflow.md ## Human gates`), update `status:
-   approved`.
+   approval word (`reference/workflow.md ## Human gates`), edit `spec.yaml`
+   `status: approved` and `updated` directly (there is no CLI transition command).
 9. Re-run `mochiflow lint --spec {slug}` after setting `status: approved`; fix any FAIL before ending plan.
 10. After the approved consistency check passes, present the next action as a
    handoff card: recommend a new session and include a copy-paste prompt rendered

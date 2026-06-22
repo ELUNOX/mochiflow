@@ -22,6 +22,23 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `--conversation-language`; the old `--language` flag has been removed.
 - Engine language policy now treats engine docs/templates as English source and
   rendered durable artifacts as artifact-language output.
+- Build now confirms eligibility through `mochiflow ready {slug}` (lint + approved
+  status + runnable verification) instead of an ad-hoc manual `spec.yaml` read.
+- Documented the provisional build-time AC Matrix tokens `UNVERIFIED` (automated
+  AC not yet verified) and the `N/A: <reason>` ASCII equivalent of
+  `対象外（<reason>）`, clarifying that only `PASS` / `人間確認済み` /
+  `対象外（<reason>）` are done-eligible.
+- Clarified that `status` transitions (`approved`, `done`) are direct `spec.yaml`
+  edits validated by `lint`, not a CLI transition command ("mechanically" wording
+  removed).
+- Spec archival in the ship close-out commit now specifies `git mv` so the rename
+  stages as a paired delete + add.
+
+### Fixed
+
+- Onboarding default config no longer ships an unreachable `pr_command` alongside
+  `provider`; `provider = "none"` keeps manual PR handoff as the first-class
+  default per the engine git policy.
 
 ### Deprecated
 
