@@ -42,8 +42,9 @@ cargo deny --manifest-path cli/Cargo.toml check --config cli/deny.toml
   エンジンのドキュメントは **英語** で書き、プロジェクト固有値を含めません。固有値は
   `config.toml` に置きます。
 - **生成される `MANIFEST.json`** — エンジンファイルを編集したら
-  `mochiflow engine manifest` で manifest を再生成します（手編集せず、生成される
-  ハッシュマップ）。
+  `mochiflow freeze` で派生ファイルを再生成します（`engine/VERSION`・
+  `engine/MANIFEST.json`・`contracts/contracts.lock` をワークスペースバージョンから
+  更新）。
 - **ベンダリングされたエンジンの複製（編集禁止）** — `.mochiflow/engine/` は dogfood 実行が
   使う gitignore 済みのインストールスナップショットです。リポジトリルートの `engine/` から
   `mochiflow upgrade` で同期され、**ソースではありません**。
@@ -58,8 +59,8 @@ cargo deny --manifest-path cli/Cargo.toml check --config cli/deny.toml
 契約面は `contracts/contracts.lock` で凍結されています。変更がスキーマ
 （`contracts/*.json`）やその他のロック対象ファイルに触れる場合、**同一コミット内**で:
 
-1. `contracts.lock` を再生成し、
-2. `engine/VERSION` を更新する
+1. `cli/Cargo.toml` の `[workspace.package].version` を更新し、
+2. `mochiflow freeze` を実行する
 
 必要があります。これによりバージョンゲートが正直に保たれます（スキーマ変更が無断で
 バージョン未管理になることがない）。`config.toml` の `schema_version` は消費者向け
