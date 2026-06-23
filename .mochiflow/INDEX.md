@@ -1,21 +1,20 @@
 # 📋 Spec Dashboard
 
-> updated: 2026-06-23 05:15 UTC
+> updated: 2026-06-23 05:33 UTC
 
 ## Pipeline
 
 | stage | count |
 |:------|------:|
-| 🌱 backlog seed | 13 |
+| 🌱 backlog seed | 12 |
 | 📝 draft | 0 |
 | 🟢 approved | 0 |
-| ✅ done | 1 |
+| ✅ done | 2 |
 
 ## Backlog seeds
 
 | Slug | Title | Maturity | Source |
 |:-----|:------|:---------|:-------|
-| ["build-completion-guidance"](specs/_backlog/"build-completion-guidance".md) | "Build phase should announce next step on completion" | ❓ "seed" | "conversation" |
 | ["commit-lifecycle-unification"](specs/_backlog/"commit-lifecycle-unification".md) | "Unify commit timing across discuss/plan/build/ship on a single branch" | ❓ "seed" | "conversation" |
 | ["commit-trailer-traceability"](specs/_backlog/"commit-trailer-traceability".md) | "Add git trailers for spec/task traceability and AI log reading recipes" | ❓ "seed" | "conversation" |
 | ["develop-branch-workflow"](specs/_backlog/"develop-branch-workflow".md) | "Introduce develop branch to reduce PR ceremony for non-code changes" | ❓ "seed" | "conversation" |
@@ -39,6 +38,7 @@
 
 | Updated | Slug | Title | Type |
 |:--------|:-----|:------|:-----|
+| 2026-06-23 | [build-completion-guidance](specs/_done/build-completion-guidance/) | Build phase should announce next step on completion | docs |
 | 2026-06-22 | [version-ssot-freeze](specs/_done/version-ssot-freeze/) | Version SSOT + freeze command | refactor |
 
-> done total: 1
+> done total: 2
