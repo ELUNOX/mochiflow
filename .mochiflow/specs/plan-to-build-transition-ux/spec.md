@@ -37,9 +37,9 @@ elevated/critical specs) helps users make informed choices.
 
 | AC | Scope | Verification method | Planned test/QA | Implementation | Result | Evidence | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| AC-01 | cli | manual | review plan.md step 10 text | `engine/commands/plan.md` | UNVERIFIED | | |
-| AC-02 | cli | manual | review plan.md step 10 risk condition | `engine/commands/plan.md` | UNVERIFIED | | |
-| AC-03 | cli | manual | review plan.md step 10 review flow | `engine/commands/plan.md` | UNVERIFIED | | |
-| AC-04 | cli | manual | review plan.md step 10 build path | `engine/commands/plan.md` | UNVERIFIED | | |
-| AC-05 | cli | manual | review plan.md step 10 later path | `engine/commands/plan.md` | UNVERIFIED | | |
-| AC-06 | cli | manual | review plan.md step 10 language handling | `engine/commands/plan.md` | UNVERIFIED | | |
+| AC-01 | cli | manual | review plan.md step 10 text | `engine/commands/plan.md` | PASS | step 10 presents review/build/later | |
+| AC-02 | cli | manual | review plan.md step 10 risk condition | `engine/commands/plan.md` | PASS | risk >= elevated orders review first with recommended marker | |
+| AC-03 | cli | manual | review plan.md step 10 review flow | `engine/commands/plan.md` | PASS | review triggers mochiflow-review; pass re-presents build/later; fail stops | |
+| AC-04 | cli | manual | review plan.md step 10 build path | `engine/commands/plan.md` | PASS | build proceeds to mochiflow-build | |
+| AC-05 | cli | manual | review plan.md step 10 later path | `engine/commands/plan.md` | PASS | later outputs handoff template and stops | |
+| AC-06 | cli | manual | review plan.md step 10 language handling | `engine/commands/plan.md` | PASS | keywords are stable identifiers; labels follow conversation language | |

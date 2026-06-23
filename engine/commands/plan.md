@@ -85,13 +85,23 @@ and drive to human approval for implementation. Do not start implementation.
    `spec.yaml`, `pitch.md` if it was corrected, `spec.md`, and conditional
    `design.md` / `tasks.md`.
 10. After the approved consistency check passes and the plan commit is created,
-   present the next action as a
-   handoff card: recommend a new session and include a copy-paste prompt rendered
-   from `templates/handoff/build-session-prompt.md`. The handoff prompt must
-   include `{slug}` and `{specs_dir}/{slug}/` because the new session has no
-   conversation state. Also offer an explicit same-session continuation phrase
-   in the conversation language, without the slug (for example, "continue with
-   implementation" / "このまま実装して").
+    present a next-step choice card in conversation language. Choice keywords
+    (`review`, `build`, `later`) are stable identifiers; surrounding labels
+    follow the conversation language.
+
+    Display order depends on risk:
+    - When `risk >= elevated`: review (with a recommended marker) / build / later.
+    - When `risk = standard`: build / review / later.
+
+    Behavior per choice:
+    - **review** — run `mochiflow-review` (spec/design quality review, not code
+      review) on the current spec. On `pass` / `pass-with-comments`, re-present
+      build / later only. On `fail`, report findings and stop; the user decides
+      whether to fix and re-review or proceed.
+    - **build** — proceed to `mochiflow-build` in the same session.
+    - **later** — output a copy-paste handoff prompt rendered from
+      `templates/handoff/build-session-prompt.md` (must include `{slug}` and
+      `{specs_dir}/{slug}/`) and stop.
 
 ## Stop conditions
 
@@ -103,7 +113,7 @@ and drive to human approval for implementation. Do not start implementation.
 - Do not ask for implementation approval until `mochiflow lint --spec {slug}` passes on the draft spec.
 - Do not set `status: approved` without an approval word.
 - Do not touch implementation code / build / PR / archive.
-- Continue to `mochiflow-build` in the same session only when the user explicitly
-  asks in the active spec context; do not require or suggest a slug for that
-  same-session phrase. Otherwise guide `{slug} build` in a separate session with
-  the handoff prompt and stop.
+- Continue to `mochiflow-build` in the same session only when the user chooses
+  `build` from the step-10 choice card; do not require or suggest a slug for
+  that same-session phrase. `later` outputs the handoff prompt and stops.
+  `review` runs ad-hoc review and, on pass, re-presents build / later.

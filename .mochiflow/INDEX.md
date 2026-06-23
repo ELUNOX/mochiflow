@@ -1,14 +1,14 @@
 # 📋 Spec Dashboard
 
-> updated: 2026-06-23 21:09 UTC
+> updated: 2026-06-23 21:47 UTC
 
 ## Pipeline
 
 | stage | count |
 |:------|------:|
-| 🌱 backlog seed | 11 |
+| 🌱 backlog seed | 10 |
 | 📝 draft | 0 |
-| 🟢 approved | 0 |
+| 🟢 approved | 1 |
 | ✅ done | 4 |
 
 ## Backlog seeds
@@ -22,14 +22,15 @@
 | ["frozen-surface-ssot"](specs/_backlog/"frozen-surface-ssot".md) | "Single source for frozen-surface input set definition and test performance" | ❓ "seed" | "conversation" |
 | ["lint-residue-and-multiline-ears"](specs/_backlog/"lint-residue-and-multiline-ears".md) | "Lint: detect template residue and multi-line EARS ACs" | ❓ "seed" | "conversation" |
 | ["parallel-spec-context-switch"](specs/_backlog/"parallel-spec-context-switch".md) | "Support parallel spec work with explicit context switching" | ❓ "seed" | "conversation" |
-| ["plan-to-build-transition-ux"](specs/_backlog/"plan-to-build-transition-ux".md) | "Present next-step choices after plan approval" | ❓ "seed" | "conversation" |
 | ["prevent-build-phase-spec-mutation"](specs/_backlog/"prevent-build-phase-spec-mutation".md) | "Prevent tasks.md structural mutation during build phase" | ❓ "seed" | "conversation" |
 | ["router-standing-load-weight"](specs/_backlog/"router-standing-load-weight".md) | "Reduce router/verb standing-load weight in CLI sessions" | ❓ "seed" | "conversation" |
 | ["ship-qa-experience"](specs/_backlog/"ship-qa-experience".md) | "Ship QA experience: rework loop, result collection, PR testing section" | ❓ "seed" | "conversation" |
 
 ## Active specs
 
-（なし）
+| Spec | Status | Risk | Docs | Module |
+|:-----|:-------|:-----|:-----|:-------|
+| [plan-to-build-transition-ux](specs/plan-to-build-transition-ux/) | 🟢 approved | standard | spec | — |
 
 ## Done (chronological)
 
