@@ -71,6 +71,24 @@ Implement the approved spec and produce verification and the AC Verification Mat
   passed, or human confirmation items remain), and (2) explicit next-step
   guidance directing the user to `mochiflow-ship`.
 
+## Resume from new session
+
+When build resumes in a new session (no prior conversation state):
+
+1. Read `tasks.md` checkboxes to identify completed (`- [x]`) and open (`- [ ]`)
+   tasks.
+2. Cross-check with git history:
+   ```bash
+   git log --grep="Spec: {slug}" \
+     --format="%s | %(trailers:key=Task,valueonly)"
+   ```
+3. If trailers and checkboxes agree, resume from the first unchecked task.
+4. If they disagree (a checked task lacks a matching `Task:` trailer in any
+   commit, or a `Task:` trailer exists for an unchecked task), **stop and
+   reconcile** before editing source files — read the relevant commits and
+   `tasks.md` to determine the true state, fix `tasks.md` checkboxes to match
+   reality, then resume.
+
 ## Stop conditions
 
 - Do not implement when `status` is not `approved` or `spec.yaml` is missing (a non-zero `mochiflow ready {slug}` exit signals this).
