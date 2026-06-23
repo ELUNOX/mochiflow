@@ -97,6 +97,14 @@ develop ─────────────── daily integration (base_br
 - `docs/**` (documentation)
 - Typo fixes in markdown
 
+### CI strategy
+
+| Trigger | CI | Rationale |
+|---------|-----|-----------|
+| PR (→ develop or main) | Full (test + fmt + clippy + freeze --check + cargo-deny) | Quality gate |
+| push to develop (direct) | None | Lightweight; breakage caught by next PR's CI |
+| push to main (release PR merge) | Full (via PR trigger) | Release gate |
+
 ### What requires a PR to develop
 
 - `cli/**` (Rust code)
@@ -116,9 +124,10 @@ develop ─────────────── daily integration (base_br
 ## Decisions (tentative)
 
 - `[git].base_branch` = `"develop"` in config.
-- CI triggers on both `push: [main, develop]` and `pull_request`.
-- Feature branches cut from develop, merge into develop.
-- Direct push to develop allowed for docs/specs only.
+- Feature branches cut from develop, merge into develop via PR (full CI).
+- Direct push to develop is allowed (not blocked by branch protection) but PR is the default path.
+- **develop push triggers NO CI** — keep it lightweight. Quality gate is on PRs only.
+- PR to develop or main triggers full CI (test + fmt + clippy + freeze --check + cargo-deny).
 - main remains protected (PR + CI required).
 - Release is a develop → main PR followed by a tag.
 - No change to `mochiflow pr` CLI code (reads config dynamically).
