@@ -15,12 +15,12 @@ Please run `{slug} build`.
 Follow this project's agent instructions and the MochiFlow router.
 Target spec: `{specs_dir}/{slug}/`
 
-Start by reading `spec.yaml`, `spec.md`, and any `design.md` / `tasks.md` files
-that exist. Confirm `status: approved`, then implement the spec, run the
-required verification, and record the acceptance-check results in the spec
-artifacts.
+Start by reading `spec.yaml`, `pitch.md`, `spec.md`, and any `design.md` /
+`tasks.md` files that exist. Confirm `status: approved`, then implement the
+spec, run the required verification, and record the acceptance-check results in
+the spec artifacts.
 ```
 
 For non-English artifact languages, translate only the prose. Keep `{slug}`,
-`{specs_dir}/{slug}/`, `build`, `spec.yaml`, `spec.md`, `design.md`, `tasks.md`,
-and `status: approved` unchanged.
+`{specs_dir}/{slug}/`, `build`, `spec.yaml`, `pitch.md`, `spec.md`, `design.md`,
+`tasks.md`, and `status: approved` unchanged.

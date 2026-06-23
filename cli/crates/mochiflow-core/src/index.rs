@@ -45,7 +45,6 @@ fn status_emoji(status: &str) -> &str {
         "approved" => "🟢",
         "done" => "✅",
         "seed" => "🌱",
-        "ready-for-plan" => "📥",
         _ => "❓",
     }
 }

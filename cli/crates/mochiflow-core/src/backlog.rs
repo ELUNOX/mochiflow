@@ -98,7 +98,8 @@ pub fn validate_seed(cfg: &Config, slug: &str) -> i32 {
 }
 
 /// Pure validation core: returns a list of failure messages (empty when valid).
-/// Checks maturity value, maturity-specific frontmatter, and required headings.
+/// Checks maturity value and required headings. Backlog files are raw seeds
+/// only; ready-for-plan handoffs were replaced by spec `pitch.md`.
 fn validate_seed_text(text: &str) -> Vec<String> {
     let mut failures: Vec<String> = Vec::new();
     let fields = parse_frontmatter(text);
@@ -118,35 +119,8 @@ fn validate_seed_text(text: &str) -> Vec<String> {
                 }
             }
         }
-        "ready-for-plan" => {
-            for (key, expected) in [("source", "conversation"), ("source_phase", "discuss")] {
-                match fields.get(key) {
-                    Some(v) if v == expected => {}
-                    Some(v) => failures.push(format!(
-                        "ready-for-plan handoff has {key}={v}, expected {expected}"
-                    )),
-                    None => failures.push(format!("ready-for-plan handoff is missing {key}")),
-                }
-            }
-            for required in [
-                "## Decision Summary",
-                "## Decisions",
-                "## Assumptions",
-                "## Open Questions",
-                "## Change Impact",
-                "## Evidence",
-            ] {
-                if !headings.iter().any(|h| h == required) {
-                    failures.push(format!(
-                        "ready-for-plan handoff is missing required heading {required}"
-                    ));
-                }
-            }
-        }
         "" => failures.push("frontmatter is missing maturity".to_string()),
-        other => failures.push(format!(
-            "maturity must be one of: seed, ready-for-plan (got {other})"
-        )),
+        other => failures.push(format!("maturity must be seed (got {other})")),
     }
 
     for required in ["slug", "title", "created", "updated"] {
@@ -209,31 +183,9 @@ updated: \"2026-06-21\"\n\
 ## Evidence\n\n- x\n\n\
 ## Open Questions\n\n- x\n";
 
-    const VALID_HANDOFF: &str = "---\n\
-slug: \"foo\"\n\
-title: \"Foo\"\n\
-maturity: \"ready-for-plan\"\n\
-source: \"conversation\"\n\
-source_phase: \"discuss\"\n\
-created: \"2026-06-21\"\n\
-updated: \"2026-06-21\"\n\
----\n\n\
-# Foo\n\n\
-## Decision Summary\n\nx\n\n\
-## Decisions\n\n- x\n\n\
-## Assumptions\n\n- x\n\n\
-## Open Questions\n\n- x\n\n\
-## Change Impact\n\n- x\n\n\
-## Evidence\n\n- x\n";
-
     #[test]
     fn valid_seed_passes() {
         assert!(validate_seed_text(VALID_SEED).is_empty());
-    }
-
-    #[test]
-    fn valid_ready_for_plan_handoff_passes() {
-        assert!(validate_seed_text(VALID_HANDOFF).is_empty());
     }
 
     #[test]
@@ -241,9 +193,7 @@ updated: \"2026-06-21\"\n\
         let text = VALID_SEED.replace("maturity: \"seed\"", "maturity: \"triaged\"");
         let failures = validate_seed_text(&text);
         assert!(
-            failures
-                .iter()
-                .any(|f| f.contains("maturity must be one of")),
+            failures.iter().any(|f| f.contains("maturity must be seed")),
             "{failures:?}"
         );
     }
@@ -259,11 +209,11 @@ updated: \"2026-06-21\"\n\
     }
 
     #[test]
-    fn handoff_missing_source_phase_fails() {
-        let text = VALID_HANDOFF.replace("source_phase: \"discuss\"\n", "");
+    fn ready_for_plan_handoff_fails() {
+        let text = VALID_SEED.replace("maturity: \"seed\"", "maturity: \"ready-for-plan\"");
         let failures = validate_seed_text(&text);
         assert!(
-            failures.iter().any(|f| f.contains("missing source_phase")),
+            failures.iter().any(|f| f.contains("maturity must be seed")),
             "{failures:?}"
         );
     }
@@ -276,18 +226,6 @@ updated: \"2026-06-21\"\n\
             failures
                 .iter()
                 .any(|f| f.contains("missing required heading ## Signal")),
-            "{failures:?}"
-        );
-    }
-
-    #[test]
-    fn handoff_wrong_source_fails() {
-        let text = VALID_HANDOFF.replace("source: \"conversation\"", "source: \"seed\"");
-        let failures = validate_seed_text(&text);
-        assert!(
-            failures
-                .iter()
-                .any(|f| f.contains("source=seed, expected conversation")),
             "{failures:?}"
         );
     }

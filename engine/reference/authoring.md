@@ -56,7 +56,7 @@ post-merge per `reference/git.md ## Post-merge local cleanup`).
 
 | class | artifacts | home | archived |
 | --- | --- | --- | --- |
-| durable | `spec.yaml` · `spec.md` (incl. AC Verification Matrix) · `design.md` · `tasks.md` | `{specs_dir}/{slug}/` → `_done/` | yes |
+| durable | `spec.yaml` · `pitch.md` · `spec.md` (incl. AC Verification Matrix) · `design.md` · `tasks.md` | `{specs_dir}/{slug}/` → `_done/` | yes |
 | ephemeral | PR body file (`pr-body.md`) · `pr-request.json` (pr_driver only) · `qa-instructions.md` | `{install_dir}/state/{slug}/` | no |
 
 Ephemeral artifacts are regenerable from the durable spec; their durable record
@@ -69,6 +69,22 @@ QA role split: `spec.md` QA scenarios are the source of truth for *what* to test
 capture evidence; the **AC Verification Matrix** is the results ledger (result +
 evidence pointers). The human follows `qa-instructions.md` during ship and never
 reads the AC Matrix as an instruction sheet.
+
+## pitch.md
+
+Discuss writes `pitch.md` as the first durable artifact, before plan expands the
+work into `spec.md`. It carries the agreed problem and solution shape:
+
+- Problem
+- Appetite
+- Solution
+- Rabbit Holes
+- No-gos
+- Alternatives Considered
+- Open Questions
+
+No frontmatter; metadata lives in `spec.yaml`. Plan reads `pitch.md` and absorbs
+the relevant rationale into `spec.md ## Background and Design Rationale`.
 
 ## spec.md
 

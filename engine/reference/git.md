@@ -13,17 +13,19 @@ mechanics and the living-spec fold.
   - all other types (`fix`, `refactor`, `docs`, `chore`) → used as-is
 - If the current branch is already `{branch}`, do not switch.
 - "Unrelated changes" is precise: any uncommitted change **other than this
-  spec's own `{specs_dir}/{slug}/**`**. The spec files just authored by `plan`
-  are *related* and expected to be present at build start — they never block.
+  spec's own `{specs_dir}/{slug}/**`**. During discuss, the matching raw seed
+  deletion at `{specs_dir}/_backlog/{slug}.md` is also related because seed
+  promotion is committed atomically. The spec files just authored by discuss /
+  plan are related and expected to be present before the phase commit — they
+  never block their own phase.
   Exception: only when returning from `ship.md ## PR Feedback Loop`, the restore
   from the archived shipped spec is also related, so the allowed dirty paths are
   exactly `{specs_dir}/{slug}/**` and `{specs_dir}/_done/{slug}/**`. Other slugs
   under `_done/`, other specs, source changes, and `state/` files remain
   unrelated dirt. Any other dirt → stop instead of switching.
-- Create from `origin/{[git].base_branch}` when the branch does not exist.
-  Create the branch first and let `git switch -c` carry the uncommitted
-  `{specs_dir}/{slug}/**` onto it (a fresh branch has no conflict; no stash
-  needed), so the base branch HEAD is never dirtied by the spec scaffold.
+- Discuss creates `{branch}` from `origin/{[git].base_branch}` when agreement is
+  reached. Plan/build/ship use the existing branch; build must error-stop if it
+  cannot find or switch to `{branch}`.
 - Trivial `risk: standard` changes MAY use the current branch with no new branch
   and no PR only when the user explicitly opts in (no-PR fast path). Default is
   a feature branch + PR. no-PR skips PR creation and the approve-PR gate, but it
@@ -123,6 +125,19 @@ follow-up before build completes.
 - `state/` is gitignored; never `git add -f` it. The vendored engine under the
   install dir is tracked by default.
 - Do not stage `.env`, `.env.*`, or credential files; warn if encountered.
+
+### Spec-lane lifecycle commits
+
+| phase | branch action | commit content |
+| --- | --- | --- |
+| discuss | create/switch `{prefix}/{slug}` from `origin/{base_branch}` | `spec.yaml (draft)`, `pitch.md`, optional `_backlog/{slug}.md` deletion |
+| plan | use existing `{prefix}/{slug}` | `spec.yaml (approved)`, `spec.md`, optional `design.md` / `tasks.md`, optional corrected `pitch.md` |
+| build | verify/switch existing `{prefix}/{slug}`; never create it | implementation, tests, task checkbox updates, AC Matrix updates |
+| ship | use existing `{prefix}/{slug}` | close-out commit: `status: done`, final AC Matrix, ADR fold, `_done/` move, regenerated index |
+
+Discuss and plan use `docs(spec): ...` commit subjects plus the required
+`Spec: {slug}` trailer. Build uses the spec's Conventional Commit type and
+`Task:` trailers when tasks complete. Ship follows `### Ship close-out commit`.
 
 ### Patch commit
 

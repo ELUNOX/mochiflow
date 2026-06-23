@@ -5,9 +5,8 @@ description: |
   mochiflow's discuss phase. Investigate code, organize design decisions through
   interactive interview, and reach an agreed why/what. Activate on the explicit
   command `mochiflow-discuss`, or natural phrasing like "ブレストして" / "壁打ちして"
-  / "相談したい". Writes no spec documents or implementation code; the agreed
-  decisions are persisted as a ready-for-plan handoff under `_backlog/` and
-  captured into spec.md by plan.
+  / "相談したい". Writes the agreed pitch as the first durable spec artifact,
+  creates the spec branch, and commits `spec.yaml (draft)` + `pitch.md`.
 triggers:
   - mochiflow-discuss
   - ブレストして
@@ -16,21 +15,24 @@ triggers:
 trigger_patterns:
   - "{slug} discuss"
 artifacts:
-  - "{specs_dir}/_backlog/{slug}.md (maturity: ready-for-plan handoff)"
+  - "{specs_dir}/{slug}/spec.yaml (status: draft)"
+  - "{specs_dir}/{slug}/pitch.md"
 prerequisites: []
 execution: inline
 allowed_writes:
+  - "{specs_dir}/{slug}/**"
   - "{specs_dir}/_backlog/{slug}.md"
 forbidden_writes:
-  - "{specs_dir}/{slug}/**"
   - "{specs_dir}/_done/**"
   - "{write.allow}"
   - .git/**
 references:
   - reference/workflow.md
+  - reference/git.md
   - reference/language.md
   - reference/engineering-standards.md
-  - templates/backlog/discuss-handoff.md
+  - templates/spec/pitch.md
+  - templates/spec/spec.yaml
 ---
 
 # spec-discuss
@@ -38,8 +40,8 @@ references:
 ## Purpose
 
 Reach agreement on the why / what / key design decisions through investigation
-and discussion. Write no spec documents and no implementation code; persist only
-the ready-for-plan handoff in `_backlog/{slug}.md`.
+and discussion. Create the feature branch and persist the durable discuss output
+as `spec.yaml (draft)` + `pitch.md`. Do not write implementation code.
 
 ## Procedure
 
@@ -48,14 +50,22 @@ the ready-for-plan handoff in `_backlog/{slug}.md`.
 3. Organize the UI / data model / API / migration / error handling / testing decision tree internally and resolve it dependency-first.
 4. One question at a time, each with a recommended answer, rationale, why the main alternatives are rejected, and impact.
 5. Ask for specifics when answers are vague ("make it nice", "your call").
-6. When every branch is resolved, write or update `{specs_dir}/_backlog/{slug}.md`
-   from `templates/backlog/discuss-handoff.md` with `maturity: ready-for-plan`,
-   `source: conversation`, and `source_phase: discuss`. Required frontmatter:
-   `slug`, `title`, `maturity`, `source`, `source_phase`, `created`, `updated`;
-   keep optional `surface`, `type_hint`, and `module` when known. Required body
-   headings: `## Decision Summary`, `## Decisions`, `## Assumptions`,
-   `## Open Questions`, `## Change Impact`, and `## Evidence`.
-7. Present the agreement in the conversation language
+6. When every branch is resolved, create `{specs_dir}/{slug}/spec.yaml` with a
+   lint-valid `draft` metadata set (`version`, `slug`, `title`, `type`,
+   `surfaces`, `integration`, `risk`, `status`, `created`, `updated`). Resolve
+   `type` conservatively from the agreed change because it determines the branch
+   prefix (`reference/git.md ## Branch`). Write `{specs_dir}/{slug}/pitch.md`
+   from `templates/spec/pitch.md` with the agreed Problem, Appetite, Solution,
+   Rabbit Holes, No-gos, Alternatives Considered, and Open Questions.
+7. Prepare the branch per `reference/git.md ## Branch`: create/switch to
+   `{prefix}/{slug}` from `origin/{[git].base_branch}` before committing. If a
+   raw seed exists at `{specs_dir}/_backlog/{slug}.md`, delete it in the same
+   change so seed promotion is atomic. Run `mochiflow lint --spec {slug}`; fix
+   any FAIL before committing.
+8. Commit the discuss artifacts with a `docs(spec): ...` Conventional Commit and
+   `Spec: {slug}` trailer. Stage only `spec.yaml`, `pitch.md`, and the seed
+   deletion when present.
+9. Present the agreement in the conversation language
    using plain labels for purpose / background / scope / decisions / assumptions
    / open questions / change impact. Internally this is the Decision summary;
    do not lead with internal headings. Guide the user toward creating the plan,
@@ -65,7 +75,7 @@ the ready-for-plan handoff in `_backlog/{slug}.md`.
 
 - Do not move to the next branch while scope is undefined, contradictory, or unjustified.
 - Do not proceed to `mochiflow-plan` with Open Questions unresolved (carrying them into plan as `[NEEDS-CLARIFICATION]` is allowed; resolve before `approved`).
-- Do not delete a backlog seed in discuss alone (deletion happens in plan).
+- Do not commit until pitch-only `mochiflow lint --spec {slug}` passes.
 - Keep scratch notes in the conversation only; persist the final agreement in
-  `_backlog/{slug}.md`. Do not create or update spec files.
-- Do not touch implementation code / branch / PR.
+  `pitch.md`. Do not create `spec.md`, `design.md`, `tasks.md`, implementation
+  code, PR metadata, fold, or archive artifacts.
