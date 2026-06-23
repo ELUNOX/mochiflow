@@ -6,6 +6,7 @@ surfaces:
   - cli
 integration: workflow
 risk: elevated
-status: approved
+status: done
 created: "2026-06-22"
 updated: "2026-06-23"
+completed: "2026-06-23T21:00:30Z"

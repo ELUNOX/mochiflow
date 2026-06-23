@@ -1,6 +1,6 @@
 # 📋 Spec Dashboard
 
-> updated: 2026-06-23 20:57 UTC
+> updated: 2026-06-23 21:09 UTC
 
 ## Pipeline
 
@@ -8,8 +8,8 @@
 |:------|------:|
 | 🌱 backlog seed | 11 |
 | 📝 draft | 0 |
-| 🟢 approved | 1 |
-| ✅ done | 3 |
+| 🟢 approved | 0 |
+| ✅ done | 4 |
 
 ## Backlog seeds
 
@@ -29,9 +29,7 @@
 
 ## Active specs
 
-| Spec | Status | Risk | Docs | Module |
-|:-----|:-------|:-----|:-----|:-------|
-| [commit-lifecycle-unification](specs/commit-lifecycle-unification/) | 🟢 approved | elevated | spec+design+tasks | — |
+（なし）
 
 ## Done (chronological)
 
@@ -39,8 +37,9 @@
 
 | Updated | Slug | Title | Type |
 |:--------|:-----|:------|:-----|
+| 2026-06-23 | [commit-lifecycle-unification](specs/_done/commit-lifecycle-unification/) | Unify commit timing across discuss/plan/build/ship on a single branch | refactor |
 | 2026-06-23 | [commit-trailer-traceability](specs/_done/commit-trailer-traceability/) | Add git trailers for spec/task traceability and AI log reading recipes | docs |
 | 2026-06-23 | [build-completion-guidance](specs/_done/build-completion-guidance/) | Build phase should announce next step on completion | docs |
 | 2026-06-22 | [version-ssot-freeze](specs/_done/version-ssot-freeze/) | Version SSOT + freeze command | refactor |
 
-> done total: 3
+> done total: 4
