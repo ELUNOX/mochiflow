@@ -542,6 +542,7 @@ fn lint_spec_dir(
 ) -> Vec<Issue> {
     let mut issues = Vec::new();
     let spec_md = spec_dir.join("spec.md");
+    let pitch_md = spec_dir.join("pitch.md");
     let design_md = spec_dir.join("design.md");
     let tasks_md = spec_dir.join("tasks.md");
 
@@ -670,8 +671,21 @@ fn lint_spec_dir(
         _ => {}
     }
 
+    // pitch.md is the durable discuss artifact for draft specs. A pitch-only
+    // draft is valid before plan expands it into spec.md / design.md / tasks.md.
+    if meta.status() == "draft" && !pitch_md.exists() {
+        issues.push(Issue {
+            severity: "FAIL".into(),
+            path: pitch_md.clone(),
+            message: "pitch.md is required for draft status".into(),
+        });
+    }
+
     // spec.md
     if !spec_md.exists() {
+        if meta.status() == "draft" {
+            return issues;
+        }
         issues.push(Issue {
             severity: "FAIL".into(),
             path: spec_md,

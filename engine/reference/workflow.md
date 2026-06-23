@@ -12,7 +12,7 @@ discuss ──▶ plan ──▶ build ──▶ ship
 
 | state | meaning | set by |
 | --- | --- | --- |
-| `draft` | spec authored, not yet approved | plan |
+| `draft` | pitch agreed, not yet approved for implementation | discuss |
 | `approved` | human approved implementation start | delivery approval gate |
 | `done` | acceptance conditions met and accepted | ship |
 
@@ -57,9 +57,9 @@ as far as the change needs:
 | Depth | Use case | Documents | Requirements detail | Tasks |
 | --- | --- | --- | --- | --- |
 | Patch | Small concrete fix | none | none | none |
-| Micro spec | Trivial but worth recording | `spec.md` | problem / change / AC / verify | none or minimal |
-| Standard spec | Normal feature/fix | `spec.md` + `tasks.md` | AC table + QA examples | checklist |
-| Design spec | Design decision or multiple areas | `spec.md` + `design.md` + `tasks.md` | NFR / contract / examples | dependency checklist |
+| Micro spec | Trivial but worth recording | `pitch.md` + `spec.md` | problem / change / AC / verify | none or minimal |
+| Standard spec | Normal feature/fix | `pitch.md` + `spec.md` + `tasks.md` | AC table + QA examples | checklist |
+| Design spec | Design decision or multiple areas | `pitch.md` + `spec.md` + `design.md` + `tasks.md` | NFR / contract / examples | dependency checklist |
 | Critical spec | migration / security / data loss / external contract | full | traceability / rollback / observability / reviewer | per-task verification checklist |
 
 Let depth increase with risk, integration, surfaces, ambiguity, and external
@@ -178,28 +178,22 @@ needed QA scenario and evidence expectation.
 
 ## Backlog seeds
 
-`{specs_dir}/_backlog/{slug}.md` is a single-file inbox for either raw ideas or
-discuss-to-plan handoff artifacts. It is not a spec.
+`{specs_dir}/_backlog/{slug}.md` is a single-file inbox for raw ideas only. It
+is not a spec and is not a plan-ready handoff.
 
 - Raw seed: `maturity: seed`, created from `templates/backlog/seed.md`, and used
   as raw input for `discuss`. Body: `## Signal`, `## Why It Matters`,
   `## Evidence`, `## Open Questions`.
-- Ready-for-plan handoff: `maturity: ready-for-plan`, created by `discuss` from
-  `templates/backlog/discuss-handoff.md`, and used by `plan` as the durable
-  Decision summary when the conversation is not available. Body:
-  `## Decision Summary`, `## Decisions`, `## Assumptions`, `## Open Questions`,
-  `## Change Impact`, `## Evidence`.
-
 Shared frontmatter: `slug,title,maturity,source,created,updated` (+ optional
-`module,surface,type_hint,source_spec,source_phase`). A ready-for-plan handoff
-also sets `source: conversation` and `source_phase: discuss`.
+`module,surface,type_hint,source_spec,source_phase`).
 
-Lifecycle: create raw seed → `discuss` reads it as input and may update the same
-file to `maturity: ready-for-plan` when agreement is reached → `plan` creates
-`{specs_dir}/{slug}/` and deletes the seed/handoff
-(`rm {specs_dir}/_backlog/{slug}.md`), recording origin in `spec.md`.
-Interrupted discuss keeps the seed/handoff file. Do not put AC, QA, design,
-tasks, or final classification in backlog files.
+Lifecycle: create raw seed → `discuss` reads it as input → when agreement is
+reached, `discuss` creates `{specs_dir}/{slug}/spec.yaml` (`status: draft`) and
+`{specs_dir}/{slug}/pitch.md`, creates/switches to `{prefix}/{slug}`, deletes the
+raw seed when present, runs pitch-only lint, and commits the promotion. `plan`
+then reads `pitch.md` as its durable input. Interrupted discuss keeps the raw
+seed file. Do not put AC, QA, design, tasks, or final classification in backlog
+files.
 
 Legacy `_backlog/{slug}/` spec-format directories are deprecated and no longer
 rendered by tooling; they remain on disk read-only.

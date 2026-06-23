@@ -1,21 +1,21 @@
 # 📋 Spec Dashboard
 
-> updated: 2026-06-23 18:26 UTC
+> updated: 2026-06-23 20:57 UTC
 
 ## Pipeline
 
 | stage | count |
 |:------|------:|
-| 🌱 backlog seed | 10 |
+| 🌱 backlog seed | 11 |
 | 📝 draft | 0 |
-| 🟢 approved | 0 |
+| 🟢 approved | 1 |
 | ✅ done | 3 |
 
 ## Backlog seeds
 
 | Slug | Title | Maturity | Source |
 |:-----|:------|:---------|:-------|
-| ["commit-lifecycle-unification"](specs/_backlog/"commit-lifecycle-unification".md) | "Unify commit timing across discuss/plan/build/ship on a single branch" | ❓ "seed" | "conversation" |
+| ["commit-lifecycle-unification"](specs/_backlog/"commit-lifecycle-unification".md) | "Unify commit timing across discuss/plan/build/ship on a single branch" | ❓ "ready-for-plan" | "conversation" |
 | ["develop-branch-workflow"](specs/_backlog/"develop-branch-workflow".md) | "Introduce develop branch to reduce PR ceremony for non-code changes" | ❓ "seed" | "conversation" |
 | ["doctor-freeze-coherence"](specs/_backlog/"doctor-freeze-coherence".md) | "Clarify doctor vs freeze responsibilities and add context freshness check" | ❓ "seed" | "conversation" |
 | ["freeze-hardening"](specs/_backlog/"freeze-hardening".md) | "Freeze module hardening: error types, format stability, visibility" | ❓ "seed" | "conversation" |
@@ -23,12 +23,15 @@
 | ["lint-residue-and-multiline-ears"](specs/_backlog/"lint-residue-and-multiline-ears".md) | "Lint: detect template residue and multi-line EARS ACs" | ❓ "seed" | "conversation" |
 | ["parallel-spec-context-switch"](specs/_backlog/"parallel-spec-context-switch".md) | "Support parallel spec work with explicit context switching" | ❓ "seed" | "conversation" |
 | ["plan-to-build-transition-ux"](specs/_backlog/"plan-to-build-transition-ux".md) | "Present next-step choices after plan approval" | ❓ "seed" | "conversation" |
+| ["prevent-build-phase-spec-mutation"](specs/_backlog/"prevent-build-phase-spec-mutation".md) | "Prevent tasks.md structural mutation during build phase" | ❓ "seed" | "conversation" |
 | ["router-standing-load-weight"](specs/_backlog/"router-standing-load-weight".md) | "Reduce router/verb standing-load weight in CLI sessions" | ❓ "seed" | "conversation" |
 | ["ship-qa-experience"](specs/_backlog/"ship-qa-experience".md) | "Ship QA experience: rework loop, result collection, PR testing section" | ❓ "seed" | "conversation" |
 
 ## Active specs
 
-（なし）
+| Spec | Status | Risk | Docs | Module |
+|:-----|:-------|:-----|:-----|:-------|
+| [commit-lifecycle-unification](specs/commit-lifecycle-unification/) | 🟢 approved | elevated | spec+design+tasks | — |
 
 ## Done (chronological)
 

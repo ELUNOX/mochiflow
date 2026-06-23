@@ -458,7 +458,7 @@ fn router_merged_event_is_cleanup_only() {
 }
 
 #[test]
-fn router_plan_can_resolve_ready_backlog_handoff() {
+fn router_plan_requires_existing_draft_spec() {
     let router = read_repo_file("engine/router.md");
 
     assert!(
@@ -466,14 +466,13 @@ fn router_plan_can_resolve_ready_backlog_handoff() {
         "router must retain the backlog discuss exception"
     );
     assert!(
-        router.contains("Exception: `{slug} plan`")
-            && router.contains("{specs_dir}/_backlog/{slug}.md")
-            && router.contains("maturity: ready-for-plan")
-            && router.contains("plan creates the active spec directory"),
-        "router must allow plan from ready-for-plan backlog handoffs"
+        router.contains("`{slug} plan` requires an existing active spec directory")
+            && router.contains("backlog files are raw seeds, not plan-ready handoffs"),
+        "router must require an existing draft spec directory for plan"
     );
     assert!(
-        router.contains("maturity: seed") && router.contains("guide back to `{slug} discuss`"),
+        router.contains("{specs_dir}/_backlog/{slug}.md")
+            && router.contains("guide back to `{slug} discuss`"),
         "router must route raw backlog seeds back to discuss"
     );
     assert!(
@@ -609,43 +608,44 @@ fn spec_templates_require_done_eligible_matrix_results() {
 }
 
 #[test]
-fn discuss_persists_ready_for_plan_handoff() {
+fn discuss_persists_pitch_draft_spec() {
     let discuss = read_repo_file("engine/commands/discuss.md");
     let workflow = read_repo_file("engine/reference/workflow.md");
     let plan = read_repo_file("engine/commands/plan.md");
-    let handoff = read_repo_file("engine/templates/backlog/discuss-handoff.md");
+    let pitch = read_repo_file("engine/templates/spec/pitch.md");
 
     assert!(
-        discuss.contains("{specs_dir}/_backlog/{slug}.md")
-            && discuss.contains("maturity: ready-for-plan")
-            && discuss.contains("templates/backlog/discuss-handoff.md"),
-        "discuss must persist a ready-for-plan handoff under _backlog"
+        discuss.contains("{specs_dir}/{slug}/spec.yaml (status: draft)")
+            && discuss.contains("{specs_dir}/{slug}/pitch.md")
+            && discuss.contains("templates/spec/pitch.md")
+            && discuss.contains("mochiflow lint --spec {slug}")
+            && discuss.contains("docs(spec):"),
+        "discuss must persist pitch + draft spec and commit them"
     );
     assert!(
-        plan.contains("maturity: ready-for-plan")
-            && plan.contains("maturity: seed")
-            && plan.contains("{slug} discuss")
-            && plan.contains("rather than inventing decisions"),
-        "plan must distinguish agreed handoffs from raw seeds"
+        plan.contains("{specs_dir}/{slug}/pitch.md exists")
+            && plan.contains("Read `{specs_dir}/{slug}/spec.yaml`")
+            && plan.contains("`{specs_dir}/{slug}/pitch.md`")
+            && plan.contains("raw `{specs_dir}/_backlog/{slug}.md`"),
+        "plan must use pitch.md instead of ready-for-plan handoffs"
     );
     assert!(
         workflow.contains("Raw seed: `maturity: seed`")
-            && workflow.contains("Ready-for-plan handoff: `maturity: ready-for-plan`")
-            && workflow.contains("durable\n  Decision summary"),
-        "workflow must document both backlog artifact types"
+            && workflow.contains("raw ideas only")
+            && workflow.contains("{specs_dir}/{slug}/pitch.md")
+            && !workflow.contains("Ready-for-plan handoff:"),
+        "workflow must document seed-only backlog and pitch lifecycle"
     );
     for heading in [
-        "## Decision Summary",
-        "## Decisions",
-        "## Assumptions",
+        "## Problem",
+        "## Appetite",
+        "## Solution",
+        "## Rabbit Holes",
+        "## No-gos",
+        "## Alternatives Considered",
         "## Open Questions",
-        "## Change Impact",
-        "## Evidence",
     ] {
-        assert!(
-            handoff.contains(heading),
-            "handoff template missing {heading}"
-        );
+        assert!(pitch.contains(heading), "pitch template missing {heading}");
     }
 }
 
@@ -1036,6 +1036,81 @@ fn run_lint_case(
     )
 }
 
+fn run_lint_case_with_optional_files(
+    spec_yaml: &str,
+    spec_md: Option<&str>,
+    pitch_md: Option<&str>,
+    design_md: Option<&str>,
+    tasks_md: Option<&str>,
+) -> (i32, String) {
+    let tmp = tempfile::tempdir().unwrap();
+    let install = tmp.path().join(".mochiflow");
+    let memory = install.join("memory");
+    std::fs::create_dir_all(&memory).unwrap();
+    for name in ["architecture.md", "pitfalls.md"] {
+        std::fs::write(memory.join(name), "# m\n").unwrap();
+    }
+    let context = install.join("context");
+    std::fs::create_dir_all(&context).unwrap();
+    for name in ["product.md", "structure.md", "tech.md"] {
+        std::fs::write(context.join(name), "# c\n").unwrap();
+    }
+    std::fs::write(
+        install.join("config.toml"),
+        "schema_version = 1\n\
+         install_dir = \".mochiflow\"\n\
+         specs_dir = \".mochiflow/specs\"\n\
+         index = \".mochiflow/INDEX.md\"\n\n\
+         [constitution]\n\
+         project = \".mochiflow/constitution.md\"\n\
+         local = \".mochiflow/constitution.local.md\"\n\n\
+         [context]\n\
+         product = \".mochiflow/context/product.md\"\n\
+         structure = \".mochiflow/context/structure.md\"\n\
+         tech = \".mochiflow/context/tech.md\"\n\n\
+         [adr]\n\
+         decisions = \".mochiflow/adr/decisions.md\"\n\
+         pitfalls = \".mochiflow/adr/pitfalls.md\"\n\n\
+         [surfaces.app]\n\
+         description = \"app\"\n\n\
+         [surfaces.app.verify]\n\
+         default = \"echo ok\"\n",
+    )
+    .unwrap();
+
+    let spec_dir = install.join("specs").join("s");
+    std::fs::create_dir_all(&spec_dir).unwrap();
+    std::fs::write(spec_dir.join("spec.yaml"), spec_yaml).unwrap();
+    if let Some(pitch) = pitch_md {
+        std::fs::write(spec_dir.join("pitch.md"), pitch).unwrap();
+    }
+    if let Some(md) = spec_md {
+        std::fs::write(spec_dir.join("spec.md"), md).unwrap();
+    }
+    if let Some(d) = design_md {
+        std::fs::write(spec_dir.join("design.md"), d).unwrap();
+    }
+    if let Some(t) = tasks_md {
+        std::fs::write(spec_dir.join("tasks.md"), t).unwrap();
+    }
+
+    let out = assert_cmd::Command::cargo_bin("mochiflow")
+        .unwrap()
+        .args([
+            "--config",
+            install.join("config.toml").to_str().unwrap(),
+            "lint",
+            "--spec",
+            "s",
+        ])
+        .output()
+        .unwrap();
+    (
+        out.status.code().unwrap_or(-1),
+        String::from_utf8_lossy(&out.stdout).into_owned(),
+    )
+}
+
 fn run_lint_case_with_dirty_file(
     spec_yaml: &str,
     spec_md: &str,
@@ -1119,6 +1194,43 @@ fn lint_passes_valid_approved_spec() {
     let md = "# S\n\n## Requirements / Acceptance Criteria\n\n| AC | Type | Priority | Requirement | Verification |\n| --- | --- | --- | --- | --- |\n| AC-01 | functional | Must | THE SYSTEM SHALL do the thing. | automated |\n\n## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | UNVERIFIED |\n";
     let (code, _out) = run_lint_case(GOOD_YAML, md, None, None);
     assert_eq!(code, 0, "a well-formed approved spec must lint clean");
+}
+
+#[test]
+fn lint_passes_pitch_only_draft_spec() {
+    let yaml = "version: 1\nslug: s\ntitle: S\ntype: feature\nsurfaces:\n  - app\nintegration: workflow\nrisk: elevated\nstatus: draft\n";
+    let pitch = "# S\n\n## Problem\n\nx\n\n## Appetite\n\nx\n\n## Solution\n\nx\n\n## Rabbit Holes\n\n- x\n\n## No-gos\n\n- x\n\n## Alternatives Considered\n\n- x\n\n## Open Questions\n\n- None.\n";
+    let (code, out) = run_lint_case_with_optional_files(yaml, None, Some(pitch), None, None);
+    assert_eq!(code, 0, "pitch-only draft must lint clean: {out}");
+}
+
+#[test]
+fn lint_draft_requires_pitch() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: draft");
+    let (code, out) = run_lint_case_with_optional_files(&yaml, None, None, None, None);
+    assert_eq!(code, 1, "{out}");
+    assert!(
+        out.contains("pitch.md is required for draft status"),
+        "{out}"
+    );
+}
+
+#[test]
+fn lint_expanded_draft_enforces_required_design() {
+    let yaml = "version: 1\nslug: s\ntitle: S\ntype: feature\nsurfaces:\n  - app\nintegration: workflow\nrisk: elevated\nstatus: draft\n";
+    let pitch = "# S\n\n## Problem\n\nx\n";
+    let md = "# S\n\n## Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL x.\n";
+    let (code, out) = run_lint_case_with_optional_files(yaml, Some(md), Some(pitch), None, None);
+    assert_eq!(code, 1, "{out}");
+    assert!(out.contains("design.md is required"), "{out}");
+}
+
+#[test]
+fn lint_approved_requires_spec_md_even_with_pitch() {
+    let pitch = "# S\n\n## Problem\n\nx\n";
+    let (code, out) = run_lint_case_with_optional_files(GOOD_YAML, None, Some(pitch), None, None);
+    assert_eq!(code, 1, "{out}");
+    assert!(out.contains("spec.md is required"), "{out}");
 }
 
 const DONE_MATRIX_MD: &str = "# S\n\n## Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
@@ -1879,7 +1991,16 @@ fn behavioral_backlog() {
     .unwrap();
     let (code, out) = run_cli(&cfg, &["backlog", "validate", "broken-seed"]);
     assert_eq!(code, 1, "{out}");
-    assert!(out.contains("maturity must be one of"), "{out}");
+    assert!(out.contains("maturity must be seed"), "{out}");
+
+    std::fs::write(
+        backlog.join("legacy-handoff.md"),
+        "---\nslug: legacy-handoff\ntitle: Legacy Handoff\nmaturity: ready-for-plan\nsource: conversation\nsource_phase: discuss\ncreated: 2026-03-10\nupdated: 2026-03-10\n---\n\n## Decision Summary\n\nx\n",
+    )
+    .unwrap();
+    let (code, out) = run_cli(&cfg, &["backlog", "validate", "legacy-handoff"]);
+    assert_eq!(code, 1, "{out}");
+    assert!(out.contains("maturity must be seed"), "{out}");
 }
 
 #[test]

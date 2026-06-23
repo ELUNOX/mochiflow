@@ -1,0 +1,11 @@
+version: 1
+slug: "commit-lifecycle-unification"
+title: "Unify commit timing across discuss/plan/build/ship on a single branch"
+type: refactor
+surfaces:
+  - cli
+integration: workflow
+risk: elevated
+status: approved
+created: "2026-06-22"
+updated: "2026-06-23"
