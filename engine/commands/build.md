@@ -67,6 +67,9 @@ Implement the approved spec and produce verification and the AC Verification Mat
   only when it explains how the review ran or when the user asks.
 - Summarize implementation as what changed, what was checked, and what remains
   for wrap-up; do not lead with `risk`, `status`, or reviewer mode.
+- On build completion, always include: (1) the verification result (all items
+  passed, or human confirmation items remain), and (2) explicit next-step
+  guidance directing the user to `mochiflow-ship`.
 
 ## Stop conditions
 

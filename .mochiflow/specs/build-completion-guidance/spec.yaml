@@ -1,0 +1,11 @@
+version: 1
+slug: "build-completion-guidance"
+title: "Build phase should announce next step on completion"
+type: "docs"
+surfaces:
+  - "cli"
+integration: "none"
+risk: "standard"
+status: "approved"
+created: "2026-06-22"
+updated: "2026-06-23"
