@@ -41,8 +41,66 @@ body (optional)
 
 - `type`: `feat|fix|refactor|docs|chore`, matching `spec.yaml` `type` (`feature` maps to `feat`).
 - `scope`: `spec.yaml` `module` if present.
-- Summary ≤ 50 chars. Body for large changes only. Never write spec slug, AC IDs, or
-  mochiflow vocabulary (external-reviewer view).
+- Summary ≤ 50 chars. Body for large changes only.
+- Summary: never write spec slug, AC IDs, or mochiflow vocabulary
+  (external-reviewer view).
+- Body: slug may appear as natural context (e.g. "implements the refresh logic
+  from oauth-refresh-flow"). AC IDs and mochiflow vocabulary (`fold`, `ship`,
+  `build phase`, etc.) remain forbidden. Body must not begin a line with `Spec:`
+  (reserved for trailer parsing; see `## Trailers`).
+- Trailers are metadata (same category as `Signed-off-by`); `Spec:` and `Task:`
+  trailers are required per `## Trailers` below.
+
+## Trailers
+
+Git trailers provide machine-parseable traceability from commits to specs and
+tasks. They go in the commit footer (after the body, separated by a blank line).
+
+```
+type(scope): summary
+
+body (optional)
+
+Spec: {slug}
+Task: T-001
+Task: T-002
+```
+
+### Rules
+
+- `Spec: {slug}` — **required** on every spec-lane commit (discuss, plan, build,
+  ship). The value is the spec's `slug` from `spec.yaml`.
+- `Task: T-XXX` — **required** when `tasks.md` exists and the commit completes a
+  specific task. Use one `Task:` line per task (multiple lines for multi-task
+  commits). **Optional** on ship close-out commits (which bundle multiple
+  concerns).
+- Patch lane commits have **no trailers** (no spec context exists).
+- `Spec:` and `Task:` keys are case-sensitive and use a single space after the
+  colon.
+
+### External-reviewer compatibility
+
+Trailers do not appear in `git log --oneline`, `git shortlog`, or GitHub PR
+subject views. They are visible in full commit messages and are useful metadata
+for any reviewer.
+
+## AI Git Log Recipes
+
+Reusable git commands for querying spec/task traceability. Use `--grep` for
+speed, then `%(trailers:...)` format for accurate extraction.
+
+```bash
+# All commits for a spec (fast grep + trailer display)
+git log --grep="Spec: {slug}" \
+  --format="%H %s%n  Spec: %(trailers:key=Spec,valueonly,separator=%x2C )%n  Task: %(trailers:key=Task,valueonly,separator=%x2C )"
+
+# Last completed task for a spec
+git log --grep="Spec: {slug}" \
+  --format="%(trailers:key=Task,valueonly)" | grep -m1 .
+
+# Recent changes to a file with spec context
+git log --format="%s | %(trailers:key=Spec,valueonly)" -- path/to/file -5
+```
 
 ## Auto-commit and staging
 
