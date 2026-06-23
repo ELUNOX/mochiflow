@@ -1,0 +1,11 @@
+version: 1
+slug: "ship-qa-experience"
+title: "Unify QA experience in ship: single-source scenarios, round-trip protocol, PR Testing section"
+type: "feature"
+surfaces:
+  - "cli"
+integration: "none"
+risk: "elevated"
+status: "draft"
+created: "2026-06-23"
+updated: "2026-06-23"
