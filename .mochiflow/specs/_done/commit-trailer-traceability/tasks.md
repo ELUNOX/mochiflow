@@ -54,3 +54,9 @@ Critical Stop Conditions:
   - Files: `engine/MANIFEST.json`, `.mochiflow/engine/reference/git.md`, `.mochiflow/engine/commands/build.md`
   - Done: `mochiflow freeze` succeeds, `mochiflow upgrade --source engine` succeeds, `mochiflow freeze --check` exit 0, `mochiflow doctor` exit 0
   - Stop: freeze or doctor failures unrelated to this spec's changes
+
+- [x] T-008 [AC-08] Verify vendored engine integrity
+  - Depends on: T-007
+  - Files: `.mochiflow/engine/**`
+  - Done: `mochiflow doctor` exit 0 (engine section passes)
+  - Stop: doctor failures unrelated to this spec

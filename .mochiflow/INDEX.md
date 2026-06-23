@@ -1,22 +1,21 @@
 # 📋 Spec Dashboard
 
-> updated: 2026-06-23 05:33 UTC
+> updated: 2026-06-23 18:26 UTC
 
 ## Pipeline
 
 | stage | count |
 |:------|------:|
-| 🌱 backlog seed | 12 |
+| 🌱 backlog seed | 10 |
 | 📝 draft | 0 |
 | 🟢 approved | 0 |
-| ✅ done | 2 |
+| ✅ done | 3 |
 
 ## Backlog seeds
 
 | Slug | Title | Maturity | Source |
 |:-----|:------|:---------|:-------|
 | ["commit-lifecycle-unification"](specs/_backlog/"commit-lifecycle-unification".md) | "Unify commit timing across discuss/plan/build/ship on a single branch" | ❓ "seed" | "conversation" |
-| ["commit-trailer-traceability"](specs/_backlog/"commit-trailer-traceability".md) | "Add git trailers for spec/task traceability and AI log reading recipes" | ❓ "seed" | "conversation" |
 | ["develop-branch-workflow"](specs/_backlog/"develop-branch-workflow".md) | "Introduce develop branch to reduce PR ceremony for non-code changes" | ❓ "seed" | "conversation" |
 | ["doctor-freeze-coherence"](specs/_backlog/"doctor-freeze-coherence".md) | "Clarify doctor vs freeze responsibilities and add context freshness check" | ❓ "seed" | "conversation" |
 | ["freeze-hardening"](specs/_backlog/"freeze-hardening".md) | "Freeze module hardening: error types, format stability, visibility" | ❓ "seed" | "conversation" |
@@ -26,7 +25,6 @@
 | ["plan-to-build-transition-ux"](specs/_backlog/"plan-to-build-transition-ux".md) | "Present next-step choices after plan approval" | ❓ "seed" | "conversation" |
 | ["router-standing-load-weight"](specs/_backlog/"router-standing-load-weight".md) | "Reduce router/verb standing-load weight in CLI sessions" | ❓ "seed" | "conversation" |
 | ["ship-qa-experience"](specs/_backlog/"ship-qa-experience".md) | "Ship QA experience: rework loop, result collection, PR testing section" | ❓ "seed" | "conversation" |
-| ["tasks-checkbox-enforcement"](specs/_backlog/"tasks-checkbox-enforcement".md) | "Enforce tasks.md checkbox updates during build" | ❓ "seed" | "conversation" |
 
 ## Active specs
 
@@ -38,7 +36,8 @@
 
 | Updated | Slug | Title | Type |
 |:--------|:-----|:------|:-----|
+| 2026-06-23 | [commit-trailer-traceability](specs/_done/commit-trailer-traceability/) | Add git trailers for spec/task traceability and AI log reading recipes | docs |
 | 2026-06-23 | [build-completion-guidance](specs/_done/build-completion-guidance/) | Build phase should announce next step on completion | docs |
 | 2026-06-22 | [version-ssot-freeze](specs/_done/version-ssot-freeze/) | Version SSOT + freeze command | refactor |
 
-> done total: 2
+> done total: 3
