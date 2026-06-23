@@ -20,7 +20,7 @@
     "adapters/kiro/steering/spec-ship.md.tpl": "sha256:3900a307dde3d9ec493c8a8cc7c67314d30ff28f6f2711ea10add0c1f36f3918",
     "adapters/kiro/steering/spec.md.tpl": "sha256:423b117da7afc306e96235288dd9786e552ccde27cf447f968032f7cdf7cc247",
     "agents/independent-reviewer.md": "sha256:96f1316650155d3ff364bea95150a8419f228261bdcf41f69c360babed37f397",
-    "commands/build.md": "sha256:25f98ec8fbbad961d450eb6e8493bbef88b9c08ef9a49e80ee1ad4fd06de194c",
+    "commands/build.md": "sha256:197f67de1be1bcdc0d137bce7b00ca7e873b6d82a072a73781ce56b2070c1f75",
     "commands/discuss.md": "sha256:f504d36cc4d6a8604993d99aa566b76ec0c00ec71de0eaa1705c90e62f7f6628",
     "commands/onboard.md": "sha256:a6389bf16e17f02cc7b83f8cd7d09c2dcb0f013fdbf8e4939d9f51b323b4fe73",
     "commands/patch.md": "sha256:4fdaeb3411418cb36268e1749e1965e84e9a3f3f2479c2e2c0c7fa5ea2319953",

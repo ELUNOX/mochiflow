@@ -1036,6 +1036,81 @@ fn run_lint_case(
     )
 }
 
+fn run_lint_case_with_dirty_file(
+    spec_yaml: &str,
+    spec_md: &str,
+    tasks_md: &str,
+    dirty_file: &str,
+) -> (i32, String) {
+    let tmp = tempfile::tempdir().unwrap();
+    let install = tmp.path().join(".mochiflow");
+    let memory = install.join("memory");
+    std::fs::create_dir_all(&memory).unwrap();
+    for name in ["architecture.md", "pitfalls.md"] {
+        std::fs::write(memory.join(name), "# m\n").unwrap();
+    }
+    let context = install.join("context");
+    std::fs::create_dir_all(&context).unwrap();
+    for name in ["product.md", "structure.md", "tech.md"] {
+        std::fs::write(context.join(name), "# c\n").unwrap();
+    }
+    std::fs::write(
+        install.join("config.toml"),
+        "schema_version = 1\n\
+         install_dir = \".mochiflow\"\n\
+         specs_dir = \".mochiflow/specs\"\n\
+         index = \".mochiflow/INDEX.md\"\n\n\
+         [constitution]\n\
+         project = \".mochiflow/constitution.md\"\n\
+         local = \".mochiflow/constitution.local.md\"\n\n\
+         [context]\n\
+         product = \".mochiflow/context/product.md\"\n\
+         structure = \".mochiflow/context/structure.md\"\n\
+         tech = \".mochiflow/context/tech.md\"\n\n\
+         [adr]\n\
+         decisions = \".mochiflow/adr/decisions.md\"\n\
+         pitfalls = \".mochiflow/adr/pitfalls.md\"\n\n\
+         [surfaces.app]\n\
+         description = \"app\"\n\n\
+         [surfaces.app.verify]\n\
+         default = \"echo ok\"\n",
+    )
+    .unwrap();
+
+    let spec_dir = install.join("specs").join("s");
+    std::fs::create_dir_all(&spec_dir).unwrap();
+    std::fs::write(spec_dir.join("spec.yaml"), spec_yaml).unwrap();
+    std::fs::write(spec_dir.join("spec.md"), spec_md).unwrap();
+    std::fs::write(spec_dir.join("tasks.md"), tasks_md).unwrap();
+
+    let dirty_path = tmp.path().join(dirty_file);
+    std::fs::create_dir_all(dirty_path.parent().unwrap()).unwrap();
+    std::fs::write(dirty_path, "dirty\n").unwrap();
+
+    let git = std::process::Command::new("git")
+        .arg("init")
+        .current_dir(tmp.path())
+        .output()
+        .unwrap();
+    assert!(git.status.success(), "git init failed");
+
+    let out = assert_cmd::Command::cargo_bin("mochiflow")
+        .unwrap()
+        .args([
+            "--config",
+            install.join("config.toml").to_str().unwrap(),
+            "lint",
+            "--spec",
+            "s",
+        ])
+        .output()
+        .unwrap();
+    (
+        out.status.code().unwrap_or(-1),
+        String::from_utf8_lossy(&out.stdout).into_owned(),
+    )
+}
+
 /// Valid approved spec (standard risk, single surface) → lint passes.
 const GOOD_YAML: &str = "version: 1\nslug: s\ntitle: S\ntype: feature\nsurfaces:\n  - app\nintegration: none\nrisk: standard\nstatus: approved\n";
 
@@ -1266,6 +1341,33 @@ fn lint_done_fails_when_task_is_unchecked() {
     assert_eq!(code, 1);
     assert!(
         out.contains("status is done but task T-001 is not checked"),
+        "{out}"
+    );
+}
+
+#[test]
+fn lint_approved_warns_when_dirty_task_file_is_unchecked() {
+    let md = "# S\n\n## Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
+              ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | UNVERIFIED |\n";
+    let tasks = "# Tasks\n\n- [ ] T-001 [AC-01] Do x\n  - Depends on: none\n  - Files:\n    - `src/x.rs`\n  - Done:\n    - [ ] Verification passed\n  - Stop:\n    - stop\n";
+    let (code, out) = run_lint_case_with_dirty_file(GOOD_YAML, md, tasks, "src/x.rs");
+    assert_eq!(code, 0, "approved drift is a WARN, not a FAIL: {out}");
+    assert!(
+        out.contains("WARN:")
+            && out.contains("task T-001 has modified Files entries and is not checked: src/x.rs"),
+        "{out}"
+    );
+}
+
+#[test]
+fn lint_approved_does_not_warn_when_dirty_task_file_is_checked() {
+    let md = "# S\n\n## Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
+              ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | UNVERIFIED |\n";
+    let tasks = "# Tasks\n\n- [x] T-001 [AC-01] Do x\n  - Depends on: none\n  - Files:\n    - `src/x.rs`\n  - Done:\n    - [ ] Verification passed\n  - Stop:\n    - stop\n";
+    let (code, out) = run_lint_case_with_dirty_file(GOOD_YAML, md, tasks, "src/x.rs");
+    assert_eq!(code, 0, "{out}");
+    assert!(
+        !out.contains("modified Files entries and is not checked"),
         "{out}"
     );
 }

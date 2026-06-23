@@ -26,6 +26,9 @@ static TASK_LINE_RE: LazyLock<Regex> = LazyLock::new(|| {
 static TASK_ID_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\bT-\d{3,}\b").expect("TASK_ID_RE"));
 #[allow(clippy::expect_used)]
+static BACKTICK_PATH_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"`([^`]+)`").expect("BACKTICK_PATH_RE"));
+#[allow(clippy::expect_used)]
 static NFR_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\bNFR-\d{2,}\b").expect("NFR_RE"));
 #[allow(clippy::expect_used)]
 static EARS_RE: LazyLock<Regex> =
@@ -188,6 +191,156 @@ fn unchecked_task_ids(text: &str) -> Vec<String> {
                 None
             } else {
                 Some(id.to_string())
+            }
+        })
+        .collect()
+}
+
+#[derive(Debug)]
+struct TaskProgress {
+    id: String,
+    checked: bool,
+    files: Vec<String>,
+}
+
+fn normalize_task_path(path: &str) -> String {
+    path.trim()
+        .trim_matches('`')
+        .trim()
+        .strip_prefix("./")
+        .unwrap_or(path.trim().trim_matches('`').trim())
+        .replace('\\', "/")
+}
+
+fn paths_from_files_value(value: &str) -> Vec<String> {
+    let backtick_paths: Vec<_> = BACKTICK_PATH_RE
+        .captures_iter(value)
+        .filter_map(|cap| cap.get(1).map(|m| normalize_task_path(m.as_str())))
+        .filter(|path| !path.is_empty())
+        .collect();
+    if !backtick_paths.is_empty() {
+        return backtick_paths;
+    }
+
+    let cleaned = value
+        .trim()
+        .trim_start_matches("- ")
+        .trim()
+        .trim_matches(['[', ']']);
+    if cleaned.is_empty() || cleaned.eq_ignore_ascii_case("none") {
+        Vec::new()
+    } else {
+        cleaned
+            .split(',')
+            .map(normalize_task_path)
+            .filter(|path| !path.is_empty())
+            .collect()
+    }
+}
+
+fn is_task_block_label(trimmed: &str, label: &str) -> bool {
+    trimmed.starts_with(&format!("{label}:")) || trimmed.starts_with(&format!("- {label}:"))
+}
+
+fn files_for_task_body(body: &str) -> Vec<String> {
+    let mut files = Vec::new();
+    let mut in_files = false;
+
+    for line in body.lines() {
+        let trimmed = line.trim_start();
+        if is_task_block_label(trimmed, "Files") {
+            in_files = true;
+            if let Some((_, value)) = trimmed.split_once(':') {
+                files.extend(paths_from_files_value(value));
+            }
+            continue;
+        }
+
+        if in_files
+            && (is_task_block_label(trimmed, "Depends on")
+                || is_task_block_label(trimmed, "Done")
+                || is_task_block_label(trimmed, "Stop"))
+        {
+            in_files = false;
+        }
+
+        if in_files && trimmed.starts_with('-') {
+            files.extend(paths_from_files_value(trimmed));
+        }
+    }
+
+    files.sort();
+    files.dedup();
+    files
+}
+
+fn task_progress(text: &str) -> Vec<TaskProgress> {
+    let captures: Vec<_> = TASK_LINE_RE.captures_iter(text).collect();
+    let mut tasks = Vec::new();
+
+    for (idx, cap) in captures.iter().enumerate() {
+        let Some(task_match) = cap.get(0) else {
+            continue;
+        };
+        let Some(id) = cap.name("id").map(|m| m.as_str().to_string()) else {
+            continue;
+        };
+        let checked = cap
+            .name("checked")
+            .is_some_and(|m| m.as_str().eq_ignore_ascii_case("x"));
+        let start = task_match.end();
+        let end = captures
+            .get(idx + 1)
+            .and_then(|next| next.get(0))
+            .map_or(text.len(), |m| m.start());
+        let files = files_for_task_body(&text[start..end]);
+        tasks.push(TaskProgress { id, checked, files });
+    }
+
+    tasks
+}
+
+fn dirty_worktree_paths(repo_root: &Path) -> Option<HashSet<String>> {
+    let output = std::process::Command::new("git")
+        .args(["status", "--porcelain", "--untracked-files=all"])
+        .current_dir(repo_root)
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let mut paths = HashSet::new();
+    for line in stdout.lines() {
+        let Some(raw_path) = line.get(3..) else {
+            continue;
+        };
+        for path in raw_path.split(" -> ") {
+            let normalized = normalize_task_path(path);
+            if !normalized.is_empty() {
+                paths.insert(normalized);
+            }
+        }
+    }
+    Some(paths)
+}
+
+fn dirty_files_for_unchecked_task<'a>(
+    task: &'a TaskProgress,
+    dirty_paths: &HashSet<String>,
+) -> Vec<&'a str> {
+    if task.checked {
+        return Vec::new();
+    }
+
+    task.files
+        .iter()
+        .filter_map(|path| {
+            if dirty_paths.contains(path) {
+                Some(path.as_str())
+            } else {
+                None
             }
         })
         .collect()
@@ -382,7 +535,11 @@ fn design_required(meta: &SpecMeta) -> bool {
     risk == "elevated" || risk == "critical" || integration != "none" || meta.surfaces().len() > 1
 }
 
-fn lint_spec_dir(spec_dir: &Path, allowed_surfaces: &HashSet<String>) -> Vec<Issue> {
+fn lint_spec_dir(
+    spec_dir: &Path,
+    allowed_surfaces: &HashSet<String>,
+    dirty_paths: Option<&HashSet<String>>,
+) -> Vec<Issue> {
     let mut issues = Vec::new();
     let spec_md = spec_dir.join("spec.md");
     let design_md = spec_dir.join("design.md");
@@ -610,6 +767,25 @@ fn lint_spec_dir(spec_dir: &Path, allowed_surfaces: &HashSet<String>) -> Vec<Iss
             });
         }
         tasks_text = Some(tt);
+    }
+
+    if meta.status() == "approved"
+        && let (Some(tt), Some(dirty_paths)) = (tasks_text.as_deref(), dirty_paths)
+    {
+        for task in task_progress(tt) {
+            let dirty_files = dirty_files_for_unchecked_task(&task, dirty_paths);
+            if !dirty_files.is_empty() {
+                issues.push(Issue {
+                    severity: "WARN".into(),
+                    path: tasks_md.clone(),
+                    message: format!(
+                        "status is approved but task {} has modified Files entries and is not checked: {}",
+                        task.id,
+                        dirty_files.join(", ")
+                    ),
+                });
+            }
+        }
     }
 
     // AC Matrix guards
@@ -886,6 +1062,7 @@ pub fn run_lint(cfg: &Config, spec_slug: Option<&str>, log_to_stderr: bool) -> i
         vec![cfg.specs_dir_path()]
     };
 
+    let dirty_paths = dirty_worktree_paths(&cfg.repo_root);
     let mut seen = HashSet::new();
     for root in &paths {
         let spec_dirs = discover_spec_dirs(root);
@@ -894,7 +1071,7 @@ pub fn run_lint(cfg: &Config, spec_slug: Option<&str>, log_to_stderr: bool) -> i
                 continue;
             }
             seen.insert(spec_dir.clone());
-            all_issues.extend(lint_spec_dir(&spec_dir, &allowed));
+            all_issues.extend(lint_spec_dir(&spec_dir, &allowed, dirty_paths.as_ref()));
         }
     }
 
