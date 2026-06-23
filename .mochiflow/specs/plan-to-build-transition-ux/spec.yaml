@@ -1,0 +1,11 @@
+version: 1
+slug: "plan-to-build-transition-ux"
+title: "Present next-step choices after plan approval"
+type: "docs"
+surfaces:
+  - "cli"
+integration: "none"
+risk: "standard"
+status: "draft"
+created: "2026-06-23"
+updated: "2026-06-23"
