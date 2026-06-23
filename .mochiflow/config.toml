@@ -22,7 +22,7 @@ decisions = ".mochiflow/adr/decisions.md"
 pitfalls = ".mochiflow/adr/pitfalls.md"
 
 [git]
-provider = "none"
+provider = "github"
 base_branch = "main"
 
 [adapter]
