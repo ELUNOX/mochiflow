@@ -16,8 +16,8 @@ Critical Stop Conditions:
 
 - [ ] T-001 [AC-01, AC-02, AC-04] Update project verification profiles
   - Depends on: none
-  - Files: `.mochiflow/config.toml`, `.mochiflow/context/tech.md`
-  - Done: `cli.default` runs test, fmt, clippy, and freeze checks; `cli.quick` runs the test-only command; tech context accurately reflects the new default and CI-only `cargo-deny`
+  - Files: `.mochiflow/config.toml`
+  - Done: `cli.default` runs test, fmt, clippy, and freeze checks; `cli.quick` runs the test-only command; `cargo-deny` remains outside local `default`
   - Stop: if the chained default command is too brittle to run from the repository root
 
 - [ ] T-002 [AC-03, AC-04] Update workflow guidance for default versus quick profiles
@@ -35,7 +35,7 @@ Critical Stop Conditions:
 - [ ] T-004 [AC-01, AC-02, AC-03, AC-04, AC-06] Verify and record acceptance evidence
   - Depends on: T-003
   - Files: `.mochiflow/specs/verify-ci-parity/spec.md`, `.mochiflow/specs/verify-ci-parity/design.md`, `.mochiflow/specs/verify-ci-parity/tasks.md`
-  - Done: new `cli.default` command passes; `mochiflow config show` confirms profiles; `mochiflow lint --spec verify-ci-parity` passes; AC Matrix rows are updated with evidence; elevated-risk review result is recorded in `design.md ## Review Results`
+  - Done: new `cli.default` command passes; `mochiflow config show` confirms profiles; `mochiflow lint --spec verify-ci-parity` passes; AC Matrix rows are updated with evidence; elevated-risk review result is recorded in `design.md ## Review Results`; post-ship `refresh-context` follow-up is reported
   - Stop: if verification fails for a reason outside this spec's scope
 
 ## Verification Plan / AC Matrix

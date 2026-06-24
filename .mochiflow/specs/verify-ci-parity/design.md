@@ -21,12 +21,22 @@
   agents should choose profiles, while `.mochiflow/config.toml` holds this
   repository's concrete commands.
 
+- **Explicit config write exception**: this spec permits build to edit
+  `.mochiflow/config.toml` only for the `surfaces.cli.verify` profile change,
+  even though that file is outside the current `[write].allow` globs. Without
+  this exception, the approved ACs would require a file the build procedure
+  cannot write.
+
+- **Context refresh is a follow-up**: `.mochiflow/context/tech.md` is derived
+  current-state orientation and must not be hand-edited during build. The change
+  should leave a post-ship `refresh-context` follow-up instead of committing an
+  inline context edit.
+
 ## Architecture
 
 | File | Change |
 | --- | --- |
 | `.mochiflow/config.toml` | Change `surfaces.cli.verify.default` to the chained local CI-equivalent command; add `quick` with the existing `cargo test` command |
-| `.mochiflow/context/tech.md` | Refresh the verification summary so it no longer says default is test-only |
 | `engine/reference/workflow.md` | Clarify that `default` is canonical build/merge-equivalent verification and `quick` is fast feedback |
 | `engine/commands/build.md` | Clarify that build runs the canonical `default` profile for completion, not a narrower fast profile |
 | `engine/MANIFEST.json` | Regenerate after engine source edits |
@@ -62,6 +72,12 @@
   `mochiflow upgrade --source engine`, and `mochiflow adapter generate --check`.
 - Run `cargo test --manifest-path cli/Cargo.toml` as the Rust regression suite.
 
+## Post-ship Follow-up
+
+- Run `mochiflow refresh-context` after this work is shipped so
+  `.mochiflow/context/tech.md` can be regenerated from the changed project
+  configuration under the normal human-confirmed context refresh flow.
+
 ## Integration Contract
 
 - Contract owner: MochiFlow workflow documentation and project configuration.
@@ -76,4 +92,3 @@
   file evidence.
 
 ## Review Results
-

@@ -19,10 +19,11 @@ not bounce back for avoidable formatting, lint, or freeze failures.
 
 - In: update `.mochiflow/config.toml` verification profiles for the `cli` surface.
 - In: update engine workflow/build guidance so `default` is treated as the reliable merge-equivalent verification profile and `quick` is optional.
-- In: update project context/docs that name the default verification command.
 - In: verify the new command shape with local commands that are available in this repository.
+- In: explicitly allow this spec's build work to edit `.mochiflow/config.toml`, because the config file is the target of AC-01 and AC-02 even though it is outside the configured `[write].allow` globs.
 - Out: changing GitHub Actions, removing CI checks, or weakening PR requirements.
 - Out: installing or vendoring `cargo-deny`, changing dependency audit policy, or making MochiFlow a CI runner.
+- Out: editing `.mochiflow/context/tech.md` directly during build; record a post-ship `refresh-context` follow-up instead.
 - Out: implementation changes unrelated to verification profile selection.
 
 ## Edge Cases
@@ -31,6 +32,8 @@ not bounce back for avoidable formatting, lint, or freeze failures.
 - The `quick` profile, if added, must not become the command that `mochiflow ready` or normal build completion depends on.
 - Documentation must not imply `cargo-deny` has been run locally by default when it remains CI-only.
 - Engine source edits require dogfood synchronization: `mochiflow freeze`, `mochiflow upgrade --source engine`, and `mochiflow adapter generate --check`.
+- The `.mochiflow/config.toml` write exception is limited to this spec's verification profile change; it does not permit unrelated config, context, ADR, or runtime-state edits.
+- Current-state context updates remain a separate `refresh-context` follow-up after ship.
 
 ## Acceptance Criteria (EARS)
 
