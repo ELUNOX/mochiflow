@@ -30,4 +30,11 @@ Add `[P]` after the ID for a task that runs parallel to the previous `[P]` block
 never `[P]` two tasks that edit the same file. Each task needs Depends on / Files /
 Done / Stop. `Depends on:` lists prior `T-###` IDs or `none`.
 Create the ## AC Verification Matrix here during plan (one row per AC) so it is present at approval; record verification results during build.
+
+## Verification Plan / AC Matrix
+
+| AC | Scope | Verification method | Planned test/QA | Implementation | Result | Evidence | Notes |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| AC-01 | {surface} | automated | `command ...` | `path/File.ext` | UNVERIFIED | | |
+
 -->

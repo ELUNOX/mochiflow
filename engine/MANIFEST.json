@@ -24,7 +24,7 @@
     "commands/discuss.md": "sha256:809f96033e34d5bc605acde94d0e166a1a2eaa837ff3f71c3529167c4bca42f7",
     "commands/onboard.md": "sha256:a6389bf16e17f02cc7b83f8cd7d09c2dcb0f013fdbf8e4939d9f51b323b4fe73",
     "commands/patch.md": "sha256:4fdaeb3411418cb36268e1749e1965e84e9a3f3f2479c2e2c0c7fa5ea2319953",
-    "commands/plan.md": "sha256:643eae12ac2a50ac0fe09107dd574929192b58a8fc0bee444b8d0f6d7ff35f6c",
+    "commands/plan.md": "sha256:f69777673f2cbb409d885bc116256d8794ee6f92cad9d314f496644ed02655c3",
     "commands/refresh-context.md": "sha256:2840fd557d9367d7f539978d87d858d4dc5fcfdc10fe1e7755da7d147474cfc6",
     "commands/review.md": "sha256:4f66189df83abbd7bf1509709dc4db0b25a22693a9e550541e7833364cd2e33d",
     "commands/ship.md": "sha256:dbb90edc02d04490110dfc0394e4d665b399bc9988550adb55100947d833bec6",
@@ -43,11 +43,11 @@
     "templates/handoff/build-session-prompt.md": "sha256:73f34f2aa4b83c5cf2f5b78128226a72cb54b7520f71f361dd556e32bcbc5a68",
     "templates/spec/design.md": "sha256:6fd076467f44d3be02c0ed27e847b4bb09f5d40cfa7f01c20e5b290d49dc66fb",
     "templates/spec/pitch.md": "sha256:c5f0bdb786e52b0deba314415d8a3c1e3a9fd0429d67f26f6d808095251477f1",
-    "templates/spec/spec.md": "sha256:d5e783533bc346bb5787610ca24f67d8b7d44fdc61a59e6adb169e39ac82495d",
+    "templates/spec/spec.md": "sha256:87dfb98e30f6194f17a41607bf3b72773f2b0342f3a95640cb7e75667e426fa3",
     "templates/spec/spec.micro.md": "sha256:a599bb82764d746b8f344febc2aa0f0a6cbb3cff7526ab4cc93243303ad02f51",
-    "templates/spec/spec.standard.md": "sha256:c3681bc5617d2fd7f84a95b070fe0a06194fefd16c29ffc55d09bef54cb6d16f",
+    "templates/spec/spec.standard.md": "sha256:167511cd37d0942258f2ecff311e63e5305fb5c4af9159cc04bb5c308d90a447",
     "templates/spec/spec.yaml": "sha256:984ce5f045a9886475405f7ad99f4da884acc3a4c993688f7c84a972fbf87b97",
-    "templates/spec/tasks.md": "sha256:347493cd14c6fdc343e9ecfb94b8215a2d7a3d4295d4f62459c53015289b9402"
+    "templates/spec/tasks.md": "sha256:36968cb5cc4bff4f3b4c049356c50978c0a06ec20eef296ea3adc6bbc054f9b1"
   },
   "version": "1.1.3"
 }
