@@ -83,4 +83,4 @@ The likely implementation areas are:
 
 ## Open Questions
 
-- None - ready for plan.
+- Resolved - ready for plan.
