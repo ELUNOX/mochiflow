@@ -26,7 +26,7 @@ Critical Stop Conditions:
   - Done: steps 1–3 define: present numbered QA list → accept per-item or numbered batch response → map to QA item by number → record Matrix token → rework loop on FAIL (re-present failed items + regressed items) → resume on all pass
   - Stop: if rewrite conflicts with ship.md PR Feedback Loop or close-out logic
 
-- [ ] T-003 [AC-05] Add PR Feedback Loop triggers to ship.md and router.md
+- [x] T-003 [AC-05] Add PR Feedback Loop triggers to ship.md and router.md
   - Depends on: T-002
   - Files: `engine/commands/ship.md`, `engine/router.md`
   - Done: `{slug} feedback` / 「修正依頼」 / 「PR feedback」 in ship.md trigger_patterns; router Decision Flow step 3 adds a `_done/{slug}` resolution exception for feedback patterns (mirroring the merged-event exception); router routes these to `## PR Feedback Loop`

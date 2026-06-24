@@ -12,11 +12,16 @@ triggers:
   - mochiflow-ship
   - PR出して
   - リリースして
+  - 修正依頼
+  - PR feedback
 trigger_patterns:
   - "{slug} ship"
   - "{slug} merged"
   - "{slug} マージ済み"
   - "{slug} 完了"
+  - "{slug} feedback"
+  - "{slug} 修正依頼"
+  - "{slug} PR feedback"
 artifacts:
   - "{install_dir}/state/{slug}/qa-instructions.md"
   - "{install_dir}/state/{slug}/pr-body.md"
