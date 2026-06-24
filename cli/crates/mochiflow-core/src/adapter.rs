@@ -915,7 +915,10 @@ mod tests {
         self_heal_deprecated_kiro(&cfg, false, &mut result);
 
         assert!(
-            result.preserved.iter().any(|r| r == ".kiro/steering/spec.md"),
+            result
+                .preserved
+                .iter()
+                .any(|r| r == ".kiro/steering/spec.md"),
             "expected spec.md preserved: {:?}",
             result.preserved
         );
@@ -948,7 +951,10 @@ mod tests {
         self_heal_deprecated_kiro(&cfg, true, &mut result);
 
         assert!(
-            result.drift.iter().any(|r| r == ".kiro/agents/spec-builder.json"),
+            result
+                .drift
+                .iter()
+                .any(|r| r == ".kiro/agents/spec-builder.json"),
             "markered residue must drift in check mode: {:?}",
             result.drift
         );

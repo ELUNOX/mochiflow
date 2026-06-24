@@ -2100,11 +2100,7 @@ fn behavioral_upgrade_from_bundled_engine_regenerates_adapters() {
     let installed_version =
         std::fs::read_to_string(tmp.path().join(".mochiflow/engine/VERSION")).unwrap();
     assert_eq!(manifest["version"].as_str(), Some(installed_version.trim()));
-    assert!(
-        tmp.path()
-            .join(".kiro/steering/mochiflow.md")
-            .exists()
-    );
+    assert!(tmp.path().join(".kiro/steering/mochiflow.md").exists());
     assert!(
         tmp.path()
             .join(".kiro/agents/spec-independent-reviewer.json")
@@ -2136,7 +2132,9 @@ fn behavioral_upgrade_from_bundled_engine_respects_drift_force() {
 fn behavioral_upgrade_reports_adapter_merge_required_after_engine_update() {
     let tmp = tempfile::tempdir().unwrap();
     let cfg = materialize_full(tmp.path());
-    let target = tmp.path().join(".kiro/agents/spec-independent-reviewer.json");
+    let target = tmp
+        .path()
+        .join(".kiro/agents/spec-independent-reviewer.json");
     std::fs::create_dir_all(target.parent().unwrap()).unwrap();
     std::fs::write(&target, "{\"custom\": true}\n").unwrap();
 
@@ -2184,7 +2182,10 @@ fn behavioral_kiro_self_heal_and_full_file_steering() {
     let (code, out) = run_cli(&cfg, &["adapter", "generate"]);
     assert_eq!(code, 0, "{out}");
     // markered deprecated files removed and reported (incl. legacy hook)
-    assert!(out.contains("removed: .kiro/agents/spec-builder.json"), "{out}");
+    assert!(
+        out.contains("removed: .kiro/agents/spec-builder.json"),
+        "{out}"
+    );
     assert!(
         out.contains("removed: .kiro/hooks/generate-project-index.kiro.hook"),
         "{out}"

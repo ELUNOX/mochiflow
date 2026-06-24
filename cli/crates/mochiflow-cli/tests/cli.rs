@@ -374,7 +374,9 @@ fn join_blocks_handwritten_structured_adapter_and_writes_candidate() {
         .assert()
         .success();
 
-    let structured = dir.path().join(".kiro/agents/spec-independent-reviewer.json");
+    let structured = dir
+        .path()
+        .join(".kiro/agents/spec-independent-reviewer.json");
     fs::write(&structured, "{\"custom\": true}\n").unwrap();
 
     let result = bin()
@@ -720,7 +722,9 @@ fn init_existing_markdown_adapter_target_appends_managed_block() {
 #[test]
 fn init_blocked_json_exits_1_and_includes_candidate() {
     let dir = tempfile::tempdir().unwrap();
-    let existing = dir.path().join(".kiro/agents/spec-independent-reviewer.json");
+    let existing = dir
+        .path()
+        .join(".kiro/agents/spec-independent-reviewer.json");
     fs::create_dir_all(existing.parent().unwrap()).unwrap();
     fs::write(&existing, "{\"custom\": true}\n").unwrap();
 
@@ -758,7 +762,9 @@ fn init_blocked_json_exits_1_and_includes_candidate() {
 #[test]
 fn init_existing_structured_adapter_target_guidance_is_language_aware() {
     let dir = tempfile::tempdir().unwrap();
-    let existing = dir.path().join(".kiro/agents/spec-independent-reviewer.json");
+    let existing = dir
+        .path()
+        .join(".kiro/agents/spec-independent-reviewer.json");
     fs::create_dir_all(existing.parent().unwrap()).unwrap();
     fs::write(&existing, "{\"custom\": true}\n").unwrap();
 
@@ -795,7 +801,9 @@ fn init_existing_structured_adapter_target_guidance_is_language_aware() {
 #[test]
 fn init_existing_nested_adapter_target_writes_nested_candidate() {
     let dir = tempfile::tempdir().unwrap();
-    let existing = dir.path().join(".kiro/agents/spec-independent-reviewer.json");
+    let existing = dir
+        .path()
+        .join(".kiro/agents/spec-independent-reviewer.json");
     fs::create_dir_all(existing.parent().unwrap()).unwrap();
     fs::write(&existing, "{\"custom\": true}\n").unwrap();
 
@@ -1113,11 +1121,7 @@ fn init_existing_adapter_targets_append_markdown_and_block_structured_files() {
         .failure()
         .code(1);
 
-    for rel in [
-        "AGENTS.md",
-        "CLAUDE.md",
-        ".github/copilot-instructions.md",
-    ] {
+    for rel in ["AGENTS.md", "CLAUDE.md", ".github/copilot-instructions.md"] {
         let body = fs::read_to_string(dir.path().join(rel)).unwrap();
         assert!(
             body.starts_with(&format!("CUSTOM {rel}\n")),
@@ -1354,11 +1358,7 @@ fn adapter_generate_appends_managed_blocks_for_all_markdown_targets() {
         .assert()
         .success();
 
-    for rel in [
-        "AGENTS.md",
-        "CLAUDE.md",
-        ".github/copilot-instructions.md",
-    ] {
+    for rel in ["AGENTS.md", "CLAUDE.md", ".github/copilot-instructions.md"] {
         let target = dir.path().join(rel);
         fs::create_dir_all(target.parent().unwrap()).unwrap();
         fs::write(&target, format!("CUSTOM {rel}\n")).unwrap();
@@ -1552,7 +1552,9 @@ fn adapter_generate_fails_when_candidate_parent_cannot_be_created() {
         .write_stdin("")
         .assert()
         .success();
-    let builder = dir.path().join(".kiro/agents/spec-independent-reviewer.json");
+    let builder = dir
+        .path()
+        .join(".kiro/agents/spec-independent-reviewer.json");
     fs::write(&builder, "{\"custom\": true}\n").unwrap();
     let state = dir.path().join(".mochiflow/state");
     if state.exists() {
@@ -1586,7 +1588,9 @@ fn adapter_generate_fails_when_candidate_parent_cannot_be_created() {
 #[test]
 fn adapter_generate_errors_make_init_fail_when_candidate_parent_cannot_be_created() {
     let dir = tempfile::tempdir().unwrap();
-    let existing = dir.path().join(".kiro/agents/spec-independent-reviewer.json");
+    let existing = dir
+        .path()
+        .join(".kiro/agents/spec-independent-reviewer.json");
     fs::create_dir_all(existing.parent().unwrap()).unwrap();
     fs::write(&existing, "{\"custom\": true}\n").unwrap();
     let install = dir.path().join(".mochiflow");
