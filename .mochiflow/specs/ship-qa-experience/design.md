@@ -22,13 +22,17 @@
   Scenarios rows where `Type ∈ {Human-operated, Visual}` or all rows when the
   spec is trivial. Concrete steps + expected result, no internal IDs.
 
-- **qa-instructions.md removal strategy**: delete template file, update MANIFEST
-  via `mochiflow freeze`, update three conformance test call sites in
-  `tests/conformance.rs`, update prose references in ship.md / workflow.md /
-  authoring.md. The Kiro spec-builder agent file list
-  (`.kiro/agents/spec-builder.json`) and its template
+- **qa-instructions.md removal strategy**: delete template file and the
+  ephemeral generation target (`{install_dir}/state/{slug}/qa-instructions.md` is
+  no longer produced — the round-trip protocol presents QA directly in
+  conversation). Update MANIFEST via `mochiflow freeze`, update three conformance
+  test call sites in `tests/conformance.rs`, update prose references in ship.md /
+  workflow.md / authoring.md, and remove ship.md frontmatter `artifacts:` and
+  `references:` lines pointing to the deleted file. The Kiro spec-builder agent
+  file list (`.kiro/agents/spec-builder.json`) and its template
   (`engine/adapters/kiro/agents/spec-builder.json.tpl`) also reference
-  qa-instructions.md — remove those lines.
+  qa-instructions.md — remove those lines, then regenerate the agent file via
+  `mochiflow adapter generate`.
 
 - **Router triggers for PR Feedback Loop**: add `{slug} feedback` / 「修正依頼」
   / 「PR feedback」 to ship.md `trigger_patterns` and update router.md's
@@ -40,7 +44,7 @@ No new files or modules. Changes are engine documentation edits:
 
 | File | Change type |
 | --- | --- |
-| `engine/commands/ship.md` | Rewrite Acceptance steps 1–3 (round-trip + rework); add triggers |
+| `engine/commands/ship.md` | Rewrite Acceptance steps 1–3 (round-trip + rework); add triggers; remove `qa-instructions.md` from frontmatter `artifacts:` and `references:` |
 | `engine/router.md` | Add PR Feedback trigger handling note |
 | `engine/reference/workflow.md` | Remove acceptance-adapter qa-instructions reference; update QA role text |
 | `engine/reference/authoring.md` | Update ephemeral table and QA role split paragraph |

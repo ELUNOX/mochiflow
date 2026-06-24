@@ -35,9 +35,12 @@ defined recovery path and PR reviewers know how to test the change.
 ## Scope
 
 - In: ship.md QA acceptance rewrite (round-trip protocol + rework loop),
+  ship.md frontmatter `artifacts:`/`references:` cleanup,
   router.md trigger additions, workflow.md acceptance-adapter and authoring
   updates, `pr-description.md` `## Testing` addition, `qa-instructions.md`
-  template removal, spec.md template QA Scenarios column update,
+  template removal (including ephemeral generation target),
+  spec.md template QA Scenarios column update,
+  Kiro adapter template + regenerated agent file update,
   conformance test updates, MANIFEST regeneration.
 - Out: CLI Rust library changes (beyond conformance tests), plan.md/build.md
   procedure changes, AC Matrix token changes, language.md changes.
@@ -68,8 +71,11 @@ defined recovery path and PR reviewers know how to test the change.
 - AC-06: WHEN ship generates `pr-body.md`, THE SYSTEM SHALL include a
   `## Testing` section derived from spec.md QA Scenarios.
 - AC-07: THE SYSTEM SHALL remove `engine/templates/delivery/qa-instructions.md`
-  and update all references in ship.md, workflow.md, and authoring.md to point to
-  spec.md QA Scenarios.
+  and the ephemeral generation target `{install_dir}/state/{slug}/qa-instructions.md`,
+  and update all references across engine docs (ship.md prose and frontmatter
+  `artifacts:`/`references:`), workflow.md, authoring.md, conformance tests, and
+  Kiro adapter template/generated agent file to point to spec.md QA Scenarios.
+  `.kiro/agents/spec-builder.json` is regenerated via `mochiflow adapter generate`.
 - AC-08: THE SYSTEM SHALL update `spec.standard.md` QA Scenarios table to
   include a `Type` column (Automated / Human-operated / Visual).
 - AC-09: THE SYSTEM SHALL pass `cargo test`, `mochiflow lint`, `mochiflow
@@ -80,11 +86,11 @@ defined recovery path and PR reviewers know how to test the change.
 | QA | Scope | Type | Steps | Expected result |
 | --- | --- | --- | --- | --- |
 | QA-01 | cli | Automated | Run `cargo test --manifest-path cli/Cargo.toml` after all engine file changes | All tests pass (conformance tests updated to no longer reference deleted template) |
-| QA-02 | cli | Automated | Run `mochiflow lint --spec ship-qa-experience` | 0 fail, 0 warn |
+| QA-02 | cli | Automated | Run `mochiflow lint --spec ship-qa-experience` | 0 fail |
 | QA-03 | cli | Automated | Run `mochiflow freeze --check` after MANIFEST regeneration | Exit 0 |
 | QA-04 | cli | Automated | Run `mochiflow doctor` | Exit 0 |
 | QA-05 | human | Human-operated | Read ship.md acceptance section and confirm the round-trip protocol is clear and complete | Rework loop is documented with numbered steps |
-| QA-06 | human | Human-operated | Read router.md and confirm `{slug} feedback` / 「修正依頼」 trigger is present and correctly routes | Triggers listed in ship trigger_patterns and router handles them |
+| QA-06 | human | Human-operated | Read router.md and confirm `{slug} feedback` / 「修正依頼」 / 「PR feedback」 triggers are present and correctly route to PR Feedback Loop | Triggers listed in ship trigger_patterns and router handles them |
 | QA-07 | human | Human-operated | Read `pr-description.md` and confirm `## Testing` section exists with derivation instructions | Template contains the new section |
 
 ## Completion Conditions

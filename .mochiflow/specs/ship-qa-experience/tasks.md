@@ -40,8 +40,8 @@ Critical Stop Conditions:
 
 - [ ] T-005 [AC-07] Delete qa-instructions.md template and update all references
   - Depends on: T-002, T-004
-  - Files: `engine/templates/delivery/qa-instructions.md`, `engine/reference/workflow.md`, `engine/reference/authoring.md`, `.kiro/agents/spec-builder.json`, `engine/adapters/kiro/agents/spec-builder.json.tpl`
-  - Done: template file deleted; all prose references point to spec.md QA Scenarios; agent file lists no longer include the deleted path
+  - Files: `engine/templates/delivery/qa-instructions.md`, `engine/commands/ship.md`, `engine/reference/workflow.md`, `engine/reference/authoring.md`, `engine/adapters/kiro/agents/spec-builder.json.tpl`
+  - Done: template file deleted; ship.md frontmatter `artifacts:` and `references:` lines removed; all prose references point to spec.md QA Scenarios; Kiro adapter template line removed; `mochiflow adapter generate` regenerates `.kiro/agents/spec-builder.json` cleanly
   - Stop: if deletion breaks `mochiflow freeze` in a way not fixable by re-running freeze
 
 - [ ] T-006 [AC-07] Update conformance tests that reference qa-instructions template
