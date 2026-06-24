@@ -12,13 +12,17 @@ triggers:
   - mochiflow-ship
   - PR出して
   - リリースして
+  - 修正依頼
+  - PR feedback
 trigger_patterns:
   - "{slug} ship"
   - "{slug} merged"
   - "{slug} マージ済み"
   - "{slug} 完了"
+  - "{slug} feedback"
+  - "{slug} 修正依頼"
+  - "{slug} PR feedback"
 artifacts:
-  - "{install_dir}/state/{slug}/qa-instructions.md"
   - "{install_dir}/state/{slug}/pr-body.md"
   - "{install_dir}/state/{slug}/pr-request.json (pr_driver backend only)"
   - "{specs_dir}/_done/{slug}/"
@@ -37,7 +41,6 @@ forbidden_writes:
 references:
   - reference/workflow.md
   - reference/git.md
-  - templates/delivery/qa-instructions.md
   - templates/delivery/pr-description.md
 ---
 
@@ -52,9 +55,32 @@ living-spec fold, and archive.
 
 ### Acceptance
 
-1. Build `qa-instructions.md` into `{install_dir}/state/{slug}/` from the QA scenarios in `spec.md` (reference, do not copy — `spec.md` is the source of truth for *what* to test). Pick the adapter via `reference/workflow.md ## Acceptance adapters`. This is a ship-time working sheet (ephemeral, gitignored, not archived per `reference/authoring.md ## Durable vs ephemeral`).
-2. Run the final verification command and record the result.
-3. Request QA that needs human operation / visual checking here **exactly once**. The human follows `qa-instructions.md`; record results and evidence in the **AC Verification Matrix** (the durable ledger — the matrix is the record, not an instruction sheet). Translate worksheet prose into canonical Matrix tokens: `Human confirmed` → `人間確認済み`, `Not applicable (reason)` → `対象外（<reason>）`, and failures → `FAIL`. Evidence pointers live in the matrix so the ephemeral worksheet can be discarded.
+1. Run the final verification command for each surface and record the result in
+   the AC Verification Matrix. Settle automated AC rows as `PASS` or `FAIL`.
+2. Identify QA items that need human operation or visual checking from `spec.md`
+   QA Scenarios (rows where `Type` is `Human-operated` or `Visual`). If no such
+   items exist, skip to step 4.
+3. **QA round-trip protocol** — present and collect human QA results:
+   - 3a. Present the human-required QA items as a numbered list in the
+     conversation language, derived from spec.md QA Scenarios (scenario name,
+     steps, expected result). Number items sequentially.
+   - 3b. The human responds in conversation language (free-form intent). Accepted
+     forms include per-item responses ("1: OK, 2: NG reason") or batch
+     confirmation ("all OK"). These are examples, not a fixed vocabulary — the
+     agent interprets intent, not pattern-matches tokens.
+   - 3c. For each item, map the human's intent to the canonical AC Matrix token:
+     pass intent → `人間確認済み`, fail intent → `FAIL`, not-applicable with
+     reason → `対象外（<reason>）`. Record the token and evidence pointer in the
+     AC Verification Matrix.
+   - 3d. If any item is ambiguous (cannot determine pass or fail intent), re-ask
+     for that specific item with a clear pass/fail question. Do not guess.
+   - 3e. **Rework loop**: if any item is `FAIL`, pause ship (status stays
+     `approved`). Run a build-equivalent fix loop (modify → verify → commit on
+     the feature branch). After the fix, re-present: (1) the failed items, plus
+     (2) any previously-passed items whose implementation files were modified by
+     the fix (regression check). Repeat from 3b for the re-presented items only.
+   - 3f. When all human QA items reach a done-eligible result (`人間確認済み` or
+     `対象外（<reason>）`), the round-trip is complete. Proceed to step 4.
 4. When the acceptance conditions in `reference/workflow.md ## AC Verification Matrix` all hold (matrix complete, every result is done-eligible, and the reviewer verdict recorded when `risk ≥ elevated`), edit `spec.yaml` `status: done`, `updated`, and `completed` (the current UTC timestamp in ISO 8601, e.g. `2026-06-21T22:16:03Z`) directly (no approval word; there is no CLI transition command), then run `mochiflow lint --spec {slug}` to confirm the transition is valid. `completed` is the immutable completion time that orders the Done view in `INDEX.md`; set it (or overwrite it on a re-ship) each time status becomes `done`. This is not a gate; `ship` is the only path that sets `done`.
 
 ### Close-out

@@ -31,7 +31,6 @@
     "file://{{engine}}/templates/context/product.md",
     "file://{{engine}}/templates/context/structure.md",
     "file://{{engine}}/templates/context/tech.md",
-    "file://{{engine}}/templates/delivery/qa-instructions.md",
     "file://{{engine}}/templates/delivery/pr-description.md",
     "file://{{constitution.project}}",
     "file://{{constitution.local}}",

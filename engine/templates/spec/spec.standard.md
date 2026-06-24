@@ -26,9 +26,9 @@ As {user}, I want {capability}, so that {reason}.
 
 ## QA Scenarios
 
-| QA | Scope | Steps | Expected result |
-| --- | --- | --- | --- |
-| QA-01 | ios | ... | ... |
+| QA | Scope | Type | Steps | Expected result |
+| --- | --- | --- | --- | --- |
+| QA-01 | ios | Automated / Human-operated / Visual | ... | ... |
 
 ## Completion Conditions
 

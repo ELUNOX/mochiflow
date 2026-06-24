@@ -1,15 +1,15 @@
 # 📋 Spec Dashboard
 
-> updated: 2026-06-23 21:49 UTC
+> updated: 2026-06-24 00:29 UTC
 
 ## Pipeline
 
 | stage | count |
 |:------|------:|
-| 🌱 backlog seed | 10 |
+| 🌱 backlog seed | 9 |
 | 📝 draft | 0 |
 | 🟢 approved | 0 |
-| ✅ done | 5 |
+| ✅ done | 6 |
 
 ## Backlog seeds
 
@@ -24,7 +24,6 @@
 | ["parallel-spec-context-switch"](specs/_backlog/"parallel-spec-context-switch".md) | "Support parallel spec work with explicit context switching" | ❓ "seed" | "conversation" |
 | ["prevent-build-phase-spec-mutation"](specs/_backlog/"prevent-build-phase-spec-mutation".md) | "Prevent tasks.md structural mutation during build phase" | ❓ "seed" | "conversation" |
 | ["router-standing-load-weight"](specs/_backlog/"router-standing-load-weight".md) | "Reduce router/verb standing-load weight in CLI sessions" | ❓ "seed" | "conversation" |
-| ["ship-qa-experience"](specs/_backlog/"ship-qa-experience".md) | "Ship QA experience: rework loop, result collection, PR testing section" | ❓ "seed" | "conversation" |
 
 ## Active specs
 
@@ -39,7 +38,8 @@
 | 2026-06-23 | [commit-lifecycle-unification](specs/_done/commit-lifecycle-unification/) | Unify commit timing across discuss/plan/build/ship on a single branch | refactor |
 | 2026-06-23 | [commit-trailer-traceability](specs/_done/commit-trailer-traceability/) | Add git trailers for spec/task traceability and AI log reading recipes | docs |
 | 2026-06-23 | [plan-to-build-transition-ux](specs/_done/plan-to-build-transition-ux/) | Present next-step choices after plan approval | docs |
+| 2026-06-23 | [ship-qa-experience](specs/_done/ship-qa-experience/) | Unify QA experience in ship: single-source scenarios, round-trip protocol, PR Testing section | feature |
 | 2026-06-23 | [build-completion-guidance](specs/_done/build-completion-guidance/) | Build phase should announce next step on completion | docs |
 | 2026-06-22 | [version-ssot-freeze](specs/_done/version-ssot-freeze/) | Version SSOT + freeze command | refactor |
 
-> done total: 5
+> done total: 6

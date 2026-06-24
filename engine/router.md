@@ -42,6 +42,7 @@ loads this as a standing instruction. Do not load it from planning / reviewer ro
    - Exception: `{slug} discuss` resolves against a seed at `{specs_dir}/_backlog/{slug}.md` when the slug exists only there; if `{specs_dir}/{slug}/` already exists, re-open that spec instead.
    - `{slug} plan` requires an existing active spec directory at `{specs_dir}/{slug}/` created by discuss. If only `{specs_dir}/_backlog/{slug}.md` exists, do not activate plan — guide back to `{slug} discuss` because backlog files are raw seeds, not plan-ready handoffs.
    - Event patterns `{slug} merged` / `{slug} マージ済み` / `{slug} 完了` are the only trigger-pattern exception for completed specs: resolve `{slug}` against `{specs_dir}/_done/{slug}/` first, then resume ship's post-merge local cleanup only, not a fresh ship. Fold/archive already happened in the feature branch close-out commit before PR.
+   - Feedback patterns `{slug} feedback` / `{slug} 修正依頼` / `{slug} PR feedback` also resolve `{slug}` against `{specs_dir}/_done/{slug}/` (since the spec is archived at the time PR feedback arrives), then route to `ship.md ## PR Feedback Loop` — not a fresh ship.
 4. With no active spec context, route concrete small-edit requests ("直して" / "fix this" / "仕様書なしで" / "quick fix") through the `commands/patch.md ## Eligibility` check before proposing a spec verb.
    - If eligible, declare `patch` in one line and proceed.
    - If ineligible or uncertain, propose `Start plan?` in one line and wait.

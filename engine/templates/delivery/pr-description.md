@@ -21,4 +21,8 @@ MochiFlow vocabulary (`risk: standard`, etc.).
 ## Risk
 
 - {Natural artifact-language description of reversibility, schema/contract impact, and affected area in 1-2 lines.}
+
+## Testing
+
+- {For each human-operated or visual QA scenario in spec.md QA Scenarios, list: scenario name, concrete reproduction steps, and expected result. Omit internal IDs (QA-XX, AC-XX). If all QA is automated, state "Automated verification only — see Verification above."}
 ```

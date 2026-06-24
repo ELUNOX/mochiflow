@@ -160,8 +160,8 @@ auto-commit.
 
 ## Acceptance adapters (ship)
 
-Build `{install_dir}/state/{slug}/qa-instructions.md` from `spec.md` QA
-scenarios (reference, do not copy), and pick the adapter by `Scope` / kind:
+Ship identifies human-operated and visual QA items from `spec.md` QA Scenarios
+(the `Type` column) and picks the adapter by `Scope` / kind:
 
 | Scope / kind | adapter | main checks |
 | --- | --- | --- |
@@ -172,7 +172,7 @@ scenarios (reference, do not copy), and pick the adapter by `Scope` / kind:
 | `human` | Human confirmation | physical device, judgement, visual, external service |
 | `cross-surface` | contract / workflow QA | contract or workflow across surfaces |
 
-Human/visual AC are requested once, in ship, alongside `qa-instructions.md` —
+Human/visual AC are requested once, in ship, via the QA round-trip protocol —
 not during build. During build, mark those Matrix rows `PENDING_HUMAN` with the
 needed QA scenario and evidence expectation.
 

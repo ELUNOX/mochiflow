@@ -36,7 +36,7 @@ Fix each fact in one place; reference by ID elsewhere.
 | --- | --- | --- |
 | AC (pass/fail criteria) | `spec.md` | task line reference `[AC-01]` (ID only) |
 | surface / risk / type / status | `spec.yaml` | not repeated |
-| QA scenarios | `spec.md` | `qa-instructions.md` references, does not copy |
+| QA scenarios | `spec.md` | PR `## Testing` derives from it; no intermediate file |
 | reviewer / git / journal cadence | `risk.md` | not repeated |
 | user-authored standing rules | `[constitution]` (project / local), written by the user | always-loaded; never generated from code |
 | current-state orientation (purpose / layout / tech) | code/config, mapped into `[context]` (product / structure / tech) via onboard / `refresh-context` | always-loaded; never folded |
@@ -57,18 +57,19 @@ post-merge per `reference/git.md ## Post-merge local cleanup`).
 | class | artifacts | home | archived |
 | --- | --- | --- | --- |
 | durable | `spec.yaml` · `pitch.md` · `spec.md` (incl. AC Verification Matrix) · `design.md` · `tasks.md` | `{specs_dir}/{slug}/` → `_done/` | yes |
-| ephemeral | PR body file (`pr-body.md`) · `pr-request.json` (pr_driver only) · `qa-instructions.md` | `{install_dir}/state/{slug}/` | no |
+| ephemeral | PR body file (`pr-body.md`) · `pr-request.json` (pr_driver only) | `{install_dir}/state/{slug}/` | no |
 
 Ephemeral artifacts are regenerable from the durable spec; their durable record
 is the merged PR (delivery) or the AC Verification Matrix (QA results). Rationale:
 they are inter-process handoffs / working sheets, not knowledge, so keeping them
 in the tracked tree pollutes history and the archive.
 
-QA role split: `spec.md` QA scenarios are the source of truth for *what* to test;
-`qa-instructions.md` is the ship-time worksheet for *how* to run and where to
-capture evidence; the **AC Verification Matrix** is the results ledger (result +
-evidence pointers). The human follows `qa-instructions.md` during ship and never
-reads the AC Matrix as an instruction sheet.
+QA role split: `spec.md` QA Scenarios are the source of truth for *what* to test
+and *how* (steps + expected result). The **AC Verification Matrix** is the results
+ledger (result + evidence pointers). During ship, the agent presents QA items
+directly in conversation via the round-trip protocol (`commands/ship.md`
+Acceptance step 3); PR reviewers read the `## Testing` section in the PR
+description (derived from QA Scenarios). There is no intermediate QA file.
 
 ## pitch.md
 
