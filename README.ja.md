@@ -248,7 +248,7 @@ MochiFlowは、各AIコーディングツールが読み込める入口ファイ
 
 | AIツール | 生成される入口 | 役割 |
 | --- | --- | --- |
-| Kiro | `.kiro/` | 専用エージェント / steeringを生成 |
+| Kiro | `.kiro/` | 常時読み込みsteering + 読み取り専用レビューア; 権限は `permissions.yaml` に委譲 |
 | Claude Code | `CLAUDE.md` | プロジェクトルールとワークフローを読み込ませる |
 | GitHub Copilot | `.github/` | Copilot向けの指示ファイルを生成 |
 | 汎用エージェント | `AGENTS.md` | 汎用AIエージェント向けの入口を生成 |

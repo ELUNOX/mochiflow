@@ -797,7 +797,7 @@ mod tests {
         let out = render_init_summary(
             &report(),
             &["wrote .mochiflow/config.toml".into()],
-            &[".kiro/agents/spec-builder.json needs manual merge".into()],
+            &[".kiro/agents/spec-independent-reviewer.json needs manual merge".into()],
             InitStatus::NeedsAiReview,
             OutputMode::Plain,
             ColorChoice::Never,
@@ -820,7 +820,10 @@ mod tests {
             "{out}"
         );
         assert!(out.contains("Needs review:"), "{out}");
-        assert!(out.contains(".kiro/agents/spec-builder.json"), "{out}");
+        assert!(
+            out.contains(".kiro/agents/spec-independent-reviewer.json"),
+            "{out}"
+        );
         assert!(out.contains("not errors"), "{out}");
         assert!(out.contains("Paste this into your AI agent"), "{out}");
         assert!(out.contains(".mochiflow/config.toml"), "{out}");

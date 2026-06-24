@@ -9,5 +9,5 @@
     "file://{{engine}}/reference/language.md"
   ],
   "tools": ["read", "grep", "glob"],
-  "model": "auto"
+  "model": "claude-opus-4.8"
 }
