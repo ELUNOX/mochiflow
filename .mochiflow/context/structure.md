@@ -21,8 +21,8 @@ source of truth; this is a forward-placed map to avoid first-move mistakes.
 - `cli/crates/mochiflow-cli` — clap binary (`main.rs`) and CLI integration tests
   (`tests/cli.rs`, `tests/conformance.rs`, `tests/first_run.rs`, `tests/pr.rs`).
 - `cli/crates/mochiflow-core` — library modules: `adapter`, `backlog`,
-  `config`, `detach`, `detect`, `doctor`, `index`, `init`, `join`, `lint`,
-  `manifest`, `pr`, `present`, `spec_meta`, `upgrade`.
+  `config`, `detach`, `detect`, `doctor`, `freeze`, `index`, `init`, `join`,
+  `lint`, `manifest`, `pr`, `present`, `spec_meta`, `upgrade`.
 - `docs/` — user-facing concepts, setup, configuration, versioning, and release
   verification.
 - `assets/` — logo / mark images used by README and distribution material.
@@ -39,9 +39,23 @@ source of truth; this is a forward-placed map to avoid first-move mistakes.
   `decisions`, `pitfalls`).
 - `.mochiflow/specs/` — specs (`_backlog/`, `{slug}/`, `_done/`).
 
+## Adapter output layout
+
+| Adapter | Generated output | Mechanism |
+| --- | --- | --- |
+| `agents` | `AGENTS.md` | Embeddable managed block appended to existing file |
+| `claude-code` | `CLAUDE.md` | Embeddable managed block |
+| `copilot` | `.github/copilot-instructions.md` | Embeddable managed block |
+| `kiro` | `.kiro/steering/mochiflow.md` | Full-file managed (always-on steering with `#[[file:]]` pointers) |
+| `kiro` | `.kiro/agents/spec-independent-reviewer.json` | Full-file managed (read-only reviewer agent) |
+
+Kiro uses no dedicated build agent, no `toolsSettings`, and no per-verb steering.
+Permissions are delegated to the user's `permissions.yaml`.
+
 ## Entry points
 
 - `mochiflow <command>` — `config`, `index`, `lint`, `doctor`, `adapter`,
   `upgrade`, `ready`, `backlog`, `init`, `join`, `detach`, `guide`,
   `completions`, `freeze`, `pr`.
 - Verification surface: `cli` → `cargo test --manifest-path cli/Cargo.toml`.
+

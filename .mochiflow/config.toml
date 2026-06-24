@@ -6,7 +6,7 @@ index = ".mochiflow/INDEX.md"
 
 [i18n]
 artifact_language = "en"
-conversation_language = "auto"
+conversation_language = "ja"
 
 [constitution]
 project = ".mochiflow/constitution.md"
