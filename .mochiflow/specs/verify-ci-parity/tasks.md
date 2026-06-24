@@ -14,7 +14,7 @@ Critical Stop Conditions:
 
 ## Tasks
 
-- [ ] T-001 [AC-01, AC-02, AC-04] Update project verification profiles
+- [x] T-001 [AC-01, AC-02, AC-04] Update project verification profiles
   - Depends on: none
   - Files: `.mochiflow/config.toml`
   - Done: `cli.default` runs test, fmt, clippy, and freeze checks; `cli.quick` runs the test-only command; `cargo-deny` remains outside local `default`
