@@ -24,10 +24,10 @@ Critical Stop Conditions:
   - Files: `engine/adapters/kiro/steering/mochiflow.md.tpl`, `cli/crates/mochiflow-core/src/adapter.rs`
   - Done: `inclusion: always` frontmatter (line 1); marker comment; `#[[file:]]` includes for `{{engine}}/router.md`, `{{constitution.project}}`, `{{constitution.local}}`, `{{context.product}}`, `{{context.structure}}`, `{{context.tech}}`; Rules block mirroring `AGENTS.md.tpl` (push/PR via `mochiflow pr` only); `.kiro/steering/mochiflow.md` generated as a full-file managed target so a markerless pre-existing file is overwritten whole (frontmatter stays at top), not block-appended
   - Stop: if any `{{token}}` lacks a substitution in `subs()`
-- [ ] T-003 [AC-03] Confirm reviewer agent is policy-free
+- [ ] T-003 [AC-03] Confirm reviewer agent is policy-free and set model
   - Depends on: T-001
   - Files: `engine/adapters/kiro/agents/spec-independent-reviewer.json.tpl`
-  - Done: no `toolsSettings` key; `tools` exactly `["read","grep","glob"]`; no `subagent` trust block required
+  - Done: no `toolsSettings` key; `tools` exactly `["read","grep","glob"]`; no `subagent` trust block required; template `model` set to `claude-opus-4.8` (was `auto`); `preserve_kiro_agent_model` left intact for local overrides
   - Stop: if the reviewer needs a tool beyond read/grep/glob to function
 - [ ] T-004 [AC-04] Implement marker-gated self-heal of deprecated Kiro outputs
   - Depends on: T-001

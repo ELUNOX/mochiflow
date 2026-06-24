@@ -95,7 +95,9 @@ Claude/AGENTS trust model and carries no duplicated, drift-prone tool policy.
   `mochiflow pr`; a markerless pre-existing `mochiflow.md` SHALL be overwritten
   whole rather than block-appended.
 - AC-03: THE SYSTEM SHALL generate Kiro agent JSON with no `toolsSettings` key,
-  and the reviewer agent SHALL retain `tools` of exactly `read`, `grep`, `glob`.
+  and the reviewer agent SHALL retain `tools` of exactly `read`, `grep`, `glob`
+  and declare `model` `claude-opus-4.8` in its template (the generated default;
+  `preserve_kiro_agent_model` still preserves a user's local `model` override).
 - AC-04: WHEN `mochiflow adapter generate` runs in a project that still contains
   deprecated mochiflow-managed Kiro outputs (`spec-builder.json`, `spec*.md`
   steering, the legacy hook), THE SYSTEM SHALL remove only deprecated-list files
@@ -121,7 +123,7 @@ Claude/AGENTS trust model and carries no duplicated, drift-prone tool policy.
 | QA-01 | cli | Automated | Run `cargo test --manifest-path cli/Cargo.toml` | Pass, incl. updated Kiro file-set assertions |
 | QA-02 | cli | Automated | In a materialized kiro project, run `mochiflow adapter generate` then `adapter generate --check` | Two files generated; `--check` reports no drift |
 | QA-03 | cli | AI-observed | Inspect generated `.kiro/steering/mochiflow.md` | `inclusion: always`, `#[[file:]]` pointers for router/constitution/context, Rules block present; no inlined context |
-| QA-04 | cli | AI-observed | Inspect generated Kiro agent JSON | No `toolsSettings`; reviewer `tools` exactly read/grep/glob |
+| QA-04 | cli | AI-observed | Inspect generated Kiro agent JSON | No `toolsSettings`; reviewer `tools` exactly read/grep/glob; reviewer template `model` is `claude-opus-4.8` |
 | QA-05 | cli | Automated | Seed a project with a markered deprecated file (`spec-builder.json`), a markerless deprecated-list file (e.g. a marker-stripped `spec.md` steering), a markered legacy `hooks/generate-project-index.kiro.hook`, and an unmanaged `release.md`; run generate | Markered deprecated files (incl. the hook) removed and reported (`removed:`); markerless deprecated-list file reported (`preserved:`) and kept; `release.md` untouched and not reported |
 | QA-07 | cli | Automated | Pre-create a markerless `.kiro/steering/mochiflow.md`, run generate | File overwritten whole; `inclusion: always` frontmatter is on line 1; no appended managed block |
 | QA-06 | cli | AI-observed | After dogfood `freeze` + vendored sync + regenerate, run `mochiflow doctor` | Doctor passes; no MANIFEST drift, no residue |
