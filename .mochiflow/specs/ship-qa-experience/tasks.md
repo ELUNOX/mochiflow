@@ -32,7 +32,7 @@ Critical Stop Conditions:
   - Done: `{slug} feedback` / 「修正依頼」 / 「PR feedback」 in ship.md trigger_patterns; router Decision Flow step 3 adds a `_done/{slug}` resolution exception for feedback patterns (mirroring the merged-event exception); router routes these to `## PR Feedback Loop`
   - Stop: if new triggers conflict with existing trigger_patterns in other commands
 
-- [ ] T-004 [AC-06] Add `## Testing` section to pr-description.md template
+- [x] T-004 [AC-06] Add `## Testing` section to pr-description.md template
   - Depends on: none
   - Files: `engine/templates/delivery/pr-description.md`
   - Done: template contains `## Testing` with instruction to derive from spec.md QA Scenarios

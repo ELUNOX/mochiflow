@@ -39,7 +39,7 @@
     "templates/context/product.md": "sha256:03b4aefa05a1a4a198060a21a5f3e36ae8b4bcfba4b285dd257f725be0b68e7a",
     "templates/context/structure.md": "sha256:c788968d46949343b386609e12fcc7ebc78d2b3eb08d1514c608b5ea5662be37",
     "templates/context/tech.md": "sha256:c219d6bbf8854761b2d5dd724ac7301ef26a5f6c91faa26205752964e30086f0",
-    "templates/delivery/pr-description.md": "sha256:246e1fd03761d3932cef48e51543f74c09f7db51104baa1760fae0be5b3e5a75",
+    "templates/delivery/pr-description.md": "sha256:e5296bdc9f3e2425c37568e5663c075727af49cdc8da5ca5a22f537b39597afe",
     "templates/delivery/qa-instructions.md": "sha256:b53b6bd34ffb6466e418dd3439334849245ec608eeb699a01fe4b607c1c8db69",
     "templates/handoff/build-session-prompt.md": "sha256:73f34f2aa4b83c5cf2f5b78128226a72cb54b7520f71f361dd556e32bcbc5a68",
     "templates/spec/design.md": "sha256:6fd076467f44d3be02c0ed27e847b4bb09f5d40cfa7f01c20e5b290d49dc66fb",
