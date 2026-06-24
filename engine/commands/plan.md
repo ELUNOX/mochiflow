@@ -84,7 +84,9 @@ and drive to human approval for implementation. Do not start implementation.
 9. Commit the plan artifacts on the existing `{prefix}/{slug}` branch with a
    `docs(spec): ...` Conventional Commit and `Spec: {slug}` trailer. Stage only
    `spec.yaml`, `pitch.md` if it was corrected, `spec.md`, and conditional
-   `design.md` / `tasks.md`.
+   `design.md` / `tasks.md`. When fixing reviewer findings after a phase commit,
+   create a separate `docs(spec): ...` commit with the same `Spec:` trailer. Do
+   not amend the phase commit.
 10. After the approved consistency check passes and the plan commit is created,
     ask the user to choose the next step. Choice keywords
     (`review`, `build`, `later`) are stable identifiers; surrounding labels

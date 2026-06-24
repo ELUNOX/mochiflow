@@ -68,8 +68,13 @@ as `spec.yaml (draft)` + `pitch.md`. Do not write implementation code.
 9. Present the agreement in the conversation language
    using plain labels for purpose / background / scope / decisions / assumptions
    / open questions / change impact. Internally this is the Decision summary;
-   do not lead with internal headings. Guide the user toward creating the plan,
-   mentioning `mochiflow-plan` or `{slug} plan` only as the command if useful.
+   do not lead with internal headings. Then ask the user to choose the next step.
+   Choice keywords (`plan`, `later`) are stable identifiers; surrounding labels
+   follow the conversation language.
+
+   - **plan** — proceed to `mochiflow-plan` in the same session.
+   - **later** — stop here; output a resume note (spec slug and path) that can
+     be pasted into a new session to continue with `{slug} plan`.
 
 ## Stop conditions
 

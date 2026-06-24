@@ -1,4 +1,9 @@
 # Constitution (user-authored)
 
-User-authored always-loaded project rules go here. MochiFlow does not fill this during onboarding.
+## Dogfood: engine source → vendored sync
+
+When any file under `engine/` is edited, run these before the final verification:
+1. `mochiflow freeze`
+2. `mochiflow upgrade --source engine`
+3. `mochiflow adapter generate --check`
 
