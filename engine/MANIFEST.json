@@ -27,7 +27,7 @@
     "commands/plan.md": "sha256:643eae12ac2a50ac0fe09107dd574929192b58a8fc0bee444b8d0f6d7ff35f6c",
     "commands/refresh-context.md": "sha256:2840fd557d9367d7f539978d87d858d4dc5fcfdc10fe1e7755da7d147474cfc6",
     "commands/review.md": "sha256:4f66189df83abbd7bf1509709dc4db0b25a22693a9e550541e7833364cd2e33d",
-    "commands/ship.md": "sha256:369a809d9055bc34b95ec9ebbf43b547d437b839dfe55508600b009702ed399e",
+    "commands/ship.md": "sha256:bec0df34f7de2c7b8f8d7ce5a7cfce4216218d816ec2decd39b74d3db051c14e",
     "reference/authoring.md": "sha256:1cb643a350f35091a3a2aa7c2c4ed2fd77c357e01ae6ce2d9b332abe4d91cb7e",
     "reference/engineering-standards.md": "sha256:2f414d1f3bc71c6c47332867541313c9c1a00377fc1c9ff5021fdaaf37c5ea02",
     "reference/git.md": "sha256:a61c67ec07ff96ae01075a91b519c4ffc13251b09e74f5fd2e49e0760e878b2d",

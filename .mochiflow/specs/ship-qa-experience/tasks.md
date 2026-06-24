@@ -14,13 +14,13 @@ Critical Stop Conditions:
 
 ## Tasks
 
-- [ ] T-001 [AC-08] Update spec.standard.md QA Scenarios table to add Type column
+- [x] T-001 [AC-08] Update spec.standard.md QA Scenarios table to add Type column
   - Depends on: none
   - Files: `engine/templates/spec/spec.standard.md`
   - Done: QA table has columns `| QA | Scope | Type | Steps | Expected result |`
   - Stop: if template change breaks lint on existing `_done/` specs
 
-- [ ] T-002 [AC-01, AC-02, AC-03, AC-04] Rewrite ship.md Acceptance section with round-trip protocol
+- [x] T-002 [AC-01, AC-02, AC-03, AC-04] Rewrite ship.md Acceptance section with round-trip protocol
   - Depends on: none
   - Files: `engine/commands/ship.md`
   - Done: steps 1–3 define: present numbered QA list → accept per-item or numbered batch response → map to QA item by number → record Matrix token → rework loop on FAIL (re-present failed items + regressed items) → resume on all pass
