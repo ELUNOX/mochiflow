@@ -30,7 +30,7 @@ machine-readable workflow tokens.
 
 - In: lint.rs token validation (2 functions + error messages), workflow.md,
   ship.md, build.md, language.md, spec.md/spec.standard.md templates,
-  conformance tests.
+  conformance tests, MANIFEST.json regeneration.
 - Out: `_done/` spec migration, `PASS`/`FAIL`/`PENDING_HUMAN`/`UNVERIFIED`
   changes, deprecated alias removal.
 
@@ -45,12 +45,14 @@ machine-readable workflow tokens.
 
 - AC-01: THE SYSTEM SHALL accept `CONFIRMED` as a done-eligible AC Matrix result
   token in `is_done_matrix_result`.
-- AC-02: THE SYSTEM SHALL accept `CONFIRMED` as a canonical AC Matrix result
-  token in `is_canonical_matrix_result`.
-- AC-03: THE SYSTEM SHALL continue to accept `人間確認済み` as both canonical and
-  done-eligible (deprecated alias).
-- AC-04: THE SYSTEM SHALL continue to accept `対象外（<reason>）` as both
-  canonical and done-eligible (deprecated alias).
+- AC-02: THE SYSTEM SHALL accept `CONFIRMED` and `N/A: <reason>` as canonical
+  AC Matrix result tokens in `is_canonical_matrix_result`. (`N/A: <reason>` is
+  already canonical; this AC confirms it is not removed.)
+- AC-03: THE SYSTEM SHALL accept `N/A: <reason>` as a done-eligible AC Matrix
+  result token in `is_done_matrix_result` (promoting it from canonical-only to
+  done-eligible).
+- AC-04: THE SYSTEM SHALL continue to accept `人間確認済み` and
+  `対象外（<reason>）` as both canonical and done-eligible (deprecated aliases).
 - AC-05: THE SYSTEM SHALL display `CONFIRMED` and `N/A: <reason>` as the primary
   tokens in lint error messages, with deprecated aliases noted as "also accepted".
   A conformance test SHALL assert on the error message text.
@@ -91,7 +93,7 @@ machine-readable workflow tokens.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | AC-01 | cli | automated | QA-01, QA-02 | `cli/crates/mochiflow-core/src/lint.rs` | UNVERIFIED | | |
 | AC-02 | cli | automated | QA-01, QA-02 | `cli/crates/mochiflow-core/src/lint.rs` | UNVERIFIED | | |
-| AC-03 | cli | automated | QA-01, QA-03 | `cli/crates/mochiflow-core/src/lint.rs` | UNVERIFIED | | |
+| AC-03 | cli | automated | QA-01, QA-02 | `cli/crates/mochiflow-core/src/lint.rs` | UNVERIFIED | | |
 | AC-04 | cli | automated | QA-01, QA-03 | `cli/crates/mochiflow-core/src/lint.rs` | UNVERIFIED | | |
 | AC-05 | cli | automated | QA-01 | `cli/crates/mochiflow-core/src/lint.rs`, `cli/crates/mochiflow-cli/tests/conformance.rs` | UNVERIFIED | | |
 | AC-06 | cli | automated | QA-01 | `engine/reference/workflow.md` | UNVERIFIED | | |

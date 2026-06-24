@@ -24,7 +24,7 @@
 
 | File | Change |
 | --- | --- |
-| `cli/crates/mochiflow-core/src/lint.rs` | Add `CONFIRMED` to both match arms; update 2 error message format strings |
+| `cli/crates/mochiflow-core/src/lint.rs` | Add `CONFIRMED` to both match arms; add `N/A: <reason>` to `is_done_matrix_result` (it is already in `is_canonical_matrix_result` via `strip_prefix`); update 2 error message format strings |
 | `engine/reference/workflow.md` | Redefine canonical tokens; update done-eligible list |
 | `engine/commands/ship.md` | Round-trip protocol: `CONFIRMED` replaces `人間確認済み` |
 | `engine/commands/build.md` | AC Matrix recording instruction: `N/A: <reason>` replaces `対象外（<reason>）` |

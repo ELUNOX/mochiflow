@@ -14,10 +14,10 @@ Critical Stop Conditions:
 
 ## Tasks
 
-- [ ] T-001 [AC-01, AC-02, AC-03, AC-04] Add `CONFIRMED` to lint.rs and update error messages
+- [ ] T-001 [AC-01, AC-02, AC-03, AC-04] Add `CONFIRMED` and `N/A:` done-eligibility to lint.rs and update error messages
   - Depends on: none
   - Files: `cli/crates/mochiflow-core/src/lint.rs`
-  - Done: `is_canonical_matrix_result` accepts `CONFIRMED`; `is_done_matrix_result` accepts `CONFIRMED`; old tokens still accepted; error messages show new tokens primary with deprecated note
+  - Done: `is_canonical_matrix_result` accepts `CONFIRMED`; `is_done_matrix_result` accepts `CONFIRMED` and `N/A: <reason>`; old tokens still accepted; error messages show new tokens primary with deprecated note
   - Stop: if adding the token requires structural changes beyond the match arms
 
 - [ ] T-002 [AC-06] Update workflow.md canonical token definitions
@@ -44,8 +44,8 @@ Critical Stop Conditions:
   - Done: Completion Conditions text uses `CONFIRMED` and `N/A: <reason>` instead of Japanese tokens
   - Stop: if template change breaks lint on existing specs
 
-- [ ] T-006 [AC-05, AC-10] Update conformance tests and run full verification
+- [ ] T-006 [AC-05, AC-10] Update conformance tests, regenerate MANIFEST, and run full verification
   - Depends on: T-001, T-003, T-004, T-005
-  - Files: `cli/crates/mochiflow-cli/tests/conformance.rs`
-  - Done: (1) existing `lint_done_passes_with_canonical_final_matrix_results` kept as deprecated-alias test; (2) new test added using `CONFIRMED` + `N/A: reason`; (3) new assertion confirms lint error message text contains `CONFIRMED` and `N/A: <reason>` as primary and deprecated aliases as "also accepted"; (4) language.md token assertion updated to expect new canonical tokens; (5) ship.md assertion updated to expect `CONFIRMED`; (6) `engine_templates_are_english_source` exclusion simplified (templates no longer contain Japanese tokens); (7) `cargo test` passes; `mochiflow freeze --check` exit 0; `mochiflow upgrade --source engine` exit 0; `mochiflow doctor` exit 0; (8) elevated-risk independent-reviewer run and verdict recorded in `design.md ## Review Results`
+  - Files: `cli/crates/mochiflow-cli/tests/conformance.rs`, `engine/MANIFEST.json`
+  - Done: (1) existing `lint_done_passes_with_canonical_final_matrix_results` kept as deprecated-alias test; (2) new test added using `CONFIRMED` + `N/A: reason` in done state; (3) new assertion confirms lint error message text contains `CONFIRMED` and `N/A: <reason>` as primary and deprecated aliases as "also accepted"; (4) language.md token assertion block (~:793-805) updated: `CONFIRMED` and `N/A: <reason>` asserted as canonical, deprecated tokens asserted as present-but-deprecated (not removed); (5) ship.md assertion updated to expect `CONFIRMED`; (6) `engine_templates_are_english_source` exclusion simplified (templates no longer contain Japanese tokens); (7) `mochiflow freeze` run to regenerate MANIFEST.json; (8) `mochiflow freeze --check` exit 0; `mochiflow upgrade --source engine` exit 0; `cargo test` passes; `mochiflow doctor` exit 0; (9) elevated-risk independent-reviewer run and verdict recorded in `design.md ## Review Results`
   - Stop: if test migration requires more than assertion text changes
