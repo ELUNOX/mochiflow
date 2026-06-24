@@ -41,7 +41,9 @@ defined recovery path and PR reviewers know how to test the change.
   template removal (including ephemeral generation target),
   spec.md template QA Scenarios column update,
   Kiro adapter template + regenerated agent file update,
-  conformance test updates, MANIFEST regeneration.
+  conformance test updates, MANIFEST regeneration,
+  vendored engine sync (`mochiflow upgrade --source engine`),
+  adapter regeneration check (`mochiflow adapter generate --check`).
 - Out: CLI Rust library changes (beyond conformance tests), plan.md/build.md
   procedure changes, AC Matrix token changes, language.md changes.
 
@@ -58,16 +60,22 @@ defined recovery path and PR reviewers know how to test the change.
 
 - AC-01: WHEN ship enters acceptance, THE SYSTEM SHALL present human-operated
   and visual QA items as a numbered list derived from spec.md QA Scenarios
-  (scenario name, steps, expected result).
-- AC-02: WHEN a human responds with pass intent, THE SYSTEM SHALL record
-  `人間確認済み` in the AC Matrix for that item.
-- AC-03: WHEN a human responds with fail intent and a reason, THE SYSTEM SHALL
-  record `FAIL` in the AC Matrix, pause ship (status stays `approved`), run a
-  build-equivalent fix loop, then re-present only the failed items.
+  (scenario name, steps, expected result). The human responds per item or as a
+  numbered batch (e.g. "1: OK, 2: NG reason"). The agent maps each response to
+  its QA item by number.
+- AC-02: WHEN a human responds with pass intent for an item, THE SYSTEM SHALL
+  record `人間確認済み` in the AC Matrix for that item.
+- AC-03: WHEN a human responds with fail intent and a reason for an item, THE
+  SYSTEM SHALL record `FAIL` in the AC Matrix for that item, pause ship (status
+  stays `approved`), run a build-equivalent fix loop, then re-present only the
+  failed items plus any previously-passed items whose implementation was modified
+  by the fix.
 - AC-04: WHEN all QA items reach a done-eligible result, THE SYSTEM SHALL resume
   the ship step that sets `status: done`.
 - AC-05: THE SYSTEM SHALL add router triggers `{slug} feedback` / 「修正依頼」 /
-  「PR feedback」 that invoke the existing PR Feedback Loop in ship.md.
+  「PR feedback」 that invoke the existing PR Feedback Loop in ship.md. The
+  router SHALL resolve `{slug}` against `{specs_dir}/_done/{slug}/` for these
+  feedback patterns (since the spec is archived at the time PR feedback arrives).
 - AC-06: WHEN ship generates `pr-body.md`, THE SYSTEM SHALL include a
   `## Testing` section derived from spec.md QA Scenarios.
 - AC-07: THE SYSTEM SHALL remove `engine/templates/delivery/qa-instructions.md`
@@ -79,7 +87,8 @@ defined recovery path and PR reviewers know how to test the change.
 - AC-08: THE SYSTEM SHALL update `spec.standard.md` QA Scenarios table to
   include a `Type` column (Automated / Human-operated / Visual).
 - AC-09: THE SYSTEM SHALL pass `cargo test`, `mochiflow lint`, `mochiflow
-  freeze --check`, and `mochiflow doctor` after all changes.
+  freeze --check`, `mochiflow upgrade --source engine` (vendored engine sync),
+  `mochiflow adapter generate --check`, and `mochiflow doctor` after all changes.
 
 ## QA Scenarios
 

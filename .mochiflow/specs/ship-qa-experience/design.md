@@ -37,6 +37,16 @@
 - **Router triggers for PR Feedback Loop**: add `{slug} feedback` / 「修正依頼」
   / 「PR feedback」 to ship.md `trigger_patterns` and update router.md's
   handling to route these to `## PR Feedback Loop` (not full ship restart).
+  Router resolves `{slug}` against `{specs_dir}/_done/{slug}/` for feedback
+  patterns specifically (since the spec is archived when PR feedback arrives),
+  mirroring the existing `{slug} merged` exception in router.md Decision Flow
+  step 3.
+
+- **QA round-trip response model**: the agent presents items as a numbered list
+  and accepts responses either per-item or as a numbered batch. Each response is
+  mapped to its QA item by number. After a rework fix, the agent re-presents
+  failed items plus any previously-passed items whose implementation files were
+  modified by the fix (to catch regressions).
 
 ## Architecture
 
@@ -55,6 +65,7 @@ No new files or modules. Changes are engine documentation edits:
 | `.kiro/agents/spec-builder.json` | Remove qa-instructions line from inputFiles |
 | `engine/adapters/kiro/agents/spec-builder.json.tpl` | Remove qa-instructions line |
 | `engine/MANIFEST.json` | Regenerated via `mochiflow freeze` |
+| `.mochiflow/engine/**` | Synced from source via `mochiflow upgrade --source engine` |
 
 ## Error Handling
 
