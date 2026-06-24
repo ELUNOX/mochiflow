@@ -1,14 +1,14 @@
 # 📋 Spec Dashboard
 
-> updated: 2026-06-23 21:49 UTC
+> updated: 2026-06-24 00:21 UTC
 
 ## Pipeline
 
 | stage | count |
 |:------|------:|
-| 🌱 backlog seed | 10 |
+| 🌱 backlog seed | 9 |
 | 📝 draft | 0 |
-| 🟢 approved | 0 |
+| 🟢 approved | 1 |
 | ✅ done | 5 |
 
 ## Backlog seeds
@@ -24,11 +24,12 @@
 | ["parallel-spec-context-switch"](specs/_backlog/"parallel-spec-context-switch".md) | "Support parallel spec work with explicit context switching" | ❓ "seed" | "conversation" |
 | ["prevent-build-phase-spec-mutation"](specs/_backlog/"prevent-build-phase-spec-mutation".md) | "Prevent tasks.md structural mutation during build phase" | ❓ "seed" | "conversation" |
 | ["router-standing-load-weight"](specs/_backlog/"router-standing-load-weight".md) | "Reduce router/verb standing-load weight in CLI sessions" | ❓ "seed" | "conversation" |
-| ["ship-qa-experience"](specs/_backlog/"ship-qa-experience".md) | "Ship QA experience: rework loop, result collection, PR testing section" | ❓ "seed" | "conversation" |
 
 ## Active specs
 
-（なし）
+| Spec | Status | Risk | Docs | Module |
+|:-----|:-------|:-----|:-----|:-------|
+| [ship-qa-experience](specs/ship-qa-experience/) | 🟢 approved | elevated | spec+design+tasks | — |
 
 ## Done (chronological)
 

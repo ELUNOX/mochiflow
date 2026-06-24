@@ -50,7 +50,7 @@ Critical Stop Conditions:
   - Done: all 3 call sites replaced: (1) `branch_placeholders_use_prefix_slug` — remove qa read (git.md assertion already covers the guarantee); (2) `english_template_headings_are_present` — remove qa heading assertions (headings are gone; spec.standard.md QA table and pr-description.md `## Testing` are already tested via their own template reads); (3) `ac_matrix_pending_human_is_canonical_provisional_token` — move the token-mapping assertion to ship.md (`ship.contains("人間確認済み")` confirms the round-trip protocol preserves the mapping). `cargo test` passes.
   - Stop: if test semantics depend on qa-instructions content beyond file existence
 
-- [ ] T-007 [AC-09] Sync vendored engine, regenerate MANIFEST, and run full verification
+- [x] T-007 [AC-09] Sync vendored engine, regenerate MANIFEST, and run full verification
   - Depends on: T-005, T-006
   - Files: `engine/MANIFEST.json`, `.mochiflow/engine/**`
   - Done: `mochiflow upgrade --source engine` exits 0 (vendored copy synced); `mochiflow freeze` exits 0; `mochiflow freeze --check` exits 0; `mochiflow adapter generate --check` exits 0; `cargo test` passes; `mochiflow doctor` exits 0; `mochiflow lint --spec ship-qa-experience` passes
