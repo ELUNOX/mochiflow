@@ -1,0 +1,11 @@
+version: 1
+slug: "kiro-adapter-default-agent"
+title: "Kiro adapter: drop dedicated agent, single always-on steering, delegate permissions"
+type: "refactor"
+surfaces:
+  - "cli"
+integration: "contract"
+risk: "elevated"
+status: "draft"
+created: "2026-06-24"
+updated: "2026-06-24"
