@@ -76,7 +76,8 @@ and drive to human approval for implementation. Do not start implementation.
    When talking to the user, call this a consistency check unless the exact
    command matters.
 7. Present readiness in conversation-language plain wording: what will change, what
-   was checked, and what approval is needed to start implementation. On an
+   was checked, and that approval unlocks implementation (but does not start it
+   immediately — the choice card in step 10 decides the next action). On an
    approval word (`reference/workflow.md ## Human gates`), edit `spec.yaml`
    `status: approved` and `updated` directly (there is no CLI transition command).
 8. Re-run `mochiflow lint --spec {slug}` after setting `status: approved`; fix any FAIL before ending plan.
@@ -99,9 +100,9 @@ and drive to human approval for implementation. Do not start implementation.
       build / later only. On `fail`, report findings and stop; the user decides
       whether to fix and re-review or proceed.
     - **build** — proceed to `mochiflow-build` in the same session.
-    - **later** — output a copy-paste handoff prompt rendered from
-      `templates/handoff/build-session-prompt.md` (must include `{slug}` and
-      `{specs_dir}/{slug}/`) and stop.
+    - **later** — stop here; output a resume note (rendered from
+      `templates/handoff/build-session-prompt.md`, includes `{slug}` and
+      `{specs_dir}/{slug}/`) that can be pasted into a new session to continue.
 
 ## Stop conditions
 
