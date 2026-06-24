@@ -159,4 +159,9 @@
 
 ## Review Results
 
-<!-- Recorded during build: independent-reviewer once after all tasks (risk: elevated). Reviewer mode: delegated | inline / Verdict: pass | pass-with-comments | fail -->
+<!-- Recorded during build: independent-reviewer once after all tasks (risk: elevated). -->
+Reviewer mode: delegated | Verdict: pass-with-comments
+
+Low (maintainability): the `generate` write branch checks `is_kiro_full_file_md`
+twice via empty guard arms. Functionally correct; optional structural cleanup.
+No Critical/High/Medium findings. All ACs verified against source.
