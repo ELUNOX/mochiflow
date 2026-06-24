@@ -86,7 +86,7 @@ and drive to human approval for implementation. Do not start implementation.
    `spec.yaml`, `pitch.md` if it was corrected, `spec.md`, and conditional
    `design.md` / `tasks.md`.
 10. After the approved consistency check passes and the plan commit is created,
-    present a next-step choice card in conversation language. Choice keywords
+    ask the user to choose the next step. Choice keywords
     (`review`, `build`, `later`) are stable identifiers; surrounding labels
     follow the conversation language.
 
