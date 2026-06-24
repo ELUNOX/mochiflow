@@ -651,6 +651,7 @@ pub fn cmd_adapter_generate(cfg: &Config, check: bool, force: bool) -> i32 {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 
