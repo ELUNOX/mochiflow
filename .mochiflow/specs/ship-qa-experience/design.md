@@ -86,4 +86,7 @@ No new files or modules. Changes are engine documentation edits:
 
 ## Review Results
 
-<!-- Populated during build after independent-reviewer run. -->
+- Reviewer mode: delegated
+- Verdict: pass-with-comments
+- Findings: 2 Low (AC-01..06 still PENDING_HUMAN — expected pre-ship; CHANGELOG historical entry mentions deleted qa-instructions.md — optional fix at next release)
+- No required fixes.
