@@ -23,7 +23,6 @@ trigger_patterns:
   - "{slug} 修正依頼"
   - "{slug} PR feedback"
 artifacts:
-  - "{install_dir}/state/{slug}/qa-instructions.md"
   - "{install_dir}/state/{slug}/pr-body.md"
   - "{install_dir}/state/{slug}/pr-request.json (pr_driver backend only)"
   - "{specs_dir}/_done/{slug}/"
@@ -42,7 +41,6 @@ forbidden_writes:
 references:
   - reference/workflow.md
   - reference/git.md
-  - templates/delivery/qa-instructions.md
   - templates/delivery/pr-description.md
 ---
 
