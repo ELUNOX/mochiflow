@@ -27,16 +27,16 @@
   this exception, the approved ACs would require a file the build procedure
   cannot write.
 
-- **Context refresh is a follow-up**: `.mochiflow/context/tech.md` is derived
-  current-state orientation and must not be hand-edited during build. The change
-  should leave a post-ship `refresh-context` follow-up instead of committing an
-  inline context edit.
+- **Context refresh output is preserved**: the `.mochiflow/context/` changes
+  already present on the branch came from `refresh-context` output and are kept
+  as related context refresh output, not hand-authored build edits.
 
 ## Architecture
 
 | File | Change |
 | --- | --- |
 | `.mochiflow/config.toml` | Change `surfaces.cli.verify.default` to the chained local CI-equivalent command; add `quick` with the existing `cargo test` command |
+| `.mochiflow/context/**` | Preserve already refreshed context output that was present when this work started |
 | `engine/reference/workflow.md` | Clarify that `default` is canonical build/merge-equivalent verification and `quick` is fast feedback |
 | `engine/commands/build.md` | Clarify that build runs the canonical `default` profile for completion, not a narrower fast profile |
 | `engine/MANIFEST.json` | Regenerate after engine source edits |
@@ -71,12 +71,6 @@
 - Because engine source changes are expected, run `mochiflow freeze`,
   `mochiflow upgrade --source engine`, and `mochiflow adapter generate --check`.
 - Run `cargo test --manifest-path cli/Cargo.toml` as the Rust regression suite.
-
-## Post-ship Follow-up
-
-- Run `mochiflow refresh-context` after this work is shipped so
-  `.mochiflow/context/tech.md` can be regenerated from the changed project
-  configuration under the normal human-confirmed context refresh flow.
 
 ## Integration Contract
 

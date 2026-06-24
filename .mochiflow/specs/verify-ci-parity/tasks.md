@@ -35,7 +35,7 @@ Critical Stop Conditions:
 - [x] T-004 [AC-01, AC-02, AC-03, AC-04, AC-06] Verify and record acceptance evidence
   - Depends on: T-003
   - Files: `.mochiflow/specs/verify-ci-parity/spec.md`, `.mochiflow/specs/verify-ci-parity/design.md`, `.mochiflow/specs/verify-ci-parity/tasks.md`
-  - Done: new `cli.default` command passes; `mochiflow config show` confirms profiles; `mochiflow lint --spec verify-ci-parity` passes; AC Matrix rows are updated with evidence; elevated-risk review result is recorded in `design.md ## Review Results`; post-ship `refresh-context` follow-up is reported
+  - Done: new `cli.default` command passes; `mochiflow config show` confirms profiles; `mochiflow lint --spec verify-ci-parity` passes; AC Matrix rows are updated with evidence; elevated-risk review result is recorded in `design.md ## Review Results`; pre-existing context refresh output is preserved
   - Stop: if verification fails for a reason outside this spec's scope
 
 ## Verification Plan / AC Matrix
