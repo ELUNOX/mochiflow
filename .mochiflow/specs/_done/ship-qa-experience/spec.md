@@ -112,12 +112,12 @@ defined recovery path and PR reviewers know how to test the change.
 
 | AC | Scope | Verification method | Planned test/QA | Implementation | Result | Evidence | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| AC-01 | cli | human | QA-05 | `engine/commands/ship.md` | PENDING_HUMAN | | |
-| AC-02 | cli | human | QA-05 | `engine/commands/ship.md` | PENDING_HUMAN | | |
-| AC-03 | cli | human | QA-05 | `engine/commands/ship.md` | PENDING_HUMAN | | |
-| AC-04 | cli | human | QA-05 | `engine/commands/ship.md` | PENDING_HUMAN | | |
-| AC-05 | cli | human | QA-06 | `engine/commands/ship.md`, `engine/router.md` | PENDING_HUMAN | | |
-| AC-06 | cli | human | QA-07 | `engine/templates/delivery/pr-description.md` | PENDING_HUMAN | | |
+| AC-01 | cli | human | QA-05 | `engine/commands/ship.md` | 人間確認済み | QA-05 human confirmation | |
+| AC-02 | cli | human | QA-05 | `engine/commands/ship.md` | 人間確認済み | QA-05 human confirmation | |
+| AC-03 | cli | human | QA-05 | `engine/commands/ship.md` | 人間確認済み | QA-05 human confirmation | |
+| AC-04 | cli | human | QA-05 | `engine/commands/ship.md` | 人間確認済み | QA-05 human confirmation | |
+| AC-05 | cli | human | QA-06 | `engine/commands/ship.md`, `engine/router.md` | 人間確認済み | QA-06 human confirmation | |
+| AC-06 | cli | human | QA-07 | `engine/templates/delivery/pr-description.md` | 人間確認済み | QA-07 human confirmation | |
 | AC-07 | cli | automated | QA-01, QA-03 | `engine/templates/delivery/`, `engine/commands/ship.md`, `engine/reference/workflow.md`, `engine/reference/authoring.md` | PASS | `cargo test` 100 passed, `mochiflow freeze --check` exit 0 | |
 | AC-08 | cli | automated | QA-01 | `engine/templates/spec/spec.standard.md` | PASS | `cargo test` 100 passed | |
 | AC-09 | cli | automated | QA-01, QA-02, QA-03, QA-04 | all | PASS | `cargo test` 100/0, `mochiflow lint` 0 fail, `mochiflow freeze --check` exit 0, `mochiflow upgrade --source engine` exit 0, `mochiflow adapter generate --check` 0 drift, `mochiflow doctor` 0 fail | |
