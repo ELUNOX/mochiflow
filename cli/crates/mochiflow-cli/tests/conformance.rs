@@ -661,7 +661,7 @@ fn ac_matrix_pending_human_is_canonical_provisional_token() {
         "language reference must preserve the provisional token"
     );
     assert!(
-        ship.contains("`人間確認済み`"),
+        ship.contains("`CONFIRMED`"),
         "ship round-trip protocol must map human confirmation to the canonical Matrix token"
     );
 }
@@ -800,14 +800,21 @@ fn language_reference_uses_current_ac_results() {
     }
     for current in [
         "`PASS`",
-        "`人間確認済み`",
-        "`対象外（<reason>）`",
+        "`CONFIRMED`",
+        "`N/A: <reason>`",
         "`FAIL`",
         "`PENDING_HUMAN`",
     ] {
         assert!(
             language.contains(current),
             "language reference must list current AC result value {current}"
+        );
+    }
+    // Deprecated aliases must remain present (for backward-compatibility documentation)
+    for deprecated in ["`人間確認済み`", "`対象外（<reason>）`"] {
+        assert!(
+            language.contains(deprecated),
+            "language reference must still mention deprecated alias {deprecated}"
         );
     }
 }
@@ -856,11 +863,8 @@ fn engine_templates_are_english_source() {
     collect_files(&templates_dir, &mut files);
 
     for path in files {
-        let mut text = std::fs::read_to_string(&path)
+        let text = std::fs::read_to_string(&path)
             .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
-        for token in ["人間確認済み", "対象外"] {
-            text = text.replace(token, "");
-        }
         let has_japanese = text.chars().any(|c| {
             ('\u{3040}'..='\u{30ff}').contains(&c) || ('\u{4e00}'..='\u{9fff}').contains(&c)
         });
@@ -1293,6 +1297,32 @@ fn lint_done_passes_with_canonical_final_matrix_results() {
               ## AC Verification Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | PASS |\n| AC-02 | 人間確認済み |\n| AC-03 | 対象外（not relevant for CLI） |\n";
     let (code, out) = run_lint_case(&yaml, md, None, None);
     assert_eq!(code, 0, "{out}");
+}
+
+#[test]
+fn lint_done_passes_with_ascii_canonical_tokens() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: done");
+    let md = "# S\n\n## 受入基準\n\n\
+              - AC-01: THE SYSTEM SHALL x.\n\
+              - AC-02: WHEN y, THE SYSTEM SHALL z.\n\
+              - AC-03: WHERE q, THE SYSTEM SHALL r.\n\n\
+              ## AC Verification Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | PASS |\n| AC-02 | CONFIRMED |\n| AC-03 | N/A: not relevant for CLI |\n";
+    let (code, out) = run_lint_case(&yaml, md, None, None);
+    assert_eq!(code, 0, "{out}");
+}
+
+#[test]
+fn lint_error_message_shows_ascii_tokens_as_primary() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: done");
+    let md = "# S\n\n## 受入基準\n\n\
+              - AC-01: THE SYSTEM SHALL x.\n\n\
+              ## AC Verification Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | BOGUS |\n";
+    let (code, out) = run_lint_case(&yaml, md, None, None);
+    assert_ne!(code, 0);
+    assert!(
+        out.contains("CONFIRMED") && out.contains("N/A: <reason>") && out.contains("also accepted"),
+        "lint error must show ASCII tokens as primary and note deprecated aliases: {out}"
+    );
 }
 
 #[test]

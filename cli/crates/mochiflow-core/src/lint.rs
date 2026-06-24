@@ -509,7 +509,7 @@ fn parse_matrix_rows(text: &str) -> Vec<MatrixRow> {
 fn is_canonical_matrix_result(result: &str) -> bool {
     matches!(
         result,
-        "UNVERIFIED" | "PASS" | "PENDING_HUMAN" | "人間確認済み" | "FAIL"
+        "UNVERIFIED" | "PASS" | "CONFIRMED" | "PENDING_HUMAN" | "人間確認済み" | "FAIL"
     ) || result
         .strip_prefix("N/A: ")
         .is_some_and(|reason| !reason.trim().is_empty())
@@ -520,13 +520,16 @@ fn is_canonical_matrix_result(result: &str) -> bool {
 }
 
 fn is_done_matrix_result(result: &str) -> bool {
-    if result == "PASS" || result == "人間確認済み" {
+    if result == "PASS" || result == "CONFIRMED" || result == "人間確認済み" {
         return true;
     }
     result
-        .strip_prefix("対象外（")
-        .and_then(|s| s.strip_suffix('）'))
-        .is_some_and(|reason| !reason.trim().is_empty() && reason.trim() != "理由")
+        .strip_prefix("N/A: ")
+        .is_some_and(|reason| !reason.trim().is_empty())
+        || result
+            .strip_prefix("対象外（")
+            .and_then(|s| s.strip_suffix('）'))
+            .is_some_and(|reason| !reason.trim().is_empty() && reason.trim() != "理由")
 }
 
 fn design_required(meta: &SpecMeta) -> bool {
@@ -836,7 +839,7 @@ fn lint_spec_dir(
                     severity: "FAIL".into(),
                     path: matrix_path.clone(),
                     message: format!(
-                        "AC Matrix result for {} must be one of UNVERIFIED, PASS, PENDING_HUMAN, 人間確認済み, N/A: <reason>, 対象外（<reason>）, FAIL",
+                        "AC Matrix result for {} must be one of UNVERIFIED, PASS, CONFIRMED, PENDING_HUMAN, N/A: <reason>, FAIL (also accepted: 人間確認済み, 対象外（<reason>）)",
                         row.ac
                     ),
                 });
@@ -883,7 +886,7 @@ fn lint_spec_dir(
                         severity: "FAIL".into(),
                         path: spec_dir.join("spec.yaml"),
                         message: format!(
-                            "status is done but AC Matrix row {} has invalid result `{shown}`; expected PASS, 人間確認済み, or 対象外（<reason>）",
+                            "status is done but AC Matrix row {} has invalid result `{shown}`; expected PASS, CONFIRMED, or N/A: <reason> (also accepted: 人間確認済み, 対象外（<reason>）)",
                             row.ac
                         ),
                     });

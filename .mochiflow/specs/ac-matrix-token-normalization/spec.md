@@ -91,14 +91,14 @@ machine-readable workflow tokens.
 
 | AC | Scope | Verification method | Planned test/QA | Implementation | Result | Evidence | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| AC-01 | cli | automated | QA-01, QA-02 | `cli/crates/mochiflow-core/src/lint.rs` | UNVERIFIED | | |
-| AC-02 | cli | automated | QA-01, QA-02 | `cli/crates/mochiflow-core/src/lint.rs` | UNVERIFIED | | |
-| AC-03 | cli | automated | QA-01, QA-02 | `cli/crates/mochiflow-core/src/lint.rs` | UNVERIFIED | | |
-| AC-04 | cli | automated | QA-01, QA-03 | `cli/crates/mochiflow-core/src/lint.rs` | UNVERIFIED | | |
-| AC-05 | cli | automated | QA-01 | `cli/crates/mochiflow-core/src/lint.rs`, `cli/crates/mochiflow-cli/tests/conformance.rs` | UNVERIFIED | | |
-| AC-06 | cli | automated | QA-01 | `engine/reference/workflow.md` | UNVERIFIED | | |
-| AC-07 | cli | automated | QA-01 | `engine/commands/ship.md` | UNVERIFIED | | |
-| AC-08 | cli | automated | QA-01 | `engine/reference/language.md` | UNVERIFIED | | |
-| AC-09 | cli | automated | QA-01 | `engine/templates/spec/spec.md`, `engine/templates/spec/spec.standard.md` | UNVERIFIED | | |
-| AC-10 | cli | automated | QA-01, QA-04 | all | UNVERIFIED | | |
-| AC-11 | cli | automated | QA-01 | `engine/commands/build.md` | UNVERIFIED | | |
+| AC-01 | cli | automated | QA-01, QA-02 | `cli/crates/mochiflow-core/src/lint.rs` | PASS | cargo test 102 passed | |
+| AC-02 | cli | automated | QA-01, QA-02 | `cli/crates/mochiflow-core/src/lint.rs` | PASS | cargo test 102 passed | |
+| AC-03 | cli | automated | QA-01, QA-02 | `cli/crates/mochiflow-core/src/lint.rs` | PASS | lint_done_passes_with_ascii_canonical_tokens | |
+| AC-04 | cli | automated | QA-01, QA-03 | `cli/crates/mochiflow-core/src/lint.rs` | PASS | lint_done_passes_with_canonical_final_matrix_results (deprecated alias) | |
+| AC-05 | cli | automated | QA-01 | `cli/crates/mochiflow-core/src/lint.rs`, `cli/crates/mochiflow-cli/tests/conformance.rs` | PASS | lint_error_message_shows_ascii_tokens_as_primary | |
+| AC-06 | cli | automated | QA-01 | `engine/reference/workflow.md` | PASS | cargo test 102 passed | |
+| AC-07 | cli | automated | QA-01 | `engine/commands/ship.md` | PASS | cargo test 102 passed | |
+| AC-08 | cli | automated | QA-01 | `engine/reference/language.md` | PASS | cargo test 102 passed | |
+| AC-09 | cli | automated | QA-01 | `engine/templates/spec/spec.md`, `engine/templates/spec/spec.standard.md` | PASS | cargo test 102 passed | |
+| AC-10 | cli | automated | QA-01, QA-04 | all | PASS | cargo test 102, freeze --check 0, upgrade 0, doctor 0 fail | |
+| AC-11 | cli | automated | QA-01 | `engine/commands/build.md` | PASS | cargo test 102 passed | |

@@ -98,22 +98,20 @@ The AC Matrix is created during plan in `spec.md` under
 Canonical result values are exact tokens:
 
 - `PASS` — done-eligible automated or AI-observed verification passed.
-- `人間確認済み` — done-eligible human/visual QA was confirmed.
-- `対象外（<reason>）` — done-eligible not-applicable result with a concrete reason.
+- `CONFIRMED` — done-eligible human/visual QA was confirmed.
+- `N/A: <reason>` — done-eligible not-applicable result with a concrete reason.
 - `FAIL` — failing result; not done-eligible.
 - `PENDING_HUMAN` — provisional build-time result for human/visual QA that has
   not been performed yet; not done-eligible.
 - `UNVERIFIED` — provisional build-time result for an automated/AI-observed AC
   row not yet verified; not done-eligible. Resolve to `PASS` / `FAIL` /
-  `対象外（<reason>）` before `done`.
+  `N/A: <reason>` before `done`.
 
-The done-eligible tokens are exactly `PASS`, `人間確認済み`, and `対象外（<reason>）`.
+The done-eligible tokens are exactly `PASS`, `CONFIRMED`, and `N/A: <reason>`.
 `PENDING_HUMAN` and `UNVERIFIED` are provisional build-time placeholders only.
-`N/A: <reason>` is the ASCII-input equivalent of `対象外（<reason>）` and is
-accepted by `lint`; prefer the canonical `対象外（<reason>）` token in authored
-artifacts. These provisional/ASCII forms are matrix-cell working values only —
-do not introduce them into templates, the AC heading prose, or stable-identifier
-lists in `reference/language.md`.
+Deprecated aliases `人間確認済み` (equivalent to `CONFIRMED`) and
+`対象外（<reason>）` (equivalent to `N/A: <reason>`) are permanently accepted
+by lint for backward compatibility with archived specs.
 
 `done` is an acceptance state, not a human approval. There is no CLI transition
 command: `ship` edits `spec.yaml` `status: done` (and `updated`) directly once
@@ -121,7 +119,7 @@ all of these conditions hold, then re-runs `lint` to confirm — no approval wor
 is involved:
 
 1. the AC Verification Matrix is present and complete — every spec AC appears as a row;
-2. every row has a done-eligible result token (`PASS`, `人間確認済み`, or `対象外（<reason>）`);
+2. every row has a done-eligible result token (`PASS`, `CONFIRMED`, or `N/A: <reason>`);
 3. when `risk ≥ elevated`, the reviewer verdict is recorded (condition owned by
    `risk.md ## Consequences`; referenced here, not redefined).
 
