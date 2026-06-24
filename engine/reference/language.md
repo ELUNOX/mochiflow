@@ -67,6 +67,7 @@ Use these examples as meaning guides, not as a fixed dictionary:
 | `fold` | record durable learnings | 学びの記録 |
 | `archive` | move to completed work | 完了済みに整理 |
 | reviewer verdict | review result | レビュー結果 |
+| `seed` / backlog file | add to backlog | バックログに追加 |
 
 ## Stable Identifiers
 
