@@ -90,7 +90,8 @@ Claude/AGENTS trust model and carries no duplicated, drift-prone tool policy.
 - AC-04: WHEN `mochiflow adapter generate` runs in a project that still contains
   deprecated mochiflow-managed Kiro outputs (`spec-builder.json`, `spec*.md`
   steering), THE SYSTEM SHALL remove only those files that carry the mochiflow
-  marker, report each removal, and leave marker-less files unchanged.
+  marker, report each removal, and leave marker-less files unchanged and
+  reported as preserved.
 - AC-05: WHEN `mochiflow adapter generate --check` and `mochiflow doctor` run
   after generation on the new layout, THE SYSTEM SHALL report no drift and no
   Kiro residue failure.
@@ -111,7 +112,7 @@ Claude/AGENTS trust model and carries no duplicated, drift-prone tool policy.
 | QA-02 | cli | Automated | In a materialized kiro project, run `mochiflow adapter generate` then `adapter generate --check` | Two files generated; `--check` reports no drift |
 | QA-03 | cli | AI-observed | Inspect generated `.kiro/steering/mochiflow.md` | `inclusion: always`, `#[[file:]]` pointers for router/constitution/context, Rules block present; no inlined context |
 | QA-04 | cli | AI-observed | Inspect generated Kiro agent JSON | No `toolsSettings`; reviewer `tools` exactly read/grep/glob |
-| QA-05 | cli | Automated | Seed a project with old `spec-builder.json` + `spec*.md` (markered) and an unmanaged `release.md`, run generate | Markered deprecated files removed and reported; `release.md` untouched |
+| QA-05 | cli | Automated | Seed a project with old `spec-builder.json` + `spec*.md` (markered) and an unmanaged `release.md`, run generate | Markered deprecated files removed and reported (`removed:`); `release.md` untouched and reported as preserved (`preserved:`) |
 | QA-06 | cli | AI-observed | After dogfood `freeze` + vendored sync + regenerate, run `mochiflow doctor` | Doctor passes; no MANIFEST drift, no residue |
 
 ## Completion Conditions

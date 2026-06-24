@@ -12,8 +12,9 @@ into the host's default agent and rely on prose guardrails — no baked agent, n
 baked permissions.
 
 That baked policy is a duplicated, drift-prone surface: it must track engine
-reality every release, it is mirrored on `golden/**` so it trips the version
-gate, and Kiro CLI 3.0's capability-based `permissions.yaml` (resolution order
+reality every release, it is hashed into `engine/MANIFEST.json` (so any template
+edit needs a re-freeze), and Kiro CLI 3.0's capability-based `permissions.yaml`
+(resolution order
 `deny > ask > allow`) now overlaps it — mochiflow's allowlist cannot loosen
 anything a user denied anyway, and workspace permissions live per-user outside
 the repo so a clone cannot inject rules. The asymmetry buys nothing and costs
@@ -31,8 +32,11 @@ reference the context layer by path (pointer), not inlined.
 ## Appetite
 
 A focused refactor of the Kiro adapter generation + detection + validation, plus
-the contract-surface re-freeze (`mochiflow freeze` + engine `VERSION` bump) and
-golden-fixture regeneration that a contract change requires. This is an alpha,
+the engine-integrity re-freeze (`mochiflow freeze` regenerates
+`engine/MANIFEST.json`) and vendored-engine sync that editing `engine/` requires.
+No `contracts.lock` / engine `VERSION` bump is needed because no `contracts/*.json`
+schema changes (confirmed in plan; `manifest.version` tracks `VERSION` and stays
+equal across a re-freeze). This is an alpha,
 breaking-changes-OK redesign — no backward-compatibility ceremony for existing
 Kiro projects.
 
@@ -69,8 +73,9 @@ Likely scope (for plan to expand): `cli/crates/mochiflow-core/src/adapter.rs`
 steering; update `is_kiro_agent_json` and Kiro detection), the Kiro
 `manifest.toml` + templates under `engine/adapters/kiro/**`, `doctor` /
 `adapter generate --check` Kiro validation, self-healing removal of deprecated
-Kiro outputs, `golden/**` + conformance regeneration with `mochiflow freeze` +
-engine `VERSION` bump in the same commit, and the README/docs Kiro row. Tests in
+Kiro outputs, `mochiflow freeze` + vendored-engine sync to preserve engine
+integrity (no engine `VERSION` bump unless a `contracts/*.json` schema changes),
+and the README/docs Kiro row. Tests in
 `cli.rs`, `conformance.rs`, and `present.rs` reference `spec-builder.json` and
 must be updated.
 

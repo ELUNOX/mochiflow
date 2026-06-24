@@ -29,6 +29,10 @@
   Rationale: the marker is already the system's reliable "mochiflow-managed"
   signal (used by `detach`); this self-heals existing projects (including this
   dogfood repo) without risking user files such as `.kiro/steering/release.md`.
+  Known limitation (out of scope): `detach`'s `plan_adapter_cleanup` iterates
+  only the current manifest `[files]`, so after the manifest shrinks, `detach`
+  on a never-regenerated project no longer cleans the old `spec-builder.json` /
+  `spec*.md`. Acceptable for alpha; left as a documented limitation.
 - **No `VERSION` / `contracts.lock` bump.** The changed contract is the
   `engine/`-resident adapter output (hashed into `engine/MANIFEST.json`), not a
   `contracts/*.json` schema. The dogfood sequence (`mochiflow freeze` →
@@ -55,16 +59,23 @@
   self-heal in `generate` (and surface removals in `AdapterResult`); keep
   `preserve_kiro_agent_model` / `kiro_agent_matches_rendered` working for the
   reviewer agent.
-- `cli/crates/mochiflow-core/src/doctor.rs` — ensure no residue false-positive
-  for the new layout; deprecated marker-bearing residue is healed by `generate`
-  rather than failing `doctor` indefinitely.
+- `cli/crates/mochiflow-core/src/doctor.rs` — `doctor` reuses `generate(check)`
+  and maps every drift entry to FAIL, so there is one rule, not two: `doctor`
+  (and `adapter generate --check`) FAIL while un-healed marker-bearing deprecated
+  residue is present, and clear once `mochiflow adapter generate` (write mode)
+  removes it. Both detection (check branch) and removal (write branch) are driven
+  by a single shared deprecated-path list so they cannot disagree.
 
 ## Data Model / Interfaces
 
 - `AdapterResult` gains a way to report removed deprecated files (e.g. a
-  `removed: Vec<String>`), printed by `cmd_adapter_generate` alongside `wrote:`.
-  In `--check` mode, lingering marker-bearing deprecated files are reported as
-  drift so CI catches un-regenerated projects.
+  `removed: Vec<String>`) and preserved/skipped marker-less deprecated files
+  (e.g. `preserved: Vec<String>`), printed by `cmd_adapter_generate` alongside
+  `wrote:` as `removed:` / `preserved:` lines. Detection and removal are driven
+  by **one** shared static deprecated-path list, scanned in **both** the
+  write branch (remove markered, record preserved) and the check branch (report
+  lingering markered residue as drift so `--check` / `doctor` catch
+  un-regenerated projects).
 - Deprecated Kiro path list (static, kiro-only):
   `.kiro/agents/spec-builder.json`, `.kiro/steering/spec.md`,
   `.kiro/steering/spec-discuss.md`, `-plan`, `-build`, `-ship`, `-patch`,
@@ -74,8 +85,8 @@
 ## Error Handling
 
 - Removal that hits `NotFound` is a no-op success (file already gone).
-- A deprecated path present but lacking the marker is skipped and reported as
-  preserved (never deleted).
+- A deprecated path present but lacking the marker is skipped, recorded in
+  `preserved`, and reported (never deleted).
 - Self-heal applies only to the `kiro` adapter; other adapters are unaffected.
 
 ## Test Strategy
@@ -83,8 +94,11 @@
 - Update `conformance.rs` `materialize_full` assertions: expect
   `.kiro/steering/mochiflow.md` (not `spec.md`) and
   `.kiro/agents/spec-independent-reviewer.json`; drop `spec-builder.json`
-  existence and the blocked-`spec-builder.json` cases (replace the
-  blocked-merge case with the reviewer agent or `mochiflow.md`).
+  existence. Replace the blocked-merge case (`spec-builder.json`) with the
+  remaining JSON target `.kiro/agents/spec-independent-reviewer.json` — never
+  with `mochiflow.md`, which is an embeddable `.md` target that always
+  merges/appends a managed block and never reaches the BLOCKED-candidate branch,
+  so it cannot exercise blocked-merge coverage.
 - Update `cli.rs` cases that write/inspect `spec-builder.json`.
 - Update `present.rs` doctests/tests referencing `spec-builder.json` messages.
 - New unit test in `adapter.rs`: deprecated markered files removed + reported;

@@ -32,13 +32,13 @@ Critical Stop Conditions:
 - [ ] T-004 [AC-04] Implement marker-gated self-heal of deprecated Kiro outputs
   - Depends on: T-001
   - Files: `cli/crates/mochiflow-core/src/adapter.rs`
-  - Done: `is_kiro_agent_json` lists only the reviewer; `generate` removes deprecated kiro paths only when they contain `MARKER_PREFIX`, records them in `AdapterResult`, and `cmd_adapter_generate` prints removals; marker-less files preserved
+  - Done: `is_kiro_agent_json` lists only the reviewer; `generate` removes deprecated kiro paths only when they contain `MARKER_PREFIX`, records them in `AdapterResult.removed`, records marker-less deprecated files in `AdapterResult.preserved`, and `cmd_adapter_generate` prints `removed:` / `preserved:` lines; marker-less files are never deleted
   - Stop: if removal logic would run for non-kiro adapters
 - [ ] T-005 [AC-05] Make `--check` and `doctor` consistent with the new layout
   - Depends on: T-004
   - Files: `cli/crates/mochiflow-core/src/adapter.rs`, `cli/crates/mochiflow-core/src/doctor.rs`
-  - Done: `adapter generate --check` flags lingering marker-bearing deprecated files as drift; `doctor` does not permanently fail on residue that `generate` heals
-  - Stop: if doctor and generate disagree on what counts as residue
+  - Done: one shared deprecated-path list drives both branches; `doctor` and `adapter generate --check` (doctor reuses `generate(check)`) FAIL while un-healed marker-bearing deprecated residue is present, and clear once write-mode `mochiflow adapter generate` removes it
+  - Stop: if doctor and generate could disagree on what counts as residue (they must share one list)
 - [ ] T-006 [AC-06] Update tests to the new Kiro file set
   - Depends on: T-004
   - Files: `cli/crates/mochiflow-cli/tests/conformance.rs`, `cli/crates/mochiflow-cli/tests/cli.rs`, `cli/crates/mochiflow-core/src/present.rs`
