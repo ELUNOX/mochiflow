@@ -44,7 +44,7 @@ Critical Stop Conditions:
   - Done: template file deleted; ship.md frontmatter `artifacts:` and `references:` lines removed; all prose references point to spec.md QA Scenarios; Kiro adapter template line removed; `mochiflow adapter generate` regenerates `.kiro/agents/spec-builder.json` cleanly
   - Stop: if deletion breaks `mochiflow freeze` in a way not fixable by re-running freeze
 
-- [ ] T-006 [AC-07] Update conformance tests that reference qa-instructions template
+- [x] T-006 [AC-07] Update conformance tests that reference qa-instructions template
   - Depends on: T-005
   - Files: `cli/crates/mochiflow-cli/tests/conformance.rs`
   - Done: all 3 call sites replaced: (1) `branch_placeholders_use_prefix_slug` — remove qa read (git.md assertion already covers the guarantee); (2) `english_template_headings_are_present` — remove qa heading assertions (headings are gone; spec.standard.md QA table and pr-description.md `## Testing` are already tested via their own template reads); (3) `ac_matrix_pending_human_is_canonical_provisional_token` — move the token-mapping assertion to ship.md (`ship.contains("人間確認済み")` confirms the round-trip protocol preserves the mapping). `cargo test` passes.

@@ -484,17 +484,8 @@ fn router_plan_requires_existing_draft_spec() {
 
 #[test]
 fn branch_placeholders_use_prefix_slug() {
-    let qa = read_repo_file("engine/templates/delivery/qa-instructions.md");
     let git = read_repo_file("engine/reference/git.md");
 
-    assert!(
-        qa.contains("**branch**: `{prefix}/{slug}`"),
-        "QA template must display the real branch placeholder"
-    );
-    assert!(
-        !qa.contains("{type}/{slug}"),
-        "QA template must not use the unmapped branch placeholder"
-    );
     assert!(
         git.contains("git branch -d {prefix}/{slug}"),
         "post-merge cleanup must delete the real branch placeholder"
@@ -654,7 +645,7 @@ fn ac_matrix_pending_human_is_canonical_provisional_token() {
     let workflow = read_repo_file("engine/reference/workflow.md");
     let build = read_repo_file("engine/commands/build.md");
     let language = read_repo_file("engine/reference/language.md");
-    let qa = read_repo_file("engine/templates/delivery/qa-instructions.md");
+    let ship = read_repo_file("engine/commands/ship.md");
 
     assert!(workflow.contains("`PENDING_HUMAN`"), "{workflow}");
     assert!(
@@ -670,8 +661,8 @@ fn ac_matrix_pending_human_is_canonical_provisional_token() {
         "language reference must preserve the provisional token"
     );
     assert!(
-        qa.contains("Human confirmed` is worksheet prose only") && qa.contains("`人間確認済み`"),
-        "QA worksheet must map prose confirmation to the Matrix token"
+        ship.contains("`人間確認済み`"),
+        "ship round-trip protocol must map human confirmation to the canonical Matrix token"
     );
 }
 
@@ -886,7 +877,6 @@ fn english_template_headings_are_present() {
     let spec = read_repo_file("engine/templates/spec/spec.md");
     let design = read_repo_file("engine/templates/spec/design.md");
     let tasks = read_repo_file("engine/templates/spec/tasks.md");
-    let qa = read_repo_file("engine/templates/delivery/qa-instructions.md");
 
     for heading in [
         "## Background and Design Rationale",
@@ -923,16 +913,6 @@ fn english_template_headings_are_present() {
         "Stop:",
     ] {
         assert!(tasks.contains(heading), "tasks template missing {heading}");
-    }
-    for heading in [
-        "# QA Instructions:",
-        "## Legend",
-        "## Preparation",
-        "## Scenario List",
-        "## Detailed Steps",
-        "## Report Formats",
-    ] {
-        assert!(qa.contains(heading), "QA template missing {heading}");
     }
 }
 
