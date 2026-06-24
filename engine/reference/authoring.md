@@ -123,10 +123,12 @@ Write when the change is multi-step. Carries:
 - Header: one-line scope · risk · critical stop conditions (1–3 spec-specific)
 - `## Defaults` preamble (shared verification command + stop conditions)
 - A `## Tasks` checklist of dependency-ordered checkbox tasks. Each task line is
-  `- [ ] T-### [AC-01] title` — the bracket reference is required and is an AC
-  (`[AC-01]`), an NFR (`[NFR-01]`), or a chore reason (`[chore: ...]`). Each task
-  body needs `Depends on:` (prior `T-###` IDs or `none`), `Files:`, `Done:`, and
-  `Stop:`.
+  `- [ ] T-### [AC-01] title` — the bracket reference is required and is one or
+  more AC IDs (`[AC-01]`, `[AC-01, AC-02]`), one NFR (`[NFR-01]`), or a chore
+  reason (`[chore: ...]`). Use a compound AC reference when one implementation
+  task naturally covers multiple related ACs; do not split tasks just to make
+  one task per AC. Each task body needs `Depends on:` (prior `T-###` IDs or
+  `none`), `Files:`, `Done:`, and `Stop:`.
 - `[P]` parallel marks: a task tagged `- [ ] T-### [P] ...` runs parallel to the
   previous `[P]` block; no `[P]` depends on the previous task; never `[P]` two
   tasks editing the same file
@@ -139,9 +141,10 @@ lint gate fails.
 
 After authoring, verify once against the spec's own intent before `approved`:
 Open Questions closed (or kept as `[NEEDS-CLARIFICATION]`), design decisions not
-contradicting the rationale in `spec.md`, task line `[AC-01]` references covering `spec.md` AC,
-no dependency cycle in Workstreams. No per-document self-review loop (deep defects
-are caught by `independent-reviewer` during build).
+contradicting the rationale in `spec.md`, task line `[AC-01]` / compound
+`[AC-01, AC-02]` references covering `spec.md` AC, no dependency cycle in
+Workstreams. No per-document self-review loop (deep defects are caught by
+`independent-reviewer` during build).
 
 Before asking for approval, remove all template residue:
 

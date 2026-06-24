@@ -17,7 +17,7 @@ Critical Stop Conditions:
   - Files: `path/to/File.ext`
   - Done: {objective, checkable completion condition}
   - Stop: {task-specific stop condition; see Defaults for shared ones}
-- [ ] T-002 [P] [AC-02] {task title}
+- [ ] T-002 [P] [AC-02, AC-03] {task title}
   - Depends on: none
   - Files: `path/to/Other.ext`
   - Done: {objective, checkable completion condition}
@@ -25,7 +25,10 @@ Critical Stop Conditions:
 
 <!--
 Task line: `- [ ] T-### [AC-01] title`. The reference in brackets is required and
-must be an AC (`[AC-01]`), an NFR (`[NFR-01]`), or a chore reason (`[chore: ...]`).
+must be one or more AC IDs (`[AC-01]`, `[AC-01, AC-02]`), an NFR (`[NFR-01]`),
+or a chore reason (`[chore: ...]`). Use a compound AC reference when one task
+naturally covers multiple related ACs; do not split tasks just to force one task
+per AC.
 Add `[P]` after the ID for a task that runs parallel to the previous `[P]` block;
 never `[P]` two tasks that edit the same file. Each task needs Depends on / Files /
 Done / Stop. `Depends on:` lists prior `T-###` IDs or `none`.

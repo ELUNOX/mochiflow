@@ -1434,6 +1434,29 @@ fn lint_fails_when_tasks_do_not_cover_all_acs() {
 }
 
 #[test]
+fn lint_accepts_compound_task_ac_references() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: done");
+    let md = "# S\n\n## Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL x.\n- AC-02: WHEN y, THE SYSTEM SHALL z.\n\n\
+              ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | PASS |\n| AC-02 | PASS |\n";
+    let tasks = "# Tasks\n\n- [x] T-001 [AC-01, AC-02] Do x and z\n  - Depends on: none\n  - Files:\n    - `src/x.rs`\n  - Done:\n    - [ ] Verification passed\n  - Stop:\n    - stop\n";
+    let (code, out) = run_lint_case(&yaml, md, None, Some(tasks));
+    assert_eq!(code, 0, "{out}");
+}
+
+#[test]
+fn lint_rejects_unknown_ac_in_compound_task_reference() {
+    let md = "# S\n\n## Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
+              ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | UNVERIFIED |\n";
+    let tasks = "# Tasks\n\n- [ ] T-001 [AC-01, AC-02] Do x\n  - Depends on: none\n  - Files:\n    - `src/x.rs`\n  - Done:\n    - [ ] Verification passed\n  - Stop:\n    - stop\n";
+    let (code, out) = run_lint_case(GOOD_YAML, md, None, Some(tasks));
+    assert_eq!(code, 1);
+    assert!(
+        out.contains("tasks reference AC IDs not in spec.md: AC-02"),
+        "{out}"
+    );
+}
+
+#[test]
 fn lint_accepts_english_acceptance_and_task_headings() {
     let yaml = GOOD_YAML.replace("status: approved", "status: done");
     let md = "# S\n\n## Acceptance Criteria (EARS)\n\n- AC-01: THE SYSTEM SHALL x.\n\n\

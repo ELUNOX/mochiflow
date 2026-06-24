@@ -16,27 +16,27 @@ Critical Stop Conditions:
 
 ## Tasks
 
-- [ ] T-001 [AC-01, AC-02] Add the build-phase task-structure stop condition
+- [x] T-001 [AC-01, AC-02] Add the build-phase task-structure stop condition
   - Depends on: none
   - Files: `engine/commands/build.md`
   - Done: `mochiflow-build` guidance distinguishes allowed progress/evidence
     edits from structural `tasks.md` edits that must return to plan.
   - Stop: Stop if the rule requires mechanical drift detection to be credible.
-- [ ] T-002 [AC-03] Document compound AC references
+- [x] T-002 [AC-03] Document compound AC references
   - Depends on: T-001
   - Files: `engine/reference/authoring.md`, `engine/templates/spec/tasks.md`
   - Done: Authoring guidance and task template examples show that one task may
     cover multiple ACs with `[AC-01, AC-02]`.
   - Stop: Stop if the resulting syntax conflicts with the existing task-line
     parser.
-- [ ] T-003 [AC-04] Lock compound AC coverage in lint tests
+- [x] T-003 [AC-04] Lock compound AC coverage in lint tests
   - Depends on: T-002
   - Files: `cli/crates/mochiflow-cli/tests/conformance.rs`, `cli/crates/mochiflow-core/src/lint.rs`
   - Done: A focused test proves compound task references cover all mentioned ACs;
     `lint.rs` is changed only if the test exposes a real parsing gap.
   - Stop: Stop if test setup requires changing the lint contract beyond AC
     extraction.
-- [ ] T-004 [AC-05] Sync engine artifacts and verify
+- [x] T-004 [AC-05] Sync engine artifacts and verify
   - Depends on: T-001, T-002, T-003
   - Files: `engine/MANIFEST.json`, `.mochiflow/engine/**`, generated adapter check output
   - Done: Required freeze, dogfood upgrade, adapter check, spec lint, and default

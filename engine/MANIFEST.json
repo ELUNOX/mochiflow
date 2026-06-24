@@ -12,7 +12,7 @@
     "adapters/kiro/manifest.toml": "sha256:7e41192664fd0a60f63c12fae446b45d6c22f535db91566b5c5624cc6a542009",
     "adapters/kiro/steering/mochiflow.md.tpl": "sha256:30718db1f1e983f86092c6eb8607cd9a22e9b6472e1ac14d1f516ebc00d65cb5",
     "agents/independent-reviewer.md": "sha256:96f1316650155d3ff364bea95150a8419f228261bdcf41f69c360babed37f397",
-    "commands/build.md": "sha256:d4199271b8bb7ba0661c83a3333b5f29007161fba93952db3b1626cb83dbee49",
+    "commands/build.md": "sha256:916417accb7da67093eb091da23e5fb7ff6d1baa03abbb47a42f7117e5c7a5cb",
     "commands/discuss.md": "sha256:b2d1053c1b356a0f5cd2e439a02b7a6a6ba805f7227a5fdb2c3e39e0f3a9167c",
     "commands/onboard.md": "sha256:a6389bf16e17f02cc7b83f8cd7d09c2dcb0f013fdbf8e4939d9f51b323b4fe73",
     "commands/patch.md": "sha256:4fdaeb3411418cb36268e1749e1965e84e9a3f3f2479c2e2c0c7fa5ea2319953",
@@ -20,7 +20,7 @@
     "commands/refresh-context.md": "sha256:2840fd557d9367d7f539978d87d858d4dc5fcfdc10fe1e7755da7d147474cfc6",
     "commands/review.md": "sha256:4f66189df83abbd7bf1509709dc4db0b25a22693a9e550541e7833364cd2e33d",
     "commands/ship.md": "sha256:ca9ca51c063463c75ea3435881de4b02eb6a2be84ef7833fbcd73c6f0aa505bd",
-    "reference/authoring.md": "sha256:1ccd1ea00f7141ab5d1974a2dca5c2f696d50872c5a53a6224c5dbf430c856a4",
+    "reference/authoring.md": "sha256:117f34225c96cd32104d5d28d9f64efe54939be2895e6e87743580acd164b4e5",
     "reference/engineering-standards.md": "sha256:2f414d1f3bc71c6c47332867541313c9c1a00377fc1c9ff5021fdaaf37c5ea02",
     "reference/git.md": "sha256:a61c67ec07ff96ae01075a91b519c4ffc13251b09e74f5fd2e49e0760e878b2d",
     "reference/language.md": "sha256:f971198533518d4e8ea0cb0f89f01f73029cb225778f4a6b9e4caf09b14e2f37",
@@ -39,7 +39,7 @@
     "templates/spec/spec.micro.md": "sha256:a599bb82764d746b8f344febc2aa0f0a6cbb3cff7526ab4cc93243303ad02f51",
     "templates/spec/spec.standard.md": "sha256:04aec70ceec5cfc271c4bc6f33eba73f85e5ae946d80a828cb5a951b1ea96852",
     "templates/spec/spec.yaml": "sha256:984ce5f045a9886475405f7ad99f4da884acc3a4c993688f7c84a972fbf87b97",
-    "templates/spec/tasks.md": "sha256:36968cb5cc4bff4f3b4c049356c50978c0a06ec20eef296ea3adc6bbc054f9b1"
+    "templates/spec/tasks.md": "sha256:9929d57176244440942b6a0a34b1721690a10a35e14c2b45bad9d20c769c62a8"
   },
   "version": "1.1.3"
 }
