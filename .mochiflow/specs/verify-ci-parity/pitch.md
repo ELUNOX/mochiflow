@@ -17,9 +17,10 @@ orchestration, or package management.
 
 ## Solution
 
-Make local build verification cover the merge-blocking checks that CI expects
-for this repository. The preferred shape is to make the `cli` surface's
-`default` verification profile CI-equivalent, because current readiness and
+Make local build verification cover the merge-blocking checks that are practical
+and toolchain-backed in this repository. The agreed shape is to make the `cli`
+surface's `default` verification profile run `cargo test`, `cargo fmt --check`,
+`cargo clippy -D warnings`, and `freeze --check`, because current readiness and
 build flow already validate and run `default`. A faster profile can exist as an
 optional `quick` command, but it must not be the signal that build completion
 depends on.
@@ -27,7 +28,9 @@ depends on.
 Update the workflow guidance so `default` is understood as the reliable
 merge/CI-equivalent profile for a surface, not merely a unit-test command. Keep
 the actual command list aligned with `.github/workflows/ci.yml` and the PR
-template instead of duplicating a divergent local notion of quality.
+template where local tool availability makes that reasonable. `cargo-deny`
+remains a CI-only expectation unless the plan finds a standard way to guarantee
+that tool locally.
 
 ## Rabbit Holes
 
@@ -36,9 +39,9 @@ template instead of duplicating a divergent local notion of quality.
   still pass build using `default`.
 - Do not turn MochiFlow into a CI runner. The goal is parity with this repo's
   own configured checks, not remote CI emulation.
-- Be careful with checks that require nonstandard local tooling, such as
-  `cargo-deny`; decide explicitly whether they belong in `default` or in a
-  separately documented CI-only expectation.
+- Keep checks that require nonstandard local tooling, such as `cargo-deny`, out
+  of `default` unless the plan finds a standard way to guarantee that tool
+  locally.
 
 ## No-gos
 
@@ -59,8 +62,4 @@ template instead of duplicating a divergent local notion of quality.
 
 ## Open Questions
 
-- Should `cargo run --manifest-path cli/Cargo.toml -- freeze --check` and
-  `cargo deny --manifest-path cli/Cargo.toml check --config cli/deny.toml` be
-  included directly in the `default` profile, or should the plan document one of
-  them as a separate CI-only check if local tool availability makes it unsuitable
-  for the canonical build command?
+- None -- ready for plan.
