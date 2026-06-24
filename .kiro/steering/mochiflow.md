@@ -40,7 +40,7 @@ always-on steering file:
 - Run verification via the command for the spec's surface from `[surfaces.<surface>.verify]`.
 - Validate specs with `mochiflow lint`; quality gate is `mochiflow doctor`.
 - Artifact language: `en`; conversation language:
-  `auto`. Follow `.mochiflow/engine/reference/language.md` for
+  `ja`. Follow `.mochiflow/engine/reference/language.md` for
   user-facing wording and `auto` conversation behavior.
 - At ship, fold durable knowledge into `.mochiflow/adr/decisions.md` (decisions) /
   `.mochiflow/adr/pitfalls.md` (pitfalls) before archiving to `.mochiflow/specs/_done/`. The

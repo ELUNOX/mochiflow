@@ -54,3 +54,4 @@ who want a disciplined, auditable spec-to-PR flow.
 - Not a CI/build system; it invokes the project's own verify commands.
 - Does not host or merge PRs; it delegates to `gh` / a pr_driver / manual handoff.
 - Not a runtime framework; it is a workflow + living-spec engine.
+

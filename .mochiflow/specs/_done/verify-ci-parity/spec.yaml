@@ -1,0 +1,12 @@
+version: 1
+slug: "verify-ci-parity"
+title: "Verify profile should cover CI lint checks"
+type: "fix"
+surfaces:
+  - "cli"
+integration: "workflow"
+risk: "elevated"
+status: "done"
+created: "2026-06-24"
+updated: "2026-06-24"
+completed: "2026-06-24T21:54:18Z"

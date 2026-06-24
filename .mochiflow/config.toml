@@ -6,7 +6,7 @@ index = ".mochiflow/INDEX.md"
 
 [i18n]
 artifact_language = "en"
-conversation_language = "auto"
+conversation_language = "ja"
 
 [constitution]
 project = ".mochiflow/constitution.md"
@@ -36,4 +36,5 @@ deny = [".git/**", "**/node_modules/**", "**/__pycache__/**"]
 description = "MochiFlow CLI (Rust)"
 
 [surfaces.cli.verify]
-default = "cargo test --manifest-path cli/Cargo.toml"
+default = "cargo test --manifest-path cli/Cargo.toml && cargo fmt --manifest-path cli/Cargo.toml --all -- --check && cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings && cargo run --manifest-path cli/Cargo.toml -- freeze --check"
+quick = "cargo test --manifest-path cli/Cargo.toml"
