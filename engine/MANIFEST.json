@@ -46,7 +46,7 @@
     "templates/spec/pitch.md": "sha256:c5f0bdb786e52b0deba314415d8a3c1e3a9fd0429d67f26f6d808095251477f1",
     "templates/spec/spec.md": "sha256:d5e783533bc346bb5787610ca24f67d8b7d44fdc61a59e6adb169e39ac82495d",
     "templates/spec/spec.micro.md": "sha256:a599bb82764d746b8f344febc2aa0f0a6cbb3cff7526ab4cc93243303ad02f51",
-    "templates/spec/spec.standard.md": "sha256:d5e783533bc346bb5787610ca24f67d8b7d44fdc61a59e6adb169e39ac82495d",
+    "templates/spec/spec.standard.md": "sha256:c3681bc5617d2fd7f84a95b070fe0a06194fefd16c29ffc55d09bef54cb6d16f",
     "templates/spec/spec.yaml": "sha256:984ce5f045a9886475405f7ad99f4da884acc3a4c993688f7c84a972fbf87b97",
     "templates/spec/tasks.md": "sha256:347493cd14c6fdc343e9ecfb94b8215a2d7a3d4295d4f62459c53015289b9402"
   },
