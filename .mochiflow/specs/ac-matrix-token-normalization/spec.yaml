@@ -1,0 +1,11 @@
+version: 1
+slug: "ac-matrix-token-normalization"
+title: "Normalize AC Matrix result tokens to ASCII-only"
+type: "refactor"
+surfaces:
+  - "cli"
+integration: "none"
+risk: "elevated"
+status: "draft"
+created: "2026-06-23"
+updated: "2026-06-23"
