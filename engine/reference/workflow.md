@@ -133,8 +133,16 @@ lines missing an EARS keyword (resolve before `approved`).
 ## Verification profiles
 
 Verification commands are not hardcoded in the engine. Each surface declares its
-commands in `config.toml` under `[surfaces.<surface>.verify]` with named profiles
-(`default`, and optionally `quick` / `targeted` / others). Resolve them via:
+commands in `config.toml` under `[surfaces.<surface>.verify]` with named
+profiles.
+
+`default` is the canonical verification profile for spec-lane build completion:
+it should be the reliable local command whose success is sufficient to say the
+surface is ready for PR / merge, except for checks explicitly documented as
+human-operated or CI-only. Optional profiles such as `quick` / `targeted` are for
+faster intermediate feedback; they do not replace `default` for build completion.
+
+Resolve commands via:
 
 - `mochiflow config show` — inspect the resolved commands for every surface.
 - The verb runs the command for the spec's surface and the appropriate profile,

@@ -20,13 +20,13 @@ Critical Stop Conditions:
   - Done: `cli.default` runs test, fmt, clippy, and freeze checks; `cli.quick` runs the test-only command; `cargo-deny` remains outside local `default`
   - Stop: if the chained default command is too brittle to run from the repository root
 
-- [ ] T-002 [AC-03, AC-04] Update workflow guidance for default versus quick profiles
+- [x] T-002 [AC-03, AC-04] Update workflow guidance for default versus quick profiles
   - Depends on: T-001
   - Files: `engine/reference/workflow.md`, `engine/commands/build.md`
   - Done: workflow/build docs identify `default` as canonical build/merge-equivalent verification and `quick` as optional fast feedback; `cargo-deny` is not implied to be locally covered
   - Stop: if changing build guidance requires a CLI behavior change to stay coherent
 
-- [ ] T-003 [AC-05] Refresh engine-generated artifacts
+- [x] T-003 [AC-05] Refresh engine-generated artifacts
   - Depends on: T-002
   - Files: `engine/MANIFEST.json`, `.mochiflow/engine/**`, `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`, `.kiro/**`
   - Done: `mochiflow freeze`, `mochiflow upgrade --source engine`, and `mochiflow adapter generate --check` complete; generated outputs are either unchanged or explicitly committed if regenerated
