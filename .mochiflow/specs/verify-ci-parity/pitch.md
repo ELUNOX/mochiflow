@@ -62,4 +62,4 @@ that tool locally.
 
 ## Open Questions
 
-- None -- ready for plan.
+- No open questions remain; ready for plan.
