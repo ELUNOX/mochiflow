@@ -69,8 +69,8 @@ living-spec fold, and archive.
      confirmation ("all OK"). These are examples, not a fixed vocabulary — the
      agent interprets intent, not pattern-matches tokens.
    - 3c. For each item, map the human's intent to the canonical AC Matrix token:
-     pass intent → `人間確認済み`, fail intent → `FAIL`, not-applicable with
-     reason → `対象外（<reason>）`. Record the token and evidence pointer in the
+     pass intent → `CONFIRMED`, fail intent → `FAIL`, not-applicable with
+     reason → `N/A: <reason>`. Record the token and evidence pointer in the
      AC Verification Matrix.
    - 3d. If any item is ambiguous (cannot determine pass or fail intent), re-ask
      for that specific item with a clear pass/fail question. Do not guess.
@@ -79,8 +79,8 @@ living-spec fold, and archive.
      the feature branch). After the fix, re-present: (1) the failed items, plus
      (2) any previously-passed items whose implementation files were modified by
      the fix (regression check). Repeat from 3b for the re-presented items only.
-   - 3f. When all human QA items reach a done-eligible result (`人間確認済み` or
-     `対象外（<reason>）`), the round-trip is complete. Proceed to step 4.
+   - 3f. When all human QA items reach a done-eligible result (`CONFIRMED` or
+     `N/A: <reason>`), the round-trip is complete. Proceed to step 4.
 4. When the acceptance conditions in `reference/workflow.md ## AC Verification Matrix` all hold (matrix complete, every result is done-eligible, and the reviewer verdict recorded when `risk ≥ elevated`), edit `spec.yaml` `status: done`, `updated`, and `completed` (the current UTC timestamp in ISO 8601, e.g. `2026-06-21T22:16:03Z`) directly (no approval word; there is no CLI transition command), then run `mochiflow lint --spec {slug}` to confirm the transition is valid. `completed` is the immutable completion time that orders the Done view in `INDEX.md`; set it (or overwrite it on a re-ship) each time status becomes `done`. This is not a gate; `ship` is the only path that sets `done`.
 
 ### Close-out

@@ -32,7 +32,7 @@ As {user}, I want {capability}, so that {reason}.
 
 ## Completion Conditions
 
-- Every AC appears in the AC Verification Matrix with a done-eligible result token (`PASS`, `人間確認済み`, or `対象外（<reason>）`).
+- Every AC appears in the AC Verification Matrix with a done-eligible result token (`PASS`, `CONFIRMED`, or `N/A: <reason>`).
 - Verification commands and results are recorded.
 
 <!-- Create the ## AC Verification Matrix during plan (one row per AC) so it is present at approval; record verification results during build. Put it here, or at the end of tasks.md when tasks.md exists.

@@ -1,6 +1,6 @@
 # 📋 Spec Dashboard
 
-> updated: 2026-06-24 00:29 UTC
+> updated: 2026-06-24 02:56 UTC
 
 ## Pipeline
 
@@ -9,7 +9,7 @@
 | 🌱 backlog seed | 9 |
 | 📝 draft | 0 |
 | 🟢 approved | 0 |
-| ✅ done | 6 |
+| ✅ done | 7 |
 
 ## Backlog seeds
 
@@ -36,10 +36,11 @@
 | Updated | Slug | Title | Type |
 |:--------|:-----|:------|:-----|
 | 2026-06-23 | [commit-lifecycle-unification](specs/_done/commit-lifecycle-unification/) | Unify commit timing across discuss/plan/build/ship on a single branch | refactor |
+| 2026-06-23 | [ac-matrix-token-normalization](specs/_done/ac-matrix-token-normalization/) | Normalize AC Matrix result tokens to ASCII-only | refactor |
 | 2026-06-23 | [commit-trailer-traceability](specs/_done/commit-trailer-traceability/) | Add git trailers for spec/task traceability and AI log reading recipes | docs |
 | 2026-06-23 | [plan-to-build-transition-ux](specs/_done/plan-to-build-transition-ux/) | Present next-step choices after plan approval | docs |
 | 2026-06-23 | [ship-qa-experience](specs/_done/ship-qa-experience/) | Unify QA experience in ship: single-source scenarios, round-trip protocol, PR Testing section | feature |
 | 2026-06-23 | [build-completion-guidance](specs/_done/build-completion-guidance/) | Build phase should announce next step on completion | docs |
 | 2026-06-22 | [version-ssot-freeze](specs/_done/version-ssot-freeze/) | Version SSOT + freeze command | refactor |
 
-> done total: 6
+> done total: 7
