@@ -1,0 +1,11 @@
+version: 1
+slug: "prevent-build-phase-spec-mutation"
+title: "Prevent build-phase spec mutation"
+type: "fix"
+surfaces:
+  - "cli"
+integration: "none"
+risk: "elevated"
+status: "draft"
+created: "2026-06-24"
+updated: "2026-06-24"
