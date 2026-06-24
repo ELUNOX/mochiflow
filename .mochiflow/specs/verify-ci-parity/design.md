@@ -92,3 +92,7 @@
   file evidence.
 
 ## Review Results
+
+- Reviewer mode: delegated
+- Verdict: pass-with-comments
+- Findings: 1 Low spec-conformance note: AC evidence for lint should be refreshed after recording this review and checking T-004, because the Matrix edit temporarily made lint report the dirty unchecked T-004 warning. No code quality findings.
