@@ -113,10 +113,69 @@ pub fn render(template: &str, substitutions: &BTreeMap<String, String>) -> Strin
 }
 
 fn is_kiro_agent_json(out_rel: &str) -> bool {
-    matches!(
-        out_rel,
-        ".kiro/agents/spec-builder.json" | ".kiro/agents/spec-independent-reviewer.json"
-    )
+    matches!(out_rel, ".kiro/agents/spec-independent-reviewer.json")
+}
+
+/// Kiro steering `.md` files are full-file managed targets, not block-embeddable
+/// ones: a Kiro steering file needs its `inclusion:` frontmatter at the very top
+/// of the file, so a markerless pre-existing file must be overwritten whole
+/// rather than have a managed block appended mid-file.
+fn is_kiro_full_file_md(out_rel: &str) -> bool {
+    out_rel.starts_with(".kiro/steering/") && out_rel.ends_with(".md")
+}
+
+/// Deprecated mochiflow-managed Kiro outputs from earlier adapter versions.
+/// Self-heal removes only the entries here that still carry `MARKER_PREFIX`;
+/// files not on this list are never scanned, removed, or reported. This single
+/// static list drives both the write branch (remove markered, record preserved)
+/// and the check branch (report lingering markered residue as drift) so the two
+/// can never disagree.
+const DEPRECATED_KIRO_PATHS: &[&str] = &[
+    ".kiro/agents/spec-builder.json",
+    ".kiro/steering/spec.md",
+    ".kiro/steering/spec-discuss.md",
+    ".kiro/steering/spec-plan.md",
+    ".kiro/steering/spec-build.md",
+    ".kiro/steering/spec-ship.md",
+    ".kiro/steering/spec-patch.md",
+    ".kiro/steering/spec-review.md",
+    ".kiro/steering/spec-refresh-context.md",
+    ".kiro/hooks/generate-project-index.kiro.hook",
+];
+
+/// Scan the static deprecated-path list for the `kiro` adapter.
+///
+/// Write mode: remove each listed path that carries the marker (recording it in
+/// `removed`) and record a listed-but-markerless path in `preserved` without
+/// deleting it. Check mode: report a lingering markered path as drift so
+/// `adapter generate --check` / `doctor` catch un-regenerated projects. Paths
+/// that are absent, and any path not on the list, are left entirely alone.
+fn self_heal_deprecated_kiro(cfg: &Config, check: bool, result: &mut AdapterResult) {
+    for rel in DEPRECATED_KIRO_PATHS {
+        let path = cfg.repo_root.join(rel);
+        let content = match std::fs::read_to_string(&path) {
+            Ok(c) => c,
+            Err(_) => continue,
+        };
+        let markered = content.contains(MARKER_PREFIX);
+        if check {
+            if markered {
+                result.drift.push((*rel).to_string());
+            }
+            continue;
+        }
+        if markered {
+            match std::fs::remove_file(&path) {
+                Ok(()) => result.removed.push((*rel).to_string()),
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+                Err(e) => result
+                    .errors
+                    .push(format!("could not remove deprecated {rel}: {e}")),
+            }
+        } else {
+            result.preserved.push((*rel).to_string());
+        }
+    }
 }
 
 fn parse_json_object(content: &str) -> Option<serde_json::Map<String, serde_json::Value>> {
@@ -374,6 +433,10 @@ pub struct AdapterResult {
     pub wrote: Vec<String>,
     pub blocked: Vec<BlockedAdapter>,
     pub errors: Vec<String>,
+    /// Deprecated marker-bearing Kiro outputs removed by self-heal (write mode).
+    pub removed: Vec<String>,
+    /// Deprecated-list Kiro outputs kept because they lack the marker (write mode).
+    pub preserved: Vec<String>,
 }
 
 pub struct BlockedAdapter {
@@ -388,6 +451,8 @@ pub fn generate(cfg: &Config, check: bool, force: bool) -> AdapterResult {
         wrote: Vec::new(),
         blocked: Vec::new(),
         errors: Vec::new(),
+        removed: Vec::new(),
+        preserved: Vec::new(),
     };
 
     for tool in &cfg.adapter_tools() {
@@ -418,8 +483,12 @@ pub fn generate(cfg: &Config, check: bool, force: bool) -> AdapterResult {
 
             if check {
                 let matches = current.as_deref().is_some_and(|cur| {
-                    embeddable_target_matches_rendered(out_rel, tool, cur, &rendered)
-                        || kiro_agent_matches_rendered(out_rel, cur, &rendered)
+                    if is_kiro_full_file_md(out_rel) {
+                        cur == rendered
+                    } else {
+                        embeddable_target_matches_rendered(out_rel, tool, cur, &rendered)
+                            || kiro_agent_matches_rendered(out_rel, cur, &rendered)
+                    }
                 });
                 if !matches {
                     result.drift.push(out_rel.clone());
@@ -430,7 +499,12 @@ pub fn generate(cfg: &Config, check: bool, force: bool) -> AdapterResult {
             if let Some(ref cur) = current
                 && !force
             {
-                if is_embeddable_target(out_rel) {
+                if is_kiro_full_file_md(out_rel) {
+                    // Full-file managed: fall through to the whole-file write
+                    // below so `inclusion: always` frontmatter stays at the top,
+                    // overwriting a markerless pre-existing file rather than
+                    // appending a managed block mid-file.
+                } else if is_embeddable_target(out_rel) {
                     let block = managed_block(tool, &rendered);
                     let rendered = if managed_block_bounds(cur, tool).is_some() {
                         replace_managed_block(cur, tool, &block).unwrap_or_else(|| cur.clone())
@@ -461,8 +535,9 @@ pub fn generate(cfg: &Config, check: bool, force: bool) -> AdapterResult {
                     continue;
                 }
 
-                if cur.contains(MARKER_PREFIX) {
-                    // Managed non-embeddable targets fall through to full-file update.
+                if is_kiro_full_file_md(out_rel) || cur.contains(MARKER_PREFIX) {
+                    // Full-file managed (Kiro steering) and managed non-embeddable
+                    // targets fall through to the whole-file update below.
                 } else {
                     let candidate = format!("{}/state/adapters/{out_rel}", cfg.install_dir);
                     let candidate_path = cfg.repo_root.join(&candidate);
@@ -513,6 +588,10 @@ pub fn generate(cfg: &Config, check: bool, force: bool) -> AdapterResult {
             }
             result.wrote.push(out_rel.clone());
         }
+
+        if tool == "kiro" {
+            self_heal_deprecated_kiro(cfg, check, &mut result);
+        }
     }
 
     result
@@ -541,6 +620,12 @@ pub fn cmd_adapter_generate(cfg: &Config, check: bool, force: bool) -> i32 {
     } else {
         for f in &result.wrote {
             println!("wrote: {f}");
+        }
+        for f in &result.removed {
+            println!("removed: {f}");
+        }
+        for f in &result.preserved {
+            println!("preserved: {f}");
         }
         for blocked in &result.blocked {
             println!(
@@ -718,5 +803,157 @@ mod tests {
         subs.insert("k".to_string(), "V".to_string());
         // repeated token replaced everywhere; unknown {{x}} left as-is
         assert_eq!(render("{{k}}-{{k}}-{{x}}", &subs), "V-V-{{x}}");
+    }
+
+    fn config_with_root(root: std::path::PathBuf) -> crate::config::Config {
+        use crate::config::{
+            Config, I18nConfig, I18nMeta, I18nValueSource, RawAdapter, RawAdr, RawConstitution,
+            RawContext, RawGit, RawWrite,
+        };
+        let config_path = root.join(".mochiflow/config.toml");
+        Config {
+            schema_version: 1,
+            i18n: I18nConfig {
+                artifact_language: "en".into(),
+                conversation_language: "auto".into(),
+            },
+            i18n_meta: I18nMeta {
+                has_i18n_table: true,
+                has_legacy_language: false,
+                missing_artifact_language: false,
+                missing_conversation_language: false,
+                artifact_source: I18nValueSource::I18n,
+                conversation_source: I18nValueSource::I18n,
+            },
+            install_dir: ".mochiflow".into(),
+            specs_dir: ".mochiflow/specs".into(),
+            index: ".mochiflow/INDEX.md".into(),
+            constitution: RawConstitution {
+                project: ".mochiflow/constitution.md".into(),
+                local: ".mochiflow/constitution.local.md".into(),
+            },
+            context: RawContext {
+                product: ".mochiflow/context/product.md".into(),
+                structure: ".mochiflow/context/structure.md".into(),
+                tech: ".mochiflow/context/tech.md".into(),
+            },
+            adr: RawAdr {
+                decisions: ".mochiflow/adr/decisions.md".into(),
+                pitfalls: ".mochiflow/adr/pitfalls.md".into(),
+            },
+            git: RawGit::default(),
+            adapter: RawAdapter::default(),
+            write: RawWrite::default(),
+            surfaces: BTreeMap::new(),
+            repo_root: root,
+            config_path,
+        }
+    }
+
+    fn empty_result() -> AdapterResult {
+        AdapterResult {
+            drift: Vec::new(),
+            wrote: Vec::new(),
+            blocked: Vec::new(),
+            errors: Vec::new(),
+            removed: Vec::new(),
+            preserved: Vec::new(),
+        }
+    }
+
+    fn write_file(root: &std::path::Path, rel: &str, body: &str) {
+        let path = root.join(rel);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, body).unwrap();
+    }
+
+    const MARKERED: &str = "<!-- generated by mochiflow adapter=kiro version=1.1.0 -->\nbody\n";
+
+    #[test]
+    fn self_heal_removes_markered_outputs_and_reports_them() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().to_path_buf();
+        // markered deprecated outputs, including the legacy hook
+        write_file(&root, ".kiro/agents/spec-builder.json", MARKERED);
+        write_file(&root, ".kiro/steering/spec-plan.md", MARKERED);
+        write_file(
+            &root,
+            ".kiro/hooks/generate-project-index.kiro.hook",
+            MARKERED,
+        );
+        let cfg = config_with_root(root.clone());
+        let mut result = empty_result();
+
+        self_heal_deprecated_kiro(&cfg, false, &mut result);
+
+        for rel in [
+            ".kiro/agents/spec-builder.json",
+            ".kiro/steering/spec-plan.md",
+            ".kiro/hooks/generate-project-index.kiro.hook",
+        ] {
+            assert!(
+                result.removed.iter().any(|r| r == rel),
+                "expected {rel} reported removed: {:?}",
+                result.removed
+            );
+            assert!(!root.join(rel).exists(), "{rel} should be deleted");
+        }
+        assert!(result.preserved.is_empty(), "{:?}", result.preserved);
+    }
+
+    #[test]
+    fn self_heal_preserves_markerless_listed_and_ignores_unlisted() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().to_path_buf();
+        // listed-but-markerless (user-edited): must be preserved, not deleted
+        write_file(&root, ".kiro/steering/spec.md", "hand edited, no marker\n");
+        // unlisted user file: never scanned, removed, or reported
+        write_file(&root, ".kiro/steering/release.md", "release notes\n");
+        let cfg = config_with_root(root.clone());
+        let mut result = empty_result();
+
+        self_heal_deprecated_kiro(&cfg, false, &mut result);
+
+        assert!(
+            result.preserved.iter().any(|r| r == ".kiro/steering/spec.md"),
+            "expected spec.md preserved: {:?}",
+            result.preserved
+        );
+        assert!(
+            root.join(".kiro/steering/spec.md").exists(),
+            "markerless listed file must be kept"
+        );
+        assert!(root.join(".kiro/steering/release.md").exists());
+        assert!(
+            result.removed.is_empty(),
+            "nothing should be removed: {:?}",
+            result.removed
+        );
+        assert!(
+            !result.preserved.iter().any(|r| r.contains("release.md")),
+            "unlisted file must not be reported: {:?}",
+            result.preserved
+        );
+    }
+
+    #[test]
+    fn self_heal_check_mode_flags_markered_residue_as_drift() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().to_path_buf();
+        write_file(&root, ".kiro/agents/spec-builder.json", MARKERED);
+        write_file(&root, ".kiro/steering/spec.md", "no marker\n");
+        let cfg = config_with_root(root.clone());
+        let mut result = empty_result();
+
+        self_heal_deprecated_kiro(&cfg, true, &mut result);
+
+        assert!(
+            result.drift.iter().any(|r| r == ".kiro/agents/spec-builder.json"),
+            "markered residue must drift in check mode: {:?}",
+            result.drift
+        );
+        // markerless listed file is not drift, and the file is left in place
+        assert!(!result.drift.iter().any(|r| r == ".kiro/steering/spec.md"));
+        assert!(root.join(".kiro/agents/spec-builder.json").exists());
     }
 }

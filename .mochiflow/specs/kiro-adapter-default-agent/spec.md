@@ -138,11 +138,11 @@ Claude/AGENTS trust model and carries no duplicated, drift-prone tool policy.
 
 | AC | Scope | Verification method | Planned test/QA | Implementation | Result | Evidence | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| AC-01 | cli | automated | `cargo test` file-set assertions + QA-02 | `engine/adapters/kiro/manifest.toml`, `cli/.../adapter.rs` | UNVERIFIED | | |
-| AC-02 | cli | AI-observed | QA-03, QA-07 | `engine/adapters/kiro/steering/mochiflow.md.tpl`, `cli/crates/mochiflow-core/src/adapter.rs` | UNVERIFIED | | |
-| AC-03 | cli | AI-observed | QA-04 | `engine/adapters/kiro/agents/spec-independent-reviewer.json.tpl` | UNVERIFIED | | |
-| AC-04 | cli | automated | QA-05 | `cli/crates/mochiflow-core/src/adapter.rs` | UNVERIFIED | | |
-| AC-05 | cli | automated | QA-02, QA-06 | `cli/crates/mochiflow-core/src/{adapter.rs,doctor.rs}` | UNVERIFIED | | |
-| AC-06 | cli | automated | QA-01 | `cli/crates/mochiflow-core/src/adapter.rs`, `cli/crates/mochiflow-cli/tests/{cli.rs,conformance.rs}`, `cli/crates/mochiflow-core/src/present.rs` | UNVERIFIED | | |
-| AC-07 | cli | automated | QA-06 + `mochiflow freeze --check` | `engine/MANIFEST.json`, `.mochiflow/engine/**` | UNVERIFIED | | |
-| AC-08 | cli | AI-observed | docs review | `README.md`, `README.ja.md`, `docs/configuration.md` | UNVERIFIED | | |
+| AC-01 | cli | automated | `cargo test` file-set assertions + QA-02 | `engine/adapters/kiro/manifest.toml`, `cli/.../adapter.rs` | PASS | `cargo test` 266 tests pass; `behavioral_kiro_self_heal_and_full_file_steering` verifies two-file output | |
+| AC-02 | cli | AI-observed | QA-03, QA-07 | `engine/adapters/kiro/steering/mochiflow.md.tpl`, `cli/crates/mochiflow-core/src/adapter.rs` | PASS | Generated `.kiro/steering/mochiflow.md` starts with `---\ninclusion: always\n---`, contains `#[[file:` pointers for router/constitution/context, has Rules block; markerless overwrite confirmed by test | |
+| AC-03 | cli | AI-observed | QA-04 | `engine/adapters/kiro/agents/spec-independent-reviewer.json.tpl` | PASS | Template has no `toolsSettings`; `tools` is exactly `["read","grep","glob"]`; `model` is `claude-opus-4.8` | |
+| AC-04 | cli | automated | QA-05 | `cli/crates/mochiflow-core/src/adapter.rs` | PASS | Unit tests `self_heal_removes_markered_outputs_and_reports_them`, `self_heal_preserves_markerless_listed_and_ignores_unlisted`; integration test `behavioral_kiro_self_heal_and_full_file_steering` covers markered removal/reporting, markerless preserved/reporting, and unlisted untouched | |
+| AC-05 | cli | automated | QA-02, QA-06 | `cli/crates/mochiflow-core/src/{adapter.rs,doctor.rs}` | PASS | `mochiflow adapter generate --check` exits 0; `mochiflow doctor` exits 0 (0 fail); shared `DEPRECATED_KIRO_PATHS` list drives both branches | |
+| AC-06 | cli | automated | QA-01 | `cli/crates/mochiflow-core/src/adapter.rs`, `cli/crates/mochiflow-cli/tests/{cli.rs,conformance.rs}`, `cli/crates/mochiflow-core/src/present.rs` | PASS | `cargo test --manifest-path cli/Cargo.toml` — 266 tests, 0 failures | |
+| AC-07 | cli | automated | QA-06 + `mochiflow freeze --check` | `engine/MANIFEST.json`, `.mochiflow/engine/**` | PASS | `mochiflow freeze` + `mochiflow upgrade --source engine` + doctor 0 fail + adapter generate --check 0 drift | |
+| AC-08 | cli | AI-observed | docs review | `README.md`, `README.ja.md`, `docs/configuration.md` | PASS | Kiro rows updated: always-on steering + read-only reviewer + permissions.yaml delegation; no claim of dedicated agent with baked policy | |

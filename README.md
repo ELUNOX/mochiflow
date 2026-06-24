@@ -217,7 +217,7 @@ are messages for your AI tool, not terminal commands.
 
 | Tool | How it integrates |
 | --- | --- |
-| Kiro | Generates dedicated agents and steering |
+| Kiro | Always-on steering (`.kiro/steering/mochiflow.md`) + read-only reviewer; permissions via `permissions.yaml` |
 | Claude Code | Generates `CLAUDE.md` |
 | GitHub Copilot | Generates `.github/` integration |
 | Generic agents | Generates `AGENTS.md` |

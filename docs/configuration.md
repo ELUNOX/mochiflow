@@ -11,7 +11,7 @@ Adapters tell each AI tool how to load the MochiFlow workflow:
 | --- | --- |
 | `agents` | `AGENTS.md` |
 | `claude-code` | `CLAUDE.md` |
-| `kiro` | `.kiro/` agents and steering |
+| `kiro` | `.kiro/steering/mochiflow.md` (always-on) + read-only reviewer agent |
 | `copilot` | `.github/` integration |
 
 Choose adapters during setup:
