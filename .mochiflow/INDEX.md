@@ -1,6 +1,6 @@
 # 📋 Spec Dashboard
 
-> updated: 2026-06-24 21:55 UTC
+> updated: 2026-06-24 23:06 UTC
 
 ## Pipeline
 
@@ -9,7 +9,7 @@
 | 🌱 backlog seed | 10 |
 | 📝 draft | 0 |
 | 🟢 approved | 0 |
-| ✅ done | 9 |
+| ✅ done | 10 |
 
 ## Backlog seeds
 
@@ -23,7 +23,7 @@
 | ["lint-residue-and-multiline-ears"](specs/_backlog/"lint-residue-and-multiline-ears".md) | "Lint: detect template residue and multi-line EARS ACs" | ❓ "seed" | "conversation" |
 | ["manifest-test-isolation"](specs/_backlog/"manifest-test-isolation".md) | "Isolate MANIFEST integrity check from functional conformance tests" | ❓ "seed" | "conversation" |
 | ["parallel-spec-context-switch"](specs/_backlog/"parallel-spec-context-switch".md) | "Support parallel spec work with explicit context switching" | ❓ "seed" | "conversation" |
-| ["prevent-build-phase-spec-mutation"](specs/_backlog/"prevent-build-phase-spec-mutation".md) | "Prevent tasks.md structural mutation during build phase" | ❓ "seed" | "conversation" |
+| ["phase-completion-guidance"](specs/_backlog/"phase-completion-guidance".md) | "Every phase should present the next action clearly" | ❓ "seed" | "conversation" |
 | ["unify-commit-granularity-per-task"](specs/_backlog/"unify-commit-granularity-per-task".md) | "Unify commit granularity to per-task across all risk levels" | ❓ "seed" | "conversation" |
 
 ## Active specs
@@ -36,6 +36,7 @@
 
 | Updated | Slug | Title | Type |
 |:--------|:-----|:------|:-----|
+| 2026-06-24 | [prevent-build-phase-spec-mutation](specs/_done/prevent-build-phase-spec-mutation/) | Prevent build-phase spec mutation | fix |
 | 2026-06-24 | [verify-ci-parity](specs/_done/verify-ci-parity/) | Verify profile should cover CI lint checks | fix |
 | 2026-06-24 | [kiro-adapter-default-agent](specs/_done/kiro-adapter-default-agent/) | Kiro adapter: drop dedicated agent, single always-on steering, delegate permissions | refactor |
 | 2026-06-23 | [commit-lifecycle-unification](specs/_done/commit-lifecycle-unification/) | Unify commit timing across discuss/plan/build/ship on a single branch | refactor |
@@ -46,4 +47,4 @@
 | 2026-06-23 | [build-completion-guidance](specs/_done/build-completion-guidance/) | Build phase should announce next step on completion | docs |
 | 2026-06-22 | [version-ssot-freeze](specs/_done/version-ssot-freeze/) | Version SSOT + freeze command | refactor |
 
-> done total: 9
+> done total: 10
