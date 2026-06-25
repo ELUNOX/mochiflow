@@ -1570,12 +1570,84 @@ fn lint_approved_fails_with_needs_clarification() {
 }
 
 #[test]
+fn lint_fails_on_template_residue_classes() {
+    for (residue, expected) in [
+        ("As {user}, I want x.\n", "unreplaced `{...}` placeholder"),
+        ("<!-- Create this from the template. -->\n", "HTML comment"),
+        (
+            "| QA | Scope | Steps | Expected result |\n| --- | --- | --- | --- |\n| QA-01 | app | ... | ... |\n",
+            "example-only table row",
+        ),
+        ("TBD\n", "bare `TBD`"),
+    ] {
+        let md = format!(
+            "# S\n\n## Background\n\n{residue}\n## Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
+             ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | UNVERIFIED |\n"
+        );
+        let (code, out) = run_lint_case(GOOD_YAML, &md, None, None);
+        assert_eq!(code, 1, "{residue}: {out}");
+        assert!(out.contains(expected), "{residue}: {out}");
+    }
+}
+
+#[test]
+fn lint_ignores_template_like_text_in_code() {
+    let md = "# S\n\n## Background\n\n\
+              Inline code is allowed: `{user}` and `TBD`.\n\n\
+              ```json\n{\"value\":\"{placeholder}\", \"status\":\"TBD\"}\n```\n\n\
+              | AC | Result |\n| --- | --- |\n| `AC-00` | `...` |\n\n\
+              ## Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
+              ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | UNVERIFIED |\n";
+    let (code, out) = run_lint_case(GOOD_YAML, md, None, None);
+    assert_eq!(code, 0, "{out}");
+    assert!(!out.contains("template residue remains"), "{out}");
+}
+
+#[test]
 fn lint_requirements_acceptance_heading_participates_in_ears_check() {
     let md = "# S\n\n## Requirements / Acceptance Criteria\n\n- AC-01: x happens.\n\n\
               ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | UNVERIFIED |\n";
     let (code, out) = run_lint_case(GOOD_YAML, md, None, None);
     assert_eq!(code, 0);
     assert!(out.contains("AC without EARS keyword"), "{out}");
+}
+
+#[test]
+fn lint_accepts_multiline_ears_ac_blocks() {
+    let md = "# S\n\n## Requirements / Acceptance Criteria\n\n\
+              - AC-01: IF x happens,\n  THEN THE SYSTEM SHALL y.\n\n\
+              ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | UNVERIFIED |\n";
+    let (code, out) = run_lint_case(GOOD_YAML, md, None, None);
+    assert_eq!(code, 0, "{out}");
+    assert!(!out.contains("AC without EARS keyword"), "{out}");
+}
+
+#[test]
+fn lint_multiline_ears_blocks_stop_at_next_ac() {
+    let md = "# S\n\n## Requirements / Acceptance Criteria\n\n\
+              - AC-01: x happens.\n\
+              - AC-02: THE SYSTEM SHALL y.\n\n\
+              ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | UNVERIFIED |\n| AC-02 | UNVERIFIED |\n";
+    let (code, out) = run_lint_case(GOOD_YAML, md, None, None);
+    assert_eq!(code, 0);
+    assert!(
+        out.contains("AC without EARS keyword") && out.contains("AC-01") && !out.contains("AC-02"),
+        "{out}"
+    );
+}
+
+#[test]
+fn lint_multiline_ears_blocks_stop_at_next_heading() {
+    let md = "# S\n\n## Requirements / Acceptance Criteria\n\n\
+              - AC-01: x happens.\n\n\
+              ## Notes\n\nTHE SYSTEM SHALL not count here.\n\n\
+              ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | UNVERIFIED |\n";
+    let (code, out) = run_lint_case(GOOD_YAML, md, None, None);
+    assert_eq!(code, 0);
+    assert!(
+        out.contains("AC without EARS keyword") && out.contains("AC-01"),
+        "{out}"
+    );
 }
 
 #[test]

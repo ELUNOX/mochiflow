@@ -34,6 +34,18 @@ static NFR_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\bNFR-\d{2,}\b").
 static EARS_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\b(?:SHALL|WHEN|WHILE|WHERE|THEN)\b").expect("EARS_RE"));
 #[allow(clippy::expect_used)]
+static TEMPLATE_PLACEHOLDER_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\{[^{}\n]{1,80}\}").expect("TEMPLATE_PLACEHOLDER_RE"));
+#[allow(clippy::expect_used)]
+static HTML_COMMENT_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?s)<!--.*?-->").expect("HTML_COMMENT_RE"));
+#[allow(clippy::expect_used)]
+static BARE_TBD_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)\bTBD\b").expect("BARE_TBD_RE"));
+#[allow(clippy::expect_used)]
+static EXAMPLE_CELL_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?m)\|\s*\.\.\.\s*\|").expect("EXAMPLE_CELL_RE"));
+#[allow(clippy::expect_used)]
 static VERDICT_RE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?i)Verdict:\s*(pass-with-comments|pass|fail)").expect("VERDICT_RE")
 });
@@ -148,6 +160,74 @@ fn task_count(tasks_text: Option<&str>) -> usize {
         .unwrap_or(0)
 }
 
+fn markdown_text_without_code(text: &str) -> String {
+    let mut result = String::with_capacity(text.len());
+    let mut in_fence = false;
+    for line in text.split_inclusive('\n') {
+        let trimmed = line.trim_start();
+        if trimmed.starts_with("```") || trimmed.starts_with("~~~") {
+            in_fence = !in_fence;
+            result.push('\n');
+            continue;
+        }
+        if in_fence {
+            result.push('\n');
+            continue;
+        }
+
+        let mut in_inline_code = false;
+        for ch in line.chars() {
+            if ch == '`' {
+                in_inline_code = !in_inline_code;
+                result.push(' ');
+            } else if in_inline_code {
+                result.push(' ');
+            } else {
+                result.push(ch);
+            }
+        }
+    }
+    result
+}
+
+fn template_residue_messages(text: &str) -> Vec<String> {
+    let check_text = markdown_text_without_code(text);
+    let mut messages = Vec::new();
+
+    if TEMPLATE_PLACEHOLDER_RE.is_match(&check_text) {
+        messages.push("template residue remains: unreplaced `{...}` placeholder".to_string());
+    }
+    if HTML_COMMENT_RE.is_match(&check_text) {
+        messages.push("template residue remains: template-only HTML comment".to_string());
+    }
+    if EXAMPLE_CELL_RE.is_match(&check_text) {
+        messages.push("template residue remains: example-only table row".to_string());
+    }
+    if BARE_TBD_RE.is_match(&check_text) {
+        messages.push("template residue remains: bare `TBD`".to_string());
+    }
+
+    messages
+}
+
+fn push_template_residue_issues(issues: &mut Vec<Issue>, path: &Path, text: &str) {
+    for message in template_residue_messages(text) {
+        issues.push(Issue {
+            severity: "FAIL".into(),
+            path: path.to_path_buf(),
+            message,
+        });
+    }
+}
+
+fn line_starts_section(line: &str) -> bool {
+    line.trim_start().starts_with("## ")
+}
+
+fn line_declares_ac(line: &str) -> bool {
+    AC_RE.is_match(line)
+}
+
 fn ac_lines_missing_ears(text: &str) -> BTreeSet<String> {
     let body = section_any(
         text,
@@ -160,16 +240,31 @@ fn ac_lines_missing_ears(text: &str) -> BTreeSet<String> {
     )
     .unwrap_or("");
     let mut missing = BTreeSet::new();
+    let mut current_ids: Vec<String> = Vec::new();
+    let mut current_block = String::new();
     for line in body.lines() {
+        if line_starts_section(line) || (line_declares_ac(line) && !current_ids.is_empty()) {
+            if !EARS_RE.is_match(&current_block) {
+                missing.extend(current_ids.iter().cloned());
+            }
+            current_ids.clear();
+            current_block.clear();
+        }
+
         let found: Vec<String> = AC_RE
             .find_iter(line)
             .map(|m| m.as_str().to_string())
             .collect();
-        if !found.is_empty() && !EARS_RE.is_match(line) {
-            for id in found {
-                missing.insert(id);
-            }
+        if !found.is_empty() {
+            current_ids = found;
         }
+        if !current_ids.is_empty() {
+            current_block.push_str(line);
+            current_block.push('\n');
+        }
+    }
+    if !current_ids.is_empty() && !EARS_RE.is_match(&current_block) {
+        missing.extend(current_ids);
     }
     missing
 }
@@ -704,6 +799,7 @@ fn lint_spec_dir(
             message: "Markdown frontmatter is not allowed; use spec.yaml".into(),
         });
     }
+    push_template_residue_issues(&mut issues, &spec_md, &spec_text);
     let spec_acs = ac_ids_in_spec(&spec_text);
     if spec_text.contains("[NEEDS-CLARIFICATION") {
         let severity = if meta.status() == "draft" {
@@ -748,6 +844,7 @@ fn lint_spec_dir(
                 message: "Markdown frontmatter is not allowed; use spec.yaml".into(),
             });
         }
+        push_template_residue_issues(&mut issues, &design_md, &design_text);
         if (meta.integration() == "contract" || meta.integration() == "workflow")
             && !design_text.contains("## Integration Contract")
         {
@@ -771,6 +868,7 @@ fn lint_spec_dir(
                 message: "Markdown frontmatter is not allowed; use spec.yaml".into(),
             });
         }
+        push_template_residue_issues(&mut issues, &tasks_md, &tt);
         let unknown: BTreeSet<_> = ac_ids_in_tasks(&tt)
             .difference(&spec_acs)
             .cloned()
