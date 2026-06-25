@@ -1,7 +1,7 @@
 # Risk Reference
 
-`risk` is the single dimension that decides reviewer cadence, integration-log
-requirement, and commit granularity. It is an **ordered enum**, not a boolean:
+`risk` is the single dimension that decides reviewer cadence and integration-log
+requirement. It is an **ordered enum**, not a boolean:
 
 ```
 standard < elevated < critical
@@ -28,11 +28,16 @@ For a multi-surface spec, evaluate each surface and adopt the highest risk.
 
 ## Consequences (single source of truth)
 
-| risk | reviewer cadence | integration log | commit granularity |
-| --- | --- | --- | --- |
-| `standard` | none (AC Matrix only) | not written | 1 commit |
-| `elevated` | independent-reviewer once, after all tasks | optional | per logical step |
-| `critical` | independent-reviewer after **each** task | required, appended per task | per task |
+| risk | reviewer cadence | integration log |
+| --- | --- | --- |
+| `standard` | none (AC Matrix only) | not written |
+| `elevated` | independent-reviewer once, after all tasks | optional |
+| `critical` | independent-reviewer after **each** task | required, appended per task |
+
+Build commit cadence is task-based and owned by `commands/build.md` plus
+`reference/git.md`, not by this risk table. When `tasks.md` exists, normal build
+commits complete one task at a time regardless of risk; taskless / micro specs
+produce one logical-unit build commit.
 
 Reviewer = `agents/independent-reviewer.md`, read-only. A recorded reviewer
 verdict (`pass` / `pass-with-comments`) is required when `risk ≥ elevated`; this

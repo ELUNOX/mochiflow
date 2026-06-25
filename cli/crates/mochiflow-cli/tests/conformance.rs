@@ -576,6 +576,48 @@ fn auto_commit_gate_is_verification_not_reviewer() {
 }
 
 #[test]
+fn build_commit_cadence_is_task_based_not_risk_based() {
+    let risk = read_repo_file("engine/reference/risk.md");
+    let build = read_repo_file("engine/commands/build.md");
+    let git = read_repo_file("engine/reference/git.md");
+    let concepts = read_repo_file("docs/concepts.md");
+
+    assert!(
+        risk.contains("Build commit cadence is task-based")
+            && risk.contains("not by this risk table"),
+        "risk reference must explicitly remove commit cadence from risk consequences"
+    );
+    assert!(
+        !risk.contains("commit granularity")
+            && !risk.contains("per logical step")
+            && !risk.contains("| `standard` | none (AC Matrix only) | not written | 1 commit |"),
+        "risk table must not define commit granularity by risk"
+    );
+    assert!(
+        build.contains("the unit is one currently open task")
+            && build.contains("taskless / micro specs")
+            && build.contains("Normal build commits do not combine multiple task completions"),
+        "build command must define task-based commit units"
+    );
+    assert!(
+        !build.contains("standard = one commit")
+            && !build.contains("elevated = per logical step")
+            && !build.contains("critical = per task"),
+        "build command must not derive commit units from risk"
+    );
+    assert!(
+        git.contains("Normal build commits complete one task")
+            && git.contains("Multiple `Task:` lines are kept for compatibility"),
+        "git reference must keep Task trailers while making one-task commits normal"
+    );
+    assert!(
+        !concepts
+            .contains("Riskier changes can require stricter review cadence and commit granularity"),
+        "user docs must not say risk controls commit granularity"
+    );
+}
+
+#[test]
 fn spec_templates_require_done_eligible_matrix_results() {
     for path in [
         "engine/templates/spec/spec.md",
