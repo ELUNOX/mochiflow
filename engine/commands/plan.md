@@ -64,6 +64,13 @@ and drive to human approval for implementation. Do not start implementation.
    needing the fuller contract. `templates/spec/spec.md` is the compatibility
    standard template. Re-judge risk per `reference/risk.md` and update
    `spec.yaml` when the plan discovers a different risk / surface / integration.
+   Populate `spec.md ## QA Scenarios` with risk-appropriate persona attack
+   coverage (P1-P7) following the mapping owned by
+   `reference/risk.md ## QA attack coverage` — do not restate per-risk thresholds
+   here. Record each persona as a `QA-XX` row (a non-applicable persona is a row
+   with a reasoned `N/A: <reason>`), and reference an attack that backs an AC from
+   the AC Matrix `Planned test/QA` / `Evidence` column by its `QA-XX` id. Do not
+   promote attacks to ACs or mint a separate attack-id scheme.
 3. Create `design.md` only when `reference/risk.md ## design.md required condition` applies. When creating it, delete optional sections at creation time unless their condition applies (`## Workstreams` only for multiple workstreams / cross-surface, `## Integration Contract` only for `integration ≠ none`, `## Review Results` only for `risk ≥ elevated`, `## Integration Log` only when the risk table calls for it during build). Create `tasks.md` when multi-step. Let depth follow `reference/workflow.md ## Depth scaling` (a trivial change is spec.md only).
 4. Run `reference/authoring.md ## Consistency check` **exactly once**.
 5. Remove all template residue before asking for approval. `lint` enforces these
