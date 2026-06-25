@@ -13,7 +13,7 @@ Critical Stop Conditions:
 
 ## Tasks
 
-- [ ] T-001 [AC-01, AC-02, AC-04] Add template residue lint checks
+- [x] T-001 [AC-01, AC-02, AC-04] Add template residue lint checks
   - Depends on: none
   - Files: `cli/crates/mochiflow-core/src/lint.rs`
   - Done: Expanded spec documents fail on unfinished residue classes while fenced code, inline code, and valid AC Matrix provisional tokens remain accepted.
