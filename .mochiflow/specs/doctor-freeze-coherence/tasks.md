@@ -26,7 +26,7 @@ Critical Stop Conditions:
   - Stop: implementing `--root` requires interpreting global `--config` as a source-root input.
 - [ ] T-003 [AC-07] Update user-facing documentation
   - Depends on: T-001, T-002
-  - Files: `README.md`, `docs/versioning.md`, `contracts/VERSIONING.md`
+  - Files: `README.md`, `docs/versioning.md`, `contracts/VERSIONING.md`, `cli/crates/mochiflow-cli/tests/cli.rs`
   - Done: docs add only the missing guidance for `doctor` versus `freeze --check` and the new `freeze --root` usage, avoid duplicating existing consumer drift/versioning explanations, and doc assertion tests cover the required phrases.
   - Stop: docs need to claim that `doctor` verifies source derived-file coherence.
 - [ ] T-004 [AC-01, AC-02, AC-03, AC-04, AC-05, AC-06, AC-07] Run verification and update evidence
