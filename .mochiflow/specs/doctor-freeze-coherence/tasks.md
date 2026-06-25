@@ -29,7 +29,7 @@ Critical Stop Conditions:
   - Files: `README.md`, `docs/versioning.md`, `contracts/VERSIONING.md`, `cli/crates/mochiflow-cli/tests/cli.rs`
   - Done: docs add only the missing guidance for `doctor` versus `freeze --check` and the new `freeze --root` usage, avoid duplicating existing consumer drift/versioning explanations, and doc assertion tests cover the required phrases.
   - Stop: docs need to claim that `doctor` verifies source derived-file coherence.
-- [ ] T-004 [AC-01, AC-02, AC-03, AC-04, AC-05, AC-06, AC-07] Run verification and update evidence
+- [x] T-004 [AC-01, AC-02, AC-03, AC-04, AC-05, AC-06, AC-07] Run verification and update evidence
   - Depends on: T-001, T-002, T-003
   - Files: `.mochiflow/specs/doctor-freeze-coherence/spec.md`, `.mochiflow/specs/doctor-freeze-coherence/tasks.md`
   - Done: targeted tests and the configured `cli.default` verification pass, task checkboxes and AC Matrix evidence are updated with results.
