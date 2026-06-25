@@ -39,5 +39,5 @@ MochiFlow keeps two human decision points:
 - approve the design before implementation starts;
 - approve the PR path before shipping.
 
-Riskier changes can require stricter review cadence and commit granularity, but
-the normal user flow remains the same.
+Riskier changes can require stricter review cadence, but the normal user flow
+remains the same.

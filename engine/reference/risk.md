@@ -1,7 +1,7 @@
 # Risk Reference
 
-`risk` is the single dimension that decides reviewer cadence, integration-log
-requirement, and commit granularity. It is an **ordered enum**, not a boolean:
+`risk` is the single dimension that decides reviewer cadence and integration-log
+requirement. It is an **ordered enum**, not a boolean:
 
 ```
 standard < elevated < critical
@@ -28,11 +28,16 @@ For a multi-surface spec, evaluate each surface and adopt the highest risk.
 
 ## Consequences (single source of truth)
 
-| risk | reviewer cadence | integration log | commit granularity |
-| --- | --- | --- | --- |
-| `standard` | none (AC Matrix only) | not written | 1 commit |
-| `elevated` | independent-reviewer once, after all tasks | optional | per logical step |
-| `critical` | independent-reviewer after **each** task | required, appended per task | per task |
+| risk | reviewer cadence | integration log |
+| --- | --- | --- |
+| `standard` | none (AC Matrix only) | not written |
+| `elevated` | independent-reviewer once, after all tasks | optional |
+| `critical` | independent-reviewer after **each** task | required, appended per task |
+
+Build commit cadence is task-based and owned by `commands/build.md` plus
+`reference/git.md`, not by this risk table. When `tasks.md` exists, normal build
+commits complete one task at a time regardless of risk; taskless / micro specs
+produce one logical-unit build commit.
 
 Reviewer = `agents/independent-reviewer.md`, read-only. A recorded reviewer
 verdict (`pass` / `pass-with-comments`) is required when `risk ≥ elevated`; this
@@ -49,13 +54,19 @@ single post-task review entry. Branch / PR / archive mechanics live in
 
 ## Review transport
 
-Reviewer cadence names the reviewer procedure, not a mandatory transport. Run
-`agents/independent-reviewer.md` read-only using the first available mode:
+Reviewer cadence names the reviewer procedure, with delegated transport
+preferred whenever the adapter/runtime exposes a subagent mechanism. A user
+request that triggers ad-hoc review, or a user-approved build flow that reaches
+mandatory risk-cadence review, is also an explicit request to use the delegated
+reviewer when available. Do not fall back to inline merely because the host
+runtime says subagents require an explicit delegation request; this rule and the
+active review trigger provide that request. Run `agents/independent-reviewer.md`
+read-only using the first available mode:
 
 1. `delegated`: dispatch a subagent when the adapter/runtime supports it.
-2. `inline`: when subagents are unavailable, the main agent temporarily switches
-   to the independent-reviewer role and executes the same reviewer procedure
-   inline.
+2. `inline`: only when subagents are unavailable or dispatch fails for a
+   runtime/tooling reason, the main agent temporarily switches to the
+   independent-reviewer role and executes the same reviewer procedure inline.
 
 Inline review must read `agents/independent-reviewer.md`, use the same Stage 1 /
 Stage 2 / verdict format, and record `Reviewer mode: inline`. While in reviewer

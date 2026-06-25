@@ -1,8 +1,8 @@
 # Git Reference
 
-Branch / commit / PR / fold / archive rules during mochiflow. Reviewer and
-commit-granularity cadence are defined in `risk.md`; this file owns the git
-mechanics and the living-spec fold.
+Branch / commit / PR / fold / archive rules during mochiflow. Reviewer cadence
+and integration-log requirements are defined in `risk.md`; this file owns the
+git mechanics and the living-spec fold.
 
 ## Branch
 
@@ -73,9 +73,10 @@ Task: T-002
 - `Spec: {slug}` — **required** on every spec-lane commit (discuss, plan, build,
   ship). The value is the spec's `slug` from `spec.yaml`.
 - `Task: T-XXX` — **required** when `tasks.md` exists and the commit completes a
-  specific task. Use one `Task:` line per task (multiple lines for multi-task
-  commits). **Optional** on ship close-out commits (which bundle multiple
-  concerns).
+  specific task. Normal build commits complete one task and use one `Task:`
+  line. Multiple `Task:` lines are kept for compatibility with existing history
+  and exceptional reconciliation commits. **Optional** on ship close-out commits
+  (which bundle multiple concerns).
 - Patch lane commits have **no trailers** (no spec context exists).
 - `Spec:` and `Task:` keys are case-sensitive and use a single space after the
   colon.
@@ -114,13 +115,13 @@ follow-up before build completes.
 
 - Stage only files in the change plan / task plus tests added for verification.
 - Stage this spec's own files under `{specs_dir}/{slug}/**` together with the
-  change, as part of build's **first** commit (folded into the single commit for
-  `standard`, or the first commit — `docs(scope): ...` or alongside task 1 — for
-  `elevated` / `critical`). `.gitignore` is the single source of truth for
-  whether specs are tracked: when the project tracks specs, git includes these
-  files; when the project gitignores `{specs_dir}/{slug}/`, git skips them and
-  the worktree was already clean. Never `git add -f` to override either way. The
-  ADR under `[adr]` is committed regardless of this choice.
+  change, as part of build's first task commit when `tasks.md` exists, or as
+  part of the single logical-unit build commit for taskless / micro specs.
+  `.gitignore` is the single source of truth for whether specs are tracked: when
+  the project tracks specs, git includes these files; when the project gitignores
+  `{specs_dir}/{slug}/`, git skips them and the worktree was already clean.
+  Never `git add -f` to override either way. The ADR under `[adr]` is committed
+  regardless of this choice.
 - `git add .` is forbidden — name files explicitly.
 - `state/` is gitignored; never `git add -f` it. The vendored engine under the
   install dir is tracked by default.
