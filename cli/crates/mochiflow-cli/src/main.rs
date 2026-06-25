@@ -153,6 +153,9 @@ enum Commands {
     },
     /// Regenerate derived version/integrity files (engine/VERSION, MANIFEST.json, contracts.lock)
     Freeze {
+        /// MochiFlow source repo root (default: walk up from current directory)
+        #[arg(long)]
+        root: Option<String>,
         /// Report staleness without writing
         #[arg(long)]
         check: bool,
@@ -432,13 +435,23 @@ fn main() -> Result<()> {
                 dry_run,
             )
         }
-        Commands::Freeze { check } => {
+        Commands::Freeze { root, check } => {
             let cwd = std::env::current_dir()?;
-            let repo_root = match mochiflow_core::freeze::resolve_repo_root(&cwd) {
-                Ok(r) => r,
-                Err(e) => {
-                    println!("{e}");
-                    std::process::exit(1);
+            let repo_root = if let Some(root) = root {
+                match mochiflow_core::freeze::validate_repo_root(std::path::Path::new(&root)) {
+                    Ok(r) => r,
+                    Err(e) => {
+                        println!("{e}");
+                        std::process::exit(1);
+                    }
+                }
+            } else {
+                match mochiflow_core::freeze::resolve_repo_root(&cwd) {
+                    Ok(r) => r,
+                    Err(e) => {
+                        println!("{e}");
+                        std::process::exit(1);
+                    }
                 }
             };
             match mochiflow_core::freeze::freeze(&repo_root, check) {

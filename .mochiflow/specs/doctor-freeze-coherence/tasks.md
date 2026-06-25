@@ -19,7 +19,7 @@ Critical Stop Conditions:
   - Files: `cli/crates/mochiflow-core/src/doctor.rs`, `cli/crates/mochiflow-cli/src/main.rs`, `cli/crates/mochiflow-cli/tests/cli.rs`
   - Done: `doctor config` reports source-repo guidance where applicable, warns on stale context command references, stays quiet for valid CLI command, valid workflow command, and no command references, and tests cover allowlist drift against clap's actual top-level subcommands.
   - Stop: a reliable check requires running `freeze --check` from `doctor` or fully regenerating context prose.
-- [ ] T-002 [AC-04, AC-05, AC-06] Add explicit root handling for freeze
+- [x] T-002 [AC-04, AC-05, AC-06] Add explicit root handling for freeze
   - Depends on: none
   - Files: `cli/crates/mochiflow-cli/src/main.rs`, `cli/crates/mochiflow-core/src/freeze.rs`, `cli/crates/mochiflow-cli/tests/cli.rs`
   - Done: `mochiflow freeze --root <source-repo> [--check]` uses the explicit root, invalid roots fail before writes, no-root cwd fallback still works, and tests cover all three cases.

@@ -1997,6 +1997,49 @@ fn doctor_config_guides_source_repo_users_to_freeze_check() {
     assert!(out.contains("doctor` checks project health"), "{out}");
 }
 
+#[test]
+fn freeze_root_check_uses_explicit_source_repo_from_other_cwd() {
+    let cwd = tempfile::tempdir().unwrap();
+    let result = bin()
+        .current_dir(cwd.path())
+        .args(["freeze", "--root", repo_root().to_str().unwrap(), "--check"])
+        .assert()
+        .success();
+    let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
+    assert!(
+        out.contains("freeze: all derived files are up to date"),
+        "{out}"
+    );
+}
+
+#[test]
+fn freeze_root_invalid_path_fails_before_writing() {
+    let root = tempfile::tempdir().unwrap();
+    let result = bin()
+        .args(["freeze", "--root", root.path().to_str().unwrap()])
+        .assert()
+        .failure()
+        .code(1);
+    let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
+    assert!(out.contains("not a mochiflow source repo"), "{out}");
+    assert!(!root.path().join("engine/VERSION").exists());
+    assert!(!root.path().join("contracts/contracts.lock").exists());
+}
+
+#[test]
+fn freeze_without_root_keeps_cwd_upward_resolution() {
+    let result = bin()
+        .current_dir(repo_root().join("cli/crates/mochiflow-core"))
+        .args(["freeze", "--check"])
+        .assert()
+        .success();
+    let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
+    assert!(
+        out.contains("freeze: all derived files are up to date"),
+        "{out}"
+    );
+}
+
 /// Public docs list only Rust CLI commands; onboard is an AI engine command.
 #[test]
 fn readmes_do_not_list_onboard_as_cli_command() {
