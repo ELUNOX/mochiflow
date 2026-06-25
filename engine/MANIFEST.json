@@ -35,9 +35,9 @@
     "templates/handoff/build-session-prompt.md": "sha256:73f34f2aa4b83c5cf2f5b78128226a72cb54b7520f71f361dd556e32bcbc5a68",
     "templates/spec/design.md": "sha256:6fd076467f44d3be02c0ed27e847b4bb09f5d40cfa7f01c20e5b290d49dc66fb",
     "templates/spec/pitch.md": "sha256:c5f0bdb786e52b0deba314415d8a3c1e3a9fd0429d67f26f6d808095251477f1",
-    "templates/spec/spec.md": "sha256:b66c5b8733096112d3a5165efed3f44eb621107284b5a9982baf99d15f168b9c",
+    "templates/spec/spec.md": "sha256:6a70b2640bc1308585f531e72617f2b035f564d969613c36e53690f164a1b3f9",
     "templates/spec/spec.micro.md": "sha256:a599bb82764d746b8f344febc2aa0f0a6cbb3cff7526ab4cc93243303ad02f51",
-    "templates/spec/spec.standard.md": "sha256:04aec70ceec5cfc271c4bc6f33eba73f85e5ae946d80a828cb5a951b1ea96852",
+    "templates/spec/spec.standard.md": "sha256:351789c31b47c6e3ff97adcc0efd78d64c02f5c289aadd3b59e9408a26cee52b",
     "templates/spec/spec.yaml": "sha256:984ce5f045a9886475405f7ad99f4da884acc3a4c993688f7c84a972fbf87b97",
     "templates/spec/tasks.md": "sha256:9929d57176244440942b6a0a34b1721690a10a35e14c2b45bad9d20c769c62a8"
   },

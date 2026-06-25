@@ -13,7 +13,7 @@ Critical Stop Conditions:
 
 ## Tasks
 
-- [ ] T-001 [AC-01] Add the persona dimension (P1-P7) to QA Scenarios in the spec templates
+- [x] T-001 [AC-01] Add the persona dimension (P1-P7) to QA Scenarios in the spec templates
   - Depends on: none
   - Files: `engine/templates/spec/spec.standard.md`, `engine/templates/spec/spec.md`
   - Done: both templates' `## QA Scenarios` tables carry a persona column/guidance covering P1-P7, with an example that uses a reasoned `N/A: <reason>`; micro template left untouched.

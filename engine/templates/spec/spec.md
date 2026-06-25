@@ -26,9 +26,16 @@ As {user}, I want {capability}, so that {reason}.
 
 ## QA Scenarios
 
-| QA | Scope | Steps | Expected result |
-| --- | --- | --- | --- |
-| QA-01 | ios | ... | ... |
+> Cover the adversarial personas P1-P7 (P1 new user, P2 power user, P3 malicious
+> user, P4 data integrity, P5 migration, P6 regression, P7 spec skeptic). Required
+> coverage and evidence strength per `risk` are owned by
+> `reference/risk.md ## QA attack coverage`; a persona that does not apply is a
+> row with a reasoned `N/A: <reason>`. Reference an attack from the AC Matrix via
+> its `QA-XX` id; do not promote attacks to ACs or mint a separate attack id.
+
+| QA | Persona | Scope | Steps | Expected result |
+| --- | --- | --- | --- | --- |
+| QA-01 | P1, P7 | ios | ... | ... |
 
 ## Completion Conditions
 
