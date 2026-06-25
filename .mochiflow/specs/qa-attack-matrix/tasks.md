@@ -23,7 +23,7 @@ Critical Stop Conditions:
   - Files: `engine/reference/risk.md`
   - Done: risk.md states a single risk->persona/evidence mapping that owns both required persona coverage and evidence strength per risk level (standard exercises at least P1/P3/P6/P7 with reasoned `N/A` allowed; elevated requires evidence for relevant personas; critical requires strong evidence and rejects casual `N/A`), without duplicating the reviewer-cadence table.
   - Stop: the wording would introduce a new enforced gate beyond the existing risk consequences.
-- [ ] T-003 [AC-02, AC-05] Add persona-coverage and QA-XX traceability guidance to plan.md
+- [x] T-003 [AC-02, AC-05] Add persona-coverage and QA-XX traceability guidance to plan.md
   - Depends on: T-001
   - Files: `engine/commands/plan.md`
   - Done: plan.md instructs capturing risk-appropriate persona coverage in QA Scenarios by referencing the risk->persona/evidence mapping in risk.md (no restated thresholds), and references attacks via `QA-XX` from the AC Matrix `Planned test/QA` / `Evidence` columns, with no new AC column or attack-ID scheme.
