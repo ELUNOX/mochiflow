@@ -52,6 +52,42 @@ single post-task review entry. Branch / PR / archive mechanics live in
 `git.md`; the AC Matrix format and delivery approval gates live in
 `workflow.md`.
 
+## QA attack coverage
+
+This section is the single owner of how much adversarial QA a spec must carry and
+how strong the evidence must be. `plan.md` (authoring) and
+`agents/independent-reviewer.md` (Stage 1) reference this mapping instead of
+restating thresholds, per `reference/authoring.md` SSOT discipline.
+
+Seven adversarial personas frame the "do not trust that it works" pass:
+
+- P1 new user: intuitive operation, misclicks, empty submit, repeated clicks.
+- P2 power user: fast keyboard operation, large input, Tab order, IME Enter.
+- P3 malicious user: boundaries, invalid values, unauthorized actions, duplicate submit.
+- P4 data integrity: inspect backing tables / state, not only the screen.
+- P5 migration: old data, missing fields, format / encoding differences, volume.
+- P6 regression: nearby existing behavior still works.
+- P7 spec skeptic: compare the primary specification to observed behavior.
+
+Personas are recorded as `QA-XX` rows in `spec.md ## QA Scenarios` (with a
+`Persona` column). A persona that does not apply is a row with a reasoned
+`N/A: <reason>`, never an omission. `## QA Scenarios` is the "what to test"
+source and carries no result columns; an attack whose outcome must be recorded is
+referenced from the relevant AC's AC Matrix `Planned test/QA` / `Evidence` column
+(the results ledger). Attacks are never promoted to formal ACs and never get a
+separate attack-id scheme.
+
+Required coverage and evidence strength scale with `risk`:
+
+| risk | required personas | evidence strength |
+| --- | --- | --- |
+| `standard` | at least P1, P3, P6, P7 exercised; others reasoned `N/A: <reason>` | automated / AI-observed evidence or a reasoned `N/A` |
+| `elevated` | all relevant personas exercised (especially P3, P4, P5 where applicable) | concrete evidence for each exercised persona; `N/A` needs a specific reason |
+| `critical` | all applicable personas exercised | strong evidence (test output, logs, human confirmation); casual `N/A` is not accepted |
+
+Micro specs (no `## QA Scenarios` table) keep persona coverage optional. Specs
+authored before this convention are not retrofitted.
+
 ## Review transport
 
 Reviewer cadence names the reviewer procedure, with delegated transport

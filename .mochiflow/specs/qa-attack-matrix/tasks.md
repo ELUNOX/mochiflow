@@ -18,7 +18,7 @@ Critical Stop Conditions:
   - Files: `engine/templates/spec/spec.standard.md`, `engine/templates/spec/spec.md`
   - Done: both templates' `## QA Scenarios` tables carry a persona column/guidance covering P1-P7, with an example that uses a reasoned `N/A: <reason>`; micro template left untouched.
   - Stop: a template edit would force persona coverage on micro specs.
-- [ ] T-002 [AC-03] Document risk-scaled attack-evidence strength in risk.md
+- [x] T-002 [AC-03] Document risk-scaled attack-evidence strength in risk.md
   - Depends on: none
   - Files: `engine/reference/risk.md`
   - Done: risk.md states a single risk->persona/evidence mapping that owns both required persona coverage and evidence strength per risk level (standard exercises at least P1/P3/P6/P7 with reasoned `N/A` allowed; elevated requires evidence for relevant personas; critical requires strong evidence and rejects casual `N/A`), without duplicating the reviewer-cadence table.
