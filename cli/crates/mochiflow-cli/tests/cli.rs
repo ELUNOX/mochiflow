@@ -2040,6 +2040,52 @@ fn freeze_without_root_keeps_cwd_upward_resolution() {
     );
 }
 
+#[test]
+fn docs_explain_doctor_freeze_boundaries_and_root_usage() {
+    let root = repo_root();
+    let readme = fs::read_to_string(root.join("README.md")).unwrap();
+    assert!(
+        readme.contains("`mochiflow doctor` is the project health check"),
+        "{readme}"
+    );
+    assert!(
+        readme.contains("`mochiflow freeze --check` as the separate"),
+        "{readme}"
+    );
+    assert!(
+        readme.contains("`mochiflow freeze --root <source-repo> --check`"),
+        "{readme}"
+    );
+
+    let docs_versioning = fs::read_to_string(root.join("docs/versioning.md")).unwrap();
+    assert!(
+        docs_versioning.contains("## Source repo coherence"),
+        "{docs_versioning}"
+    );
+    assert!(
+        docs_versioning.contains("It does not replace"),
+        "{docs_versioning}"
+    );
+    assert!(
+        docs_versioning.contains("source-repo derived-file"),
+        "{docs_versioning}"
+    );
+    assert!(
+        docs_versioning.contains("mochiflow freeze --root <source-repo> --check"),
+        "{docs_versioning}"
+    );
+
+    let contract_versioning = fs::read_to_string(root.join("contracts/VERSIONING.md")).unwrap();
+    assert!(
+        contract_versioning.contains("mochiflow freeze --root <source-repo>"),
+        "{contract_versioning}"
+    );
+    assert!(
+        contract_versioning.contains("It is separate from `mochiflow doctor`"),
+        "{contract_versioning}"
+    );
+}
+
 /// Public docs list only Rust CLI commands; onboard is an AI engine command.
 #[test]
 fn readmes_do_not_list_onboard_as_cli_command() {

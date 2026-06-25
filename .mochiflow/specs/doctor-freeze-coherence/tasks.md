@@ -24,7 +24,7 @@ Critical Stop Conditions:
   - Files: `cli/crates/mochiflow-cli/src/main.rs`, `cli/crates/mochiflow-core/src/freeze.rs`, `cli/crates/mochiflow-cli/tests/cli.rs`
   - Done: `mochiflow freeze --root <source-repo> [--check]` uses the explicit root, invalid roots fail before writes, no-root cwd fallback still works, and tests cover all three cases.
   - Stop: implementing `--root` requires interpreting global `--config` as a source-root input.
-- [ ] T-003 [AC-07] Update user-facing documentation
+- [x] T-003 [AC-07] Update user-facing documentation
   - Depends on: T-001, T-002
   - Files: `README.md`, `docs/versioning.md`, `contracts/VERSIONING.md`, `cli/crates/mochiflow-cli/tests/cli.rs`
   - Done: docs add only the missing guidance for `doctor` versus `freeze --check` and the new `freeze --root` usage, avoid duplicating existing consumer drift/versioning explanations, and doc assertion tests cover the required phrases.

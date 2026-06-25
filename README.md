@@ -124,6 +124,12 @@ MochiFlow's public CLI commands are:
 | `mochiflow pr` | Run PR pre-flight, push, and provider/manual PR handoff. |
 | `mochiflow completions` | Generate shell completion scripts. |
 
+For initialized projects, `mochiflow doctor` is the project health check. In the
+MochiFlow source repo, run `mochiflow freeze --check` as the separate
+derived-file coherence check; scripts can use
+`mochiflow freeze --root <source-repo> --check` when they cannot rely on the
+current working directory.
+
 ## What `init` creates
 
 `mochiflow init` adds a `.mochiflow/` workspace and generates the entrypoint
