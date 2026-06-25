@@ -11,7 +11,7 @@
     "adapters/kiro/agents/spec-independent-reviewer.json.tpl": "sha256:52c0231ddddc2a999cc5726427e3e632c7c4aa7300595e71b6dd196f7fec232d",
     "adapters/kiro/manifest.toml": "sha256:7e41192664fd0a60f63c12fae446b45d6c22f535db91566b5c5624cc6a542009",
     "adapters/kiro/steering/mochiflow.md.tpl": "sha256:30718db1f1e983f86092c6eb8607cd9a22e9b6472e1ac14d1f516ebc00d65cb5",
-    "agents/independent-reviewer.md": "sha256:96f1316650155d3ff364bea95150a8419f228261bdcf41f69c360babed37f397",
+    "agents/independent-reviewer.md": "sha256:8a2093d70df6563fa542723f08564b0a6e694b98fcec58782c66ccac3a2719be",
     "commands/build.md": "sha256:41a7c3fc7492357b78d09f29602daed4a4208be64315c770fc622ecbfdce4e5f",
     "commands/discuss.md": "sha256:b2d1053c1b356a0f5cd2e439a02b7a6a6ba805f7227a5fdb2c3e39e0f3a9167c",
     "commands/onboard.md": "sha256:a6389bf16e17f02cc7b83f8cd7d09c2dcb0f013fdbf8e4939d9f51b323b4fe73",

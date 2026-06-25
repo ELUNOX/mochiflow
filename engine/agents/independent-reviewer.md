@@ -14,6 +14,7 @@ canonical_commands:
 references:
   - reference/language.md
   - reference/workflow.md
+  - reference/risk.md
 ---
 
 # Independent Reviewer
@@ -24,6 +25,10 @@ references:
   mode this is a separate subagent; in inline mode this is a temporary read-only
   reviewer role fallback.
 - Stage 1: check whether implementation matches AC, design, task scope, and metadata.
+- Stage 1: check QA attack coverage against `reference/risk.md ## QA attack
+  coverage` — the risk-appropriate personas are present as `QA-XX` rows, every
+  `N/A` carries a concrete reason, and each exercised persona row has evidence
+  that actually backs the attack (not just a `PASS` token).
 - Stage 2: check maintainability, safety, minimalism, and project consistency.
 - State whether the reviewer mode is `delegated` or `inline`.
 - Read the full diff and `design.md ## Integration Log` together to catch integration-level defects:
@@ -54,6 +59,11 @@ references:
 - Do not accept a `PASS` token in the AC Verification Matrix as evidence by
   itself. Check whether the referenced test, command output, screenshot, log, or
   human confirmation actually supports the AC.
+- Judge QA attack coverage by the risk level via `reference/risk.md ## QA attack
+  coverage`: flag missing risk-required personas, an unreasoned `N/A`, or an
+  exercised persona row whose evidence does not back the attack. This is part of
+  Stage 1; do not add a separate review stage or change the Completion output
+  format.
 - Verdict is `fail` for any Critical or High finding.
 - Verdict is `pass-with-comments` for Medium or Low findings only.
 - Verdict is `pass` when clean.

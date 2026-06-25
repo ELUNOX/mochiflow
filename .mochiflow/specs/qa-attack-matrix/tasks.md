@@ -28,7 +28,7 @@ Critical Stop Conditions:
   - Files: `engine/commands/plan.md`
   - Done: plan.md instructs capturing risk-appropriate persona coverage in QA Scenarios by referencing the risk->persona/evidence mapping in risk.md (no restated thresholds), and references attacks via `QA-XX` from the AC Matrix `Planned test/QA` / `Evidence` columns, with no new AC column or attack-ID scheme.
   - Stop: guidance would require promoting attacks to formal ACs.
-- [ ] T-004 [AC-04] Extend reviewer Stage 1 with attack-evidence verification
+- [x] T-004 [AC-04] Extend reviewer Stage 1 with attack-evidence verification
   - Depends on: T-002
   - Files: `engine/agents/independent-reviewer.md`
   - Done: Stage 1 verifies, against the risk.md mapping, risk-appropriate persona-row presence, concrete `N/A` reasons, and that exercised rows carry evidence backing the attack; the reviewer references risk.md for this rule; no new stage and the Completion output format is unchanged.
