@@ -63,3 +63,27 @@ Only the no-`--root` path should use upward cwd discovery.
 **Check:** `validate_repo_root_does_not_walk_to_parent` and CLI root tests cover
 exact-root success, invalid-root failure before writes, and cwd fallback.
 **Status:** Active.
+
+
+
+## Editing engine/ requires `mochiflow freeze` before tests pass (2026-06-25)
+
+**Applies to:** dogfood builds that edit repo-root `engine/**` (docs, templates,
+reference, agents).
+**Signal:** `cargo test --manifest-path cli/Cargo.toml` fails with
+`STALE: engine/MANIFEST.json` on the `freeze_*` tests after editing any
+`engine/` file, even though no Rust changed.
+**Cause:** The CLI test suite runs `freeze --check`, which compares
+`engine/MANIFEST.json` against `engine/` contents. Any engine edit invalidates
+the manifest hash until re-frozen.
+**Guardrail:** After each `engine/` edit and before verifying/committing a task,
+run `mochiflow freeze` to regenerate `engine/MANIFEST.json`, and stage the
+regenerated manifest with that task's commit. Per the constitution dogfood rule,
+run `freeze` -> `upgrade --source engine` -> `adapter generate --check` before
+final verification. Note: the vendored `.mochiflow/engine/` is gitignored (synced
+by `upgrade`, not committed), and adapters that only reference file paths
+(`AGENTS.md`, `.kiro/*`) stay byte-identical, so engine prose edits usually leave
+no adapter diff to stage.
+**Check:** `mochiflow freeze --check` reports "all derived files are up to date"
+and the full `default` verification is green before close-out.
+**Status:** Active.

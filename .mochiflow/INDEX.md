@@ -1,6 +1,6 @@
 # 📋 Spec Dashboard
 
-> updated: 2026-06-25 17:51 UTC
+> updated: 2026-06-25 22:25 UTC
 
 ## Pipeline
 
@@ -9,7 +9,7 @@
 | 🌱 backlog seed | 10 |
 | 📝 draft | 0 |
 | 🟢 approved | 0 |
-| ✅ done | 12 |
+| ✅ done | 13 |
 
 ## Backlog seeds
 
@@ -36,6 +36,7 @@
 
 | Updated | Slug | Title | Type |
 |:--------|:-----|:------|:-----|
+| 2026-06-25 | [qa-attack-matrix](specs/_done/qa-attack-matrix/) | Add a QA attack matrix to plan and reviewer flows | feature |
 | 2026-06-25 | [lint-residue-and-multiline-ears](specs/_done/lint-residue-and-multiline-ears/) | Lint: detect template residue and multi-line EARS ACs | feature |
 | 2026-06-25 | [doctor-freeze-coherence](specs/_done/doctor-freeze-coherence/) | Clarify doctor/freeze coherence and context freshness | feature |
 | 2026-06-24 | [prevent-build-phase-spec-mutation](specs/_done/prevent-build-phase-spec-mutation/) | Prevent build-phase spec mutation | fix |
@@ -49,4 +50,4 @@
 | 2026-06-23 | [build-completion-guidance](specs/_done/build-completion-guidance/) | Build phase should announce next step on completion | docs |
 | 2026-06-22 | [version-ssot-freeze](specs/_done/version-ssot-freeze/) | Version SSOT + freeze command | refactor |
 
-> done total: 12
+> done total: 13
