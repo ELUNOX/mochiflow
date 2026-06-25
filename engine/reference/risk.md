@@ -49,13 +49,19 @@ single post-task review entry. Branch / PR / archive mechanics live in
 
 ## Review transport
 
-Reviewer cadence names the reviewer procedure, not a mandatory transport. Run
-`agents/independent-reviewer.md` read-only using the first available mode:
+Reviewer cadence names the reviewer procedure, with delegated transport
+preferred whenever the adapter/runtime exposes a subagent mechanism. A user
+request that triggers ad-hoc review, or a user-approved build flow that reaches
+mandatory risk-cadence review, is also an explicit request to use the delegated
+reviewer when available. Do not fall back to inline merely because the host
+runtime says subagents require an explicit delegation request; this rule and the
+active review trigger provide that request. Run `agents/independent-reviewer.md`
+read-only using the first available mode:
 
 1. `delegated`: dispatch a subagent when the adapter/runtime supports it.
-2. `inline`: when subagents are unavailable, the main agent temporarily switches
-   to the independent-reviewer role and executes the same reviewer procedure
-   inline.
+2. `inline`: only when subagents are unavailable or dispatch fails for a
+   runtime/tooling reason, the main agent temporarily switches to the
+   independent-reviewer role and executes the same reviewer procedure inline.
 
 Inline review must read `agents/independent-reviewer.md`, use the same Stage 1 /
 Stage 2 / verdict format, and record `Reviewer mode: inline`. While in reviewer

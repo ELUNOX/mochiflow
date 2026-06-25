@@ -35,11 +35,14 @@ Follow `reference/risk.md ## Ad-hoc review` and `## Review transport` (the
 single source of truth for this behavior):
 
 1. Run `agents/independent-reviewer.md` read-only using the review transport:
-   delegated subagent when available, otherwise inline reviewer role. Target the
-   active spec's latest artifacts (`spec.md`, plus `design.md` / `tasks.md` when
-   present). Pass only the slug, the command path, a summary of the latest
-   artifact, and a pointer to the spec — never the conversation history
-   (`router.md` routing principle 5).
+   prefer delegated subagent dispatch when available, and use inline reviewer
+   role only when subagents are unavailable or dispatch fails for a
+   runtime/tooling reason. The explicit review trigger is also the user's
+   request to use delegated reviewer transport when the runtime requires that
+   permission. Target the active spec's latest artifacts (`spec.md`, plus
+   `design.md` / `tasks.md` when present). Pass only the slug, the command path,
+   a summary of the latest artifact, and a pointer to the spec — never the
+   conversation history (`router.md` routing principle 5).
 2. Report `Reviewer mode: delegated | inline` with the verdict and findings.
 3. On High or Critical findings, stop after reporting and ask whether to enter
    the appropriate build/fix flow. Do not fix inline as part of ad-hoc review.
@@ -63,5 +66,7 @@ single source of truth for this behavior):
   (`reference/risk.md ## Consequences`); the two are independent.
 - Do not pass the conversation history to the reviewer; pass only the spec
   pointers per `router.md` routing principle 5.
-- Do not stop merely because subagents are unavailable; use inline reviewer role
-  per `reference/risk.md ## Review transport`.
+- Do not choose inline while delegated subagent dispatch is available. If
+  subagents are unavailable or dispatch fails for a runtime/tooling reason, do
+  not stop; use inline reviewer role per `reference/risk.md ## Review
+  transport`.
