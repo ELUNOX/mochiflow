@@ -1,0 +1,11 @@
+version: 1
+slug: "lint-residue-and-multiline-ears"
+title: "Lint: detect template residue and multi-line EARS ACs"
+type: "feature"
+surfaces:
+  - "cli"
+integration: "none"
+risk: "standard"
+status: "draft"
+created: "2026-06-25"
+updated: "2026-06-25"
