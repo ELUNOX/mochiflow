@@ -220,6 +220,14 @@ fn push_template_residue_issues(issues: &mut Vec<Issue>, path: &Path, text: &str
     }
 }
 
+fn line_starts_section(line: &str) -> bool {
+    line.trim_start().starts_with("## ")
+}
+
+fn line_declares_ac(line: &str) -> bool {
+    AC_RE.is_match(line)
+}
+
 fn ac_lines_missing_ears(text: &str) -> BTreeSet<String> {
     let body = section_any(
         text,
@@ -232,16 +240,31 @@ fn ac_lines_missing_ears(text: &str) -> BTreeSet<String> {
     )
     .unwrap_or("");
     let mut missing = BTreeSet::new();
+    let mut current_ids: Vec<String> = Vec::new();
+    let mut current_block = String::new();
     for line in body.lines() {
+        if line_starts_section(line) || (line_declares_ac(line) && !current_ids.is_empty()) {
+            if !EARS_RE.is_match(&current_block) {
+                missing.extend(current_ids.iter().cloned());
+            }
+            current_ids.clear();
+            current_block.clear();
+        }
+
         let found: Vec<String> = AC_RE
             .find_iter(line)
             .map(|m| m.as_str().to_string())
             .collect();
-        if !found.is_empty() && !EARS_RE.is_match(line) {
-            for id in found {
-                missing.insert(id);
-            }
+        if !found.is_empty() {
+            current_ids = found;
         }
+        if !current_ids.is_empty() {
+            current_block.push_str(line);
+            current_block.push('\n');
+        }
+    }
+    if !current_ids.is_empty() && !EARS_RE.is_match(&current_block) {
+        missing.extend(current_ids);
     }
     missing
 }

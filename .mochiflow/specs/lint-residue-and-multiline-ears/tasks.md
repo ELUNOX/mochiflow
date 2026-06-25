@@ -19,7 +19,7 @@ Critical Stop Conditions:
   - Done: Expanded spec documents fail on unfinished residue classes while fenced code, inline code, and valid AC Matrix provisional tokens remain accepted.
   - Stop: A residue class has no reliable signal without broad Markdown parsing or high false-positive risk.
 
-- [ ] T-002 [AC-03] Scan EARS keywords across AC blocks
+- [x] T-002 [AC-03] Scan EARS keywords across AC blocks
   - Depends on: none
   - Files: `cli/crates/mochiflow-core/src/lint.rs`
   - Done: EARS warning detection treats each AC declaration and its continuation lines as one block ending at the next AC declaration or section heading.
