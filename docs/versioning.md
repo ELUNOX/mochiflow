@@ -20,6 +20,25 @@ engine copy used by adapters, `config show`, and `doctor engine`.
 `.mochiflow/engine/MANIFEST.json` records the installed engine integrity
 baseline. Its `version` matches the installed `VERSION`.
 
+## Source repo coherence
+
+`mochiflow doctor` checks an initialized project's config, specs, adapters, and
+installed engine integrity. It does not replace the source-repo derived-file
+check.
+
+When working in the MochiFlow source repo, run:
+
+```bash
+mochiflow freeze --check
+```
+
+CI or scripts that run from another directory can name the source repo
+explicitly:
+
+```bash
+mochiflow freeze --root <source-repo> --check
+```
+
 ## Config schema version
 
 `schema_version` in `.mochiflow/config.toml` is the config file-format

@@ -1,22 +1,21 @@
 # 📋 Spec Dashboard
 
-> updated: 2026-06-24 23:06 UTC
+> updated: 2026-06-25 05:41 UTC
 
 ## Pipeline
 
 | stage | count |
 |:------|------:|
-| 🌱 backlog seed | 10 |
+| 🌱 backlog seed | 9 |
 | 📝 draft | 0 |
 | 🟢 approved | 0 |
-| ✅ done | 10 |
+| ✅ done | 11 |
 
 ## Backlog seeds
 
 | Slug | Title | Maturity | Source |
 |:-----|:------|:---------|:-------|
 | ["develop-branch-workflow"](specs/_backlog/"develop-branch-workflow".md) | "Introduce develop branch to reduce PR ceremony for non-code changes" | ❓ "seed" | "conversation" |
-| ["doctor-freeze-coherence"](specs/_backlog/"doctor-freeze-coherence".md) | "Clarify doctor vs freeze responsibilities and add context freshness check" | ❓ "seed" | "conversation" |
 | ["freeze-hardening"](specs/_backlog/"freeze-hardening".md) | "Freeze module hardening: error types, format stability, visibility" | ❓ "seed" | "conversation" |
 | ["frozen-surface-ssot"](specs/_backlog/"frozen-surface-ssot".md) | "Single source for frozen-surface input set definition and test performance" | ❓ "seed" | "conversation" |
 | ["lint-deleted-files-in-tasks"](specs/_backlog/"lint-deleted-files-in-tasks".md) | "Lint fires on deleted files listed in tasks.md Modified Files" | ❓ "seed" | "conversation" |
@@ -36,6 +35,7 @@
 
 | Updated | Slug | Title | Type |
 |:--------|:-----|:------|:-----|
+| 2026-06-25 | [doctor-freeze-coherence](specs/_done/doctor-freeze-coherence/) | Clarify doctor/freeze coherence and context freshness | feature |
 | 2026-06-24 | [prevent-build-phase-spec-mutation](specs/_done/prevent-build-phase-spec-mutation/) | Prevent build-phase spec mutation | fix |
 | 2026-06-24 | [verify-ci-parity](specs/_done/verify-ci-parity/) | Verify profile should cover CI lint checks | fix |
 | 2026-06-24 | [kiro-adapter-default-agent](specs/_done/kiro-adapter-default-agent/) | Kiro adapter: drop dedicated agent, single always-on steering, delegate permissions | refactor |
@@ -47,4 +47,4 @@
 | 2026-06-23 | [build-completion-guidance](specs/_done/build-completion-guidance/) | Build phase should announce next step on completion | docs |
 | 2026-06-22 | [version-ssot-freeze](specs/_done/version-ssot-freeze/) | Version SSOT + freeze command | refactor |
 
-> done total: 10
+> done total: 11

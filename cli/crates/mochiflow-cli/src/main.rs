@@ -153,6 +153,9 @@ enum Commands {
     },
     /// Regenerate derived version/integrity files (engine/VERSION, MANIFEST.json, contracts.lock)
     Freeze {
+        /// MochiFlow source repo root (default: walk up from current directory)
+        #[arg(long)]
+        root: Option<String>,
         /// Report staleness without writing
         #[arg(long)]
         check: bool,
@@ -432,13 +435,23 @@ fn main() -> Result<()> {
                 dry_run,
             )
         }
-        Commands::Freeze { check } => {
+        Commands::Freeze { root, check } => {
             let cwd = std::env::current_dir()?;
-            let repo_root = match mochiflow_core::freeze::resolve_repo_root(&cwd) {
-                Ok(r) => r,
-                Err(e) => {
-                    println!("{e}");
-                    std::process::exit(1);
+            let repo_root = if let Some(root) = root {
+                match mochiflow_core::freeze::validate_repo_root(std::path::Path::new(&root)) {
+                    Ok(r) => r,
+                    Err(e) => {
+                        println!("{e}");
+                        std::process::exit(1);
+                    }
+                }
+            } else {
+                match mochiflow_core::freeze::resolve_repo_root(&cwd) {
+                    Ok(r) => r,
+                    Err(e) => {
+                        println!("{e}");
+                        std::process::exit(1);
+                    }
                 }
             };
             match mochiflow_core::freeze::freeze(&repo_root, check) {
@@ -651,5 +664,28 @@ fn load_detach_cfg(
             }
             std::process::exit(2);
         }
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod tests {
+    use super::*;
+    use std::collections::BTreeSet;
+
+    #[test]
+    fn doctor_terminal_command_allowlist_matches_clap_subcommands() {
+        let actual: BTreeSet<_> = Cli::command()
+            .get_subcommands()
+            .map(|command| command.get_name().to_string())
+            .filter(|name| name != "help")
+            .collect();
+        let allowed: BTreeSet<_> = mochiflow_core::doctor::terminal_cli_command_references()
+            .iter()
+            .map(|command| (*command).to_string())
+            .collect();
+
+        assert_eq!(allowed, actual);
+        assert!(mochiflow_core::doctor::workflow_command_references().contains(&"discuss"));
     }
 }

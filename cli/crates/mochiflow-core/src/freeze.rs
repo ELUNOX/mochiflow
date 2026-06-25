@@ -23,6 +23,14 @@ pub fn resolve_repo_root(cwd: &Path) -> Result<PathBuf, String> {
     Err("FAIL: not a mochiflow source repo (no cli/Cargo.toml + engine/ found)".into())
 }
 
+/// Validate an explicit mochiflow repo root without walking to ancestors.
+pub fn validate_repo_root(root: &Path) -> Result<PathBuf, String> {
+    if root.join("cli/Cargo.toml").is_file() && root.join("engine/VERSION").is_file() {
+        return Ok(root.to_path_buf());
+    }
+    Err("FAIL: not a mochiflow source repo (no cli/Cargo.toml + engine/ found)".into())
+}
+
 /// Read `[workspace.package].version` from `cli/Cargo.toml` at the given repo root.
 pub fn read_workspace_version(repo_root: &Path) -> Result<String, String> {
     let path = repo_root.join("cli/Cargo.toml");
@@ -225,6 +233,17 @@ mod tests {
     fn resolve_repo_root_fails_for_non_repo() {
         let tmp = tempfile::tempdir().unwrap();
         assert!(resolve_repo_root(tmp.path()).is_err());
+    }
+
+    #[test]
+    fn validate_repo_root_does_not_walk_to_parent() {
+        let root = real_repo_root();
+        let subdir = root.join("cli/crates/mochiflow-core");
+        assert!(validate_repo_root(&subdir).is_err());
+        assert_eq!(
+            validate_repo_root(&root).unwrap().canonicalize().unwrap(),
+            root.canonicalize().unwrap()
+        );
     }
 
     #[test]

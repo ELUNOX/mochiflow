@@ -1912,6 +1912,180 @@ fn doctor_setup_message_points_to_review() {
     );
 }
 
+fn init_project_with_context(product: &str, structure: &str, tech: &str) -> tempfile::TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    bin()
+        .args(["init", "--target", dir.path().to_str().unwrap()])
+        .write_stdin("")
+        .assert()
+        .success();
+    fs::write(dir.path().join(".mochiflow/context/product.md"), product).unwrap();
+    fs::write(
+        dir.path().join(".mochiflow/context/structure.md"),
+        structure,
+    )
+    .unwrap();
+    fs::write(dir.path().join(".mochiflow/context/tech.md"), tech).unwrap();
+    dir
+}
+
+#[test]
+fn doctor_config_warns_on_stale_context_command_reference() {
+    let dir = init_project_with_context(
+        "# Product\n\nRun `mochiflow engine` during setup.\n",
+        "# Structure\n\nNo command reference.\n",
+        "# Tech\n\nNo command reference.\n",
+    );
+    let config_path = dir.path().join(".mochiflow/config.toml");
+
+    let result = bin()
+        .args([
+            "--config",
+            config_path.to_str().unwrap(),
+            "doctor",
+            "config",
+        ])
+        .assert()
+        .success();
+    let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
+    assert!(out.contains("context.product"), "{out}");
+    assert!(
+        out.contains("unknown MochiFlow command `mochiflow engine`"),
+        "{out}"
+    );
+    assert!(out.contains("refresh-context workflow"), "{out}");
+}
+
+#[test]
+fn doctor_config_allows_current_cli_and_workflow_command_references() {
+    let dir = init_project_with_context(
+        "# Product\n\nRun `mochiflow doctor` for project health.\n",
+        "# Structure\n\nUse `mochiflow discuss` for workflow planning.\n",
+        "# Tech\n\nNo command reference.\n",
+    );
+    let config_path = dir.path().join(".mochiflow/config.toml");
+
+    let result = bin()
+        .args([
+            "--config",
+            config_path.to_str().unwrap(),
+            "doctor",
+            "config",
+        ])
+        .assert()
+        .success();
+    let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
+    assert!(!out.contains("unknown MochiFlow command"), "{out}");
+}
+
+#[test]
+fn doctor_config_guides_source_repo_users_to_freeze_check() {
+    let config_path = repo_root().join(".mochiflow/config.toml");
+
+    let result = bin()
+        .args([
+            "--config",
+            config_path.to_str().unwrap(),
+            "doctor",
+            "config",
+        ])
+        .assert()
+        .success();
+    let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
+    assert!(out.contains("source repo detected"), "{out}");
+    assert!(out.contains("mochiflow freeze --check"), "{out}");
+    assert!(out.contains("doctor` checks project health"), "{out}");
+}
+
+#[test]
+fn freeze_root_check_uses_explicit_source_repo_from_other_cwd() {
+    let cwd = tempfile::tempdir().unwrap();
+    let result = bin()
+        .current_dir(cwd.path())
+        .args(["freeze", "--root", repo_root().to_str().unwrap(), "--check"])
+        .assert()
+        .success();
+    let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
+    assert!(
+        out.contains("freeze: all derived files are up to date"),
+        "{out}"
+    );
+}
+
+#[test]
+fn freeze_root_invalid_path_fails_before_writing() {
+    let root = tempfile::tempdir().unwrap();
+    let result = bin()
+        .args(["freeze", "--root", root.path().to_str().unwrap()])
+        .assert()
+        .failure()
+        .code(1);
+    let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
+    assert!(out.contains("not a mochiflow source repo"), "{out}");
+    assert!(!root.path().join("engine/VERSION").exists());
+    assert!(!root.path().join("contracts/contracts.lock").exists());
+}
+
+#[test]
+fn freeze_without_root_keeps_cwd_upward_resolution() {
+    let result = bin()
+        .current_dir(repo_root().join("cli/crates/mochiflow-core"))
+        .args(["freeze", "--check"])
+        .assert()
+        .success();
+    let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
+    assert!(
+        out.contains("freeze: all derived files are up to date"),
+        "{out}"
+    );
+}
+
+#[test]
+fn docs_explain_doctor_freeze_boundaries_and_root_usage() {
+    let root = repo_root();
+    let readme = fs::read_to_string(root.join("README.md")).unwrap();
+    assert!(
+        readme.contains("`mochiflow doctor` is the project health check"),
+        "{readme}"
+    );
+    assert!(
+        readme.contains("`mochiflow freeze --check` as the separate"),
+        "{readme}"
+    );
+    assert!(
+        readme.contains("`mochiflow freeze --root <source-repo> --check`"),
+        "{readme}"
+    );
+
+    let docs_versioning = fs::read_to_string(root.join("docs/versioning.md")).unwrap();
+    assert!(
+        docs_versioning.contains("## Source repo coherence"),
+        "{docs_versioning}"
+    );
+    assert!(
+        docs_versioning.contains("It does not replace"),
+        "{docs_versioning}"
+    );
+    assert!(
+        docs_versioning.contains("source-repo derived-file"),
+        "{docs_versioning}"
+    );
+    assert!(
+        docs_versioning.contains("mochiflow freeze --root <source-repo> --check"),
+        "{docs_versioning}"
+    );
+
+    let contract_versioning = fs::read_to_string(root.join("contracts/VERSIONING.md")).unwrap();
+    assert!(
+        contract_versioning.contains("mochiflow freeze --root <source-repo>"),
+        "{contract_versioning}"
+    );
+    assert!(
+        contract_versioning.contains("It is separate from `mochiflow doctor`"),
+        "{contract_versioning}"
+    );
+}
+
 /// Public docs list only Rust CLI commands; onboard is an AI engine command.
 #[test]
 fn readmes_do_not_list_onboard_as_cli_command() {

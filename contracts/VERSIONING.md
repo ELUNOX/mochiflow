@@ -44,7 +44,9 @@ When a frozen surface changes (schema edit or golden update):
 1. Bump `cli/Cargo.toml` `[workspace.package].version` (semver rules).
 2. Add a section to `CHANGELOG.md` for the new version.
 3. Run `mochiflow freeze` (regenerates `engine/VERSION`, `engine/MANIFEST.json`,
-   and `contracts/contracts.lock`).
+   and `contracts/contracts.lock`). From scripts or CI, use
+   `mochiflow freeze --root <source-repo>` when the current working directory is
+   not guaranteed.
 4. Conformance runner verifies all three are consistent.
 
 Editing engine docs (`commands/**`, `reference/**`, templates) does **not** trip
@@ -60,3 +62,7 @@ checks that `MANIFEST.version` matches the installed `VERSION`, then compares
 file hashes against the MANIFEST. Any hand-edit is reported as drift. If the
 installed engine differs from the engine bundled in the current CLI,
 `doctor engine` points users to `mochiflow upgrade`.
+
+In the MochiFlow source repo, `mochiflow freeze --check` is the derived-file
+coherence check. It is separate from `mochiflow doctor`, which remains the
+project health check.
