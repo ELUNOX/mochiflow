@@ -40,9 +40,10 @@ Reuse existing machinery instead of inventing a parallel artifact:
   shape, and Completion output format stay unchanged.
 - **AC Matrix interaction**: attacks are not promoted to formal ACs. Each attack
   is a `QA-XX` row in `## QA Scenarios`. When an attack backs an AC, reference its
-  `QA-XX` in the AC Matrix `Planned test/QA` or `Evidence` column. Exploratory
-  attacks tied to no AC remain `QA-XX` rows with their own `Result` / `Evidence`
-  and do not mint AC rows.
+  `QA-XX` in the AC Matrix `Planned test/QA` or `Evidence` column. `## QA
+  Scenarios` carries no result columns (the AC Matrix is the results ledger), so
+  a purely exploratory attack that backs no AC stays scenario-only and does not
+  mint an AC row unless it surfaces a defect worth its own AC.
 
 Files in scope (edit repo-root `engine/` source, then sync to vendored copy):
 `engine/commands/plan.md`, `engine/agents/independent-reviewer.md`,
