@@ -66,7 +66,9 @@ and drive to human approval for implementation. Do not start implementation.
    `spec.yaml` when the plan discovers a different risk / surface / integration.
 3. Create `design.md` only when `reference/risk.md ## design.md required condition` applies. When creating it, delete optional sections at creation time unless their condition applies (`## Workstreams` only for multiple workstreams / cross-surface, `## Integration Contract` only for `integration ≠ none`, `## Review Results` only for `risk ≥ elevated`, `## Integration Log` only when the risk table calls for it during build). Create `tasks.md` when multi-step. Let depth follow `reference/workflow.md ## Depth scaling` (a trivial change is spec.md only).
 4. Run `reference/authoring.md ## Consistency check` **exactly once**.
-5. Remove all template residue before asking for approval:
+5. Remove all template residue before asking for approval. `lint` enforces these
+   checks for expanded spec documents; placeholder-like text inside fenced code
+   blocks or inline code spans is ignored so legitimate examples can remain:
    - no `{...}` placeholder remains;
    - no example-only row remains;
    - no `TBD` remains except in AC Verification Matrix fields intentionally owned by `build`;

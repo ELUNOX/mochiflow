@@ -31,7 +31,7 @@ Critical Stop Conditions:
   - Done: Tests prove residue failures, code-example false-positive avoidance, valid matrix placeholders, and multi-line EARS acceptance.
   - Stop: Tests require fixture setup that duplicates large portions of existing lint harness code.
 
-- [ ] T-004 [AC-05] Align guidance and generated engine artifacts
+- [x] T-004 [AC-05] Align guidance and generated engine artifacts
   - Depends on: T-001, T-002, T-003
   - Files: `engine/commands/plan.md`, `engine/reference/authoring.md`, `engine/MANIFEST.json`, `.mochiflow/engine/commands/plan.md`, `.mochiflow/engine/reference/authoring.md`, `.mochiflow/engine/MANIFEST.json`, `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`, `.kiro/steering/mochiflow.md`
   - Done: Guidance reflects that lint enforces residue checks, and required freeze / upgrade / adapter checks leave generated artifacts consistent.

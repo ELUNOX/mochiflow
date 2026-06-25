@@ -146,7 +146,9 @@ contradicting the rationale in `spec.md`, task line `[AC-01]` / compound
 Workstreams. No per-document self-review loop (deep defects are caught by
 `independent-reviewer` during build).
 
-Before asking for approval, remove all template residue:
+Before asking for approval, remove all template residue. `lint` enforces these
+checks for expanded spec documents; placeholder-like text inside fenced code
+blocks or inline code spans is ignored so legitimate examples can remain:
 
 - no `{...}` placeholder remains;
 - no example-only row remains;
