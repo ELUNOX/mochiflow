@@ -14,7 +14,7 @@ Critical Stop Conditions:
 
 ## Tasks
 
-- [ ] T-001 [AC-01, AC-02, AC-03] Add doctor guidance and context command freshness warnings
+- [x] T-001 [AC-01, AC-02, AC-03] Add doctor guidance and context command freshness warnings
   - Depends on: none
   - Files: `cli/crates/mochiflow-core/src/doctor.rs`, `cli/crates/mochiflow-cli/src/main.rs`, `cli/crates/mochiflow-cli/tests/cli.rs`
   - Done: `doctor config` reports source-repo guidance where applicable, warns on stale context command references, stays quiet for valid CLI command, valid workflow command, and no command references, and tests cover allowlist drift against clap's actual top-level subcommands.

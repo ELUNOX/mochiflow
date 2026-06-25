@@ -12,11 +12,48 @@ pub struct DoctorIssue {
     pub message: String,
 }
 
+const TERMINAL_CLI_COMMAND_REFERENCES: &[&str] = &[
+    "adapter",
+    "backlog",
+    "completions",
+    "config",
+    "detach",
+    "doctor",
+    "freeze",
+    "guide",
+    "index",
+    "init",
+    "join",
+    "lint",
+    "pr",
+    "ready",
+    "upgrade",
+];
+
+const WORKFLOW_COMMAND_REFERENCES: &[&str] = &[
+    "build",
+    "discuss",
+    "onboard",
+    "patch",
+    "plan",
+    "refresh-context",
+    "review",
+    "ship",
+];
+
 struct TargetReport {
     name: String,
     issues: Vec<DoctorIssue>,
     fails: usize,
     warns: usize,
+}
+
+pub fn terminal_cli_command_references() -> &'static [&'static str] {
+    TERMINAL_CLI_COMMAND_REFERENCES
+}
+
+pub fn workflow_command_references() -> &'static [&'static str] {
+    WORKFLOW_COMMAND_REFERENCES
 }
 
 pub fn validate_config(cfg: &Config) -> Vec<DoctorIssue> {
@@ -85,6 +122,13 @@ pub fn validate_config(cfg: &Config) -> Vec<DoctorIssue> {
             ),
         });
     }
+    if is_mochiflow_source_repo(&cfg.repo_root) {
+        issues.push(DoctorIssue {
+            severity: "WARN".into(),
+            message: "source repo detected: `doctor` checks project health; run `mochiflow freeze --check` to verify source derived files."
+                .into(),
+        });
+    }
     // Context files must be filled from code during onboarding / refresh.
     // Constitution and ADR files may remain generated stubs: they are
     // user-authored or ship-grown, not onboarding completion gates.
@@ -108,7 +152,17 @@ pub fn validate_config(cfg: &Config) -> Vec<DoctorIssue> {
                     ),
                 });
             }
-            Ok(_) => {}
+            Ok(content) => {
+                for command in stale_context_command_references(&content) {
+                    issues.push(DoctorIssue {
+                        severity: "WARN".into(),
+                        message: format!(
+                            "{label} references unknown MochiFlow command `mochiflow {command}`; refresh project context from code using the refresh-context workflow: {}",
+                            path.display()
+                        ),
+                    });
+                }
+            }
         }
     }
     if cfg.surfaces.is_empty() {
@@ -173,6 +227,31 @@ pub fn validate_config(cfg: &Config) -> Vec<DoctorIssue> {
         });
     }
     issues
+}
+
+pub fn is_mochiflow_source_repo(root: &Path) -> bool {
+    root.join("cli/Cargo.toml").is_file() && root.join("engine/VERSION").is_file()
+}
+
+fn is_known_command_reference(command: &str) -> bool {
+    TERMINAL_CLI_COMMAND_REFERENCES.contains(&command)
+        || WORKFLOW_COMMAND_REFERENCES.contains(&command)
+}
+
+fn stale_context_command_references(content: &str) -> Vec<String> {
+    let Ok(re) = regex::Regex::new(r"\bmochiflow\s+([A-Za-z][A-Za-z0-9_-]*)") else {
+        return Vec::new();
+    };
+    let mut stale = std::collections::BTreeSet::new();
+    for captures in re.captures_iter(content) {
+        let Some(command) = captures.get(1).map(|m| m.as_str()) else {
+            continue;
+        };
+        if !is_known_command_reference(command) {
+            stale.insert(command.to_string());
+        }
+    }
+    stale.into_iter().collect()
 }
 
 /// FAIL when `{install_dir}/state/` is not gitignored. PR/QA delivery artifacts

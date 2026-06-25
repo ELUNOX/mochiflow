@@ -1912,6 +1912,91 @@ fn doctor_setup_message_points_to_review() {
     );
 }
 
+fn init_project_with_context(product: &str, structure: &str, tech: &str) -> tempfile::TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    bin()
+        .args(["init", "--target", dir.path().to_str().unwrap()])
+        .write_stdin("")
+        .assert()
+        .success();
+    fs::write(dir.path().join(".mochiflow/context/product.md"), product).unwrap();
+    fs::write(
+        dir.path().join(".mochiflow/context/structure.md"),
+        structure,
+    )
+    .unwrap();
+    fs::write(dir.path().join(".mochiflow/context/tech.md"), tech).unwrap();
+    dir
+}
+
+#[test]
+fn doctor_config_warns_on_stale_context_command_reference() {
+    let dir = init_project_with_context(
+        "# Product\n\nRun `mochiflow engine` during setup.\n",
+        "# Structure\n\nNo command reference.\n",
+        "# Tech\n\nNo command reference.\n",
+    );
+    let config_path = dir.path().join(".mochiflow/config.toml");
+
+    let result = bin()
+        .args([
+            "--config",
+            config_path.to_str().unwrap(),
+            "doctor",
+            "config",
+        ])
+        .assert()
+        .success();
+    let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
+    assert!(out.contains("context.product"), "{out}");
+    assert!(
+        out.contains("unknown MochiFlow command `mochiflow engine`"),
+        "{out}"
+    );
+    assert!(out.contains("refresh-context workflow"), "{out}");
+}
+
+#[test]
+fn doctor_config_allows_current_cli_and_workflow_command_references() {
+    let dir = init_project_with_context(
+        "# Product\n\nRun `mochiflow doctor` for project health.\n",
+        "# Structure\n\nUse `mochiflow discuss` for workflow planning.\n",
+        "# Tech\n\nNo command reference.\n",
+    );
+    let config_path = dir.path().join(".mochiflow/config.toml");
+
+    let result = bin()
+        .args([
+            "--config",
+            config_path.to_str().unwrap(),
+            "doctor",
+            "config",
+        ])
+        .assert()
+        .success();
+    let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
+    assert!(!out.contains("unknown MochiFlow command"), "{out}");
+}
+
+#[test]
+fn doctor_config_guides_source_repo_users_to_freeze_check() {
+    let config_path = repo_root().join(".mochiflow/config.toml");
+
+    let result = bin()
+        .args([
+            "--config",
+            config_path.to_str().unwrap(),
+            "doctor",
+            "config",
+        ])
+        .assert()
+        .success();
+    let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
+    assert!(out.contains("source repo detected"), "{out}");
+    assert!(out.contains("mochiflow freeze --check"), "{out}");
+    assert!(out.contains("doctor` checks project health"), "{out}");
+}
+
 /// Public docs list only Rust CLI commands; onboard is an AI engine command.
 #[test]
 fn readmes_do_not_list_onboard_as_cli_command() {

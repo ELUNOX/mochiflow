@@ -653,3 +653,26 @@ fn load_detach_cfg(
         }
     }
 }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod tests {
+    use super::*;
+    use std::collections::BTreeSet;
+
+    #[test]
+    fn doctor_terminal_command_allowlist_matches_clap_subcommands() {
+        let actual: BTreeSet<_> = Cli::command()
+            .get_subcommands()
+            .map(|command| command.get_name().to_string())
+            .filter(|name| name != "help")
+            .collect();
+        let allowed: BTreeSet<_> = mochiflow_core::doctor::terminal_cli_command_references()
+            .iter()
+            .map(|command| (*command).to_string())
+            .collect();
+
+        assert_eq!(allowed, actual);
+        assert!(mochiflow_core::doctor::workflow_command_references().contains(&"discuss"));
+    }
+}
