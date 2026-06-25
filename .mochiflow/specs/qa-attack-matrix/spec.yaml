@@ -1,0 +1,11 @@
+version: 1
+slug: "qa-attack-matrix"
+title: "Add a QA attack matrix to plan and reviewer flows"
+type: "feature"
+surfaces:
+  - "cli"
+integration: "none"
+risk: "standard"
+status: "draft"
+created: "2026-06-25"
+updated: "2026-06-25"
