@@ -25,7 +25,7 @@ Critical Stop Conditions:
   - Done: EARS warning detection treats each AC declaration and its continuation lines as one block ending at the next AC declaration or section heading.
   - Stop: Existing AC ID collection would need a schema-level rewrite instead of a local lint helper.
 
-- [ ] T-003 [AC-01, AC-02, AC-03, AC-04] Add conformance coverage
+- [x] T-003 [AC-01, AC-02, AC-03, AC-04] Add conformance coverage
   - Depends on: T-001, T-002
   - Files: `cli/crates/mochiflow-cli/tests/conformance.rs`
   - Done: Tests prove residue failures, code-example false-positive avoidance, valid matrix placeholders, and multi-line EARS acceptance.
