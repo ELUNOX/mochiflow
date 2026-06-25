@@ -37,7 +37,7 @@ Critical Stop Conditions:
   - Done: Guidance reflects that lint enforces residue checks, and required freeze / upgrade / adapter checks leave generated artifacts consistent.
   - Stop: Guidance changes expand into unrelated workflow policy changes.
 
-- [ ] T-005 [AC-01, AC-02, AC-03, AC-04, AC-05] Run final verification and update results
+- [x] T-005 [AC-01, AC-02, AC-03, AC-04, AC-05] Run final verification and update results
   - Depends on: T-004
   - Files: `.mochiflow/specs/lint-residue-and-multiline-ears/spec.md`, `.mochiflow/specs/lint-residue-and-multiline-ears/tasks.md`
   - Done: Default CLI verification, spec lint, and AC Matrix evidence are recorded with passing results.
