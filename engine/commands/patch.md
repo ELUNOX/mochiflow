@@ -14,20 +14,6 @@ trigger_patterns: []
 artifacts: []
 prerequisites: []
 execution: inline
-allowed_writes:
-  - "{write.allow}"
-forbidden_writes:
-  - "{specs_dir}/**"
-  - "{constitution.project}"
-  - "{constitution.local}"
-  - "{context.product}"
-  - "{context.structure}"
-  - "{context.tech}"
-  - "{adr.decisions}"
-  - "{adr.pitfalls}"
-  - "{index}"
-  - "{install_dir}/state/**"
-  - .git/**
 references:
   - reference/workflow.md
   - reference/git.md
@@ -88,10 +74,9 @@ When eligibility fails or becomes uncertain, stop and propose `Start plan?`.
 
 ## Stop Conditions
 
-- Do not write `{specs_dir}/`, `[constitution]`, `[context]`, `[adr]`, `{index}`, PR metadata, or
-  delivery state.
-- Do not create, update, approve, ship, archive, or fold any spec.
-- Do not create a branch or PR.
-- Do not stage unrelated files or files that were already dirty before patch
-  started.
-- Do not continue patch after discovering elevated/critical risk; propose `plan`.
+- Patch stays outside the spec lifecycle: it does not create, update, approve,
+  ship, archive, or fold a spec.
+- Patch stays on the current branch and does not prepare PR metadata.
+- If any intended target file was already dirty before patch started, leave the
+  patch uncommitted and report the files.
+- If elevated/critical risk appears, stop patch and propose `plan`.

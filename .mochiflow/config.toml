@@ -28,10 +28,6 @@ base_branch = "main"
 [adapter]
 tools = ["agents", "kiro"]
 
-[write]
-allow = ["engine/**", "contracts/**", "tests/**", "cli/**", "README*.md", "CHANGELOG.md", "SECURITY.md", "CODE_OF_CONDUCT.md", ".github/**", "dist-workspace.toml"]
-deny = [".git/**", "**/node_modules/**", "**/__pycache__/**"]
-
 [surfaces.cli]
 description = "MochiFlow CLI (Rust)"
 

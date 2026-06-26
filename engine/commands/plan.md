@@ -23,12 +23,6 @@ prerequisites:
   - "{specs_dir}/{slug}/spec.yaml exists with status draft"
   - "{specs_dir}/{slug}/pitch.md exists"
 execution: inline
-allowed_writes:
-  - "{specs_dir}/**"
-  - "{index}"
-forbidden_writes:
-  - "{write.allow}"
-  - .git/**
 references:
   - reference/workflow.md
   - reference/risk.md

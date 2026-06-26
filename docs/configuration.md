@@ -32,6 +32,10 @@ embedded may require a candidate merge or explicit `--force` replacement.
 
 The `codex` alias resolves to the neutral `agents` adapter.
 
+MochiFlow does not generate or manage tool permission settings. File, shell, and
+network permissions remain the responsibility of the AI tool, user environment,
+and operating system running the agent.
+
 ## Joining an existing project
 
 `mochiflow init` creates the shared project configuration and vendored engine.

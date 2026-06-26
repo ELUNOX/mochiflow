@@ -47,8 +47,8 @@ body (optional)
 - Summary: never write spec slug, AC IDs, or mochiflow vocabulary
   (external-reviewer view).
 - Body: slug may appear as natural context (e.g. "implements the refresh logic
-  from oauth-refresh-flow"). AC IDs and mochiflow vocabulary (`fold`, `ship`,
-  `build phase`, etc.) remain forbidden. Body must not begin a line with `Spec:`
+  from oauth-refresh-flow"). Avoid AC IDs and mochiflow vocabulary (`fold`,
+  `ship`, `build phase`, etc.) in the body. Body must not begin a line with `Spec:`
   (reserved for trailer parsing; see `## Trailers`).
 - Trailers are metadata (same category as `Signed-off-by`); `Spec:` and `Task:`
   trailers are required per `## Trailers` below.
@@ -113,19 +113,16 @@ reviewer PASS is a phase-completion / ship-acceptance gate, not a pre-commit gat
 If reviewer FAIL findings require changes, fix them, verify, and commit the
 follow-up before build completes.
 
-- Stage only files in the change plan / task plus tests added for verification.
+- Stage files in the change plan / task plus tests added for verification.
 - Stage this spec's own files under `{specs_dir}/{slug}/**` together with the
   change, as part of build's first task commit when `tasks.md` exists, or as
   part of the single logical-unit build commit for taskless / micro specs.
   `.gitignore` is the single source of truth for whether specs are tracked: when
   the project tracks specs, git includes these files; when the project gitignores
   `{specs_dir}/{slug}/`, git skips them and the worktree was already clean.
-  Never `git add -f` to override either way. The ADR under `[adr]` is committed
-  regardless of this choice.
-- `git add .` is forbidden — name files explicitly.
-- `state/` is gitignored; never `git add -f` it. The vendored engine under the
-  install dir is tracked by default.
-- Do not stage `.env`, `.env.*`, or credential files; warn if encountered.
+  The ADR under `[adr]` is committed regardless of this choice.
+- `state/` is gitignored. The vendored engine under the install dir is tracked
+  by default.
 
 ### Spec-lane lifecycle commits
 
@@ -150,11 +147,10 @@ If any target file is already dirty, patch may edit it only without overwriting
 the existing changes, and auto-commit is disabled for the patch. Unrelated dirty
 files are ignored and never staged.
 
-After verification PASS, stage only the patch's changed files explicitly and
-create one Conventional Commit per `## Commit`. Do not stage spec files,
-`[constitution]`, `[context]`, `[adr]`, `{index}`, `{install_dir}/state/**`, `.env*`, or
-unrelated dirty files. If verification could not be run, or any target file was
-dirty before the patch, do not commit; report the files and verification result.
+After verification PASS, stage the patch's changed files explicitly and create
+one Conventional Commit per `## Commit`. If verification could not be run, or
+any target file was dirty before the patch, leave the patch uncommitted and
+report the files and verification result.
 
 ### Ship close-out commit
 
@@ -170,7 +166,7 @@ dirty before the patch, do not commit; report the files and verification result.
   to stage);
 - the regenerated `{index}`.
 
-Stage exactly these paths (`git add .` is still forbidden). The message follows
+Stage these paths explicitly. The message follows
 the Commit convention above — Conventional Commits, artifact language, and **no
 spec slug, no AC IDs, no mochiflow vocabulary** (never "fold" / "archive" in the
 summary). This relocates what was formerly a post-merge base-branch push into the
@@ -187,10 +183,9 @@ vocabulary) are generated after human gate 2 (`workflow.md`). On the explicit
 no-PR fast path, skip PR title/body generation and `mochiflow pr`; `ship`
 acceptance and the close-out commit still happen.
 
-PR creation goes through **`mochiflow pr`** — the single command that owns
+The ship procedure uses **`mochiflow pr`** for PR handoff. The command runs
 pre-flight (working tree clean / current branch is the source / source ≠ target),
-the one `git push`, and backend resolution. The AI never calls `git push` / `gh`
-/ `az` directly; it runs `mochiflow pr` and reads the exit code (`0` created,
+pushes the branch, resolves the backend, and reports its exit code (`0` created,
 `10` manual handoff, `3` pre-flight FAIL, `1`/`2` failure).
 
 `mochiflow pr` resolves the creation backend in precedence order:
@@ -269,7 +264,7 @@ PR's close-out commit):
 2. `git switch {[git].base_branch}`
 3. `git pull --ff-only origin {[git].base_branch}` — stop if ff-only fails (divergent local).
 4. `git branch -d {prefix}/{slug}` (safe delete; fails if unmerged → leave it, ask human). Resolve `prefix` from `type`: `feature` → `feat`; all other types use `type` as-is.
-5. Do not touch the remote branch.
+5. Remote branch cleanup is outside post-merge local cleanup.
 6. Remove the spec's ephemeral delivery scratch: `rm -rf {install_dir}/state/{slug}/` (gitignored — PR body / `pr-request.json` are not archived).
 
 The fold + archive (`_done` move + `INDEX`) are **not** performed here — they are
@@ -277,11 +272,3 @@ part of the feature branch's close-out commit (`## Living-spec fold`,
 `## Auto-commit and staging`). The no-PR fast path makes that same close-out
 commit locally on the current branch after `ship` acceptance, with no
 base-branch push.
-
-## Safety
-
-- One git command per call; no `&&` / `;` / `||` / `|` chaining.
-- `git push --force` / `-f` forbidden. `git reset --hard` / `git clean -f` /
-  `git branch -D` require human judgement.
-- Keep pre-commit hooks; `--no-verify` only on explicit human instruction.
-- Do not change `git config`. Amend only your own un-pushed commits.

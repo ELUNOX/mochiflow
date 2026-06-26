@@ -1,4 +1,4 @@
-//! Project detection: surfaces, git, verify commands, write scope.
+//! Project detection: surfaces, git, and verify commands.
 //!
 //! Machine detection of *facts* (CLI, deterministic, pinnable). Judgement stays
 //! explicit: detection never auto-adopts a git provider or auto-sets a
@@ -57,14 +57,6 @@ impl DetectedGit {
     pub fn has_known_provider(&self) -> bool {
         self.provider != "none"
     }
-}
-
-/// Detected AI write scope (allow / deny globs).
-#[derive(Debug, Clone)]
-pub struct DetectedWriteScope {
-    pub allow: Vec<String>,
-    pub deny: Vec<String>,
-    pub confidence: Confidence,
 }
 
 /// Detect git provider (fact only) and base branch via argv subprocesses.
@@ -392,66 +384,12 @@ pub fn detect_surfaces(root: &Path) -> Vec<DetectedSurface> {
     surfaces
 }
 
-/// Detect write scope from directory structure.
-pub fn detect_write_scope(root: &Path) -> DetectedWriteScope {
-    let mut allow = vec![".mochiflow/config.toml".to_string()];
-    let mut detected_any = false;
-    if let Ok(entries) = std::fs::read_dir(root) {
-        let mut dirs: Vec<String> = entries
-            .flatten()
-            .filter(|e| {
-                let n = e.file_name();
-                let name = n.to_string_lossy().to_string();
-                e.path().is_dir()
-                    && !name.starts_with('.')
-                    && (e.path().join("package.json").exists()
-                        || e.path().join("pyproject.toml").exists()
-                        || e.path().join("Cargo.toml").exists()
-                        || e.path().join("src").is_dir()
-                        || ["ios", "backend", "src"].contains(&name.as_str()))
-            })
-            .map(|e| e.file_name().to_string_lossy().to_string())
-            .collect();
-        dirs.sort();
-        for d in dirs {
-            detected_any = true;
-            allow.push(format!("{d}/**"));
-        }
-    }
-    let confidence = if detected_any {
-        Confidence::High
-    } else {
-        allow.push("src/**".into());
-        Confidence::Medium
-    };
-    allow.push("README.md".into());
-
-    let deny = vec![
-        ".git/**".into(),
-        "**/.env".into(),
-        "**/.env.*".into(),
-        "**/.dev.vars".into(),
-        "**/credentials*".into(),
-        "**/secrets*".into(),
-        "**/*.pem".into(),
-        "**/*.key".into(),
-        "**/node_modules/**".into(),
-    ];
-
-    DetectedWriteScope {
-        allow,
-        deny,
-        confidence,
-    }
-}
-
 /// Aggregate of all detection results — the single source of truth shared by
 /// the config writer (WS-2) and the output presenter (WS-3).
 #[derive(Debug, Clone)]
 pub struct DetectionReport {
     pub surfaces: Vec<DetectedSurface>,
     pub git: DetectedGit,
-    pub write_scope: DetectedWriteScope,
 }
 
 impl DetectionReport {
@@ -460,7 +398,6 @@ impl DetectionReport {
         DetectionReport {
             surfaces: detect_surfaces(root),
             git: detect_git(root),
-            write_scope: detect_write_scope(root),
         }
     }
 
@@ -469,7 +406,6 @@ impl DetectionReport {
     /// (always a confirm item, never auto-adopted).
     pub fn needs_any_confirm(&self) -> bool {
         self.surfaces.iter().any(|s| s.confidence.needs_confirm())
-            || self.write_scope.confidence.needs_confirm()
             || self.git.branch_confidence.needs_confirm()
             || self.git.has_known_provider()
     }
@@ -565,26 +501,6 @@ mod tests {
         let git = detect_git(d.path());
         assert_eq!(git.provider, "none");
         assert!(!git.has_known_provider());
-    }
-
-    #[test]
-    fn write_scope_empty_falls_back_to_src_medium() {
-        let d = tmp();
-        let ws = detect_write_scope(d.path());
-        assert!(ws.allow.contains(&"src/**".to_string()));
-        assert!(ws.allow.contains(&".mochiflow/config.toml".to_string()));
-        assert!(ws.allow.contains(&"README.md".to_string()));
-        assert_eq!(ws.confidence, Confidence::Medium);
-        assert!(ws.deny.contains(&".git/**".to_string()));
-    }
-
-    #[test]
-    fn write_scope_detected_dirs_is_high() {
-        let d = tmp();
-        std::fs::create_dir_all(d.path().join("src")).unwrap();
-        let ws = detect_write_scope(d.path());
-        assert!(ws.allow.contains(&"src/**".to_string()));
-        assert_eq!(ws.confidence, Confidence::High);
     }
 
     #[test]

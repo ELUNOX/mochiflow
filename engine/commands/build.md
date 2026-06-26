@@ -30,12 +30,6 @@ references:
   - reference/risk.md
   - reference/git.md
   - reference/engineering-standards.md
-allowed_writes:
-  - "{specs_dir}/**"
-  - "{write.allow}"
-forbidden_writes:
-  - "{write.deny}"
-  - .git/**
 ---
 
 # mochiflow-build

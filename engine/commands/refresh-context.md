@@ -16,17 +16,6 @@ triggers:
   - refresh-context
 trigger_patterns: []
 execution: inline
-allowed_writes:
-  - "{context.product}"
-  - "{context.structure}"
-  - "{context.tech}"
-forbidden_writes:
-  - "{write.allow}"
-  - "{constitution.project}"
-  - "{constitution.local}"
-  - "{adr.decisions}"
-  - "{adr.pitfalls}"
-  - .git/**
 references:
   - commands/onboard.md
   - reference/git.md
@@ -72,9 +61,9 @@ Code is the source of truth; this layer is a derived map, not new knowledge.
 
 ## Stop conditions
 
-- Do not write `[adr].decisions` / `[adr].pitfalls` — those are fold
-  targets (`reference/git.md ## Living-spec fold`), not refresh targets.
-- Do not write `[constitution]`; those files are user-authored always-loaded rules.
-- Do not write dated history or rationale here; that is the fold's job.
-- Do not auto-commit; the human confirms current-state accuracy first.
-- Do not touch implementation code, branch, or PR.
+- Refresh-context updates only the current-state context layer.
+- ADR remains the fold target (`reference/git.md ## Living-spec fold`);
+  constitution remains user-authored always-loaded guidance.
+- Dated history and rationale belong to the fold, not context refresh.
+- The human confirms current-state accuracy before any commit.
+- Implementation code, branch, and PR handling are outside this command.

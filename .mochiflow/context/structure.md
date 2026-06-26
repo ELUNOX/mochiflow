@@ -50,7 +50,6 @@ source of truth; this is a forward-placed map to avoid first-move mistakes.
 | `kiro` | `.kiro/agents/spec-independent-reviewer.json` | Full-file managed (read-only reviewer agent) |
 
 Kiro uses no dedicated build agent, no `toolsSettings`, and no per-verb steering.
-Permissions are delegated to the user's `permissions.yaml`.
 
 ## Entry points
 
@@ -58,4 +57,3 @@ Permissions are delegated to the user's `permissions.yaml`.
   `upgrade`, `ready`, `backlog`, `init`, `join`, `detach`, `guide`,
   `completions`, `freeze`, `pr`.
 - Verification surface: `cli` → `cargo test --manifest-path cli/Cargo.toml`.
-

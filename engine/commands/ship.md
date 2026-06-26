@@ -29,15 +29,6 @@ artifacts:
 prerequisites:
   - Implementation and verification complete (AC Matrix exists)
 execution: inline
-allowed_writes:
-  - "{specs_dir}/**"
-  - "{install_dir}/state/**"
-  - "{adr.decisions}"
-  - "{adr.pitfalls}"
-  - "{index}"
-forbidden_writes:
-  - "{write.allow}"
-  - .git/**
 references:
   - reference/workflow.md
   - reference/git.md
@@ -94,12 +85,11 @@ living-spec fold, and archive.
 ### PR
 
 6. On the normal PR path, generate the PR title / description per `templates/delivery/pr-description.md` (the spec now lives under `_done/{slug}/`), write the body to `{install_dir}/state/{slug}/pr-body.md` (ephemeral, gitignored — **never** the spec dir), present it, and wait for human approval (gate 2). Present the approval action as **Create the PR** (`create pr` / `approved`) in a numbered choice card. The PR title/body are always produced on the PR path — the automatable, provider-independent part. If the user gives PR text corrections instead, revise the title/body and re-present the approval card. On the explicit no-PR fast path, skip this PR section after the close-out commit.
-7. After the **Create the PR** approval action on the PR path, run `mochiflow pr --spec {slug} --title "<title>" --body-file {install_dir}/state/{slug}/pr-body.md` (add `--draft` if applicable). ship is the sole producer of the body file; `mochiflow pr` only reads it (and writes `pr-request.json` under `state/{slug}/` for the `pr_driver` backend only). The working tree is clean because the close-out commit (step 5) already captured every tracked change. The CLI owns pre-flight (clean tree / branch / base≠head), the single `git push`, and backend resolution per `reference/git.md ## PR` (`pr_driver` > `provider` built-in > legacy `pr_command` > manual). Read its exit code:
+7. After the **Create the PR** approval action on the PR path, run `mochiflow pr --spec {slug} --title "<title>" --body-file {install_dir}/state/{slug}/pr-body.md` (add `--draft` if applicable). ship is the sole producer of the body file; `mochiflow pr` only reads it (and writes `pr-request.json` under `state/{slug}/` for the `pr_driver` backend only). The working tree is clean because the close-out commit (step 5) already captured every tracked change. The CLI runs pre-flight (clean tree / branch / base≠head), pushes the branch, and resolves the backend per `reference/git.md ## PR` (`pr_driver` > `provider` built-in > legacy `pr_command` > manual). Read its exit code:
    - `0` — PR created; capture the printed URL.
    - `10` — manual handoff: the branch is pushed; create the PR with the presented content via your provider UI/CLI, then report the URL / merge.
-   - `3` — pre-flight failed; fix and re-run. Do not force past it.
+   - `3` — pre-flight failed; fix and re-run.
    - `1`/`2` — backend / config failure; stop and diagnose.
-   Do not call `az` / `gh` / `git push` directly — `mochiflow pr` is the only path.
 
 ## PR Feedback Loop
 
@@ -143,8 +133,7 @@ requires code changes before merge:
 - Do not proceed to ship while implementation and verification are incomplete.
 - On the PR path, do not run `mochiflow pr` before human approval of the PR content (gate 2). On the explicit no-PR fast path, do not run `mochiflow pr`.
 - Do not proceed if AC Matrix evidence is incomplete, any required task/review is missing, any result is `PENDING_HUMAN` or `FAIL`, or any not-applicable result lacks a reason.
-- Do not force past a pre-flight FAIL (`mochiflow pr` exit 3); fix and re-run.
-- Do not call `git push` / `gh` / `az` directly; `mochiflow pr` owns push and creation.
+- On a pre-flight FAIL (`mochiflow pr` exit 3), fix the reported issue and re-run.
 - Do not build the close-out commit before `status: done` holds (acceptance conditions met). Skip the fold only when there is genuinely no new rationale or pitfall; archive (the `_done` move + `INDEX`) still happens.
 - Do not commit or push anything to the base branch during post-merge cleanup — the fold + archive are already in the PR; post-merge is local hygiene only.
 - The no-PR fast path makes the same close-out commit (`status: done` + AC matrix + fold + archive + `INDEX`) on the current branch and creates no PR. `ship` still sets `status: done` on the acceptance conditions (step 4) — there is no path where `done` is set outside ship.

@@ -5,7 +5,7 @@
 //! `Plain` (no colour, ASCII glyphs), `Json` (machine-readable) — with colour
 //! resolved from the `NO_COLOR` / `CLICOLOR` / `CLICOLOR_FORCE` env vars and the
 //! stdout TTY (AC-05). Human-facing text never exposes internal key names
-//! (surface / provider / base_branch / write scope — AC-06); the `Json` form is
+//! (surface / provider / base_branch — AC-06); the `Json` form is
 //! for scriptability and is allowed to use field names.
 
 use anstyle::{AnsiColor, Style};
@@ -236,17 +236,6 @@ pub fn render_report(
         out.push('\n');
     }
 
-    // AI edit area (no internal key name).
-    let scope_status = ItemStatus::from_confidence(report.write_scope.confidence);
-    let area = report.write_scope.allow.join(", ");
-    out.push_str(&line(
-        scope_status,
-        &format!("Files MochiFlow may edit: {area}"),
-        mode,
-        color,
-    ));
-    out.push('\n');
-
     out.push('\n');
     out.push_str(&render_next_step(language));
     out.push('\n');
@@ -305,18 +294,6 @@ pub fn render_init_summary(
         out.push_str(&line(status, &text, mode, color));
         out.push('\n');
     }
-    let scope_status = ItemStatus::from_confidence(report.write_scope.confidence);
-    out.push_str(&line(
-        scope_status,
-        &format!(
-            "Files MochiFlow may edit: {}",
-            report.write_scope.allow.join(", ")
-        ),
-        mode,
-        color,
-    ));
-    out.push('\n');
-
     out.push_str(if ja {
         "作成/更新:\n"
     } else {
@@ -451,20 +428,6 @@ fn confirmation_items(report: &DetectionReport, language: &str) -> Vec<String> {
         });
     }
 
-    if report.write_scope.confidence.needs_confirm() {
-        items.push(if ja {
-            format!(
-                "AI が編集してよい範囲を確認: {}",
-                report.write_scope.allow.join(", ")
-            )
-        } else {
-            format!(
-                "Confirm files MochiFlow may edit: {}",
-                report.write_scope.allow.join(", ")
-            )
-        });
-    }
-
     items
 }
 
@@ -487,7 +450,7 @@ pub fn render_ai_review_prompt(language: &str) -> String {
          私と確認しながら解決してください。\
          .mochiflow/context/product.md、.mochiflow/context/structure.md、\
          .mochiflow/context/tech.md をコードから埋め、\
-         必要なら surfaces / verify / write scope / git 設定を調整し、\
+         必要なら surfaces / verify / git 設定を調整し、\
          adapter を再生成して、最後に mochiflow doctor を通してください。"
             .to_string()
     } else {
@@ -497,7 +460,7 @@ pub fn render_ai_review_prompt(language: &str) -> String {
          detected values, resolve them with me, fill \
          .mochiflow/context/product.md, .mochiflow/context/structure.md, and \
          .mochiflow/context/tech.md from the code, \
-         adjust surfaces / verify / write scope / git settings if needed, regenerate adapters, \
+         adjust surfaces / verify / git settings if needed, regenerate adapters, \
          and finish with mochiflow doctor."
             .to_string()
     }
@@ -613,12 +576,6 @@ fn detected_json(report: &DetectionReport) -> serde_json::Value {
             "base_branch": report.git.base_branch,
             "branch_confidence": confidence_str(report.git.branch_confidence),
         },
-        "write_scope": {
-            "allow": report.write_scope.allow,
-            "deny": report.write_scope.deny,
-            "confidence": confidence_str(report.write_scope.confidence),
-            "confirm": report.write_scope.confidence.needs_confirm(),
-        },
     })
 }
 
@@ -682,12 +639,6 @@ fn render_json(report: &DetectionReport) -> String {
             "base_branch": report.git.base_branch,
             "branch_confidence": confidence_str(report.git.branch_confidence),
         },
-        "write_scope": {
-            "allow": report.write_scope.allow,
-            "deny": report.write_scope.deny,
-            "confidence": confidence_str(report.write_scope.confidence),
-            "confirm": report.write_scope.confidence.needs_confirm(),
-        },
         "needs_confirm": report.needs_any_confirm(),
     });
 
@@ -700,7 +651,7 @@ fn render_json(report: &DetectionReport) -> String {
 #[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 mod tests {
     use super::*;
-    use crate::detect::{DetectedGit, DetectedSurface, DetectedWriteScope};
+    use crate::detect::{DetectedGit, DetectedSurface};
 
     fn report() -> DetectionReport {
         DetectionReport {
@@ -714,11 +665,6 @@ mod tests {
                 provider: "github".into(),
                 base_branch: "main".into(),
                 branch_confidence: Confidence::High,
-            },
-            write_scope: DetectedWriteScope {
-                allow: vec!["src/**".into()],
-                deny: vec![".git/**".into()],
-                confidence: Confidence::High,
             },
         }
     }
@@ -755,7 +701,7 @@ mod tests {
 
     #[test]
     fn human_output_hides_internal_key_names() {
-        // AC-06: no surface/provider/base_branch/"write scope" jargon — in both
+        // AC-06: no surface/provider/base_branch jargon — in both
         // a normal report and the empty-project fallback (description differs).
         let mut empty = report();
         empty.surfaces = vec![DetectedSurface {
@@ -767,7 +713,7 @@ mod tests {
         empty.git.provider = "none".into();
         for r in [report(), empty] {
             let out = render_report(&r, OutputMode::Plain, ColorChoice::Never, "en");
-            for jargon in ["surface", "provider", "base_branch", "write scope"] {
+            for jargon in ["surface", "provider", "base_branch"] {
                 assert!(
                     !out.to_lowercase().contains(jargon),
                     "human output leaked internal key '{jargon}':\n{out}"

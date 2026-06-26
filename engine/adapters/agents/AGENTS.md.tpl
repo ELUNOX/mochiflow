@@ -40,5 +40,3 @@ your standing instruction and follow it for any spec / implementation / PR work.
   context layer (`{{context.product}}` / `{{context.structure}}` /
   `{{context.tech}}`) is refreshed from code (onboard / refresh-context), never
   folded.
-- Do not call direct `git push` or provider PR creation commands; PR handoff
-  goes through `mochiflow pr` after the PR content approval gate.

@@ -27,10 +27,6 @@ pr_command = "gh pr create --fill"
 [adapter]
 tool = "kiro"
 
-[write]
-allow = ["src/**"]
-deny = [".git/**"]
-
 [surfaces.app]
 description = "primary surface"
 

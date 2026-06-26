@@ -171,13 +171,6 @@ fn render_config(
     let tools_literal = toml_array(adapter_tools);
     let git_section = render_git_section(&report.git);
     let surfaces_section = render_surfaces_section(&report.surfaces);
-    let allow_literal = toml_array(&report.write_scope.allow);
-    let deny_literal = toml_array(&report.write_scope.deny);
-    let write_confirm = if report.write_scope.confidence.needs_confirm() {
-        format!("{CONFIRM} write scope fell back to a default; confirm the AI edit boundary.\n")
-    } else {
-        String::new()
-    };
     format!(
         r##"# MochiFlow project config. `mochiflow init` writes this skeleton with
 # machine-detected values. Lines flagged with a MochiFlow confirmation marker need
@@ -210,9 +203,6 @@ pitfalls = ".mochiflow/adr/pitfalls.md"
 [adapter]
 tools = {tools_literal}
 
-[write]
-{write_confirm}allow = {allow_literal}
-deny = {deny_literal}
 {surfaces_section}"##,
         artifact_language_literal = toml_string(artifact_language),
         conversation_language_literal = toml_string(conversation_language),
@@ -1127,12 +1117,10 @@ mod tests {
         v.iter().map(|s| s.to_string()).collect()
     }
 
-    use crate::detect::{
-        Confidence, DetectedGit, DetectedSurface, DetectedWriteScope, DetectionReport,
-    };
+    use crate::detect::{Confidence, DetectedGit, DetectedSurface, DetectionReport};
 
     /// A high-confidence report (no confirm markers): single clear surface,
-    /// branch detected, write scope detected, no remote provider.
+    /// branch detected, no remote provider.
     fn clean_report() -> DetectionReport {
         DetectionReport {
             surfaces: vec![DetectedSurface {
@@ -1146,16 +1134,11 @@ mod tests {
                 base_branch: "main".into(),
                 branch_confidence: Confidence::High,
             },
-            write_scope: DetectedWriteScope {
-                allow: vec!["src/**".into(), "README.md".into()],
-                deny: vec![".git/**".into()],
-                confidence: Confidence::High,
-            },
         }
     }
 
     /// A report with nothing detected (empty project): TODO verify + low/medium
-    /// confidence everywhere → confirm markers expected.
+    /// confidence on detected facts → confirm markers expected.
     fn empty_report() -> DetectionReport {
         DetectionReport {
             surfaces: vec![DetectedSurface {
@@ -1168,11 +1151,6 @@ mod tests {
                 provider: "none".into(),
                 base_branch: "main".into(),
                 branch_confidence: Confidence::Medium,
-            },
-            write_scope: DetectedWriteScope {
-                allow: vec!["src/**".into(), "README.md".into()],
-                deny: vec![".git/**".into()],
-                confidence: Confidence::Medium,
             },
         }
     }
@@ -1191,7 +1169,7 @@ mod tests {
 
     #[test]
     fn render_config_empty_report_adds_confirm_markers() {
-        // AC-02: undetected verify + fallback write scope → confirm markers.
+        // AC-02: undetected verify + fallback branch → confirm markers.
         let out = render_config("en", "auto", &tools(&["agents"]), &empty_report());
         assert!(out.contains("# mochiflow: confirm"), "{out}");
     }
@@ -1248,8 +1226,6 @@ mod tests {
         let surface_name = "front.end app]";
         let description = "A \"quoted\" app\nwith \\ path";
         let verify = "echo \"ok\"\nprintf '\\n'";
-        let allow = "frontend app/\"module\n/**";
-        let deny = "**/secret\\file\"";
         let base_branch = "main\"bad\\branch\nnext";
         let report = DetectionReport {
             surfaces: vec![DetectedSurface {
@@ -1262,11 +1238,6 @@ mod tests {
                 provider: "none".into(),
                 base_branch: base_branch.into(),
                 branch_confidence: Confidence::High,
-            },
-            write_scope: DetectedWriteScope {
-                allow: vec![allow.into()],
-                deny: vec![deny.into()],
-                confidence: Confidence::High,
             },
         };
 
@@ -1286,10 +1257,6 @@ mod tests {
         assert_eq!(parsed["git"]["base_branch"].as_str(), Some(base_branch));
         let tools = parsed["adapter"]["tools"].as_array().unwrap();
         assert_eq!(tools[1].as_str(), Some(adapter), "{out}");
-        let allow_items = parsed["write"]["allow"].as_array().unwrap();
-        assert_eq!(allow_items[0].as_str(), Some(allow), "{out}");
-        let deny_items = parsed["write"]["deny"].as_array().unwrap();
-        assert_eq!(deny_items[0].as_str(), Some(deny), "{out}");
         let surface = &parsed["surfaces"][surface_name];
         assert_eq!(surface["description"].as_str(), Some(description), "{out}");
         assert_eq!(surface["verify"]["default"].as_str(), Some(verify), "{out}");
