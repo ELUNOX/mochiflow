@@ -45,9 +45,28 @@ where explicitly defined. `done` is not a gate: it is an acceptance state that
 to confirm; there is no CLI transition command) when the acceptance conditions
 below hold.
 
+When an approval gate is presented as a numbered choice card, selecting the
+visible approval action by label or by its displayed number is the gate input.
+For example, a plan card may display "confirm the plan" as the action that sets
+`status: approved`; choosing that action dispatches approve-to-build. The old
+approval words remain compatibility inputs, not the preferred user-facing label.
+
 The no-PR fast path exists only after explicit human opt-in. It skips
 **approve-PR** because no PR is created, but it still runs `ship`; `ship` still
 sets `done` from acceptance conditions and creates the same close-out commit.
+
+## Choice cards
+
+Phase-completion choice cards present user-facing actions, each with a stable
+action label and optional compatibility keywords. A displayed number is an
+ephemeral alias for that action in the most recent unambiguous choice card only.
+It is not a durable command, and it must not be interpreted without the active
+card context.
+
+Choice selection is the dispatch primitive: choosing a visible action by label,
+compatibility keyword, or displayed number invokes that action. If a bare number
+is stale, out of range, or contextless, ask the user to choose again using the
+current action labels.
 
 ## Depth scaling
 

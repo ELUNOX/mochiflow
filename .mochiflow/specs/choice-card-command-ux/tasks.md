@@ -14,7 +14,7 @@ Critical Stop Conditions:
 
 ## Tasks
 
-- [ ] T-001 [AC-01, AC-02] Define choice-card numbering and label vocabulary in shared routing/workflow guidance
+- [x] T-001 [AC-01, AC-02] Define choice-card numbering and label vocabulary in shared routing/workflow guidance
   - Depends on: none
   - Files: `engine/router.md`, `engine/reference/workflow.md`, `engine/reference/language.md`
   - Done: shared guidance states that choice numbers are ephemeral aliases for the most recent unambiguous card, visible labels use conversation-language actions, and compatibility tokens remain secondary stable identifiers.
