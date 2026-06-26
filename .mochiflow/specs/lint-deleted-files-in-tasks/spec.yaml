@@ -1,0 +1,11 @@
+version: 1
+slug: "lint-deleted-files-in-tasks"
+title: "Suppress unchecked-task warnings for planned file deletions"
+type: "fix"
+surfaces:
+  - "cli"
+integration: "none"
+risk: "standard"
+status: "draft"
+created: "2026-06-26"
+updated: "2026-06-26"
