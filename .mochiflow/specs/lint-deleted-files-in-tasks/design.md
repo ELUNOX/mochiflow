@@ -76,4 +76,10 @@ show the clearer one-line-per-deleted-path style.
 
 ## Review Results
 
-- Mandatory elevated-risk review to be recorded after implementation.
+- 2026-06-26 mandatory build review
+  - Reviewer mode: delegated
+  - Verdict: pass-with-comments
+  - Summary: Implementation matched the lint contract. Reviewer noted unrelated
+    backlog/index noise from a prior branch-level cherry-pick; the build cleanup
+    removed the unrelated backlog seed from this branch and regenerated
+    `.mochiflow/INDEX.md`.

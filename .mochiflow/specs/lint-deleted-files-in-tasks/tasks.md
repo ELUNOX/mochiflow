@@ -52,7 +52,7 @@ Critical Stop Conditions:
   - Stop:
     - Stop if documenting the marker requires changing adapter output wording beyond generated MochiFlow instructions.
 
-- [ ] T-004 [chore: elevated-risk review] Run mandatory independent review
+- [x] T-004 [chore: elevated-risk review] Run mandatory independent review
   - Depends on: T-001, T-002, T-003
   - Files:
     - `.mochiflow/specs/lint-deleted-files-in-tasks/design.md`

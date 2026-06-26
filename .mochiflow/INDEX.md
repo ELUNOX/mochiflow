@@ -1,26 +1,24 @@
 # 📋 Spec Dashboard
 
-> updated: 2026-06-26 23:02 UTC
+> updated: 2026-06-26 23:39 UTC
 
 ## Pipeline
 
 | stage | count |
 |:------|------:|
-| 🌱 backlog seed | 10 |
+| 🌱 backlog seed | 8 |
 | 📝 draft | 0 |
-| 🟢 approved | 0 |
+| 🟢 approved | 1 |
 | ✅ done | 15 |
 
 ## Backlog seeds
 
 | Slug | Title | Maturity | Source |
 |:-----|:------|:---------|:-------|
-| ["active-spec-open-directory"](specs/_backlog/"active-spec-open-directory".md) | "Introduce an _open directory for active specs" | ❓ "seed" | "conversation" |
 | ["develop-branch-workflow"](specs/_backlog/"develop-branch-workflow".md) | "Introduce develop branch to reduce PR ceremony for non-code changes" | ❓ "seed" | "conversation" |
 | ["diagnostics-command-surfaces-hardening"](specs/_backlog/"diagnostics-command-surfaces-hardening".md) | "Harden diagnostics command surfaces and source-repo guidance" | ❓ "seed" | "conversation" |
 | ["freeze-hardening"](specs/_backlog/"freeze-hardening".md) | "Freeze module hardening: error types, format stability, visibility" | ❓ "seed" | "conversation" |
 | ["frozen-surface-ssot"](specs/_backlog/"frozen-surface-ssot".md) | "Single source for frozen-surface input set definition and test performance" | ❓ "seed" | "conversation" |
-| ["lint-deleted-files-in-tasks"](specs/_backlog/"lint-deleted-files-in-tasks".md) | "Lint fires on deleted files listed in tasks.md Modified Files" | ❓ "seed" | "conversation" |
 | ["parallel-spec-context-switch"](specs/_backlog/"parallel-spec-context-switch".md) | "Support parallel spec work with explicit context switching" | ❓ "seed" | "conversation" |
 | ["phase-completion-guidance"](specs/_backlog/"phase-completion-guidance".md) | "Every phase should present the next action clearly" | ❓ "seed" | "conversation" |
 | ["ship-handoff-recovery-and-cleanup"](specs/_backlog/"ship-handoff-recovery-and-cleanup".md) | "Improve ship handoff recovery and post-merge cleanup" | ❓ "seed" | "conversation" |
@@ -28,7 +26,9 @@
 
 ## Active specs
 
-（なし）
+| Spec | Status | Risk | Docs | Module |
+|:-----|:-------|:-----|:-----|:-------|
+| [lint-deleted-files-in-tasks](specs/lint-deleted-files-in-tasks/) | 🟢 approved | elevated | spec+design+tasks | — |
 
 ## Done (chronological)
 
