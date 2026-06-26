@@ -103,3 +103,8 @@ After running, summarize in the conversation language using plain user-facing la
 what changed / what was checked / what the user needs to do next. Do not lead
 with an internal state list. Include internal state only when useful, as a brief
 `MochiFlow:` note after the summary.
+
+When presenting next steps, prefer a numbered choice card whose labels describe
+user actions in the conversation language. Numbers are aliases for the most
+recent unambiguous card only; otherwise route by the explicit label, keyword, or
+normal intent rules.

@@ -56,6 +56,12 @@ single source of truth for this behavior):
 - Summarize findings by severity and required fixes. If High or Critical
   findings exist, state that fixes require a separate build/fix step. Avoid
   exposing routing terms unless the user asks how the review was run.
+- When review resumes a plan-confirmed flow or another `status: approved`
+  implementation-ready context, present a numbered choice card with
+  **Start implementation** (`build` / `mochiflow-build`) and
+  **Create a resume prompt** (`resume` / `later`). Outside an approved context,
+  report the review result and present only actions valid for the current
+  lifecycle state.
 
 ## Stop conditions
 

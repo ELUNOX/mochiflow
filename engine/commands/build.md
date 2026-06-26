@@ -70,8 +70,11 @@ Implement the approved spec and produce verification and the AC Verification Mat
 - Summarize implementation as what changed, what was checked, and what remains
   for wrap-up; do not lead with `risk`, `status`, or reviewer mode.
 - On build completion, always include: (1) the verification result (all items
-  passed, or human confirmation items remain), and (2) explicit next-step
-  guidance directing the user to `mochiflow-ship`.
+  passed, or human confirmation items remain), and (2) a numbered choice card:
+  **Start PR preparation** (`ship` / `mochiflow-ship`) or
+  **Create a resume prompt** (`resume` / `later`). The resume prompt is generated
+  inline from the active slug and spec path and tells the next session to run
+  `{slug} ship`.
 
 ## Resume from new session
 

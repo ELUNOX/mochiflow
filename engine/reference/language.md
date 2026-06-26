@@ -52,6 +52,11 @@ conversation and completion summaries, translate internal terms into plain
 language. Keep internal terms for file names, commands, metadata fields, schema
 enum values, and canonical table tokens required by tooling.
 
+Choice-card labels are user-facing action labels, so they follow the
+conversation language. Compatibility keywords such as `build`, `ship`, `review`,
+`later`, and `approved` remain stable inputs, but they should be secondary to the
+plain action label displayed to the user.
+
 Use these examples as meaning guides, not as a fixed dictionary:
 
 | internal term | English user-facing phrasing | Japanese user-facing phrasing |

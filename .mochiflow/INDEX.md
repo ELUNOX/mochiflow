@@ -1,6 +1,6 @@
 # 📋 Spec Dashboard
 
-> updated: 2026-06-26 00:56 UTC
+> updated: 2026-06-26 19:15 UTC
 
 ## Pipeline
 
@@ -9,7 +9,7 @@
 | 🌱 backlog seed | 9 |
 | 📝 draft | 0 |
 | 🟢 approved | 0 |
-| ✅ done | 14 |
+| ✅ done | 15 |
 
 ## Backlog seeds
 
@@ -35,6 +35,7 @@
 
 | Updated | Slug | Title | Type |
 |:--------|:-----|:------|:-----|
+| 2026-06-26 | [choice-card-command-ux](specs/_done/choice-card-command-ux/) | Clarify choice-card commands and numbered replies | docs |
 | 2026-06-26 | [manifest-test-isolation](specs/_done/manifest-test-isolation/) | Isolate MANIFEST integrity check from functional conformance tests | refactor |
 | 2026-06-25 | [qa-attack-matrix](specs/_done/qa-attack-matrix/) | Add a QA attack matrix to plan and reviewer flows | feature |
 | 2026-06-25 | [lint-residue-and-multiline-ears](specs/_done/lint-residue-and-multiline-ears/) | Lint: detect template residue and multi-line EARS ACs | feature |
@@ -50,4 +51,4 @@
 | 2026-06-23 | [build-completion-guidance](specs/_done/build-completion-guidance/) | Build phase should announce next step on completion | docs |
 | 2026-06-22 | [version-ssot-freeze](specs/_done/version-ssot-freeze/) | Version SSOT + freeze command | refactor |
 
-> done total: 14
+> done total: 15
