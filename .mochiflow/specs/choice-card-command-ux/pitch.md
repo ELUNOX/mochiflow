@@ -35,6 +35,8 @@ Use these phase-specific choices:
   - `再開用プロンプトを作る` — triggers: `再開用プロンプトを作る`, `resume`, `later`.
 - After plan draft is ready:
   - `計画を確定` — triggers: `計画を確定`, `approve plan`, `approved`.
+    Selecting this visible action, by label or by its displayed number, is the
+    approve-to-build gate input.
   - Ordinary correction feedback revises the plan and re-presents it; do not add
     a `計画を修正する` command.
 - After plan is confirmed and committed:
