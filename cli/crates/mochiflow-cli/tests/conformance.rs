@@ -1848,9 +1848,6 @@ fn materialize_full(root: &Path) -> PathBuf {
          pr_command = \"gh pr create --fill\"\n\n\
          [adapter]\n\
          tool = \"kiro\"\n\n\
-         [write]\n\
-         allow = [\"src/**\"]\n\
-         deny = [\".git/**\"]\n\n\
          [surfaces.app]\n\
          description = \"primary surface\"\n\n\
          [surfaces.app.verify]\n\

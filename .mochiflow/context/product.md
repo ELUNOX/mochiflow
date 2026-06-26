@@ -44,8 +44,7 @@ who want a disciplined, auditable spec-to-PR flow.
   regenerating the lock and bumping `engine/VERSION` in the same commit.
 - Exactly two delivery approval gates: approve-to-build and approve-PR. Only
   `ship` sets `done`.
-- Direct `git push` / provider PR creation is not part of agent flow; PR handoff
-  goes through `mochiflow pr`.
+- PR handoff is produced through `mochiflow pr`.
 - Engine source, adapter templates, schemas, and golden fixtures are the frozen
   contract surface guarded by manifests / locks and tests.
 
@@ -54,4 +53,3 @@ who want a disciplined, auditable spec-to-PR flow.
 - Not a CI/build system; it invokes the project's own verify commands.
 - Does not host or merge PRs; it delegates to `gh` / a pr_driver / manual handoff.
 - Not a runtime framework; it is a workflow + living-spec engine.
-

@@ -44,20 +44,6 @@ pub fn resolve_adapter_labels(labels: &[String]) -> Vec<String> {
 /// Build the substitution map from config (matching Python's _subs).
 fn subs(cfg: &Config, tool: &str) -> BTreeMap<String, String> {
     let engine = format!("{}/engine", cfg.install_dir);
-    let mut allow: Vec<String> = vec![
-        format!("{}/**", cfg.specs_dir),
-        format!("{}/state/**", cfg.install_dir),
-        cfg.constitution.project.clone(),
-        cfg.constitution.local.clone(),
-        cfg.context.product.clone(),
-        cfg.context.structure.clone(),
-        cfg.context.tech.clone(),
-        cfg.adr.decisions.clone(),
-        cfg.adr.pitfalls.clone(),
-        cfg.index.clone(),
-    ];
-    allow.extend(cfg.write.allow.iter().cloned());
-
     let engine_version = engine_version_label(&cfg.engine_dir());
     let mut m = BTreeMap::new();
     m.insert(
@@ -91,14 +77,6 @@ fn subs(cfg: &Config, tool: &str) -> BTreeMap<String, String> {
     m.insert("index".into(), cfg.index.clone());
     m.insert("base_branch".into(), cfg.git.base_branch.clone());
     m.insert("pr_command".into(), cfg.git.pr_command.clone());
-    m.insert(
-        "allow_json".into(),
-        serde_json::to_string_pretty(&allow).unwrap_or_default(),
-    );
-    m.insert(
-        "deny_json".into(),
-        serde_json::to_string_pretty(&cfg.write.deny).unwrap_or_default(),
-    );
     m
 }
 
@@ -656,10 +634,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn subs_exposes_layer_tokens_and_allows_all_living_spec_paths() {
+    fn subs_exposes_layer_tokens() {
         use crate::config::{
             Config, I18nConfig, I18nMeta, I18nValueSource, RawAdapter, RawAdr, RawConstitution,
-            RawContext, RawGit, RawWrite,
+            RawContext, RawGit,
         };
         let cfg = Config {
             schema_version: 1,
@@ -693,7 +671,6 @@ mod tests {
             },
             git: RawGit::default(),
             adapter: RawAdapter::default(),
-            write: RawWrite::default(),
             surfaces: BTreeMap::new(),
             repo_root: std::path::PathBuf::from("/tmp"),
             config_path: std::path::PathBuf::from("/tmp/.mochiflow/config.toml"),
@@ -730,22 +707,10 @@ mod tests {
         // legacy flat tokens are gone
         assert!(!m.contains_key("paths.architecture"));
         assert!(!m.contains_key("paths.structure"));
-        // write allow lists living-spec paths, delivery state, and shared guidance files
-        assert!(m.contains_key("allow_json"), "allow_json missing");
-        let allow = m.get("allow_json").map(String::as_str).unwrap_or("");
-        for p in [
-            ".mochiflow/state/**",
-            ".mochiflow/constitution.md",
-            ".mochiflow/constitution.local.md",
-            ".mochiflow/context/product.md",
-            ".mochiflow/context/structure.md",
-            ".mochiflow/context/tech.md",
-            ".mochiflow/adr/decisions.md",
-            ".mochiflow/adr/pitfalls.md",
-            ".mochiflow/INDEX.md",
-        ] {
-            assert!(allow.contains(p), "allow_json missing {p}: {allow}");
-        }
+        assert_eq!(
+            m.get("specs_glob").map(String::as_str),
+            Some(".mochiflow/specs/**")
+        );
     }
 
     #[test]
@@ -809,7 +774,7 @@ mod tests {
     fn config_with_root(root: std::path::PathBuf) -> crate::config::Config {
         use crate::config::{
             Config, I18nConfig, I18nMeta, I18nValueSource, RawAdapter, RawAdr, RawConstitution,
-            RawContext, RawGit, RawWrite,
+            RawContext, RawGit,
         };
         let config_path = root.join(".mochiflow/config.toml");
         Config {
@@ -844,7 +809,6 @@ mod tests {
             },
             git: RawGit::default(),
             adapter: RawAdapter::default(),
-            write: RawWrite::default(),
             surfaces: BTreeMap::new(),
             repo_root: root,
             config_path,

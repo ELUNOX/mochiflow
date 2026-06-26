@@ -42,8 +42,6 @@ pub struct RawConfig {
     #[serde(default)]
     pub adapter: RawAdapter,
     #[serde(default)]
-    pub write: RawWrite,
-    #[serde(default)]
     pub surfaces: BTreeMap<String, RawSurface>,
 }
 
@@ -138,14 +136,6 @@ fn default_tool() -> String {
     "agents".to_string()
 }
 
-#[derive(Debug, Default, Deserialize)]
-pub struct RawWrite {
-    #[serde(default)]
-    pub allow: Vec<String>,
-    #[serde(default)]
-    pub deny: Vec<String>,
-}
-
 #[derive(Debug, Deserialize)]
 pub struct RawSurface {
     #[serde(default)]
@@ -168,7 +158,6 @@ pub struct Config {
     pub adr: RawAdr,
     pub git: RawGit,
     pub adapter: RawAdapter,
-    pub write: RawWrite,
     pub surfaces: BTreeMap<String, RawSurface>,
     pub repo_root: PathBuf,
     pub config_path: PathBuf,
@@ -454,7 +443,6 @@ fn resolve(raw: RawConfig, config_path: &Path) -> Result<Config, ConfigError> {
         adr: raw.adr,
         git: raw.git,
         adapter: raw.adapter,
-        write: raw.write,
         surfaces: raw.surfaces,
         repo_root,
         config_path: config_abs,

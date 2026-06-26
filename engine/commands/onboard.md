@@ -27,13 +27,13 @@ Bootstrap MochiFlow into a project through guided automation.
 
 Install the minimal MochiFlow skeleton if needed, then resolve `config.toml`
 into an explicit operating contract. `mochiflow init` already machine-detects
-the obvious facts (surfaces / verify commands / branch / write scope) and writes
+the obvious facts (surfaces / verify commands / branch) and writes
 them, flagging anything that needs a human decision with an inline
 `# mochiflow: confirm` comment. Onboard's job is to read those markers and the
 project, then confirm or correct each one with the user. The markers in
 `config.toml` *are* the CLI→AI handoff — there is no separate envelope or prompt
 file to paste. File-structure heuristics are input, not authority: make
-defensible choices for surfaces, verification, git, and write scope.
+defensible choices for surfaces, verification, and git.
 
 ## Procedure
 
@@ -48,7 +48,7 @@ defensible choices for surfaces, verification, git, and write scope.
 
 2. **Ensure the skeleton exists**: if `.mochiflow/config.toml` is missing, run
    `mochiflow init --target <project> --adapter <tool>[ --adapter <tool2>] --artifact-language <tag>[ --conversation-language auto]`
-   first. `init` machine-detects surfaces / verify / branch / write scope, writes
+   first. `init` machine-detects surfaces / verify / branch, writes
    them, and attaches `# mochiflow: confirm` markers to values that need a human
    decision. If the Rust CLI is unavailable, report that `mochiflow` must be
    installed before onboarding. If config already exists, do not overwrite it;
@@ -86,20 +86,15 @@ defensible choices for surfaces, verification, git, and write scope.
    `provider` / `pr_driver` **only** when the user explicitly opts in. Do not
    infer a `pr_command` from the provider.
 
-7. **Set write scope deliberately**: choose allow globs from the intended AI
-   edit boundaries. Keep generated/vendor/secret/migration-sensitive paths out
-   unless the project clearly expects edits there. Always append the standard
-   deny list.
-
-8. **Fill config.toml**: update `.mochiflow/config.toml` with the confirmed
-   surfaces, verify commands, git config, adapter, `[i18n]`, and write scope.
+7. **Fill config.toml**: update `.mochiflow/config.toml` with the confirmed
+   surfaces, verify commands, git config, adapter, and `[i18n]`.
    Set `[i18n].artifact_language` to the language used for durable project
    artifacts. Set `[i18n].conversation_language` to `auto` unless the user wants
    a fixed conversation language.
    Remove a `# mochiflow: confirm` marker once its value is settled; keep the
    marker for anything still genuinely open.
 
-9. **Run adapter generate safely**: run `mochiflow adapter generate` without
+8. **Run adapter generate safely**: run `mochiflow adapter generate` without
    `--force` first. Existing Markdown instruction files are preserved and
    extended with a MochiFlow-managed block. If structured adapter targets block
    generation, inspect the candidates under `.mochiflow/state/adapters/...` and
@@ -107,7 +102,7 @@ defensible choices for surfaces, verification, git, and write scope.
    generate --force` only after the user explicitly approves replacing existing
    adapter files.
 
-10. **Generate the foundational context layer from code**: use
+9. **Generate the foundational context layer from code**: use
    `templates/context/{product,structure,tech}.md` for structure and write only
    the context files from what the code/config actually show:
    - `[context].product`: purpose / users / domain terms / core invariants / non-goals.
@@ -120,16 +115,16 @@ defensible choices for surfaces, verification, git, and write scope.
    rarely changes. Have the human confirm it matches current code. (The same
    procedure backs `commands/refresh-context.md`; onboard is its first run.)
 
-11. **Leave constitution and ADR for their owners**: do not fill
+10. **Leave constitution and ADR for their owners**: do not fill
    `[constitution].project` / `[constitution].local`; they are user-authored
    always-loaded rules. Do not fill `[adr].decisions` / `[adr].pitfalls` during
    onboarding; they grow only through ship-time folds. Present their paths and
    explain their purpose.
 
-12. **Run doctor**: verify 0 fail. If fail, diagnose and fix (most common:
+11. **Run doctor**: verify 0 fail. If fail, diagnose and fix (most common:
    adapter drift → regenerate, missing/unfilled context stubs → create or fill them).
 
-13. **Present results and the usage card**: summarize what was done, list any
+12. **Present results and the usage card**: summarize what was done, list any
    `# mochiflow: confirm` values that are still open and need the user's OK, then
    run `mochiflow guide` and present its usage card (the four verbs and the two
    delivery approval gates) so the user knows how to drive MochiFlow next.

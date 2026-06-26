@@ -19,13 +19,6 @@ artifacts:
   - "{specs_dir}/{slug}/pitch.md"
 prerequisites: []
 execution: inline
-allowed_writes:
-  - "{specs_dir}/{slug}/**"
-  - "{specs_dir}/_backlog/{slug}.md"
-forbidden_writes:
-  - "{specs_dir}/_done/**"
-  - "{write.allow}"
-  - .git/**
 references:
   - reference/workflow.md
   - reference/git.md

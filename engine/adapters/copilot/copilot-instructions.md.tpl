@@ -37,5 +37,3 @@ your standing instruction for any spec / implementation / PR work.
 - At ship, fold durable knowledge into `{{adr.decisions}}` / `{{adr.pitfalls}}` before
   archiving. Context (`{{context.product}}` / `{{context.structure}}` /
   `{{context.tech}}`) is refreshed from code (onboard / refresh-context), never folded.
-- Do not call direct `git push` or provider PR creation commands; PR handoff
-  goes through `mochiflow pr` after the PR content approval gate.

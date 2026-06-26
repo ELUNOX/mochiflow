@@ -47,7 +47,3 @@ always-on steering file:
   context layer (`.mochiflow/context/product.md` / `.mochiflow/context/structure.md` /
   `.mochiflow/context/tech.md`) is refreshed from code (onboard / refresh-context), never
   folded.
-- Do not call direct `git push` or provider PR creation commands; PR handoff
-  goes through `mochiflow pr` after the PR content approval gate.
-- Permissions (shell / write / fetch) are owned entirely by your Kiro
-  `permissions.yaml` (`deny > ask > allow`); mochiflow ships no baked tool policy.

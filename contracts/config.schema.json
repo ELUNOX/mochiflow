@@ -90,13 +90,6 @@
         }
       }
     },
-    "write": {
-      "type": "object",
-      "properties": {
-        "allow": { "type": "array", "items": { "type": "string" } },
-        "deny": { "type": "array", "items": { "type": "string" } }
-      }
-    },
     "surfaces": {
       "type": "object",
       "minProperties": 1,
