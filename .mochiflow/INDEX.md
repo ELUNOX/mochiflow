@@ -1,6 +1,6 @@
 # 📋 Spec Dashboard
 
-> updated: 2026-06-26 19:15 UTC
+> updated: 2026-06-26 23:46 UTC
 
 ## Pipeline
 
@@ -9,17 +9,17 @@
 | 🌱 backlog seed | 9 |
 | 📝 draft | 0 |
 | 🟢 approved | 0 |
-| ✅ done | 15 |
+| ✅ done | 16 |
 
 ## Backlog seeds
 
 | Slug | Title | Maturity | Source |
 |:-----|:------|:---------|:-------|
+| ["active-spec-open-directory"](specs/_backlog/"active-spec-open-directory".md) | "Introduce an _open directory for active specs" | ❓ "seed" | "conversation" |
 | ["develop-branch-workflow"](specs/_backlog/"develop-branch-workflow".md) | "Introduce develop branch to reduce PR ceremony for non-code changes" | ❓ "seed" | "conversation" |
 | ["diagnostics-command-surfaces-hardening"](specs/_backlog/"diagnostics-command-surfaces-hardening".md) | "Harden diagnostics command surfaces and source-repo guidance" | ❓ "seed" | "conversation" |
 | ["freeze-hardening"](specs/_backlog/"freeze-hardening".md) | "Freeze module hardening: error types, format stability, visibility" | ❓ "seed" | "conversation" |
 | ["frozen-surface-ssot"](specs/_backlog/"frozen-surface-ssot".md) | "Single source for frozen-surface input set definition and test performance" | ❓ "seed" | "conversation" |
-| ["lint-deleted-files-in-tasks"](specs/_backlog/"lint-deleted-files-in-tasks".md) | "Lint fires on deleted files listed in tasks.md Modified Files" | ❓ "seed" | "conversation" |
 | ["parallel-spec-context-switch"](specs/_backlog/"parallel-spec-context-switch".md) | "Support parallel spec work with explicit context switching" | ❓ "seed" | "conversation" |
 | ["phase-completion-guidance"](specs/_backlog/"phase-completion-guidance".md) | "Every phase should present the next action clearly" | ❓ "seed" | "conversation" |
 | ["ship-handoff-recovery-and-cleanup"](specs/_backlog/"ship-handoff-recovery-and-cleanup".md) | "Improve ship handoff recovery and post-merge cleanup" | ❓ "seed" | "conversation" |
@@ -35,6 +35,7 @@
 
 | Updated | Slug | Title | Type |
 |:--------|:-----|:------|:-----|
+| 2026-06-26 | [lint-deleted-files-in-tasks](specs/_done/lint-deleted-files-in-tasks/) | Suppress unchecked-task warnings for planned file deletions | fix |
 | 2026-06-26 | [choice-card-command-ux](specs/_done/choice-card-command-ux/) | Clarify choice-card commands and numbered replies | docs |
 | 2026-06-26 | [manifest-test-isolation](specs/_done/manifest-test-isolation/) | Isolate MANIFEST integrity check from functional conformance tests | refactor |
 | 2026-06-25 | [qa-attack-matrix](specs/_done/qa-attack-matrix/) | Add a QA attack matrix to plan and reviewer flows | feature |
@@ -51,4 +52,4 @@
 | 2026-06-23 | [build-completion-guidance](specs/_done/build-completion-guidance/) | Build phase should announce next step on completion | docs |
 | 2026-06-22 | [version-ssot-freeze](specs/_done/version-ssot-freeze/) | Version SSOT + freeze command | refactor |
 
-> done total: 15
+> done total: 16
