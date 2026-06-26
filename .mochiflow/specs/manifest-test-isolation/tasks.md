@@ -13,7 +13,7 @@ Critical Stop Conditions:
 
 ## Tasks
 
-- [ ] T-001 [AC-01, AC-02] Refactor the two MANIFEST-freshness-coupled tests to an in-test tempdir fixture
+- [x] T-001 [AC-01, AC-02] Refactor the two MANIFEST-freshness-coupled tests to an in-test tempdir fixture
   - Depends on: none
   - Files: `cli/crates/mochiflow-cli/tests/cli.rs`
   - Done: `freeze_root_check_uses_explicit_source_repo_from_other_cwd` and `freeze_without_root_keeps_cwd_upward_resolution` build a tempdir fixture source repo (cli/Cargo.toml + engine/ + contracts/ + tests/conformance/golden/) **inline in `cli.rs`** (mirror the `freeze.rs` `setup_fixture` shape; do not import it and do not change its visibility), freeze it in-test, then assert `--root <fixture> --check` (from an unrelated cwd) and cwd-upward `--check` (from a fixture subdirectory) both report "all derived files are up to date"; neither test asserts freshness via `repo_root()`. The two tests pass even when the committed `engine/MANIFEST.json` is stale.
@@ -33,7 +33,7 @@ Critical Stop Conditions:
 
 | AC | Scope | Verification method | Planned test/QA | Implementation | Result | Evidence | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| AC-01 | cli | automated | QA-01 (`cargo test` with stale committed MANIFEST) | `cli/crates/mochiflow-cli/tests/cli.rs` | UNVERIFIED | | |
-| AC-02 | cli | automated | QA-02, QA-05 (`cargo test --manifest-path cli/Cargo.toml`) | `cli/crates/mochiflow-cli/tests/cli.rs` | UNVERIFIED | | |
+| AC-01 | cli | automated | QA-01 (`cargo test` with stale committed MANIFEST) | `cli/crates/mochiflow-cli/tests/cli.rs` | PASS | With committed `engine/MANIFEST.json` made stale, `freeze --check` reports `STALE` while both refactored `freeze_*` tests pass; full `cli` test target green after restore. | |
+| AC-02 | cli | automated | QA-02, QA-05 (`cargo test --manifest-path cli/Cargo.toml`) | `cli/crates/mochiflow-cli/tests/cli.rs` | PASS | Both tests now build a tempdir fixture via `setup_freeze_fixture` and assert against it; no `repo_root()` freshness assertion remains in either. | |
 | AC-03 | cli | automated | QA-08 (`mochiflow config show` + `quick` profile run) | `.mochiflow/config.toml` | UNVERIFIED | | |
 | AC-04 | cli | automated | QA-03 (corrupt MANIFEST → `freeze --check` fails); QA-04 (`default` profile siblings); CI step + `default` profile inspection | `.mochiflow/config.toml`, `.github/workflows/ci.yml` | UNVERIFIED | | |

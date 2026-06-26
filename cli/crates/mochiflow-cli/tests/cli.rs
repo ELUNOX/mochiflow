@@ -1997,12 +1997,59 @@ fn doctor_config_guides_source_repo_users_to_freeze_check() {
     assert!(out.contains("doctor` checks project health"), "{out}");
 }
 
+/// Build a minimal mochiflow source-repo fixture under `root` and freeze it so
+/// `freeze --check` reports it fresh — independent of the committed repository
+/// MANIFEST. Mirrors the shape of `freeze.rs`'s private `#[cfg(test)]`
+/// `setup_fixture` (which is not importable from this integration-test crate);
+/// do not change that helper's visibility to share it.
+fn setup_freeze_fixture(root: &Path) {
+    // cli/Cargo.toml carries the version SSOT used by freeze.
+    let cli_dir = root.join("cli");
+    fs::create_dir_all(&cli_dir).unwrap();
+    fs::write(
+        cli_dir.join("Cargo.toml"),
+        "[workspace]\nmembers = []\n[workspace.package]\nversion = \"1.0.0\"\n",
+    )
+    .unwrap();
+
+    // engine/ with VERSION + a sample file so the manifest is non-empty.
+    let engine_dir = root.join("engine");
+    fs::create_dir_all(&engine_dir).unwrap();
+    fs::write(engine_dir.join("VERSION"), "1.0.0\n").unwrap();
+    fs::write(engine_dir.join("router.md"), "# Router\n").unwrap();
+
+    // contracts/*.json + tests/conformance/golden/ feed the frozen-surface hash.
+    let contracts_dir = root.join("contracts");
+    fs::create_dir_all(&contracts_dir).unwrap();
+    fs::write(contracts_dir.join("test.json"), "{}\n").unwrap();
+    let golden_dir = root.join("tests/conformance/golden");
+    fs::create_dir_all(&golden_dir).unwrap();
+    fs::write(golden_dir.join("INDEX.md"), "# Index\n").unwrap();
+
+    // Freeze the fixture so its derived files (engine/VERSION,
+    // engine/MANIFEST.json, contracts/contracts.lock) are written fresh.
+    bin()
+        .args(["freeze", "--root", root.to_str().unwrap()])
+        .assert()
+        .success();
+}
+
 #[test]
 fn freeze_root_check_uses_explicit_source_repo_from_other_cwd() {
+    let fixture = tempfile::tempdir().unwrap();
+    setup_freeze_fixture(fixture.path());
+
+    // Run from an unrelated cwd so resolution can only come from --root, and
+    // assert against the in-test fixture rather than the committed repo MANIFEST.
     let cwd = tempfile::tempdir().unwrap();
     let result = bin()
         .current_dir(cwd.path())
-        .args(["freeze", "--root", repo_root().to_str().unwrap(), "--check"])
+        .args([
+            "freeze",
+            "--root",
+            fixture.path().to_str().unwrap(),
+            "--check",
+        ])
         .assert()
         .success();
     let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
@@ -2028,8 +2075,15 @@ fn freeze_root_invalid_path_fails_before_writing() {
 
 #[test]
 fn freeze_without_root_keeps_cwd_upward_resolution() {
+    let fixture = tempfile::tempdir().unwrap();
+    setup_freeze_fixture(fixture.path());
+
+    // From a nested subdirectory of the fixture, with no --root, upward cwd
+    // resolution must walk up to the fixture root (not the committed repo).
+    let subdir = fixture.path().join("nested/work/dir");
+    fs::create_dir_all(&subdir).unwrap();
     let result = bin()
-        .current_dir(repo_root().join("cli/crates/mochiflow-core"))
+        .current_dir(&subdir)
         .args(["freeze", "--check"])
         .assert()
         .success();
