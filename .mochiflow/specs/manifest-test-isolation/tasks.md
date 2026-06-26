@@ -23,7 +23,7 @@ Critical Stop Conditions:
   - Files: `.mochiflow/config.toml`
   - Done: `[surfaces.cli.verify].quick` runs the existing `cargo test --manifest-path cli/Cargo.toml` followed by `cargo run --manifest-path cli/Cargo.toml -- freeze --check` (working-tree binary, mirroring `default`); `mochiflow config show` reflects the updated `quick` profile.
   - Stop: the change would require touching the `default` profile string — stop (out of scope).
-- [ ] T-003 [AC-04] Confirm integrity gate and out-of-scope surfaces are unchanged
+- [x] T-003 [AC-04] Confirm integrity gate and out-of-scope surfaces are unchanged
   - Depends on: T-001, T-002
   - Files: `.mochiflow/config.toml`, `.github/workflows/ci.yml`
   - Done: `[surfaces.cli.verify].default` still ends with `cargo run --manifest-path cli/Cargo.toml -- freeze --check` and the CI workflow still runs `cargo run --manifest-path cli/Cargo.toml -- freeze --check`; corrupting the committed `engine/MANIFEST.json` makes `cargo run -- freeze --check` fail (gate intact); version-gate hash code/tests untouched.
@@ -36,4 +36,4 @@ Critical Stop Conditions:
 | AC-01 | cli | automated | QA-01 (`cargo test` with stale committed MANIFEST) | `cli/crates/mochiflow-cli/tests/cli.rs` | PASS | With committed `engine/MANIFEST.json` made stale, `freeze --check` reports `STALE` while both refactored `freeze_*` tests pass; full `cli` test target green after restore. | |
 | AC-02 | cli | automated | QA-02, QA-05 (`cargo test --manifest-path cli/Cargo.toml`) | `cli/crates/mochiflow-cli/tests/cli.rs` | PASS | Both tests now build a tempdir fixture via `setup_freeze_fixture` and assert against it; no `repo_root()` freshness assertion remains in either. | |
 | AC-03 | cli | automated | QA-08 (`mochiflow config show` + `quick` profile run) | `.mochiflow/config.toml` | PASS | `config show` shows `quick: cargo test ... && cargo run --manifest-path cli/Cargo.toml -- freeze --check`; `default` unchanged. | |
-| AC-04 | cli | automated | QA-03 (corrupt MANIFEST → `freeze --check` fails); QA-04 (`default` profile siblings); CI step + `default` profile inspection | `.mochiflow/config.toml`, `.github/workflows/ci.yml` | UNVERIFIED | | |
+| AC-04 | cli | automated | QA-03 (corrupt MANIFEST → `freeze --check` fails); QA-04 (`default` profile siblings); CI step + `default` profile inspection | `.mochiflow/config.toml`, `.github/workflows/ci.yml` | PASS | Stale committed MANIFEST → `freeze --check` prints `STALE` (gate intact); `default` profile still ends with `cargo run ... -- freeze --check`; `ci.yml` and `freeze.rs` empty diff vs `origin/main`; full `default` profile green (282 tests, fmt, clippy, freeze). | |
