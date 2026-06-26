@@ -18,7 +18,7 @@ Critical Stop Conditions:
   - Files: `cli/crates/mochiflow-cli/tests/cli.rs`
   - Done: `freeze_root_check_uses_explicit_source_repo_from_other_cwd` and `freeze_without_root_keeps_cwd_upward_resolution` build a tempdir fixture source repo (cli/Cargo.toml + engine/ + contracts/ + tests/conformance/golden/) **inline in `cli.rs`** (mirror the `freeze.rs` `setup_fixture` shape; do not import it and do not change its visibility), freeze it in-test, then assert `--root <fixture> --check` (from an unrelated cwd) and cwd-upward `--check` (from a fixture subdirectory) both report "all derived files are up to date"; neither test asserts freshness via `repo_root()`. The two tests pass even when the committed `engine/MANIFEST.json` is stale.
   - Stop: cwd-upward or `--root` resolution semantics can no longer be exercised against the fixture without touching `freeze.rs` resolution logic (out of scope) — stop and route to plan.
-- [ ] T-002 [AC-03] Add `mochiflow freeze --check` to the `quick` verify profile
+- [x] T-002 [AC-03] Add `mochiflow freeze --check` to the `quick` verify profile
   - Depends on: none
   - Files: `.mochiflow/config.toml`
   - Done: `[surfaces.cli.verify].quick` runs the existing `cargo test --manifest-path cli/Cargo.toml` followed by `cargo run --manifest-path cli/Cargo.toml -- freeze --check` (working-tree binary, mirroring `default`); `mochiflow config show` reflects the updated `quick` profile.
@@ -35,5 +35,5 @@ Critical Stop Conditions:
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | AC-01 | cli | automated | QA-01 (`cargo test` with stale committed MANIFEST) | `cli/crates/mochiflow-cli/tests/cli.rs` | PASS | With committed `engine/MANIFEST.json` made stale, `freeze --check` reports `STALE` while both refactored `freeze_*` tests pass; full `cli` test target green after restore. | |
 | AC-02 | cli | automated | QA-02, QA-05 (`cargo test --manifest-path cli/Cargo.toml`) | `cli/crates/mochiflow-cli/tests/cli.rs` | PASS | Both tests now build a tempdir fixture via `setup_freeze_fixture` and assert against it; no `repo_root()` freshness assertion remains in either. | |
-| AC-03 | cli | automated | QA-08 (`mochiflow config show` + `quick` profile run) | `.mochiflow/config.toml` | UNVERIFIED | | |
+| AC-03 | cli | automated | QA-08 (`mochiflow config show` + `quick` profile run) | `.mochiflow/config.toml` | PASS | `config show` shows `quick: cargo test ... && cargo run --manifest-path cli/Cargo.toml -- freeze --check`; `default` unchanged. | |
 | AC-04 | cli | automated | QA-03 (corrupt MANIFEST → `freeze --check` fails); QA-04 (`default` profile siblings); CI step + `default` profile inspection | `.mochiflow/config.toml`, `.github/workflows/ci.yml` | UNVERIFIED | | |
