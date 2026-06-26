@@ -1,6 +1,6 @@
 //! Structural lint for spec directories.
 
-use std::collections::{BTreeSet, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use crate::config::Config;
@@ -292,10 +292,21 @@ fn unchecked_task_ids(text: &str) -> Vec<String> {
 }
 
 #[derive(Debug)]
+struct TaskFile {
+    path: String,
+    planned_deletion: bool,
+}
+
+#[derive(Debug)]
 struct TaskProgress {
     id: String,
     checked: bool,
-    files: Vec<String>,
+    files: Vec<TaskFile>,
+}
+
+#[derive(Debug)]
+struct DirtyPathStatus {
+    deleted: bool,
 }
 
 fn normalize_task_path(path: &str) -> String {
@@ -333,11 +344,26 @@ fn paths_from_files_value(value: &str) -> Vec<String> {
     }
 }
 
+fn task_files_from_files_value(value: &str) -> Vec<TaskFile> {
+    let cleaned = value.trim().trim_start_matches("- ").trim();
+    let (planned_deletion, path_value) = cleaned
+        .strip_prefix("deleted:")
+        .map_or((false, cleaned), |rest| (true, rest.trim()));
+
+    paths_from_files_value(path_value)
+        .into_iter()
+        .map(|path| TaskFile {
+            path,
+            planned_deletion,
+        })
+        .collect()
+}
+
 fn is_task_block_label(trimmed: &str, label: &str) -> bool {
     trimmed.starts_with(&format!("{label}:")) || trimmed.starts_with(&format!("- {label}:"))
 }
 
-fn files_for_task_body(body: &str) -> Vec<String> {
+fn files_for_task_body(body: &str) -> Vec<TaskFile> {
     let mut files = Vec::new();
     let mut in_files = false;
 
@@ -346,7 +372,7 @@ fn files_for_task_body(body: &str) -> Vec<String> {
         if is_task_block_label(trimmed, "Files") {
             in_files = true;
             if let Some((_, value)) = trimmed.split_once(':') {
-                files.extend(paths_from_files_value(value));
+                files.extend(task_files_from_files_value(value));
             }
             continue;
         }
@@ -360,12 +386,16 @@ fn files_for_task_body(body: &str) -> Vec<String> {
         }
 
         if in_files && trimmed.starts_with('-') {
-            files.extend(paths_from_files_value(trimmed));
+            files.extend(task_files_from_files_value(trimmed));
         }
     }
 
-    files.sort();
-    files.dedup();
+    files.sort_by(|a, b| {
+        a.path
+            .cmp(&b.path)
+            .then(a.planned_deletion.cmp(&b.planned_deletion))
+    });
+    files.dedup_by(|a, b| a.path == b.path && a.planned_deletion == b.planned_deletion);
     files
 }
 
@@ -395,7 +425,7 @@ fn task_progress(text: &str) -> Vec<TaskProgress> {
     tasks
 }
 
-fn dirty_worktree_paths(repo_root: &Path) -> Option<HashSet<String>> {
+fn dirty_worktree_paths(repo_root: &Path) -> Option<HashMap<String, DirtyPathStatus>> {
     let output = std::process::Command::new("git")
         .args(["status", "--porcelain", "--untracked-files=all"])
         .current_dir(repo_root)
@@ -406,15 +436,17 @@ fn dirty_worktree_paths(repo_root: &Path) -> Option<HashSet<String>> {
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let mut paths = HashSet::new();
+    let mut paths = HashMap::new();
     for line in stdout.lines() {
+        let status = line.get(..2).unwrap_or("");
+        let deleted = status.as_bytes().contains(&b'D');
         let Some(raw_path) = line.get(3..) else {
             continue;
         };
         for path in raw_path.split(" -> ") {
             let normalized = normalize_task_path(path);
             if !normalized.is_empty() {
-                paths.insert(normalized);
+                paths.insert(normalized, DirtyPathStatus { deleted });
             }
         }
     }
@@ -423,7 +455,7 @@ fn dirty_worktree_paths(repo_root: &Path) -> Option<HashSet<String>> {
 
 fn dirty_files_for_unchecked_task<'a>(
     task: &'a TaskProgress,
-    dirty_paths: &HashSet<String>,
+    dirty_paths: &HashMap<String, DirtyPathStatus>,
 ) -> Vec<&'a str> {
     if task.checked {
         return Vec::new();
@@ -431,11 +463,12 @@ fn dirty_files_for_unchecked_task<'a>(
 
     task.files
         .iter()
-        .filter_map(|path| {
-            if dirty_paths.contains(path) {
-                Some(path.as_str())
-            } else {
+        .filter_map(|file| {
+            let dirty_status = dirty_paths.get(&file.path)?;
+            if file.planned_deletion && dirty_status.deleted {
                 None
+            } else {
+                Some(file.path.as_str())
             }
         })
         .collect()
@@ -636,7 +669,7 @@ fn design_required(meta: &SpecMeta) -> bool {
 fn lint_spec_dir(
     spec_dir: &Path,
     allowed_surfaces: &HashSet<String>,
-    dirty_paths: Option<&HashSet<String>>,
+    dirty_paths: Option<&HashMap<String, DirtyPathStatus>>,
 ) -> Vec<Issue> {
     let mut issues = Vec::new();
     let spec_md = spec_dir.join("spec.md");
@@ -1202,4 +1235,66 @@ pub fn run_lint(cfg: &Config, spec_slug: Option<&str>, log_to_stderr: bool) -> i
     let warn_count = all_issues.iter().filter(|i| i.severity == "WARN").count();
     report_ln!("\nSummary: {fail_count} fail, {warn_count} warn");
     if fail_count > 0 { 1 } else { 0 }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        DirtyPathStatus, TaskFile, TaskProgress, dirty_files_for_unchecked_task,
+        files_for_task_body,
+    };
+    use std::collections::HashMap;
+
+    fn dirty_status(deleted: bool) -> DirtyPathStatus {
+        DirtyPathStatus { deleted }
+    }
+
+    #[test]
+    fn deleted_files_entries_mark_every_path_on_the_line() {
+        let files = files_for_task_body(
+            "  - Files:\n    - deleted: `src/a.rs`, `src/b.rs`\n    - `src/c.rs`\n",
+        );
+
+        let planned: Vec<_> = files
+            .iter()
+            .map(|file| (file.path.as_str(), file.planned_deletion))
+            .collect();
+        assert_eq!(
+            planned,
+            vec![("src/a.rs", true), ("src/b.rs", true), ("src/c.rs", false),]
+        );
+    }
+
+    #[test]
+    fn dirty_deleted_path_is_not_reported_for_planned_deletion_entry() {
+        let task = TaskProgress {
+            id: "T-001".into(),
+            checked: false,
+            files: vec![TaskFile {
+                path: "src/old.rs".into(),
+                planned_deletion: true,
+            }],
+        };
+        let dirty_paths = HashMap::from([("src/old.rs".into(), dirty_status(true))]);
+
+        assert!(dirty_files_for_unchecked_task(&task, &dirty_paths).is_empty());
+    }
+
+    #[test]
+    fn dirty_non_deleted_path_is_reported_for_planned_deletion_entry() {
+        let task = TaskProgress {
+            id: "T-001".into(),
+            checked: false,
+            files: vec![TaskFile {
+                path: "src/old.rs".into(),
+                planned_deletion: true,
+            }],
+        };
+        let dirty_paths = HashMap::from([("src/old.rs".into(), dirty_status(false))]);
+
+        assert_eq!(
+            dirty_files_for_unchecked_task(&task, &dirty_paths),
+            vec!["src/old.rs"]
+        );
+    }
 }

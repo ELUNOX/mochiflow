@@ -15,7 +15,7 @@ Critical Stop Conditions:
 
 ## Tasks
 
-- [ ] T-001 [AC-01, AC-02, AC-03, AC-04] Add deletion-aware lint parsing
+- [x] T-001 [AC-01, AC-02, AC-03, AC-04] Add deletion-aware lint parsing
   - Depends on: none
   - Files:
     - `cli/crates/mochiflow-core/src/lint.rs`
