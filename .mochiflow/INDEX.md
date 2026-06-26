@@ -1,6 +1,6 @@
 # 📋 Spec Dashboard
 
-> updated: 2026-06-26 23:43 UTC
+> updated: 2026-06-26 23:46 UTC
 
 ## Pipeline
 
@@ -8,8 +8,8 @@
 |:------|------:|
 | 🌱 backlog seed | 9 |
 | 📝 draft | 0 |
-| 🟢 approved | 1 |
-| ✅ done | 15 |
+| 🟢 approved | 0 |
+| ✅ done | 16 |
 
 ## Backlog seeds
 
@@ -27,9 +27,7 @@
 
 ## Active specs
 
-| Spec | Status | Risk | Docs | Module |
-|:-----|:-------|:-----|:-----|:-------|
-| [lint-deleted-files-in-tasks](specs/lint-deleted-files-in-tasks/) | 🟢 approved | elevated | spec+design+tasks | — |
+（なし）
 
 ## Done (chronological)
 
@@ -37,6 +35,7 @@
 
 | Updated | Slug | Title | Type |
 |:--------|:-----|:------|:-----|
+| 2026-06-26 | [lint-deleted-files-in-tasks](specs/_done/lint-deleted-files-in-tasks/) | Suppress unchecked-task warnings for planned file deletions | fix |
 | 2026-06-26 | [choice-card-command-ux](specs/_done/choice-card-command-ux/) | Clarify choice-card commands and numbered replies | docs |
 | 2026-06-26 | [manifest-test-isolation](specs/_done/manifest-test-isolation/) | Isolate MANIFEST integrity check from functional conformance tests | refactor |
 | 2026-06-25 | [qa-attack-matrix](specs/_done/qa-attack-matrix/) | Add a QA attack matrix to plan and reviewer flows | feature |
@@ -53,4 +52,4 @@
 | 2026-06-23 | [build-completion-guidance](specs/_done/build-completion-guidance/) | Build phase should announce next step on completion | docs |
 | 2026-06-22 | [version-ssot-freeze](specs/_done/version-ssot-freeze/) | Version SSOT + freeze command | refactor |
 
-> done total: 15
+> done total: 16
