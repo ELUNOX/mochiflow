@@ -129,6 +129,11 @@ Write when the change is multi-step. Carries:
   task naturally covers multiple related ACs; do not split tasks just to make
   one task per AC. Each task body needs `Depends on:` (prior `T-###` IDs or
   `none`), `Files:`, `Done:`, and `Stop:`.
+- `Files:` entries list planned file touches. Use normal paths for files that
+  will be created or modified. For planned deletions, prefix the path with
+  `deleted:`, for example ``- deleted: `path/to/OldFile.ext` ``. The marker
+  applies to every path parsed from that line, though one deleted path per line
+  is the clearest style.
 - `[P]` parallel marks: a task tagged `- [ ] T-### [P] ...` runs parallel to the
   previous `[P]` block; no `[P]` depends on the previous task; never `[P]` two
   tasks editing the same file

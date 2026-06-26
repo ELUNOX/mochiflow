@@ -38,7 +38,7 @@ Critical Stop Conditions:
   - Stop:
     - Stop if the fixture cannot reliably create deleted, modified, and untracked git status cases.
 
-- [ ] T-003 [AC-05] Document planned-deletion task file notation
+- [x] T-003 [AC-05] Document planned-deletion task file notation
   - Depends on: T-001
   - Files:
     - `engine/reference/authoring.md`
