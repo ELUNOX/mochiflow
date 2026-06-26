@@ -19,9 +19,15 @@
 - `再開用プロンプトを作る` replaces visible `later` language only at high-value
   handoff points. The compatibility keyword `later` remains useful, but the label
   should name the artifact produced for the next session.
+- Build-completion resume prompts are generated inline from the active slug and
+  spec path, pointing the next session to `{slug} ship`. This keeps the change
+  documentation-only and avoids adding a second handoff template.
 - PR title/body correction remains free-form feedback before the PR creation
   gate. There is no dedicated `PR本文を修正する` command because that would make a
   lightweight edit look like a workflow transition.
+- Risk is `elevated` because the change updates behavior contracts across
+  multiple command procedures and shared routing guidance; no data, migration, or
+  security boundary is involved.
 
 ## Architecture
 
@@ -41,6 +47,11 @@
   command procedures and presentation rules.
 - The compatibility interface is the existing trigger vocabulary plus the new
   explicit labels:
+  - `review`
+  - `build`
+  - `ship`
+  - `later`
+  - `approved`
   - `計画を作る`
   - `再開用プロンプトを作る`
   - `計画を確定`
@@ -60,6 +71,9 @@
   `計画を確定` saves and commits the plan but does not start implementation.
 - If the most recent card maps a number to `計画を確定`, the agent dispatches the
   same plan-confirmation action as the label form.
+- If ad-hoc review completes outside an approved implementation-ready context,
+  the agent reports the review result and presents only actions valid for the
+  current lifecycle state.
 - If PR-body feedback is received before PR creation, the agent revises and
   re-presents the PR content rather than routing to the PR Feedback Loop.
 - If a requested source edit would require CLI runtime behavior, stop and route

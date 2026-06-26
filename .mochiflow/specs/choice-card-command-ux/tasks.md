@@ -29,7 +29,7 @@ Critical Stop Conditions:
 - [ ] T-003 [AC-07, AC-08, AC-09, AC-10] Update review, build, and ship follow-up prompts
   - Depends on: T-001
   - Files: `engine/commands/review.md`, `engine/commands/build.md`, `engine/commands/ship.md`
-  - Done: review completion presents `実装を開始する` / `再開用プロンプトを作る`; build completion presents `PR準備を始める` / `再開用プロンプトを作る`; ship PR approval presents `PRを作成する`; PR text edits are documented as ordinary feedback before PR creation.
+  - Done: review completion presents `実装を開始する` / `再開用プロンプトを作る` only from a plan-confirmed or `status: approved` context; build completion presents `PR準備を始める` / `再開用プロンプトを作る`; the build-completion resume prompt is inline and points the next session to `{slug} ship`; ship PR approval presents `PRを作成する`; PR text edits are documented as ordinary feedback before PR creation.
   - Stop: if PR-body correction is conflated with PR Feedback Loop or if PR creation can proceed without an explicit approval action.
 
 - [ ] T-004 [AC-11] Sync generated engine artifacts and run verification

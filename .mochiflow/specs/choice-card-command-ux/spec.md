@@ -10,9 +10,9 @@ check, and a plan commit. `later` is also opaque because it produces a resume
 prompt rather than merely stopping.
 
 The chosen approach is to make the visible choices describe user intent:
-`計画を確定`, `レビューする`, `実装を開始する`, `PR準備を始める`, `PRを作成する`, and
-`再開用プロンプトを作る`. Internal keywords remain accepted compatibility inputs,
-but they are not the first thing users see.
+`計画を作る`, `計画を確定`, `レビューする`, `実装を開始する`, `PR準備を始める`,
+`PRを作成する`, and `再開用プロンプトを作る`. Internal keywords remain accepted
+compatibility inputs, but they are not the first thing users see.
 
 Numbered replies are intentionally ephemeral. A reply such as `1` is safe only
 when it maps to the most recent choice card in the current conversation. It must
@@ -92,9 +92,10 @@ implementation or PR creation will start immediately.
 - AC-06: WHEN a plan has been confirmed and committed, THE SYSTEM SHALL present
   `レビューする`, `実装を開始する`, and `再開用プロンプトを作る`, ordered by risk as
   defined by the plan procedure.
-- AC-07: WHEN ad-hoc review completes, THE SYSTEM SHALL present
-  `実装を開始する` and `再開用プロンプトを作る` as the follow-up actions, while
-  preserving report-only behavior for review findings.
+- AC-07: WHEN ad-hoc review completes from a plan-confirmed flow or another
+  `status: approved` context, THE SYSTEM SHALL present `実装を開始する` and
+  `再開用プロンプトを作る` as the follow-up actions, while preserving report-only
+  behavior for review findings.
 - AC-08: WHEN build completes, THE SYSTEM SHALL present `PR準備を始める` and
   `再開用プロンプトを作る` as the follow-up actions.
 - AC-09: WHEN PR title/body content is presented before PR creation, THE SYSTEM
@@ -117,7 +118,7 @@ implementation or PR creation will start immediately.
 | QA-04 | P4 | cli | AI-observed | Inspect whether the design introduces a stored choice-card state file or persistent numbered-command state. | No persistent state is introduced; lifecycle state remains in spec artifacts. |
 | QA-05 | P5 | cli | AI-observed | Inspect whether the change requires migration, schema changes, or data conversion. | N/A: documentation-only engine behavior contract; no persisted data schema is changed. |
 | QA-06 | P6 | cli | Automated / AI-observed | Run the configured verification and inspect existing compatibility triggers. | Existing command tokens such as `mochiflow-plan`, `review`, `build`, `ship`, `later`, `approved`, and `create pr` remain usable where specified. |
-| QA-07 | P7 | cli | AI-observed | Compare the final engine text against this spec's action matrix and no-go decisions. | The implemented wording matches the approved choice labels, trigger sets, plan-confirmation numbering rule, resume-prompt placement, and PR-body feedback decision. |
+| QA-07 | P7 | cli | AI-observed | Compare the final engine text against this spec's action matrix and no-go decisions. | The implemented wording matches the approved choice labels, trigger sets, review-context condition, plan-confirmation numbering rule, resume-prompt placement, and PR-body feedback decision. |
 
 ## Completion Conditions
 
