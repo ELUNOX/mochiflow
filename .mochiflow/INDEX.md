@@ -1,15 +1,15 @@
 # 📋 Spec Dashboard
 
-> updated: 2026-06-25 22:25 UTC
+> updated: 2026-06-26 00:56 UTC
 
 ## Pipeline
 
 | stage | count |
 |:------|------:|
-| 🌱 backlog seed | 10 |
+| 🌱 backlog seed | 9 |
 | 📝 draft | 0 |
 | 🟢 approved | 0 |
-| ✅ done | 13 |
+| ✅ done | 14 |
 
 ## Backlog seeds
 
@@ -20,7 +20,6 @@
 | ["freeze-hardening"](specs/_backlog/"freeze-hardening".md) | "Freeze module hardening: error types, format stability, visibility" | ❓ "seed" | "conversation" |
 | ["frozen-surface-ssot"](specs/_backlog/"frozen-surface-ssot".md) | "Single source for frozen-surface input set definition and test performance" | ❓ "seed" | "conversation" |
 | ["lint-deleted-files-in-tasks"](specs/_backlog/"lint-deleted-files-in-tasks".md) | "Lint fires on deleted files listed in tasks.md Modified Files" | ❓ "seed" | "conversation" |
-| ["manifest-test-isolation"](specs/_backlog/"manifest-test-isolation".md) | "Isolate MANIFEST integrity check from functional conformance tests" | ❓ "seed" | "conversation" |
 | ["parallel-spec-context-switch"](specs/_backlog/"parallel-spec-context-switch".md) | "Support parallel spec work with explicit context switching" | ❓ "seed" | "conversation" |
 | ["phase-completion-guidance"](specs/_backlog/"phase-completion-guidance".md) | "Every phase should present the next action clearly" | ❓ "seed" | "conversation" |
 | ["ship-handoff-recovery-and-cleanup"](specs/_backlog/"ship-handoff-recovery-and-cleanup".md) | "Improve ship handoff recovery and post-merge cleanup" | ❓ "seed" | "conversation" |
@@ -36,6 +35,7 @@
 
 | Updated | Slug | Title | Type |
 |:--------|:-----|:------|:-----|
+| 2026-06-26 | [manifest-test-isolation](specs/_done/manifest-test-isolation/) | Isolate MANIFEST integrity check from functional conformance tests | refactor |
 | 2026-06-25 | [qa-attack-matrix](specs/_done/qa-attack-matrix/) | Add a QA attack matrix to plan and reviewer flows | feature |
 | 2026-06-25 | [lint-residue-and-multiline-ears](specs/_done/lint-residue-and-multiline-ears/) | Lint: detect template residue and multi-line EARS ACs | feature |
 | 2026-06-25 | [doctor-freeze-coherence](specs/_done/doctor-freeze-coherence/) | Clarify doctor/freeze coherence and context freshness | feature |
@@ -50,4 +50,4 @@
 | 2026-06-23 | [build-completion-guidance](specs/_done/build-completion-guidance/) | Build phase should announce next step on completion | docs |
 | 2026-06-22 | [version-ssot-freeze](specs/_done/version-ssot-freeze/) | Version SSOT + freeze command | refactor |
 
-> done total: 13
+> done total: 14
