@@ -12,6 +12,7 @@ description: |
 triggers:
   - mochiflow-review
   - レビューして
+  - レビューする
 trigger_patterns:
   - "{slug} review"
 delegate_to:
@@ -56,6 +57,12 @@ single source of truth for this behavior):
 - Summarize findings by severity and required fixes. If High or Critical
   findings exist, state that fixes require a separate build/fix step. Avoid
   exposing routing terms unless the user asks how the review was run.
+- When review resumes a plan-confirmed flow or another `status: approved`
+  implementation-ready context, present a numbered choice card with
+  **実装を開始する** (`build` / `mochiflow-build`) and
+  **再開用プロンプトを作る** (`resume` / `later`). Outside an approved context,
+  report the review result and present only actions valid for the current
+  lifecycle state.
 
 ## Stop conditions
 

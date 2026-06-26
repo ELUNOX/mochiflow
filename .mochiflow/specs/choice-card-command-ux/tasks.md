@@ -26,7 +26,7 @@ Critical Stop Conditions:
   - Done: discuss completion presents `計画を作る` / `再開用プロンプトを作る`; plan draft confirmation presents `計画を確定` with explicit no-implementation wording; selecting `計画を確定` by label or number dispatches the approve-to-build action; plan-confirmed choices present `レビューする`, `実装を開始する`, and `再開用プロンプトを作る` with risk-aware ordering and numbered replies.
   - Stop: if the plan approval gate becomes ambiguous or appears to start implementation immediately.
 
-- [ ] T-003 [AC-07, AC-08, AC-09, AC-10] Update review, build, and ship follow-up prompts
+- [x] T-003 [AC-07, AC-08, AC-09, AC-10] Update review, build, and ship follow-up prompts
   - Depends on: T-001
   - Files: `engine/commands/review.md`, `engine/commands/build.md`, `engine/commands/ship.md`
   - Done: review completion presents `実装を開始する` / `再開用プロンプトを作る` only from a plan-confirmed or `status: approved` context; build completion presents `PR準備を始める` / `再開用プロンプトを作る`; the build-completion resume prompt is inline and points the next session to `{slug} ship`; ship PR approval presents `PRを作成する`; PR text edits are documented as ordinary feedback before PR creation.
