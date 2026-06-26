@@ -10,7 +10,6 @@ description: |
   "{slug} マージ済み" / "{slug} 完了" resumes post-merge local cleanup only.
 triggers:
   - mochiflow-ship
-  - PR準備を始める
   - PR出して
   - リリースして
   - 修正依頼
@@ -94,8 +93,8 @@ living-spec fold, and archive.
 
 ### PR
 
-6. On the normal PR path, generate the PR title / description per `templates/delivery/pr-description.md` (the spec now lives under `_done/{slug}/`), write the body to `{install_dir}/state/{slug}/pr-body.md` (ephemeral, gitignored — **never** the spec dir), present it, and wait for human approval (gate 2). Present the approval action as **PRを作成する** (`create pr` / `approved`) in a numbered choice card. The PR title/body are always produced on the PR path — the automatable, provider-independent part. If the user gives PR text corrections instead, revise the title/body and re-present the approval card. On the explicit no-PR fast path, skip this PR section after the close-out commit.
-7. After the **PRを作成する** approval action on the PR path, run `mochiflow pr --spec {slug} --title "<title>" --body-file {install_dir}/state/{slug}/pr-body.md` (add `--draft` if applicable). ship is the sole producer of the body file; `mochiflow pr` only reads it (and writes `pr-request.json` under `state/{slug}/` for the `pr_driver` backend only). The working tree is clean because the close-out commit (step 5) already captured every tracked change. The CLI owns pre-flight (clean tree / branch / base≠head), the single `git push`, and backend resolution per `reference/git.md ## PR` (`pr_driver` > `provider` built-in > legacy `pr_command` > manual). Read its exit code:
+6. On the normal PR path, generate the PR title / description per `templates/delivery/pr-description.md` (the spec now lives under `_done/{slug}/`), write the body to `{install_dir}/state/{slug}/pr-body.md` (ephemeral, gitignored — **never** the spec dir), present it, and wait for human approval (gate 2). Present the approval action as **Create the PR** (`create pr` / `approved`) in a numbered choice card. The PR title/body are always produced on the PR path — the automatable, provider-independent part. If the user gives PR text corrections instead, revise the title/body and re-present the approval card. On the explicit no-PR fast path, skip this PR section after the close-out commit.
+7. After the **Create the PR** approval action on the PR path, run `mochiflow pr --spec {slug} --title "<title>" --body-file {install_dir}/state/{slug}/pr-body.md` (add `--draft` if applicable). ship is the sole producer of the body file; `mochiflow pr` only reads it (and writes `pr-request.json` under `state/{slug}/` for the `pr_driver` backend only). The working tree is clean because the close-out commit (step 5) already captured every tracked change. The CLI owns pre-flight (clean tree / branch / base≠head), the single `git push`, and backend resolution per `reference/git.md ## PR` (`pr_driver` > `provider` built-in > legacy `pr_command` > manual). Read its exit code:
    - `0` — PR created; capture the printed URL.
    - `10` — manual handoff: the branch is pushed; create the PR with the presented content via your provider UI/CLI, then report the URL / merge.
    - `3` — pre-flight failed; fix and re-run. Do not force past it.

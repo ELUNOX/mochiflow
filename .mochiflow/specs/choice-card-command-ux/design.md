@@ -8,17 +8,19 @@
   persistent state or global numeric commands.
 - User-facing labels are conversation-language actions. Stable internal tokens
   remain accepted for compatibility and for users who already know the workflow,
-  but they are secondary to labels such as `計画を確定` and `PR準備を始める`.
-- `計画を確定` is the visible name for the first delivery gate. It must describe
-  the actual operation: set `status: approved`, re-check, and commit plan
-  artifacts. It must also state that implementation does not start until the
-  user chooses `実装を開始する` or an equivalent build trigger.
+  but they are secondary to localized labels such as "confirm the plan" and
+  "start PR preparation".
+- The localized "confirm the plan" action is the visible name for the first
+  delivery gate. It must describe the actual operation: set `status: approved`,
+  re-check, and commit plan artifacts. It must also state that implementation
+  does not start until the user chooses the localized "start implementation"
+  action or an equivalent build trigger.
 - Choice selection is the dispatch primitive: choosing a visible option by label
-  or number invokes that option's action. For `計画を確定`, that action is the
-  approve-to-build gate.
-- `再開用プロンプトを作る` replaces visible `later` language only at high-value
-  handoff points. The compatibility keyword `later` remains useful, but the label
-  should name the artifact produced for the next session.
+  or number invokes that option's action. For plan confirmation, that action is
+  the approve-to-build gate.
+- The localized "create a resume prompt" action replaces visible `later` language
+  only at high-value handoff points. The compatibility keyword `later` remains
+  useful, but the label should name the artifact produced for the next session.
 - Build-completion resume prompts are generated inline from the active slug and
   spec path, pointing the next session to `{slug} ship`. This keeps the change
   documentation-only and avoids adding a second handoff template.
@@ -52,13 +54,13 @@
   - `ship`
   - `later`
   - `approved`
-  - `計画を作る`
-  - `再開用プロンプトを作る`
-  - `計画を確定`
-  - `レビューする`
-  - `実装を開始する`
-  - `PR準備を始める`
-  - `PRを作成する`
+  - localized label: create the plan
+  - localized label: create a resume prompt
+  - localized label: confirm the plan
+  - localized label: review
+  - localized label: start implementation
+  - localized label: start PR preparation
+  - localized label: create the PR
   - `approve plan`
   - `resume`
   - `create pr`
@@ -68,9 +70,11 @@
 - If a bare number cannot be mapped to the most recent unambiguous choice card,
   the agent asks the user to choose again using the current card labels.
 - If plan-confirmation language is ambiguous, the agent explains that
-  `計画を確定` saves and commits the plan but does not start implementation.
-- If the most recent card maps a number to `計画を確定`, the agent dispatches the
-  same plan-confirmation action as the label form.
+  confirming the plan saves and commits the plan but does not start
+  implementation.
+- If the most recent card maps a number to the localized plan-confirmation
+  action, the agent dispatches the same plan-confirmation action as the label
+  form.
 - If ad-hoc review completes outside an approved implementation-ready context,
   the agent reports the review result and presents only actions valid for the
   current lifecycle state.
@@ -92,6 +96,10 @@
 
 ## Review Results
 
-Build records the required elevated-risk reviewer result here after
-implementation. Use `Reviewer mode: delegated | inline` and
-`Verdict: pass | pass-with-comments | fail`.
+- Reviewer mode: delegated
+  - Reviewer: Avicenna subagent
+  - Verdict: pass-with-comments
+  - Finding: Medium test-gap on AC-11 evidence granularity in `tasks.md`; fixed
+    by replacing summary-only evidence with command-output transcript details.
+  - Note: reviewer report header self-reported `inline`, but the review was run
+    through delegated subagent transport in this session.

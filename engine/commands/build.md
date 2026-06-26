@@ -11,7 +11,6 @@ description: |
   "ビルドして". Does not create PRs, set `done`, or archive (that is ship).
 triggers:
   - mochiflow-build
-  - 実装を開始する
   - 実装して
   - 進めて
   - ビルドして
@@ -72,8 +71,8 @@ Implement the approved spec and produce verification and the AC Verification Mat
   for wrap-up; do not lead with `risk`, `status`, or reviewer mode.
 - On build completion, always include: (1) the verification result (all items
   passed, or human confirmation items remain), and (2) a numbered choice card:
-  **PR準備を始める** (`ship` / `mochiflow-ship`) or
-  **再開用プロンプトを作る** (`resume` / `later`). The resume prompt is generated
+  **Start PR preparation** (`ship` / `mochiflow-ship`) or
+  **Create a resume prompt** (`resume` / `later`). The resume prompt is generated
   inline from the active slug and spec path and tells the next session to run
   `{slug} ship`.
 

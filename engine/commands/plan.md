@@ -11,7 +11,6 @@ triggers:
   - 仕様作って
   - プランして
   - 計画作って
-  - 計画を作る
 trigger_patterns:
   - "{slug} plan"
 artifacts:
@@ -87,7 +86,7 @@ and drive to human approval for implementation. Do not start implementation.
    command matters.
 7. Present readiness in conversation-language plain wording: what will change and
    what was checked. Then present a numbered choice card whose approval action is
-   **計画を確定** (`approve plan` / `approved`). The action means: edit
+   **Confirm the plan** (`approve plan` / `approved`). The action means: edit
    `spec.yaml` `status: approved` and `updated` directly, re-run consistency
    checks, and commit the plan artifacts. It does not start implementation; the
    next-step card in step 10 decides whether to review, build, or generate a
@@ -106,19 +105,19 @@ and drive to human approval for implementation. Do not start implementation.
     `later` as compatibility keywords.
 
     Display order depends on risk:
-    - When `risk >= elevated`: **レビューする** (recommended; `review` /
-      `mochiflow-review`) / **実装を開始する** (`build` / `mochiflow-build`) /
-      **再開用プロンプトを作る** (`resume` / `later`).
-    - When `risk = standard`: **実装を開始する** / **レビューする** /
-      **再開用プロンプトを作る**.
+    - When `risk >= elevated`: **Review** (recommended; `review` /
+      `mochiflow-review`) / **Start implementation** (`build` /
+      `mochiflow-build`) / **Create a resume prompt** (`resume` / `later`).
+    - When `risk = standard`: **Start implementation** / **Review** /
+      **Create a resume prompt**.
 
     Behavior per choice:
-    - **レビューする** — run `mochiflow-review` (spec/design quality review, not code
+    - **Review** — run `mochiflow-review` (spec/design quality review, not code
       review) on the current spec. On `pass` / `pass-with-comments`, re-present
-      **実装を開始する** / **再開用プロンプトを作る** only. On `fail`, report findings
+      **Start implementation** / **Create a resume prompt** only. On `fail`, report findings
       and stop; the user decides whether to fix and re-review or proceed.
-    - **実装を開始する** — proceed to `mochiflow-build` in the same session.
-    - **再開用プロンプトを作る** — stop here; output a resume note (rendered from
+    - **Start implementation** — proceed to `mochiflow-build` in the same session.
+    - **Create a resume prompt** — stop here; output a resume note (rendered from
       `templates/handoff/build-session-prompt.md`, includes `{slug}` and
       `{specs_dir}/{slug}/`) that can be pasted into a new session to continue.
 
@@ -134,7 +133,7 @@ and drive to human approval for implementation. Do not start implementation.
   compatibility approval word.
 - Do not touch implementation code / build / PR / archive.
 - Continue to `mochiflow-build` in the same session only when the user chooses
-  **実装を開始する** (or `build`) from the step-10 choice card; do not require or
-  suggest a slug for that same-session phrase. **再開用プロンプトを作る** (or
-  `later`) outputs the handoff prompt and stops. **レビューする** (or `review`)
+  **Start implementation** (or `build`) from the step-10 choice card; do not
+  require or suggest a slug for that same-session phrase. **Create a resume
+  prompt** (or `later`) outputs the handoff prompt and stops. **Review** (or `review`)
   runs ad-hoc review and, on pass, re-presents build / resume.

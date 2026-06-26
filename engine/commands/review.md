@@ -12,7 +12,6 @@ description: |
 triggers:
   - mochiflow-review
   - レビューして
-  - レビューする
 trigger_patterns:
   - "{slug} review"
 delegate_to:
@@ -59,8 +58,8 @@ single source of truth for this behavior):
   exposing routing terms unless the user asks how the review was run.
 - When review resumes a plan-confirmed flow or another `status: approved`
   implementation-ready context, present a numbered choice card with
-  **実装を開始する** (`build` / `mochiflow-build`) and
-  **再開用プロンプトを作る** (`resume` / `later`). Outside an approved context,
+  **Start implementation** (`build` / `mochiflow-build`) and
+  **Create a resume prompt** (`resume` / `later`). Outside an approved context,
   report the review result and present only actions valid for the current
   lifecycle state.
 

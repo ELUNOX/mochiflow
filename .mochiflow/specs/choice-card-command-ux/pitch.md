@@ -9,10 +9,10 @@ will immediately begin implementation, even when the intended action is only to
 confirm and commit the plan. The `later` label also hides the actual output: a
 prompt for resuming in a new session.
 
-At the same time, asking users to type long action labels such as
-`計画を作る` or `実装を開始する` every time is unnecessarily heavy. The UX needs
-plain user-facing action labels, short explicit triggers, and safe numbered
-replies for the most recent choice card.
+At the same time, asking users to type long localized action labels every time
+is unnecessarily heavy. The UX needs plain user-facing action labels in the
+conversation language, short explicit triggers, and safe numbered replies for
+the most recent choice card.
 
 ## Appetite
 
@@ -31,38 +31,39 @@ interpreted without a live, unambiguous choice card in the current conversation.
 Use these phase-specific choices:
 
 - After discuss completes:
-  - `計画を作る` — triggers: `計画を作る`, `plan`, `mochiflow-plan`.
-  - `再開用プロンプトを作る` — triggers: `再開用プロンプトを作る`, `resume`, `later`.
+  - Create the plan — triggers: localized label, `plan`, `mochiflow-plan`.
+  - Create a resume prompt — triggers: localized label, `resume`, `later`.
 - After plan draft is ready:
-  - `計画を確定` — triggers: `計画を確定`, `approve plan`, `approved`.
+  - Confirm the plan — triggers: localized label, `approve plan`, `approved`.
     Selecting this visible action, by label or by its displayed number, is the
     approve-to-build gate input.
   - Ordinary correction feedback revises the plan and re-presents it; do not add
-    a `計画を修正する` command.
+    a dedicated fix-plan command.
 - After plan is confirmed and committed:
-  - `レビューする` — triggers: `レビューする`, `review`, `mochiflow-review`.
-  - `実装を開始する` — triggers: `実装を開始する`, `build`, `mochiflow-build`.
-  - `再開用プロンプトを作る` — triggers: `再開用プロンプトを作る`, `resume`, `later`.
+  - Review — triggers: localized label, `review`, `mochiflow-review`.
+  - Start implementation — triggers: localized label, `build`, `mochiflow-build`.
+  - Create a resume prompt — triggers: localized label, `resume`, `later`.
 - After ad-hoc review reports:
-  - `実装を開始する` — triggers: `実装を開始する`, `build`, `mochiflow-build`.
-  - `再開用プロンプトを作る` — triggers: `再開用プロンプトを作る`, `resume`, `later`.
+  - Start implementation — triggers: localized label, `build`, `mochiflow-build`.
+  - Create a resume prompt — triggers: localized label, `resume`, `later`.
 - After build completes:
-  - `PR準備を始める` — triggers: `PR準備を始める`, `ship`, `mochiflow-ship`.
-  - `再開用プロンプトを作る` — triggers: `再開用プロンプトを作る`, `resume`, `later`.
+  - Start PR preparation — triggers: localized label, `ship`, `mochiflow-ship`.
+  - Create a resume prompt — triggers: localized label, `resume`, `later`.
 - After PR title/body are presented:
-  - `PRを作成する` — triggers: `PRを作成する`, `create pr`, `approved`.
+  - Create the PR — triggers: localized label, `create pr`, `approved`.
   - PR text corrections are ordinary feedback: revise the PR text and re-present
     it. Do not add a `PR本文を修正する` command.
 
-Visible approval UX should say `計画を確定`, not `承認`. It must state that the
-action updates `spec.yaml` to `status: approved`, re-checks consistency, and
-commits the plan artifacts, but does not start implementation. The old
-approval words may remain compatibility inputs for delivery gates, but they
-should not be the primary displayed action labels.
+Visible approval UX should use a localized action label meaning "confirm the
+plan", not a generic approval word. It must state that the action updates
+`spec.yaml` to `status: approved`, re-checks consistency, and commits the plan
+artifacts, but does not start implementation. The old approval words may remain
+compatibility inputs for delivery gates, but they should not be the primary
+displayed action labels.
 
-Only show `再開用プロンプトを作る` at the agreed high-value handoff points:
-discuss completion, plan confirmation, review completion, and build completion.
-Do not make it a permanent option on every phase prompt.
+Only show the localized resume-prompt action at the agreed high-value handoff
+points: discuss completion, plan confirmation, review completion, and build
+completion. Do not make it a permanent option on every phase prompt.
 
 ## Rabbit Holes
 
@@ -72,7 +73,7 @@ Do not make it a permanent option on every phase prompt.
   enough.
 - Do not add a dedicated PR-body editing command. Free-form feedback is clearer
   for that moment.
-- Do not make `計画を確定` imply immediate implementation.
+- Do not make the plan-confirmation action imply immediate implementation.
 - Do not show a resume-prompt option at every possible pause point.
 
 ## No-gos
@@ -91,8 +92,8 @@ Do not make it a permanent option on every phase prompt.
   operation.
 - Use only stable internal keywords such as `review`, `build`, and `later` —
   rejected because first-time users see workflow jargon instead of actions.
-- Add `再開用プロンプトを作る` everywhere — rejected because it makes common choice
-  cards noisy.
+- Add the resume-prompt action everywhere — rejected because it makes common
+  choice cards noisy.
 - Add `PR本文を修正する` — rejected because PR text edits are better handled as
   ordinary feedback before the PR creation gate.
 - Make numbered choices durable across sessions — rejected because the same

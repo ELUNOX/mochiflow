@@ -71,10 +71,11 @@ as `spec.yaml (draft)` + `pitch.md`. Do not write implementation code.
    do not lead with internal headings. Then ask the user to choose the next step
    with a numbered choice card.
 
-   - **計画を作る** (`plan` / `mochiflow-plan`) — proceed to `mochiflow-plan` in the same session.
-   - **再開用プロンプトを作る** (`resume` / `later`) — stop here; output a resume
-     note (spec slug and path) that can be pasted into a new session to continue
-     with `{slug} plan`.
+   - **Create the plan** (`plan` / `mochiflow-plan`) — proceed to
+     `mochiflow-plan` in the same session.
+   - **Create a resume prompt** (`resume` / `later`) — stop here; output a
+     resume note (spec slug and path) that can be pasted into a new session to
+     continue with `{slug} plan`.
 
 ## Stop conditions
 
