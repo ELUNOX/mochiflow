@@ -1143,6 +1143,27 @@ fn run_lint_case_with_dirty_file(
     tasks_md: &str,
     dirty_file: &str,
 ) -> (i32, String) {
+    run_lint_case_with_dirty_file_state(
+        spec_yaml,
+        spec_md,
+        tasks_md,
+        dirty_file,
+        DirtyFileState::Untracked,
+    )
+}
+
+enum DirtyFileState {
+    Untracked,
+    Deleted,
+}
+
+fn run_lint_case_with_dirty_file_state(
+    spec_yaml: &str,
+    spec_md: &str,
+    tasks_md: &str,
+    dirty_file: &str,
+    dirty_state: DirtyFileState,
+) -> (i32, String) {
     let tmp = tempfile::tempdir().unwrap();
     let install = tmp.path().join(".mochiflow");
     let memory = install.join("memory");
@@ -1184,16 +1205,40 @@ fn run_lint_case_with_dirty_file(
     std::fs::write(spec_dir.join("spec.md"), spec_md).unwrap();
     std::fs::write(spec_dir.join("tasks.md"), tasks_md).unwrap();
 
-    let dirty_path = tmp.path().join(dirty_file);
-    std::fs::create_dir_all(dirty_path.parent().unwrap()).unwrap();
-    std::fs::write(dirty_path, "dirty\n").unwrap();
-
     let git = std::process::Command::new("git")
         .arg("init")
         .current_dir(tmp.path())
         .output()
         .unwrap();
     assert!(git.status.success(), "git init failed");
+
+    let dirty_path = tmp.path().join(dirty_file);
+    std::fs::create_dir_all(dirty_path.parent().unwrap()).unwrap();
+    std::fs::write(&dirty_path, "dirty\n").unwrap();
+
+    if matches!(dirty_state, DirtyFileState::Deleted) {
+        let add = std::process::Command::new("git")
+            .args(["add", dirty_file])
+            .current_dir(tmp.path())
+            .output()
+            .unwrap();
+        assert!(add.status.success(), "git add failed");
+        let commit = std::process::Command::new("git")
+            .args([
+                "-c",
+                "user.name=Test",
+                "-c",
+                "user.email=test@example.com",
+                "commit",
+                "-m",
+                "track dirty fixture",
+            ])
+            .current_dir(tmp.path())
+            .output()
+            .unwrap();
+        assert!(commit.status.success(), "git commit failed");
+        std::fs::remove_file(dirty_path).unwrap();
+    }
 
     let out = assert_cmd::Command::cargo_bin("mochiflow")
         .unwrap()
@@ -1555,6 +1600,45 @@ fn lint_approved_does_not_warn_when_dirty_task_file_is_checked() {
     assert_eq!(code, 0, "{out}");
     assert!(
         !out.contains("modified Files entries and is not checked"),
+        "{out}"
+    );
+}
+
+#[test]
+fn lint_approved_does_not_warn_when_deleted_task_file_is_marked_deleted() {
+    let md = "# S\n\n## Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
+              ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | UNVERIFIED |\n";
+    let tasks = "# Tasks\n\n- [ ] T-001 [AC-01] Do x\n  - Depends on: none\n  - Files:\n    - deleted: `src/x.rs`\n  - Done:\n    - [ ] Verification passed\n  - Stop:\n    - stop\n";
+    let (code, out) = run_lint_case_with_dirty_file_state(
+        GOOD_YAML,
+        md,
+        tasks,
+        "src/x.rs",
+        DirtyFileState::Deleted,
+    );
+    assert_eq!(code, 0, "{out}");
+    assert!(
+        !out.contains("modified Files entries and is not checked"),
+        "{out}"
+    );
+}
+
+#[test]
+fn lint_approved_warns_when_deleted_marker_file_is_not_deleted() {
+    let md = "# S\n\n## Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
+              ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | UNVERIFIED |\n";
+    let tasks = "# Tasks\n\n- [ ] T-001 [AC-01] Do x\n  - Depends on: none\n  - Files:\n    - deleted: `src/x.rs`\n  - Done:\n    - [ ] Verification passed\n  - Stop:\n    - stop\n";
+    let (code, out) = run_lint_case_with_dirty_file_state(
+        GOOD_YAML,
+        md,
+        tasks,
+        "src/x.rs",
+        DirtyFileState::Untracked,
+    );
+    assert_eq!(code, 0, "approved drift is a WARN, not a FAIL: {out}");
+    assert!(
+        out.contains("WARN:")
+            && out.contains("task T-001 has modified Files entries and is not checked: src/x.rs"),
         "{out}"
     );
 }

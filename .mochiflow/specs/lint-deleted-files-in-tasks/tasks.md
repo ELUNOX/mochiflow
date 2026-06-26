@@ -26,7 +26,7 @@ Critical Stop Conditions:
   - Stop:
     - Stop if deletion handling requires changing task completion semantics instead of only warning selection.
 
-- [ ] T-002 [AC-01, AC-02, AC-03, AC-04] Add conformance coverage for deletion-marked task files
+- [x] T-002 [AC-01, AC-02, AC-03, AC-04] Add conformance coverage for deletion-marked task files
   - Depends on: T-001
   - Files:
     - `cli/crates/mochiflow-cli/tests/conformance.rs`
