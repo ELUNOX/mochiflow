@@ -1,0 +1,11 @@
+version: 1
+slug: "choice-card-command-ux"
+title: "Clarify choice-card commands and numbered replies"
+type: "docs"
+surfaces:
+  - "cli"
+integration: "none"
+risk: "elevated"
+status: "draft"
+created: "2026-06-26"
+updated: "2026-06-26"
