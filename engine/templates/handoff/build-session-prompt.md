@@ -1,7 +1,8 @@
 # Build Session Handoff Prompt Template
 
-Use this template at the end of `mochiflow-plan` after `spec.yaml` is `approved` and
-the final consistency check passes. Render the copy-paste prompt in
+Use this template when the user chooses the plan-completion resume-prompt action
+at the end of `mochiflow-plan`, after `spec.yaml` is `approved` and the final
+consistency check passes. Render the copy-paste prompt in
 `[i18n].artifact_language`. Preserve commands, paths, metadata values, and
 identifiers exactly.
 

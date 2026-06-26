@@ -11,6 +11,7 @@ triggers:
   - 仕様作って
   - プランして
   - 計画作って
+  - 計画を作る
 trigger_patterns:
   - "{slug} plan"
 artifacts:
@@ -84,11 +85,14 @@ and drive to human approval for implementation. Do not start implementation.
 6. Run `mochiflow lint --spec {slug}` and fix any FAIL before asking for approval.
    When talking to the user, call this a consistency check unless the exact
    command matters.
-7. Present readiness in conversation-language plain wording: what will change, what
-   was checked, and that approval unlocks implementation (but does not start it
-   immediately — the choice card in step 10 decides the next action). On an
-   approval word (`reference/workflow.md ## Human gates`), edit `spec.yaml`
-   `status: approved` and `updated` directly (there is no CLI transition command).
+7. Present readiness in conversation-language plain wording: what will change and
+   what was checked. Then present a numbered choice card whose approval action is
+   **計画を確定** (`approve plan` / `approved`). The action means: edit
+   `spec.yaml` `status: approved` and `updated` directly, re-run consistency
+   checks, and commit the plan artifacts. It does not start implementation; the
+   next-step card in step 10 decides whether to review, build, or generate a
+   resume prompt. Free-form correction feedback revises the plan and re-presents
+   readiness instead of adding a separate "fix the plan" command.
 8. Re-run `mochiflow lint --spec {slug}` after setting `status: approved`; fix any FAIL before ending plan.
 9. Commit the plan artifacts on the existing `{prefix}/{slug}` branch with a
    `docs(spec): ...` Conventional Commit and `Spec: {slug}` trailer. Stage only
@@ -97,21 +101,24 @@ and drive to human approval for implementation. Do not start implementation.
    create a separate `docs(spec): ...` commit with the same `Spec:` trailer. Do
    not amend the phase commit.
 10. After the approved consistency check passes and the plan commit is created,
-    ask the user to choose the next step. Choice keywords
-    (`review`, `build`, `later`) are stable identifiers; surrounding labels
-    follow the conversation language.
+    ask the user to choose the next step with a numbered choice card. Use
+    conversation-language action labels first and keep `review` / `build` /
+    `later` as compatibility keywords.
 
     Display order depends on risk:
-    - When `risk >= elevated`: review (with a recommended marker) / build / later.
-    - When `risk = standard`: build / review / later.
+    - When `risk >= elevated`: **レビューする** (recommended; `review` /
+      `mochiflow-review`) / **実装を開始する** (`build` / `mochiflow-build`) /
+      **再開用プロンプトを作る** (`resume` / `later`).
+    - When `risk = standard`: **実装を開始する** / **レビューする** /
+      **再開用プロンプトを作る**.
 
     Behavior per choice:
-    - **review** — run `mochiflow-review` (spec/design quality review, not code
+    - **レビューする** — run `mochiflow-review` (spec/design quality review, not code
       review) on the current spec. On `pass` / `pass-with-comments`, re-present
-      build / later only. On `fail`, report findings and stop; the user decides
-      whether to fix and re-review or proceed.
-    - **build** — proceed to `mochiflow-build` in the same session.
-    - **later** — stop here; output a resume note (rendered from
+      **実装を開始する** / **再開用プロンプトを作る** only. On `fail`, report findings
+      and stop; the user decides whether to fix and re-review or proceed.
+    - **実装を開始する** — proceed to `mochiflow-build` in the same session.
+    - **再開用プロンプトを作る** — stop here; output a resume note (rendered from
       `templates/handoff/build-session-prompt.md`, includes `{slug}` and
       `{specs_dir}/{slug}/`) that can be pasted into a new session to continue.
 
@@ -123,9 +130,11 @@ and drive to human approval for implementation. Do not start implementation.
   unless they are explicitly carried as `[NEEDS-CLARIFICATION]`; resolve them
   before `approved`.
 - Do not ask for implementation approval until `mochiflow lint --spec {slug}` passes on the draft spec.
-- Do not set `status: approved` without an approval word.
+- Do not set `status: approved` without the approve-to-build choice action or a
+  compatibility approval word.
 - Do not touch implementation code / build / PR / archive.
 - Continue to `mochiflow-build` in the same session only when the user chooses
-  `build` from the step-10 choice card; do not require or suggest a slug for
-  that same-session phrase. `later` outputs the handoff prompt and stops.
-  `review` runs ad-hoc review and, on pass, re-presents build / later.
+  **実装を開始する** (or `build`) from the step-10 choice card; do not require or
+  suggest a slug for that same-session phrase. **再開用プロンプトを作る** (or
+  `later`) outputs the handoff prompt and stops. **レビューする** (or `review`)
+  runs ad-hoc review and, on pass, re-presents build / resume.

@@ -20,7 +20,7 @@ Critical Stop Conditions:
   - Done: shared guidance states that choice numbers are ephemeral aliases for the most recent unambiguous card, visible labels use conversation-language actions, and compatibility tokens remain secondary stable identifiers.
   - Stop: if the rule would require a persistent state model or conflict with artifact-based lifecycle state.
 
-- [ ] T-002 [AC-03, AC-04, AC-05, AC-06, AC-10] Update discuss and plan choice-card instructions
+- [x] T-002 [AC-03, AC-04, AC-05, AC-06, AC-10] Update discuss and plan choice-card instructions
   - Depends on: T-001
   - Files: `engine/commands/discuss.md`, `engine/commands/plan.md`, `engine/templates/handoff/build-session-prompt.md`
   - Done: discuss completion presents `計画を作る` / `再開用プロンプトを作る`; plan draft confirmation presents `計画を確定` with explicit no-implementation wording; selecting `計画を確定` by label or number dispatches the approve-to-build action; plan-confirmed choices present `レビューする`, `実装を開始する`, and `再開用プロンプトを作る` with risk-aware ordering and numbered replies.
