@@ -55,8 +55,9 @@ gate still catches a stale committed manifest.
 - In:
   - Refactor the two MANIFEST-freshness-coupled integration tests in
     `cli/crates/mochiflow-cli/tests/cli.rs` to a tempdir fixture engine.
-  - Add `mochiflow freeze --check` to the `quick` verify profile in
-    `.mochiflow/config.toml`.
+  - Add the working-tree `cargo run --manifest-path cli/Cargo.toml -- freeze --check`
+    to the `quick` verify profile in `.mochiflow/config.toml` (not the installed
+    `mochiflow` binary).
 - Out:
   - The version-gate hash composition (`compute_contracts_hash`) and its tests.
   - The `default` verify profile command and the CI `freeze --check` step.
@@ -86,10 +87,12 @@ gate still catches a stale committed manifest.
   resolution behavior using an in-test tempdir fixture engine, and SHALL NOT
   reference the committed repository MANIFEST in those two tests.
 - AC-03: WHERE the `quick` verify profile is selected, THE SYSTEM SHALL execute
-  `mochiflow freeze --check` in addition to the existing `cargo test` command.
+  the working-tree `cargo run --manifest-path cli/Cargo.toml -- freeze --check`
+  (not the installed `mochiflow` binary) in addition to the existing `cargo test`
+  command.
 - AC-04: THE SYSTEM SHALL keep the `default` verify profile command and the CI
-  `freeze --check` step unchanged, so `mochiflow freeze --check` remains the
-  single authoritative integrity gate.
+  `freeze --check` step unchanged, so the working-tree `freeze --check` remains
+  the single authoritative integrity gate.
 
 ## QA Scenarios
 
@@ -102,6 +105,7 @@ gate still catches a stale committed manifest.
 | QA-05 | P4 | cli | Automated | After running the refactored tests, inspect the committed `engine/MANIFEST.json` for modification. | Committed `engine/MANIFEST.json` is unchanged; tests write only inside their tempdir fixtures. |
 | QA-06 | P2 | cli | Automated | N/A check: no interactive / keyboard / large-input surface is introduced. | N/A: test-architecture + config change only, no interactive surface. |
 | QA-07 | P5 | cli | Automated | N/A check: no persisted data format or migration is involved. | N/A: no stored data or schema migration; only test fixtures and a verify-profile string change. |
+| QA-08 | P6 | cli | Automated | Run `cargo run --manifest-path cli/Cargo.toml -- config show`; confirm the `cli` surface `quick` profile lists `cargo run --manifest-path cli/Cargo.toml -- freeze --check`. Then run the `quick` profile end-to-end. | `config show` reflects the updated `quick` profile and the profile run passes (tests + working-tree `freeze --check`). |
 
 ## Completion Conditions
 
