@@ -1,12 +1,12 @@
 # 📋 Spec Dashboard
 
-> updated: 2026-06-26 19:15 UTC
+> updated: 2026-06-26 23:02 UTC
 
 ## Pipeline
 
 | stage | count |
 |:------|------:|
-| 🌱 backlog seed | 9 |
+| 🌱 backlog seed | 10 |
 | 📝 draft | 0 |
 | 🟢 approved | 0 |
 | ✅ done | 15 |
@@ -15,6 +15,7 @@
 
 | Slug | Title | Maturity | Source |
 |:-----|:------|:---------|:-------|
+| ["active-spec-open-directory"](specs/_backlog/"active-spec-open-directory".md) | "Introduce an _open directory for active specs" | ❓ "seed" | "conversation" |
 | ["develop-branch-workflow"](specs/_backlog/"develop-branch-workflow".md) | "Introduce develop branch to reduce PR ceremony for non-code changes" | ❓ "seed" | "conversation" |
 | ["diagnostics-command-surfaces-hardening"](specs/_backlog/"diagnostics-command-surfaces-hardening".md) | "Harden diagnostics command surfaces and source-repo guidance" | ❓ "seed" | "conversation" |
 | ["freeze-hardening"](specs/_backlog/"freeze-hardening".md) | "Freeze module hardening: error types, format stability, visibility" | ❓ "seed" | "conversation" |
