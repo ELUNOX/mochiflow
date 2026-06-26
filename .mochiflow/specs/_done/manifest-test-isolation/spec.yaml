@@ -1,0 +1,12 @@
+version: 1
+slug: "manifest-test-isolation"
+title: "Isolate MANIFEST integrity check from functional conformance tests"
+type: "refactor"
+surfaces:
+  - "cli"
+integration: "none"
+risk: "standard"
+status: "done"
+created: "2026-06-25"
+updated: "2026-06-25"
+completed: "2026-06-26T00:55:35Z"
