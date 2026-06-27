@@ -21,14 +21,14 @@ Critical Stop Conditions:
     - `cli/crates/mochiflow-core/src/lib.rs`
     - `cli/crates/mochiflow-cli/src/main.rs`
     - `cli/crates/mochiflow-cli/tests/conformance.rs`
-  - Done: `mochiflow ship [slug]` resolves an approved active spec, supports dry-run without mutation, runs final verification, stops before mutation for failing/missing/TODO verification commands, updates eligible automated AC Matrix rows to `PASS` with evidence, writes done metadata, moves the spec to `_done`, regenerates the index while leaving ignored runtime state unstaged, and handles active-only, archived-only uncommitted, both active and archived, neither present, already done, and partially staged states in tests.
+  - Done: `mochiflow ship [slug]` resolves an approved active spec, supports dry-run without mutation, runs final verification, stops before mutation for failing/missing/TODO verification commands, updates eligible automated AC Matrix rows to `PASS` without overwriting AC-specific evidence, writes done metadata with `completed` formatted as `YYYY-MM-DDTHH:MM:SSZ`, moves the spec to `_done`, regenerates the index while leaving ignored runtime state unstaged, and handles active-only, archived-only uncommitted, both active and archived, neither present, already done, and partially staged states in tests.
   - Stop: stop if target resolution needs a branch convention that conflicts with existing `reference/git.md`.
 - [ ] T-002 [AC-04, AC-05, AC-06, AC-07] Implement safe staging validation and close-out commit
   - Depends on: T-001
   - Files:
     - `cli/crates/mochiflow-core/src/ship.rs`
     - `cli/crates/mochiflow-cli/tests/conformance.rs`
-  - Done: ship stages only configured lifecycle paths, rejects unrelated dirt using `git status --porcelain=v1 -z`, validates `git diff --cached --name-status -z`, handles paths with spaces/special characters, and creates one close-out commit with `Spec: <slug>` trailer.
+  - Done: ship stages only configured lifecycle paths, uses the ship lifecycle allowlist rather than branch-switch dirt rules, rejects unrelated dirt using `git status --porcelain=v1 -z`, validates `git diff --cached --name-status -z`, handles paths with spaces/special characters, and creates one close-out commit with `Spec: <slug>` trailer.
   - Stop: stop if Git path handling cannot be expressed with configured paths without repository-wide staging.
 - [ ] T-003 [AC-08] Add slug-aware PR pre-flight guard
   - Depends on: T-001
@@ -54,3 +54,11 @@ Critical Stop Conditions:
     - `cli/crates/mochiflow-cli/tests/conformance.rs`
   - Done: engine guidance calls `mochiflow ship`, manual fallback uses configured lifecycle parent pathspecs, command allowlists include terminal `ship`, and dogfood generated artifacts are in sync.
   - Stop: stop if generated adapter outputs contain unrelated user-authored changes outside managed blocks.
+- [ ] T-005 [AC-02, AC-04, AC-07, AC-09, AC-10] Record evidence and dogfood close-out constraints
+  - Depends on: T-001, T-002, T-004
+  - Files:
+    - `.mochiflow/specs/ship-archive-staging-pathspec/spec.md`
+    - `.mochiflow/specs/ship-archive-staging-pathspec/design.md`
+    - `.mochiflow/specs/ship-archive-staging-pathspec/tasks.md`
+  - Done: AC Matrix evidence names concrete test functions or command outputs for each automated behavior, QA-04 records committed path/trailer evidence, QA-05 records legacy done-spec non-modification evidence, and this spec's own close-out plan explicitly uses the AC-10 manual fallback instead of the new command.
+  - Stop: stop if evidence would rely only on a generic final verification PASS token.

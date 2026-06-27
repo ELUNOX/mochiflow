@@ -78,6 +78,9 @@ and close-out failures do not interrupt PR handoff.
 - `{specs_dir}` is configured to a non-default path.
 - Specs are gitignored, so lifecycle artifact staging may be intentionally empty.
 - ADR files are unchanged because there are no durable learnings to record.
+- This spec's own close-out must not rely on the newly implemented
+  `mochiflow ship`; it uses the documented manual fallback while the command is
+  validated in fixtures.
 
 ## Acceptance Criteria (EARS)
 
@@ -109,6 +112,12 @@ and close-out failures do not interrupt PR handoff.
 
 - Every AC appears in the AC Verification Matrix with a done-eligible result token (`PASS`, `CONFIRMED`, or `N/A: <reason>`).
 - Verification commands and results are recorded.
+- Build records AC-specific evidence for each automated behavior, such as test
+  function names, command output, `git diff --cached --name-status -z` checks,
+  commit trailer inspection, and fixture assertions. A generic final
+  verification command result is not sufficient evidence by itself.
+- QA-04 records concrete data-integrity evidence for committed paths/trailers.
+- QA-05 records evidence that legacy `_done` specs are not modified.
 - Required elevated-risk review result is recorded in `design.md ## Review Results`.
 
 ## Verification Plan / AC Matrix
@@ -116,13 +125,13 @@ and close-out failures do not interrupt PR handoff.
 | AC | Scope | Verification method | Planned test/QA | Implementation | Result | Evidence | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | AC-01 | cli | automated | CLI integration tests with passing, failing, missing, and TODO-placeholder surface verify commands; QA-01 | `cli/crates/mochiflow-core/src/ship.rs`, `cli/crates/mochiflow-cli/src/main.rs` | UNVERIFIED |  | Missing/TODO/failing verification must leave lifecycle files unchanged. |
-| AC-02 | cli | automated | CLI integration test inspects archived `spec.yaml` and AC Matrix result/evidence updates; QA-04 | `cli/crates/mochiflow-core/src/ship.rs` | UNVERIFIED |  | Existing `FAIL`, `PENDING_HUMAN`, and non-automated `UNVERIFIED` rows must stop before mutation. |
+| AC-02 | cli | automated | CLI integration test inspects archived `spec.yaml`, exact completed timestamp format, and AC Matrix result/evidence updates; QA-04 | `cli/crates/mochiflow-core/src/ship.rs` | UNVERIFIED |  | Existing `FAIL`, `PENDING_HUMAN`, and non-automated `UNVERIFIED` rows must stop before mutation. Evidence must name the specific test/output, not only the final verify command. |
 | AC-03 | cli | automated | CLI integration test inspects `_done/{slug}`, regenerated `INDEX.md`, and unstaged ignored state index output; QA-04 | `cli/crates/mochiflow-core/src/ship.rs`, `cli/crates/mochiflow-core/src/index.rs` | UNVERIFIED |  | Runtime state index output is allowed only when ignored and must not be staged. |
-| AC-04 | cli | automated | Git fixture test verifies active deletion and archived addition are captured; QA-02, QA-07 | `cli/crates/mochiflow-core/src/ship.rs` | UNVERIFIED |  |  |
+| AC-04 | cli | automated | Git fixture test verifies active deletion and archived addition are captured; QA-02, QA-07 | `cli/crates/mochiflow-core/src/ship.rs` | UNVERIFIED |  | Evidence must include the fixture test name and `git diff --cached --name-status -z` or committed name-status output. |
 | AC-05 | cli | automated | CLI integration tests for dirty working tree and pre-staged unrelated file with spaces/special characters in paths; QA-03 | `cli/crates/mochiflow-core/src/ship.rs` | UNVERIFIED |  | Use NUL-delimited Git parsing. |
 | AC-06 | cli | automated | Unit or integration test injects unexpected staged path with spaces/special characters before validation; QA-03, QA-07 | `cli/crates/mochiflow-core/src/ship.rs` | UNVERIFIED |  | Use NUL-delimited Git parsing. |
-| AC-07 | cli | automated | CLI integration test inspects latest commit subject and trailers; QA-04 | `cli/crates/mochiflow-core/src/ship.rs` | UNVERIFIED |  |  |
+| AC-07 | cli | automated | CLI integration test inspects latest commit subject and trailers; QA-04 | `cli/crates/mochiflow-core/src/ship.rs` | UNVERIFIED |  | Evidence must include the test name and observed commit subject/trailer output. |
 | AC-08 | cli | automated | PR integration tests verify bare slug `--spec <slug>` fails before ship, succeeds after ship on the manual-handoff path, and path-like request-dir inputs preserve existing behavior; QA-06 | `cli/crates/mochiflow-core/src/pr.rs` | UNVERIFIED |  | Dry-run remains no-preflight unless explicitly changed elsewhere. |
-| AC-09 | cli | automated | Integration tests for active-only, archived-only uncommitted, both active and archived, neither present, already done, and partially staged lifecycle states; QA-01, QA-04 | `cli/crates/mochiflow-core/src/ship.rs` | UNVERIFIED |  |  |
-| AC-10 | cli | automated | Conformance test checks engine guidance text and adapter generated output; QA-07 | `engine/commands/ship.md`, `engine/reference/git.md`, `.mochiflow/engine/**` | UNVERIFIED |  |  |
+| AC-09 | cli | automated | Integration tests for active-only, archived-only uncommitted, both active and archived, neither present, already done, and partially staged lifecycle states; QA-01, QA-04 | `cli/crates/mochiflow-core/src/ship.rs` | UNVERIFIED |  | Evidence must show resumed lifecycle paths are treated as related by the ship allowlist. |
+| AC-10 | cli | automated | Conformance test checks engine guidance text and adapter generated output; QA-07 | `engine/commands/ship.md`, `engine/reference/git.md`, `.mochiflow/engine/**` | UNVERIFIED |  | This spec's own close-out uses the documented manual fallback; command behavior is proven in fixtures. |
 | AC-11 | cli | automated | CLI integration test verifies dry-run output and unchanged working tree/index; QA-01, QA-02 | `cli/crates/mochiflow-core/src/ship.rs`, `cli/crates/mochiflow-cli/src/main.rs` | UNVERIFIED |  |  |

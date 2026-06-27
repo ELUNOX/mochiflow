@@ -27,7 +27,8 @@
   (https://git-scm.com/docs/git-diff).
 - Do not add a time dependency for completion timestamps. Use the Rust standard
   library or a small local formatter for UTC timestamps to avoid expanding the
-  dependency set solely for this command.
+  dependency set solely for this command. The formatter must emit the same shape
+  used by current done specs: `YYYY-MM-DDTHH:MM:SSZ`.
 
 ## Architecture
 
@@ -70,6 +71,11 @@
   - after all final verification commands pass, the command updates eligible
     automated `UNVERIFIED` rows to `PASS` and records evidence identifying the
     surface and command that passed;
+  - final verification evidence is supplemental. Build must still record
+    AC-specific evidence for the behavior each row claims, such as concrete test
+    names, relevant command output, staged name-status output, or commit trailer
+    output. `mochiflow ship` must not overwrite existing AC-specific evidence
+    with a generic verify-command token.
   - required elevated-risk review results must be present before `done`.
 - Dry-run:
   - resolves the target and prints readiness blockers, planned verification
@@ -109,6 +115,12 @@
   - neither: stop as missing target.
 - Any pre-existing unrelated working tree or staged change stops the command
   before mutation.
+- Ship defines related dirt with its own lifecycle allowlist, not with
+  `reference/git.md ## Branch`'s branch-switch definition. During ship and
+  retry, `{specs_dir}` lifecycle changes for the target, configured `{index}`,
+  configured ADR files, and ignored runtime state are related; source files,
+  unrelated specs, unrelated archived specs, and unignored runtime state are
+  unrelated.
 - Any unexpected staged path after ship staging stops before commit, preserving
   the user's index for inspection.
 - `mochiflow pr --spec <slug>` pre-flight should fail before push when the slug
@@ -126,6 +138,7 @@
   initialized, local user identity configured, and verify commands set to stable
   shell fixtures.
 - Cover the happy path from approved active spec to committed archived done spec.
+- Cover completion timestamp formatting exactly as `YYYY-MM-DDTHH:MM:SSZ`.
 - Cover AC Matrix updates for eligible automated rows and precondition stops for
   `FAIL`, `PENDING_HUMAN`, and non-automated `UNVERIFIED` rows.
 - Cover dirty working tree, pre-staged unrelated files, failed verification,
@@ -141,6 +154,16 @@
   configured lifecycle parent pathspec instead of the moved-from slug path.
 - Add path parsing tests with spaces or shell-special characters to prove the
   NUL-delimited Git helpers do not split paths incorrectly.
+
+## Dogfood / Bootstrap
+
+This spec's own close-out must use the documented manual fallback, not the new
+`mochiflow ship` implementation. The command is proven against controlled
+fixtures during build; using it to close out the spec that introduces it would
+make the final lifecycle move depend on unmerged behavior. The manual fallback
+must stage only configured lifecycle parents, for example
+`git add -A {specs_dir} {index} {adr_paths...}`, and must still be validated by
+the same name-status checks described above.
 
 ## Review Results
 
