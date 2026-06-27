@@ -7,82 +7,132 @@ different meanings: final acceptance, PR preparation, PR creation, archiving,
 and completion. That creates a mismatch with common PR workflows, where a PR is
 still an unmerged proposal that may receive review feedback or CI fixes.
 
-The desired user experience is also not command-by-command. After implementation
-work completes, MochiFlow should guide the user through the next safe delivery
-action based on repository state: prepare a PR, open it after approval, handle
-review/CI updates, and close the work after the PR is merged. Release handling
-should remain a separate, explicit capability and is out of scope for this
-change.
+The current model also archives too early. `ship` folds and moves the spec to
+`_done/` and sets `status: done` in a close-out commit *before* the PR is even
+opened. When review feedback arrives, that completed work has to be resurrected
+(moved back out of `_done/`, `done → approved`) to be fixed — backwards for a
+still-open review. The root cause is that lifecycle state is expressed by
+*writing* a terminal state into tracked files, which forces the write to happen
+pre-merge (since the base branch cannot be committed to directly).
+
+The desired user experience is also state-driven, not command-by-command. After
+implementation work completes, MochiFlow should offer the next safe delivery
+action based on repository state. Release handling remains a separate, explicit
+capability and is out of scope for this change.
 
 ## Appetite
 
 This is worth a workflow-level redesign because it changes lifecycle semantics,
-router behavior, command documentation, CLI handoff behavior, and archived spec
-state. Keep the implementation focused on the build-to-PR-to-close path; do not
-try to solve release automation at the same time.
+router behavior, command documentation, CLI handoff behavior, the durable state
+model, and the board/index representation. Keep the implementation focused on the
+build-to-PR-to-close path; do not try to solve release automation at the same
+time.
 
 ## Solution
 
-Replace the user-facing `ship` delivery concept with a post-build flow composed
-of state-driven actions:
+Replace the user-facing `ship` concept entirely with a post-build flow composed
+of three state-driven actions, backed by a state model that separates *asserted*
+states from *derived* delivery facts.
 
-- `build` finishes implementation and local verification, records acceptance
-  evidence, and leaves the work ready for PR preparation.
-- `open` prepares the PR title/body, presents it for human approval, then pushes
-  and creates the PR. PR creation remains gated because it has external effects.
+### Three actions
+
+- `build` finishes implementation and local verification and records the AC
+  Matrix. It ends at `approved`; it does not create a PR.
+- `open` runs final acceptance (the human QA round-trip), sets `accepted`, folds
+  durable knowledge (ADR decisions / pitfalls) *into the PR*, generates the PR
+  title/body, takes human approval (the approve-PR gate), pushes, and creates the
+  PR. PR creation stays gated because it has external effects.
 - `update` handles review feedback, CI failures, and PR-body corrections while
-  the work remains in review. It applies fixes through the same spec context,
-  re-verifies, commits, pushes, and updates PR metadata when needed.
-- `close` runs after the PR is confirmed merged. It records durable learnings,
-  archives the spec, updates the index, clears local state, and performs local
-  branch cleanup.
+  the work is in review. Code changes are delegated through the same `build`
+  loop (not reimplemented); it re-verifies, pushes, and updates PR metadata. The
+  spec is not moved and is never resurrected.
+- `close` runs after the PR is confirmed merged. It performs local hygiene only:
+  switch to base, fast-forward pull, delete the local branch, clear ephemeral
+  state, and regenerate the board. It writes nothing to the base branch — the
+  fold was already merged via the `open` PR.
 
-The primary user-facing flow should not require users to type each internal
-action name. MochiFlow should offer the next action from the current state via
-plain-language prompts and choice cards. For example, after build completes it
-should present "Create the PR" rather than requiring `mochiflow pr open`; after
-review feedback it should offer "Update the PR"; after merge it should offer
-"Close the work".
+The primary UX is the next-action prompt: after build, "Create the PR"; on
+feedback, "Update the PR"; after merge, "Close the work". Direct command entry
+still exists for advanced use.
 
-The durable state model should reflect the distinction between implemented,
-in-review, merged, and closed work. The exact metadata representation can be
-decided during plan, but the key invariant is that work is not archived merely
-because a PR was opened. Archiving belongs to `close`, after merge confirmation.
+### State model: asserted vs derived
+
+- Asserted states are stored in `spec.yaml` and all settle *before* merge on the
+  feature branch via normal PRs: `draft → approved → accepted`. `accepted` is a
+  quality state (AC Matrix all done-eligible, plus the reviewer verdict when
+  `risk ≥ elevated`), not a new human gate.
+- Delivery states are *derived*, never stored: `in_review` (a PR is open) and
+  `merged`. "Done" is observed from VCS/PR reality, not written into a file. This
+  removes every post-merge write to the base branch, and with it the
+  archive-before-PR and resurrection problems.
+
+`merged` derivation signal priority: provider API (e.g. GitHub) → a
+`Spec: {slug}` trailer present in `origin/{base_branch}` history → the human
+merge report as the final fallback. Contract: a merge must leave the
+`Spec: {slug}` trailer in the base branch — merge/rebase preserve it
+automatically; squash must carry the trailer into the squash commit.
+
+### Flat specs and the board
+
+- A spec lives at a single flat location `{specs_dir}/{slug}/` for its whole
+  life. There is no per-state folder and no `_done/` move. Existing `_done/`
+  archives remain read-only.
+- The kanban is computed, not stored: `mochiflow status` renders the live board
+  on demand (with `--fetch` for network-accurate derivation). `INDEX.md` is a
+  gitignored generated artifact, regenerated automatically at the end of every
+  mochiflow command. There are no git hooks.
+
+### Stale-base guard
+
+Starting a new spec fetches and branches from `origin/{base_branch}` and warns
+when the local base is behind, independent of the provider. This reduces the
+"forgot to report merge → new spec on a stale base" accident without depending on
+the human merge report.
+
+Plan will specify the mechanism details: exact `merged`/`in_review` derivation
+commands (including `provider = none` fidelity), the `accepted` lint gate, the
+board rendering format, and how stored `done` in legacy `_done/` specs maps to
+the derived model.
 
 ## Rabbit Holes
 
-- Do not design release automation here. `release` should remain an independent
-  command and separate future feature.
-- Do not preserve `ship` as a user-facing synonym if it keeps ambiguous meaning.
-  It can remain only as a compatibility alias if plan decides the migration
-  needs one.
-- Do not require users to remember a sequence of low-level commands when the
-  active spec and PR state can determine the next safe action.
-- Do not move a spec to completed storage before PR review and CI feedback have
-  finished.
+- Do not design release automation here. `release` stays an independent command
+  and a separate future feature.
+- Do not reintroduce directory-as-state: no `_done/` move, no symlinked
+  projection board, no committed live kanban file.
+- Do not require any base-branch commit or push for a lifecycle transition.
+- Do not require users to memorize low-level command names when the active spec
+  and PR state can offer the next safe action.
 
 ## No-gos
 
 - No package publishing, tag creation, GitHub Release creation, production
   deploy, or release-note automation in this change.
-- No PR-provider replacement. MochiFlow should orchestrate around provider state
-  and handoff contracts, not become a full review system.
+- No PR-provider replacement. MochiFlow orchestrates around provider state and
+  handoff contracts; it does not become a review system.
 - No automatic PR creation without human approval of the generated title/body.
-- No automatic external publish/deploy side effects.
+- No direct base-branch commit or push for archive or completion bookkeeping.
+- No git hooks, no symlinked board, and no committed live kanban file.
 
 ## Alternatives Considered
 
-- Keep `ship` and make it smarter. Rejected because the word remains overloaded:
-  users can reasonably read it as "open PR", "merge", "release", or "deploy".
-- Keep the current archive-before-PR model. Rejected because PR feedback then
-  has to resurrect completed work, which is backwards for a still-open review.
-- Expose only explicit commands such as `mochiflow pr open` and
-  `mochiflow pr update`. Rejected as the primary UX because the desired flow is
-  state-driven. Explicit commands may still exist as advanced/direct entry
-  points.
-- Fold release into close. Rejected because release is a product delivery unit,
-  often spanning multiple merged changes, and should be configured and approved
-  independently.
+- Keep `ship` and make it smarter. Rejected — the word stays overloaded (open PR
+  / merge / release / deploy).
+- Keep the archive-before-PR model. Rejected — PR feedback then has to resurrect
+  completed work.
+- Store `done` / move to `_done/` at `close` (post-merge). Rejected — it requires
+  a base-branch commit, which is disallowed; an unpushed local commit diverges
+  the base and breaks `pull --ff-only`.
+- A follow-up archive PR after merge. Rejected — an extra bookkeeping PR per spec.
+- Optimistic archive in the delivery PR plus in-place feedback. Rejected as the
+  primary model — the spec appears done while still under review and it keeps
+  directory-as-state.
+- A gitignored symlink projection board (`specs/` + `board/`). Rejected — two
+  parallel folder trees confuse users, even though navigation worked.
+- A committed live `INDEX.md` kanban. Rejected — it reintroduces base-branch
+  writes for the merged state and cross-spec merge conflicts.
+- Git hooks to refresh the board on merge/checkout. Rejected — setup complexity;
+  rely instead on per-command regeneration plus on-demand `mochiflow status`.
 
 ## Open Questions
 
