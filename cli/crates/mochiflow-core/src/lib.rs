@@ -12,5 +12,6 @@ pub mod lint;
 pub mod manifest;
 pub mod pr;
 pub mod present;
+pub mod ship;
 pub mod spec_meta;
 pub mod upgrade;

@@ -62,6 +62,14 @@ enum Commands {
         /// Spec slug or directory
         spec: String,
     },
+    /// Complete deterministic ship close-out mechanics
+    Ship {
+        /// Spec slug (default: infer from current feature branch)
+        slug: Option<String>,
+        /// Preview without verification, mutation, staging, or commit
+        #[arg(long)]
+        dry_run: bool,
+    },
     /// Inspect backlog seeds
     Backlog {
         #[command(subcommand)]
@@ -290,6 +298,10 @@ fn main() -> Result<()> {
         Commands::Ready { spec } => {
             let cfg = load_cfg(cli.config.as_deref())?;
             cmd_ready(&cfg, &spec)
+        }
+        Commands::Ship { slug, dry_run } => {
+            let cfg = load_cfg(cli.config.as_deref())?;
+            mochiflow_core::ship::run_ship(&cfg, slug.as_deref(), dry_run)
         }
         Commands::Backlog { command } => {
             let cfg = load_cfg(cli.config.as_deref())?;

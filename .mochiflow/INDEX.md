@@ -1,6 +1,6 @@
 # 📋 Spec Dashboard
 
-> updated: 2026-06-26 23:46 UTC
+> updated: 2026-06-27 06:46 UTC
 
 ## Pipeline
 
@@ -9,7 +9,7 @@
 | 🌱 backlog seed | 9 |
 | 📝 draft | 0 |
 | 🟢 approved | 0 |
-| ✅ done | 16 |
+| ✅ done | 17 |
 
 ## Backlog seeds
 
@@ -35,6 +35,7 @@
 
 | Updated | Slug | Title | Type |
 |:--------|:-----|:------|:-----|
+| 2026-06-27 | [ship-archive-staging-pathspec](specs/_done/ship-archive-staging-pathspec/) | Make ship archive staging resilient to moved spec paths | fix |
 | 2026-06-26 | [lint-deleted-files-in-tasks](specs/_done/lint-deleted-files-in-tasks/) | Suppress unchecked-task warnings for planned file deletions | fix |
 | 2026-06-26 | [choice-card-command-ux](specs/_done/choice-card-command-ux/) | Clarify choice-card commands and numbered replies | docs |
 | 2026-06-26 | [manifest-test-isolation](specs/_done/manifest-test-isolation/) | Isolate MANIFEST integrity check from functional conformance tests | refactor |
@@ -52,4 +53,4 @@
 | 2026-06-23 | [build-completion-guidance](specs/_done/build-completion-guidance/) | Build phase should announce next step on completion | docs |
 | 2026-06-22 | [version-ssot-freeze](specs/_done/version-ssot-freeze/) | Version SSOT + freeze command | refactor |
 
-> done total: 16
+> done total: 17

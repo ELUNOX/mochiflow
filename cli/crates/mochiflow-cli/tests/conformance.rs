@@ -14,6 +14,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use std::path::{Path, PathBuf};
+use std::process::Command as Proc;
 
 /// Repo root, derived from this crate's manifest dir (cli/crates/mochiflow-cli).
 fn repo_root() -> PathBuf {
@@ -554,6 +555,30 @@ fn ship_defers_context_refresh_until_after_pr_or_merge() {
             && refresh.contains("as separate follow-up")
             && refresh.contains("trigger this during close-out"),
         "refresh-context must remain no-auto-commit and safe outside ship close-out"
+    );
+}
+
+#[test]
+fn ship_guidance_uses_cli_and_stable_parent_pathspec_fallback() {
+    let ship = read_repo_file("engine/commands/ship.md");
+    let git = read_repo_file("engine/reference/git.md");
+
+    assert!(
+        ship.contains("Run `mochiflow ship {slug}`")
+            && ship.contains("`git add -A {specs_dir} {index} {adr_paths...}`")
+            && ship.contains("never a pathspec that requires the moved-from `{specs_dir}/{slug}`"),
+        "ship guidance must use CLI close-out and stable parent pathspec fallback"
+    );
+    assert!(
+        git.contains("Use `mochiflow ship {slug}`")
+            && git.contains("git add -A {specs_dir} {index} {adr_paths...}")
+            && git.contains("git diff --cached --name-status -z")
+            && git.contains("do not stage the moved-from\n`{specs_dir}/{slug}`"),
+        "git reference must document the safe manual fallback"
+    );
+    assert!(
+        !git.contains("git mv {specs_dir}/{slug}/ {specs_dir}/_done/{slug}/` so both"),
+        "git reference must not require staging the moved-from path after the move"
     );
 }
 
@@ -1803,7 +1828,31 @@ fn lint_done_elevated_fails_with_only_fail_reviewer_verdict() {
     let (code, out) = run_lint_case(&yaml, md, Some(design), None);
     assert_eq!(code, 1);
     assert!(
-        out.contains("Review Results contains reviewer Verdict: fail"),
+        out.contains("latest Review Results reviewer Verdict is fail"),
+        "{out}"
+    );
+    assert!(
+        !out.contains("reviewer verdict (pass/pass-with-comments) is not recorded"),
+        "{out}"
+    );
+}
+
+#[test]
+fn lint_done_elevated_uses_latest_reviewer_verdict() {
+    let yaml = GOOD_YAML
+        .replace("status: approved", "status: done")
+        .replace("risk: standard", "risk: elevated");
+    let md = "# S\n\n## 受入基準\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
+              ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | PASS |\n";
+    let fail_then_pass = "# design\n\n## Review Results\n\nReviewer mode: delegated\nVerdict: fail\n\nReviewer mode: delegated\nVerdict: pass\n";
+    let (code, out) = run_lint_case(&yaml, md, Some(fail_then_pass), None);
+    assert_eq!(code, 0, "{out}");
+
+    let pass_then_fail = "# design\n\n## Review Results\n\nReviewer mode: delegated\nVerdict: pass\n\nReviewer mode: delegated\nVerdict: fail\n";
+    let (code, out) = run_lint_case(&yaml, md, Some(pass_then_fail), None);
+    assert_eq!(code, 1, "{out}");
+    assert!(
+        out.contains("latest Review Results reviewer Verdict is fail"),
         "{out}"
     );
 }
@@ -1982,6 +2031,480 @@ fn run_cli_in_dir(config: &Path, cwd: &Path, args: &[&str]) -> (i32, String) {
         out.status.code().unwrap_or(-1),
         String::from_utf8_lossy(&out.stdout).into_owned(),
     )
+}
+
+fn run_cli_capture(config: &Path, cwd: &Path, args: &[&str]) -> (i32, String, String) {
+    let mut full = vec!["--config", config.to_str().unwrap()];
+    full.extend_from_slice(args);
+    let out = assert_cmd::Command::cargo_bin("mochiflow")
+        .unwrap()
+        .current_dir(cwd)
+        .args(&full)
+        .output()
+        .unwrap();
+    (
+        out.status.code().unwrap_or(-1),
+        String::from_utf8_lossy(&out.stdout).into_owned(),
+        String::from_utf8_lossy(&out.stderr).into_owned(),
+    )
+}
+
+fn git_ok(dir: &Path, args: &[&str]) {
+    let status = Proc::new("git")
+        .args(args)
+        .current_dir(dir)
+        .status()
+        .unwrap();
+    assert!(status.success(), "git {args:?} failed in {}", dir.display());
+}
+
+fn git_out(dir: &Path, args: &[&str]) -> String {
+    let out = Proc::new("git")
+        .args(args)
+        .current_dir(dir)
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "git {args:?} failed in {}",
+        dir.display()
+    );
+    String::from_utf8_lossy(&out.stdout).into_owned()
+}
+
+fn materialize_ship_repo(root: &Path, slug: &str, specs_dir: &str) -> (PathBuf, PathBuf) {
+    let bare = root.join("origin.git");
+    std::fs::create_dir_all(&bare).unwrap();
+    git_ok(&bare, &["init", "--bare", "-q"]);
+
+    let repo = root.join("repo");
+    std::fs::create_dir_all(&repo).unwrap();
+    git_ok(&repo, &["init", "-q", "-b", "main"]);
+    git_ok(&repo, &["config", "user.email", "t@example.com"]);
+    git_ok(&repo, &["config", "user.name", "Test"]);
+
+    let install = repo.join(".mochiflow");
+    let specs = repo.join(specs_dir);
+    std::fs::create_dir_all(specs.join(slug)).unwrap();
+    std::fs::create_dir_all(install.join("context")).unwrap();
+    std::fs::create_dir_all(install.join("adr")).unwrap();
+    std::fs::write(repo.join(".gitignore"), ".mochiflow/state/\n").unwrap();
+    for name in ["constitution.md", "constitution.local.md"] {
+        std::fs::write(install.join(name), "# c\n").unwrap();
+    }
+    for name in ["product.md", "structure.md", "tech.md"] {
+        std::fs::write(install.join("context").join(name), "# c\n").unwrap();
+    }
+    std::fs::write(install.join("adr").join("decisions.md"), "# Decisions\n").unwrap();
+    std::fs::write(install.join("adr").join("pitfalls.md"), "# Pitfalls\n").unwrap();
+
+    std::fs::write(
+        install.join("config.toml"),
+        format!(
+            "schema_version = 1\n\
+             install_dir = \".mochiflow\"\n\
+             specs_dir = \"{specs_dir}\"\n\
+             index = \".mochiflow/INDEX.md\"\n\n\
+             [i18n]\nartifact_language = \"en\"\nconversation_language = \"auto\"\n\n\
+             [constitution]\nproject = \".mochiflow/constitution.md\"\nlocal = \".mochiflow/constitution.local.md\"\n\n\
+             [context]\nproduct = \".mochiflow/context/product.md\"\nstructure = \".mochiflow/context/structure.md\"\ntech = \".mochiflow/context/tech.md\"\n\n\
+             [adr]\ndecisions = \".mochiflow/adr/decisions.md\"\npitfalls = \".mochiflow/adr/pitfalls.md\"\n\n\
+             [git]\nprovider = \"none\"\nbase_branch = \"main\"\n\n\
+             [adapter]\ntool = \"agents\"\n\n\
+             [surfaces.app]\ndescription = \"app\"\n\n[surfaces.app.verify]\ndefault = \"echo test-pass\"\n"
+        ),
+    )
+    .unwrap();
+    write_active_ship_spec(&specs.join(slug), slug);
+    git_ok(&repo, &["add", "."]);
+    git_ok(&repo, &["commit", "-q", "-m", "init"]);
+    git_ok(&repo, &["remote", "add", "origin", bare.to_str().unwrap()]);
+    git_ok(&repo, &["push", "-q", "-u", "origin", "main"]);
+    git_ok(&repo, &["checkout", "-q", "-b", &format!("fix/{slug}")]);
+    (install.join("config.toml"), repo)
+}
+
+fn write_active_ship_spec(spec_dir: &Path, slug: &str) {
+    std::fs::create_dir_all(spec_dir).unwrap();
+    std::fs::write(
+        spec_dir.join("spec.yaml"),
+        format!(
+            "version: 1\nslug: {slug}\ntitle: Ship Fixture\ntype: fix\nsurfaces:\n  - app\nintegration: none\nrisk: standard\nstatus: approved\nupdated: \"2026-06-27\"\n"
+        ),
+    )
+    .unwrap();
+    std::fs::write(spec_dir.join("pitch.md"), "# Pitch\n").unwrap();
+    std::fs::write(
+        spec_dir.join("spec.md"),
+        "# Ship Fixture\n\n## Acceptance Criteria (EARS)\n\n- AC-01: WHEN shipping, THE SYSTEM SHALL finish safely.\n\n## Verification Plan / AC Matrix\n\n| AC | Scope | Verification method | Planned test/QA | Implementation | Result | Evidence | Notes |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n| AC-01 | app | automated | final verify | fixture | UNVERIFIED | behavioral fixture assertion |  |\n",
+    )
+    .unwrap();
+}
+
+#[test]
+fn behavioral_ship_commits_active_spec_archive_with_safe_paths() {
+    let tmp = tempfile::tempdir().unwrap();
+    let slug = "ship-fixture";
+    let (cfg, repo) = materialize_ship_repo(tmp.path(), slug, ".mochiflow/specs");
+
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["ship"]);
+    assert_eq!(code, 0, "stdout:\n{out}\nstderr:\n{err}");
+    assert!(!repo.join(format!(".mochiflow/specs/{slug}")).exists());
+    assert!(repo.join(format!(".mochiflow/specs/_done/{slug}")).exists());
+
+    let archived_yaml =
+        std::fs::read_to_string(repo.join(format!(".mochiflow/specs/_done/{slug}/spec.yaml")))
+            .unwrap();
+    assert!(
+        archived_yaml.contains("status: \"done\""),
+        "{archived_yaml}"
+    );
+    assert!(
+        archived_yaml.contains("completed: \"20") && archived_yaml.contains("Z\""),
+        "{archived_yaml}"
+    );
+    let archived_spec =
+        std::fs::read_to_string(repo.join(format!(".mochiflow/specs/_done/{slug}/spec.md")))
+            .unwrap();
+    assert!(archived_spec.contains("| AC-01 | app | automated"));
+    assert!(archived_spec.contains(
+        "| PASS | behavioral fixture assertion<br>final verification: `echo test-pass` |"
+    ));
+    assert!(repo.join(".mochiflow/INDEX.md").exists());
+    assert!(repo.join(".mochiflow/state/index.json").exists());
+
+    let message = git_out(&repo, &["show", "-s", "--format=%B", "HEAD"]);
+    assert!(
+        message.starts_with("fix: complete delivery record"),
+        "{message}"
+    );
+    assert!(message.contains(&format!("Spec: {slug}")), "{message}");
+    let name_status = git_out(
+        &repo,
+        &["diff-tree", "--no-commit-id", "--name-status", "-r", "HEAD"],
+    );
+    assert!(
+        name_status.contains(&format!(".mochiflow/specs/_done/{slug}/spec.yaml")),
+        "{name_status}"
+    );
+    assert!(
+        !name_status.contains(".mochiflow/state/index.json"),
+        "{name_status}"
+    );
+    let status = git_out(&repo, &["status", "--short"]);
+    assert_eq!(status, "", "{status}");
+}
+
+#[test]
+fn behavioral_ship_does_not_modify_legacy_done_specs() {
+    let tmp = tempfile::tempdir().unwrap();
+    let slug = "legacy-active-fixture";
+    let legacy_slug = "legacy-done-fixture";
+    let (cfg, repo) = materialize_ship_repo(tmp.path(), slug, ".mochiflow/specs");
+    write_done_spec(&repo.join(".mochiflow/specs"), legacy_slug);
+    let legacy_dir = repo.join(format!(".mochiflow/specs/_done/{legacy_slug}"));
+    let legacy_yaml = legacy_dir.join("spec.yaml");
+    let legacy_spec = legacy_dir.join("spec.md");
+    let before_yaml = std::fs::read(&legacy_yaml).unwrap();
+    let before_spec = std::fs::read(&legacy_spec).unwrap();
+    assert!(
+        !String::from_utf8_lossy(&before_yaml).contains("completed:"),
+        "fixture must model legacy _done metadata without completed"
+    );
+    git_ok(
+        &repo,
+        &[
+            "add",
+            legacy_yaml.to_str().unwrap(),
+            legacy_spec.to_str().unwrap(),
+        ],
+    );
+    git_ok(&repo, &["commit", "-q", "-m", "test: legacy done fixture"]);
+
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["ship", slug]);
+    assert_eq!(code, 0, "stdout:\n{out}\nstderr:\n{err}");
+    assert_eq!(std::fs::read(&legacy_yaml).unwrap(), before_yaml);
+    assert_eq!(std::fs::read(&legacy_spec).unwrap(), before_spec);
+    let name_status = git_out(
+        &repo,
+        &["diff-tree", "--no-commit-id", "--name-status", "-r", "HEAD"],
+    );
+    assert!(
+        !name_status.contains(&format!(".mochiflow/specs/_done/{legacy_slug}/")),
+        "{name_status}"
+    );
+}
+
+#[test]
+fn behavioral_ship_dry_run_does_not_mutate_or_stage() {
+    let tmp = tempfile::tempdir().unwrap();
+    let slug = "dry-run-fixture";
+    let (cfg, repo) = materialize_ship_repo(tmp.path(), slug, ".mochiflow/specs");
+
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["ship", slug, "--dry-run"]);
+    assert_eq!(code, 0, "stdout:\n{out}\nstderr:\n{err}");
+    assert!(out.contains("dry-run: no verification"), "{out}");
+    assert!(repo.join(format!(".mochiflow/specs/{slug}")).exists());
+    assert!(!repo.join(format!(".mochiflow/specs/_done/{slug}")).exists());
+    assert!(!repo.join(".mochiflow/INDEX.md").exists());
+    let status = git_out(&repo, &["status", "--short"]);
+    assert_eq!(status, "", "{status}");
+}
+
+#[test]
+fn behavioral_ship_rejects_unrelated_staged_path_with_spaces() {
+    let tmp = tempfile::tempdir().unwrap();
+    let slug = "dirty-fixture";
+    let (cfg, repo) = materialize_ship_repo(tmp.path(), slug, ".mochiflow/specs");
+    std::fs::write(repo.join("unrelated file.txt"), "x\n").unwrap();
+    git_ok(&repo, &["add", "unrelated file.txt"]);
+
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["ship", slug]);
+    assert_eq!(code, 1, "stdout:\n{out}\nstderr:\n{err}");
+    assert!(err.contains("unrelated file.txt"), "{err}");
+    assert!(repo.join(format!(".mochiflow/specs/{slug}")).exists());
+    assert!(!repo.join(format!(".mochiflow/specs/_done/{slug}")).exists());
+}
+
+#[test]
+fn behavioral_ship_stops_before_mutation_when_verification_cannot_pass() {
+    let tmp = tempfile::tempdir().unwrap();
+    let slug = "verify-fail-fixture";
+    let (cfg, repo) = materialize_ship_repo(tmp.path(), slug, ".mochiflow/specs");
+    let config = std::fs::read_to_string(&cfg)
+        .unwrap()
+        .replace("default = \"echo test-pass\"", "default = \"false\"");
+    std::fs::write(&cfg, config).unwrap();
+    git_ok(&repo, &["add", ".mochiflow/config.toml"]);
+    git_ok(
+        &repo,
+        &["commit", "-q", "-m", "test: failing verify fixture"],
+    );
+
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["ship", slug]);
+    assert_eq!(code, 1, "stdout:\n{out}\nstderr:\n{err}");
+    assert!(err.contains("verification failed"), "{err}");
+    assert!(repo.join(format!(".mochiflow/specs/{slug}")).exists());
+    assert!(!repo.join(format!(".mochiflow/specs/_done/{slug}")).exists());
+
+    let config = std::fs::read_to_string(&cfg).unwrap().replace(
+        "default = \"false\"",
+        "default = \"TODO: define test command\"",
+    );
+    std::fs::write(&cfg, config).unwrap();
+    git_ok(&repo, &["add", ".mochiflow/config.toml"]);
+    git_ok(&repo, &["commit", "-q", "-m", "test: todo verify fixture"]);
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["ship", slug]);
+    assert_eq!(code, 1, "stdout:\n{out}\nstderr:\n{err}");
+    assert!(err.contains("not runnable"), "{err}");
+    assert!(repo.join(format!(".mochiflow/specs/{slug}")).exists());
+
+    let config = std::fs::read_to_string(&cfg)
+        .unwrap()
+        .replace("default = \"TODO: define test command\"\n", "");
+    std::fs::write(&cfg, config).unwrap();
+    git_ok(&repo, &["add", ".mochiflow/config.toml"]);
+    git_ok(
+        &repo,
+        &["commit", "-q", "-m", "test: missing verify fixture"],
+    );
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["ship", slug]);
+    assert_eq!(code, 1, "stdout:\n{out}\nstderr:\n{err}");
+    assert!(err.contains("has no verify profile"), "{err}");
+    assert!(repo.join(format!(".mochiflow/specs/{slug}")).exists());
+}
+
+#[test]
+fn behavioral_ship_stops_before_mutation_for_pending_human_matrix_row() {
+    let tmp = tempfile::tempdir().unwrap();
+    let slug = "pending-human-fixture";
+    let (cfg, repo) = materialize_ship_repo(tmp.path(), slug, ".mochiflow/specs");
+    let spec_md = repo.join(format!(".mochiflow/specs/{slug}/spec.md"));
+    let text = std::fs::read_to_string(&spec_md).unwrap().replace(
+        "UNVERIFIED | behavioral fixture assertion |",
+        "PENDING_HUMAN | needs QA |",
+    );
+    std::fs::write(&spec_md, text).unwrap();
+
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["ship", slug]);
+    assert_eq!(code, 1, "stdout:\n{out}\nstderr:\n{err}");
+    assert!(err.contains("PENDING_HUMAN"), "{err}");
+    assert!(repo.join(format!(".mochiflow/specs/{slug}")).exists());
+    assert!(!repo.join(format!(".mochiflow/specs/_done/{slug}")).exists());
+}
+
+#[test]
+fn behavioral_ship_stops_before_mutation_for_generic_only_matrix_evidence() {
+    let tmp = tempfile::tempdir().unwrap();
+    let slug = "generic-evidence-fixture";
+    let (cfg, repo) = materialize_ship_repo(tmp.path(), slug, ".mochiflow/specs");
+    let spec_md = repo.join(format!(".mochiflow/specs/{slug}/spec.md"));
+    let text = std::fs::read_to_string(&spec_md)
+        .unwrap()
+        .replace("behavioral fixture assertion", "");
+    std::fs::write(&spec_md, text).unwrap();
+
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["ship", slug]);
+    assert_eq!(code, 1, "stdout:\n{out}\nstderr:\n{err}");
+    assert!(err.contains("needs AC-specific evidence"), "{err}");
+    assert!(repo.join(format!(".mochiflow/specs/{slug}")).exists());
+    assert!(!repo.join(format!(".mochiflow/specs/_done/{slug}")).exists());
+}
+
+#[test]
+fn behavioral_ship_stops_before_mutation_for_non_automated_unverified_row() {
+    let tmp = tempfile::tempdir().unwrap();
+    let slug = "manual-unverified-fixture";
+    let (cfg, repo) = materialize_ship_repo(tmp.path(), slug, ".mochiflow/specs");
+    let spec_md = repo.join(format!(".mochiflow/specs/{slug}/spec.md"));
+    let text = std::fs::read_to_string(&spec_md)
+        .unwrap()
+        .replace("| AC-01 | app | automated |", "| AC-01 | app | human |");
+    std::fs::write(&spec_md, text).unwrap();
+
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["ship", slug]);
+    assert_eq!(code, 1, "stdout:\n{out}\nstderr:\n{err}");
+    assert!(
+        err.contains("cannot be completed by final verification"),
+        "{err}"
+    );
+    assert!(repo.join(format!(".mochiflow/specs/{slug}")).exists());
+    assert!(!repo.join(format!(".mochiflow/specs/_done/{slug}")).exists());
+}
+
+#[test]
+fn behavioral_ship_honors_non_default_specs_dir() {
+    let tmp = tempfile::tempdir().unwrap();
+    let slug = "custom-specs-fixture";
+    let (cfg, repo) = materialize_ship_repo(tmp.path(), slug, ".workflow/specs");
+
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["ship", slug]);
+    assert_eq!(code, 0, "stdout:\n{out}\nstderr:\n{err}");
+    assert!(!repo.join(format!(".workflow/specs/{slug}")).exists());
+    assert!(repo.join(format!(".workflow/specs/_done/{slug}")).exists());
+    let name_status = git_out(
+        &repo,
+        &["diff-tree", "--no-commit-id", "--name-status", "-r", "HEAD"],
+    );
+    assert!(
+        name_status.contains(&format!(".workflow/specs/_done/{slug}/spec.yaml")),
+        "{name_status}"
+    );
+    assert!(!name_status.contains(".mochiflow/specs/"), "{name_status}");
+}
+
+#[test]
+fn behavioral_ship_resumes_archived_only_uncommitted_closeout() {
+    let tmp = tempfile::tempdir().unwrap();
+    let slug = "resume-fixture";
+    let (cfg, repo) = materialize_ship_repo(tmp.path(), slug, ".mochiflow/specs");
+    let active = repo.join(format!(".mochiflow/specs/{slug}"));
+    let done = repo.join(format!(".mochiflow/specs/_done/{slug}"));
+    std::fs::create_dir_all(done.parent().unwrap()).unwrap();
+    std::fs::rename(&active, &done).unwrap();
+    let yaml = std::fs::read_to_string(done.join("spec.yaml"))
+        .unwrap()
+        .replace("status: approved", "status: done")
+        .replace("risk: standard", "risk: elevated")
+        + "completed: \"2026-06-27T00:00:00Z\"\n";
+    std::fs::write(done.join("spec.yaml"), yaml).unwrap();
+    let spec = std::fs::read_to_string(done.join("spec.md"))
+        .unwrap()
+        .replace(
+            "UNVERIFIED | behavioral fixture assertion |",
+            "PASS | interrupted close-out fixture |",
+        );
+    std::fs::write(done.join("spec.md"), spec).unwrap();
+    std::fs::write(
+        done.join("design.md"),
+        "# Design\n\n## Review Results\n\n- Reviewer mode: delegated\n- Verdict: pass\n",
+    )
+    .unwrap();
+    git_ok(
+        &repo,
+        &[
+            "add",
+            done.join("spec.yaml").to_str().unwrap(),
+            done.join("design.md").to_str().unwrap(),
+        ],
+    );
+
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["ship", slug]);
+    assert_eq!(code, 0, "stdout:\n{out}\nstderr:\n{err}");
+    let message = git_out(&repo, &["show", "-s", "--format=%B", "HEAD"]);
+    assert!(message.contains(&format!("Spec: {slug}")), "{message}");
+    let status = git_out(&repo, &["status", "--short"]);
+    assert_eq!(status, "", "{status}");
+}
+
+#[test]
+fn behavioral_ship_reports_both_or_missing_lifecycle_states_without_mutation() {
+    let tmp = tempfile::tempdir().unwrap();
+    let slug = "state-fixture";
+    let (cfg, repo) = materialize_ship_repo(tmp.path(), slug, ".mochiflow/specs");
+    let active = repo.join(format!(".mochiflow/specs/{slug}"));
+    let done = repo.join(format!(".mochiflow/specs/_done/{slug}"));
+    write_active_ship_spec(&done, slug);
+
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["ship", slug]);
+    assert_eq!(code, 1, "stdout:\n{out}\nstderr:\n{err}");
+    assert!(err.contains("both active and archived"), "{err}");
+    std::fs::remove_dir_all(&active).unwrap();
+    std::fs::remove_dir_all(&done).unwrap();
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["ship", slug]);
+    assert_eq!(code, 1, "stdout:\n{out}\nstderr:\n{err}");
+    assert!(err.contains("was not found"), "{err}");
+}
+
+#[test]
+fn behavioral_ship_rerun_after_completed_closeout_is_noop() {
+    let tmp = tempfile::tempdir().unwrap();
+    let slug = "already-done-fixture";
+    let (cfg, repo) = materialize_ship_repo(tmp.path(), slug, ".mochiflow/specs");
+
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["ship", slug]);
+    assert_eq!(code, 0, "stdout:\n{out}\nstderr:\n{err}");
+    let first_head = git_out(&repo, &["rev-parse", "HEAD"]);
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["ship", slug]);
+    assert_eq!(code, 0, "stdout:\n{out}\nstderr:\n{err}");
+    assert!(out.contains("already completed"), "{out}");
+    let second_head = git_out(&repo, &["rev-parse", "HEAD"]);
+    assert_eq!(first_head, second_head);
+    let status = git_out(&repo, &["status", "--short"]);
+    assert_eq!(status, "", "{status}");
+}
+
+#[test]
+fn behavioral_pr_slug_guard_requires_committed_ship_closeout() {
+    let tmp = tempfile::tempdir().unwrap();
+    let slug = "pr-guard-fixture";
+    let (cfg, repo) = materialize_ship_repo(tmp.path(), slug, ".mochiflow/specs");
+
+    let (code, _out, err) = run_cli_capture(&cfg, &repo, &["pr", "--spec", slug, "--title", "Add"]);
+    assert_eq!(code, 3, "{err}");
+    assert!(err.contains("still active"), "{err}");
+
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["ship", slug]);
+    assert_eq!(code, 0, "stdout:\n{out}\nstderr:\n{err}");
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["pr", "--spec", slug, "--title", "Add"]);
+    assert_eq!(code, 10, "stdout:\n{out}\nstderr:\n{err}");
+}
+
+#[test]
+fn behavioral_pr_path_like_spec_preserves_request_dir_behavior() {
+    let tmp = tempfile::tempdir().unwrap();
+    let slug = "path-like-pr-fixture";
+    let (cfg, repo) = materialize_ship_repo(tmp.path(), slug, ".mochiflow/specs");
+    let request_dir = repo.join("request-dir");
+    std::fs::create_dir_all(&request_dir).unwrap();
+
+    let (code, out, err) = run_cli_capture(
+        &cfg,
+        &repo,
+        &["pr", "--spec", "./request-dir", "--title", "Add"],
+    );
+    assert_eq!(code, 10, "stdout:\n{out}\nstderr:\n{err}");
+    assert!(!err.contains("still active"), "{err}");
 }
 
 fn write_done_spec(specs_dir: &Path, slug: &str) {

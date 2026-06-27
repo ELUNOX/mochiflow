@@ -27,6 +27,7 @@ const TERMINAL_CLI_COMMAND_REFERENCES: &[&str] = &[
     "lint",
     "pr",
     "ready",
+    "ship",
     "upgrade",
 ];
 

@@ -160,13 +160,18 @@ report the files and verification result.
 - `spec.yaml` `status: done` (+ `updated`);
 - the AC Matrix rows added at ship (build already recorded the rest);
 - the ADR fold (`[adr].decisions` / `[adr].pitfalls`);
-- the archive move `{specs_dir}/{slug}/` → `{specs_dir}/_done/{slug}/` (use
-  `git mv {specs_dir}/{slug}/ {specs_dir}/_done/{slug}/` so both the deletion and
-  the addition are staged as a rename; when specs are gitignored there is nothing
-  to stage);
+- the archive move `{specs_dir}/{slug}/` → `{specs_dir}/_done/{slug}/`;
 - the regenerated `{index}`.
 
-Stage these paths explicitly. The message follows
+Use `mochiflow ship {slug}` for the deterministic mechanics: it stages the
+configured lifecycle paths with `git add -A {specs_dir} {index} {adr_paths...}`,
+validates the staged name-status output, and creates the close-out commit. If
+manual fallback is required, use the same stable parent pathspecs and validate
+with `git diff --cached --name-status -z`; do not stage the moved-from
+`{specs_dir}/{slug}` as a required pathspec after the archive move. When specs
+are gitignored there may be nothing to stage under `{specs_dir}`.
+
+The message follows
 the Commit convention above — Conventional Commits, artifact language, and **no
 spec slug, no AC IDs, no mochiflow vocabulary** (never "fold" / "archive" in the
 summary). This relocates what was formerly a post-merge base-branch push into the
