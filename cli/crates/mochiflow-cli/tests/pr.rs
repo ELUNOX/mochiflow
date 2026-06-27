@@ -70,6 +70,40 @@ fn setup(dir: &Path, git_block: &str, stay_on_main: bool) -> std::path::PathBuf 
     config_path
 }
 
+fn mark_shipped(dir: &Path, slug: &str) {
+    let repo = dir.join("repo");
+    let done = repo.join(".mochiflow/specs/_done").join(slug);
+    fs::create_dir_all(&done).unwrap();
+    fs::write(
+        done.join("spec.yaml"),
+        format!(
+            "version: 1\nslug: {slug}\ntitle: Done\ntype: fix\nsurfaces:\n  - app\nintegration: none\nrisk: standard\nstatus: done\n"
+        ),
+    )
+    .unwrap();
+    fs::write(done.join("spec.md"), "# Done\n").unwrap();
+    git(
+        &repo,
+        &[
+            "add",
+            "-f",
+            done.join("spec.yaml").to_str().unwrap(),
+            done.join("spec.md").to_str().unwrap(),
+        ],
+    );
+    git(
+        &repo,
+        &[
+            "commit",
+            "-q",
+            "-m",
+            "fix: complete delivery record",
+            "-m",
+            &format!("Spec: {slug}"),
+        ],
+    );
+}
+
 fn run_pr(config: &Path, extra: &[&str]) -> assert_cmd::assert::Assert {
     let mut args = vec!["--config", config.to_str().unwrap(), "pr"];
     args.extend_from_slice(extra);
@@ -214,6 +248,7 @@ fn pr_command_escapes_spec_dir_placeholder() {
     let block =
         "provider = \"none\"\npr_command = \"mkdir -p {spec_dir} && touch {spec_dir}/marker\"";
     let cfg = setup(dir.path(), block, false);
+    mark_shipped(dir.path(), "semi;touch hacked");
     run_pr(&cfg, &["--title", "Add", "--spec", "semi;touch hacked"]).success();
     assert!(
         dir.path()
@@ -361,6 +396,7 @@ fn pr_driver_writes_under_state_slug_not_specs() {
         driver.to_str().unwrap()
     );
     let cfg = setup(dir.path(), &block, false);
+    mark_shipped(dir.path(), "my-slug");
     run_pr(&cfg, &["--spec", "my-slug", "--title", "Add"]).success();
     assert!(
         dir.path()
@@ -386,6 +422,7 @@ fn pr_bare_slug_never_targets_tracked_topdir() {
         driver.to_str().unwrap()
     );
     let cfg = setup(dir.path(), &block, false);
+    mark_shipped(dir.path(), "docs");
     let docs = dir.path().join("repo/docs");
     fs::create_dir_all(&docs).unwrap();
     run_pr(&cfg, &["--spec", "docs", "--title", "Add"]).success();
@@ -428,8 +465,9 @@ fn pr_body_only_from_body_file() {
         driver.to_str().unwrap()
     );
     let cfg = setup(dir.path(), &block, false);
-    // stray pr-description.md in the spec dir (gitignored under .mochiflow/) must be ignored
-    let specdir = dir.path().join("repo/.mochiflow/specs/my-slug");
+    mark_shipped(dir.path(), "my-slug");
+    // stray pr-description.md in the completed spec dir (gitignored under .mochiflow/) must be ignored
+    let specdir = dir.path().join("repo/.mochiflow/specs/_done/my-slug");
     fs::create_dir_all(&specdir).unwrap();
     fs::write(specdir.join("pr-description.md"), "STRAY BODY\n").unwrap();
     run_pr(&cfg, &["--spec", "my-slug", "--title", "Add"]).success();

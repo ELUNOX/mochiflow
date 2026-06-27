@@ -167,5 +167,25 @@ the same name-status checks described above.
 
 ## Review Results
 
-Mandatory elevated-risk review will be recorded during build before ship
-acceptance.
+- 2026-06-27 mandatory build review
+  - Reviewer mode: delegated
+  - Verdict: fail
+  - Summary: Required fixes for archived-only retry readiness, AC-specific
+    Matrix evidence, Git status fail-closed behavior, and missing evidence
+    recording.
+- 2026-06-27 mandatory build re-review
+  - Reviewer mode: delegated
+  - Verdict: pass
+  - Summary: No findings. Prior fail areas resolved; verification result was
+    supplied by builder.
+- 2026-06-27 mandatory build review follow-up
+  - Reviewer mode: delegated
+  - Verdict: fail
+  - Summary: Required fix for `has_passing_review` treating any historical
+    fail as blocking even when a later pass exists. Recommended follow-ups for
+    partially staged evidence, archived retry git failure handling, and stricter
+    `Spec:` trailer matching.
+- 2026-06-27 mandatory build final re-review
+  - Reviewer mode: delegated
+  - Verdict: pass
+  - Summary: No findings. Verification result was supplied by builder.

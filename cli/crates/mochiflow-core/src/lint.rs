@@ -154,6 +154,10 @@ fn review_verdicts(design_text: &str) -> Vec<String> {
         .collect()
 }
 
+fn latest_review_verdict(design_text: &str) -> Option<String> {
+    review_verdicts(design_text).into_iter().next_back()
+}
+
 fn task_count(tasks_text: Option<&str>) -> usize {
     tasks_text
         .map(|text| TASK_HEADING_RE.find_iter(text).count())
@@ -1053,21 +1057,21 @@ fn lint_spec_dir(
         if risk_order(meta.risk()) >= 1 {
             let design_text = std::fs::read_to_string(&design_md).unwrap_or_default();
             let verdicts = review_verdicts(&design_text);
-            if verdicts.iter().any(|v| v == "fail") {
+            let latest_verdict = latest_review_verdict(&design_text);
+            if latest_verdict.as_deref() == Some("fail") {
                 issues.push(Issue {
                     severity: "FAIL".into(),
                     path: spec_dir.join("spec.yaml"),
-                    message: "status is done but Review Results contains reviewer Verdict: fail"
+                    message: "status is done but latest Review Results reviewer Verdict is fail"
                         .into(),
                 });
+            } else if latest_verdict.is_none() {
+                issues.push(Issue { severity: "FAIL".into(), path: spec_dir.join("spec.yaml"), message: "status is done but reviewer verdict (pass/pass-with-comments) is not recorded in design.md ## Review Results for risk>=elevated".into() });
             }
             let pass_count = verdicts
                 .iter()
                 .filter(|v| v.as_str() == "pass" || v.as_str() == "pass-with-comments")
                 .count();
-            if pass_count == 0 {
-                issues.push(Issue { severity: "FAIL".into(), path: spec_dir.join("spec.yaml"), message: "status is done but reviewer verdict (pass/pass-with-comments) is not recorded in design.md ## Review Results for risk>=elevated".into() });
-            }
             if meta.risk() == "critical" {
                 let required = task_count(tasks_text.as_deref());
                 if required > 0 && pass_count < required {
