@@ -1,13 +1,13 @@
 # 📋 Spec Dashboard
 
-> updated: 2026-06-26 23:46 UTC
+> updated: 2026-06-27 02:31 UTC
 
 ## Pipeline
 
 | stage | count |
 |:------|------:|
 | 🌱 backlog seed | 9 |
-| 📝 draft | 0 |
+| 📝 draft | 1 |
 | 🟢 approved | 0 |
 | ✅ done | 16 |
 
@@ -27,7 +27,9 @@
 
 ## Active specs
 
-（なし）
+| Spec | Status | Risk | Docs | Module |
+|:-----|:-------|:-----|:-----|:-------|
+| [ship-archive-staging-pathspec](specs/ship-archive-staging-pathspec/) | 📝 draft | elevated | spec | — |
 
 ## Done (chronological)
 

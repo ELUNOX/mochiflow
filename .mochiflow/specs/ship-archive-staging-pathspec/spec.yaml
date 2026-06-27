@@ -1,0 +1,11 @@
+version: 1
+slug: "ship-archive-staging-pathspec"
+title: "Make ship archive staging resilient to moved spec paths"
+type: "fix"
+surfaces:
+  - "cli"
+integration: "none"
+risk: "elevated"
+status: "draft"
+created: "2026-06-26"
+updated: "2026-06-26"
