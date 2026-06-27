@@ -36,20 +36,28 @@ states from *derived* delivery facts.
 
 ### Three actions
 
-- `build` finishes implementation and local verification and records the AC
-  Matrix. It ends at `approved`; it does not create a PR.
-- `open` runs final acceptance (the human QA round-trip), sets `accepted`, folds
-  durable knowledge (ADR decisions / pitfalls) *into the PR*, generates the PR
-  title/body, takes human approval (the approve-PR gate), pushes, and creates the
-  PR. PR creation stays gated because it has external effects.
+- `build` finishes implementation and local verification, records the AC Matrix,
+  and captures operational pitfalls while they are fresh. It ends at `approved`;
+  it does not create a PR.
+- `open` runs final acceptance (the human QA round-trip), sets `accepted`,
+  finalizes the fold (decision rationale plus the pitfalls captured during build)
+  and commits it *into the PR*, generates the PR title/body, takes human approval
+  (the approve-PR gate), pushes, and creates the PR. PR creation stays gated
+  because it has external effects.
 - `update` handles review feedback, CI failures, and PR-body corrections while
   the work is in review. Code changes are delegated through the same `build`
-  loop (not reimplemented); it re-verifies, pushes, and updates PR metadata. The
-  spec is not moved and is never resurrected.
+  loop (not reimplemented); it re-verifies, pushes, updates PR metadata, and
+  revises the fold when feedback changes a decision. The spec is not moved and is
+  never resurrected.
 - `close` runs after the PR is confirmed merged. It performs local hygiene only:
   switch to base, fast-forward pull, delete the local branch, clear ephemeral
   state, and regenerate the board. It writes nothing to the base branch — the
   fold was already merged via the `open` PR.
+
+The fold is not a single instant: pitfalls are captured during `build`, the fold
+is finalized and committed at `open` so it lands in the PR (reviewed and merged
+with no post-merge base write), and `update` keeps it matching the final design.
+The no-PR fast path is reserved for trivial changes and skips the fold entirely.
 
 The primary UX is the next-action prompt: after build, "Create the PR"; on
 feedback, "Update the PR"; after merge, "Close the work". Direct command entry
