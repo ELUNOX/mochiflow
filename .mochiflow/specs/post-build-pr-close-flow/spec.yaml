@@ -1,0 +1,11 @@
+version: 1
+slug: "post-build-pr-close-flow"
+title: "Post-build PR and Close Flow"
+type: "feature"
+surfaces:
+  - "cli"
+integration: "workflow"
+risk: "elevated"
+status: "draft"
+created: "2026-06-27"
+updated: "2026-06-27"
