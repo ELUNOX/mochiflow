@@ -43,11 +43,16 @@ and close-out failures do not interrupt PR handoff.
     current feature branch.
   - Validate ship readiness before mutating lifecycle files.
   - Run configured final verification for the spec surfaces.
+  - Update eligible automated AC Matrix rows with final verification results
+    and evidence.
   - Set `status: done`, `updated`, and `completed`.
-  - Move the spec to `{specs_dir}/_done/{slug}/`, regenerating `{index}`.
+  - Move the spec to `{specs_dir}/_done/{slug}/`, regenerating `{index}` and
+    runtime state index output without staging runtime state.
   - Stage only configured lifecycle paths with a stable parent pathspec.
   - Verify the staged result with machine-readable Git output before committing.
   - Create the ship close-out commit with required traceability.
+  - Support `--dry-run` for reporting the resolved target and planned
+    close-out actions without verification, mutation, staging, or commit.
   - Update `mochiflow pr` pre-flight to require the committed ship close-out
     when `--spec <slug>` is supplied.
   - Update shared ship guidance and command allowlists.
@@ -76,8 +81,8 @@ and close-out failures do not interrupt PR handoff.
 
 ## Acceptance Criteria (EARS)
 
-- AC-01: WHEN a user runs `mochiflow ship [slug]` for an approved, fully verified spec, THE SYSTEM SHALL run the configured final verification for every declared surface before changing the spec to `done`.
-- AC-02: WHEN all ship readiness checks and final verification pass, THE SYSTEM SHALL set `spec.yaml` to `status: done` with current `updated` and `completed` values.
+- AC-01: WHEN a user runs `mochiflow ship [slug]` for an approved spec whose non-automated AC Matrix rows are done-eligible, THE SYSTEM SHALL run the configured final verification for every declared surface before changing the spec to `done`.
+- AC-02: WHEN final verification passes, THE SYSTEM SHALL update eligible automated AC Matrix rows to `PASS` with evidence for the command that passed before setting `spec.yaml` to `status: done` with current `updated` and `completed` values.
 - AC-03: WHEN the target spec is active under `{specs_dir}/{slug}/`, THE SYSTEM SHALL move it to `{specs_dir}/_done/{slug}/` and regenerate the configured index.
 - AC-04: WHEN staging ship close-out changes, THE SYSTEM SHALL stage configured lifecycle paths using a stable parent pathspec that captures the archive deletion and addition without using the moved-from slug path as a required pathspec.
 - AC-05: IF unrelated working tree or staged changes exist before ship starts, THEN THE SYSTEM SHALL stop before mutating lifecycle files and report the unrelated paths.
@@ -86,6 +91,7 @@ and close-out failures do not interrupt PR handoff.
 - AC-08: IF `mochiflow pr --spec <slug>` is run before the requested spec's ship close-out is committed, THEN THE SYSTEM SHALL fail pre-flight before pushing.
 - AC-09: WHEN `mochiflow ship` is re-run after an interrupted close-out, THE SYSTEM SHALL either resume safely from the detected lifecycle state or stop with a precise, non-destructive recovery message.
 - AC-10: WHEN engine ship guidance describes manual fallback staging, THE SYSTEM SHALL recommend `git add -A` scoped to configured lifecycle parents instead of a pathspec that requires `{specs_dir}/{slug}` after the archive move.
+- AC-11: WHEN a user runs `mochiflow ship [slug] --dry-run`, THE SYSTEM SHALL report the resolved target, readiness blockers, planned lifecycle paths, and planned close-out actions without running verification, mutating files, staging changes, or committing.
 
 ## QA Scenarios
 
@@ -93,11 +99,11 @@ and close-out failures do not interrupt PR handoff.
 | --- | --- | --- | --- | --- |
 | QA-01 | P1 new user | cli | Run `mochiflow ship` on a branch whose name maps to exactly one approved spec. | The command resolves the spec, prints the verification and close-out actions, and either completes or reports the first missing readiness item. |
 | QA-02 | P2 power user | cli | Run `mochiflow ship <slug>` for a configured non-default `specs_dir`. | The command uses configured paths and does not assume `.mochiflow/specs`. |
-| QA-03 | P3 malicious user | cli | Create an unrelated staged file before running `mochiflow ship <slug>`. | The command stops before lifecycle mutation and reports the pre-existing staged path. |
+| QA-03 | P3 malicious user | cli | Create an unrelated staged file, including a path containing spaces, before running `mochiflow ship <slug>`. | The command stops before lifecycle mutation and reports the pre-existing staged path without path parsing ambiguity. |
 | QA-04 | P4 data integrity | cli | Ship a fixture with an active spec move, index update, and ADR change. | The resulting commit contains only allowed lifecycle paths and the `Spec:` trailer. |
 | QA-05 | P5 migration | cli | Use a legacy done spec without `completed`, and a current active approved spec. | The command only modifies the target active spec and does not retrofit unrelated archived specs. |
 | QA-06 | P6 regression | cli | Run existing `mochiflow pr` tests and then run `mochiflow pr --spec <slug>` before ship. | Existing PR behavior remains intact, while the new slug-aware pre-flight blocks an unshipped spec. |
-| QA-07 | P7 spec skeptic | cli | Compare this specification's allowed path rules with `git diff --cached --name-status` after ship. | The staged or committed paths match the specified lifecycle set and do not include unrelated files. |
+| QA-07 | P7 spec skeptic | cli | Compare this specification's allowed path rules with `git diff --cached --name-status -z` after ship. | The staged or committed paths match the specified lifecycle set and do not include unrelated files. |
 
 ## Completion Conditions
 
@@ -109,13 +115,14 @@ and close-out failures do not interrupt PR handoff.
 
 | AC | Scope | Verification method | Planned test/QA | Implementation | Result | Evidence | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| AC-01 | cli | automated | CLI integration test with a passing surface verify command; QA-01 | `cli/crates/mochiflow-core/src/ship.rs`, `cli/crates/mochiflow-cli/src/main.rs` | UNVERIFIED |  |  |
-| AC-02 | cli | automated | CLI integration test inspects archived `spec.yaml`; QA-04 | `cli/crates/mochiflow-core/src/ship.rs` | UNVERIFIED |  |  |
-| AC-03 | cli | automated | CLI integration test inspects `_done/{slug}` and regenerated `INDEX.md`; QA-04 | `cli/crates/mochiflow-core/src/ship.rs`, `cli/crates/mochiflow-core/src/index.rs` | UNVERIFIED |  |  |
+| AC-01 | cli | automated | CLI integration tests with passing, failing, missing, and TODO-placeholder surface verify commands; QA-01 | `cli/crates/mochiflow-core/src/ship.rs`, `cli/crates/mochiflow-cli/src/main.rs` | UNVERIFIED |  | Missing/TODO/failing verification must leave lifecycle files unchanged. |
+| AC-02 | cli | automated | CLI integration test inspects archived `spec.yaml` and AC Matrix result/evidence updates; QA-04 | `cli/crates/mochiflow-core/src/ship.rs` | UNVERIFIED |  | Existing `FAIL`, `PENDING_HUMAN`, and non-automated `UNVERIFIED` rows must stop before mutation. |
+| AC-03 | cli | automated | CLI integration test inspects `_done/{slug}`, regenerated `INDEX.md`, and unstaged ignored state index output; QA-04 | `cli/crates/mochiflow-core/src/ship.rs`, `cli/crates/mochiflow-core/src/index.rs` | UNVERIFIED |  | Runtime state index output is allowed only when ignored and must not be staged. |
 | AC-04 | cli | automated | Git fixture test verifies active deletion and archived addition are captured; QA-02, QA-07 | `cli/crates/mochiflow-core/src/ship.rs` | UNVERIFIED |  |  |
-| AC-05 | cli | automated | CLI integration tests for dirty working tree and pre-staged unrelated file; QA-03 | `cli/crates/mochiflow-core/src/ship.rs` | UNVERIFIED |  |  |
-| AC-06 | cli | automated | Unit or integration test injects unexpected staged path before validation; QA-03, QA-07 | `cli/crates/mochiflow-core/src/ship.rs` | UNVERIFIED |  |  |
+| AC-05 | cli | automated | CLI integration tests for dirty working tree and pre-staged unrelated file with spaces/special characters in paths; QA-03 | `cli/crates/mochiflow-core/src/ship.rs` | UNVERIFIED |  | Use NUL-delimited Git parsing. |
+| AC-06 | cli | automated | Unit or integration test injects unexpected staged path with spaces/special characters before validation; QA-03, QA-07 | `cli/crates/mochiflow-core/src/ship.rs` | UNVERIFIED |  | Use NUL-delimited Git parsing. |
 | AC-07 | cli | automated | CLI integration test inspects latest commit subject and trailers; QA-04 | `cli/crates/mochiflow-core/src/ship.rs` | UNVERIFIED |  |  |
-| AC-08 | cli | automated | PR integration test verifies `mochiflow pr --spec <slug>` fails before ship and passes pre-flight after ship on dry-run; QA-06 | `cli/crates/mochiflow-core/src/pr.rs` | UNVERIFIED |  |  |
-| AC-09 | cli | automated | Integration tests for already-moved and partially staged lifecycle states; QA-01, QA-04 | `cli/crates/mochiflow-core/src/ship.rs` | UNVERIFIED |  |  |
+| AC-08 | cli | automated | PR integration tests verify bare slug `--spec <slug>` fails before ship, succeeds after ship on the manual-handoff path, and path-like request-dir inputs preserve existing behavior; QA-06 | `cli/crates/mochiflow-core/src/pr.rs` | UNVERIFIED |  | Dry-run remains no-preflight unless explicitly changed elsewhere. |
+| AC-09 | cli | automated | Integration tests for active-only, archived-only uncommitted, both active and archived, neither present, already done, and partially staged lifecycle states; QA-01, QA-04 | `cli/crates/mochiflow-core/src/ship.rs` | UNVERIFIED |  |  |
 | AC-10 | cli | automated | Conformance test checks engine guidance text and adapter generated output; QA-07 | `engine/commands/ship.md`, `engine/reference/git.md`, `.mochiflow/engine/**` | UNVERIFIED |  |  |
+| AC-11 | cli | automated | CLI integration test verifies dry-run output and unchanged working tree/index; QA-01, QA-02 | `cli/crates/mochiflow-core/src/ship.rs`, `cli/crates/mochiflow-cli/src/main.rs` | UNVERIFIED |  |  |

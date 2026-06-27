@@ -12,18 +12,19 @@
   (https://docs.rs/clap/latest/clap/_derive/_tutorial/index.html).
 - Treat `mochiflow ship` as the CLI owner of automatable ship close-out, not as
   a thin staging helper. The command validates readiness, runs final
-  verification, updates done metadata, moves the spec, regenerates the index,
-  stages allowed lifecycle paths, validates the staged result, and creates the
-  close-out commit.
+  verification, updates eligible automated AC Matrix rows, updates done
+  metadata, moves the spec, regenerates the index, stages allowed lifecycle
+  paths, validates the staged result, and creates the close-out commit.
 - Keep human judgment outside the command. Human-operated QA, visual
   confirmation, and durable learning content must already be recorded in the
   durable artifacts before `mochiflow ship` proceeds.
-- Use Git's standard index workflow: `git add -A` constrained by configured
-  lifecycle pathspecs, `git status --porcelain` for script-readable dirt checks,
-  and `git diff --cached --name-status` for staged result validation. Sources:
-  Git `add` documentation (https://git-scm.com/docs/git-add), Git `status`
-  documentation (https://git-scm.com/docs/git-status), Git `diff`
-  documentation (https://git-scm.com/docs/git-diff).
+- Use Git's standard index workflow with delimiter-safe parsing: `git add -A`
+  constrained by configured lifecycle pathspecs, `git status --porcelain=v1 -z`
+  for script-readable dirt checks, and `git diff --cached --name-status -z` for
+  staged result validation. Sources: Git `add` documentation
+  (https://git-scm.com/docs/git-add), Git `status` documentation
+  (https://git-scm.com/docs/git-status), Git `diff` documentation
+  (https://git-scm.com/docs/git-diff).
 - Do not add a time dependency for completion timestamps. Use the Rust standard
   library or a small local formatter for UTC timestamps to avoid expanding the
   dependency set solely for this command.
@@ -60,16 +61,36 @@
 - Readiness:
   - target must be `approved` before mutation;
   - `mochiflow lint --spec <slug>` must pass before mutation;
-  - all matrix rows must already be ship-eligible or become ship-eligible after
-    the command's final verification update according to the implemented
-    command contract;
+  - human-operated, visual, `CONFIRMED`, `N/A: <reason>`, and existing `PASS`
+    matrix rows must already be done-eligible before mutation;
+  - `FAIL`, `PENDING_HUMAN`, and non-automated `UNVERIFIED` rows stop the
+    command before mutation;
+  - automated rows may be `UNVERIFIED` before mutation only when their scope
+    maps to a declared surface that has a runnable final verification command;
+  - after all final verification commands pass, the command updates eligible
+    automated `UNVERIFIED` rows to `PASS` and records evidence identifying the
+    surface and command that passed;
   - required elevated-risk review results must be present before `done`.
+- Dry-run:
+  - resolves the target and prints readiness blockers, planned verification
+    commands, lifecycle paths, and close-out actions;
+  - does not run verification, edit spec files, regenerate index files, stage,
+    or commit.
+- Generated index outputs:
+  - `index::generate_index` updates the configured human-readable `{index}` and
+    runtime `{install_dir}/state/index.json`;
+  - `{index}` is staged as a lifecycle artifact;
+  - `state/index.json` is runtime state and is never staged, but it may exist or
+    change when the configured state directory is gitignored;
+  - if runtime state is not ignored, `mochiflow ship` stops with the same class
+    of hygiene failure expected before PR handoff.
 - Staging allowlist:
   - configured `{specs_dir}` parent;
   - configured `{index}`;
   - configured ADR files;
-  - no `state/`, source files, unrelated active specs, or unrelated archived
-    specs.
+  - configured ignored runtime state may be dirty but not staged;
+  - no source files, unrelated active specs, unrelated archived specs, or
+    unignored `state/` files.
 - Commit:
   - one Conventional Commit close-out commit;
   - include `Spec: <slug>` trailer;
@@ -93,6 +114,11 @@
 - `mochiflow pr --spec <slug>` pre-flight should fail before push when the slug
   still has an active approved spec or lacks a committed done spec under
   `_done/{slug}`.
+- `mochiflow pr --spec <value>` keeps the existing resolver split:
+  - bare tokens are treated as spec slugs, resolve delivery artifacts under
+    `{install_dir}/state/{slug}`, and run the slug-aware ship-complete guard;
+  - path-like values, including absolute paths or values containing a path
+    separator, remain explicit request directories and do not run the slug guard.
 
 ## Test Strategy
 
@@ -100,13 +126,21 @@
   initialized, local user identity configured, and verify commands set to stable
   shell fixtures.
 - Cover the happy path from approved active spec to committed archived done spec.
+- Cover AC Matrix updates for eligible automated rows and precondition stops for
+  `FAIL`, `PENDING_HUMAN`, and non-automated `UNVERIFIED` rows.
 - Cover dirty working tree, pre-staged unrelated files, failed verification,
-  missing reviewer verdict, and non-default `specs_dir`.
-- Cover retry states, including already moved to `_done` before commit.
-- Extend PR tests so `mochiflow pr --spec <slug> --dry-run` refuses an unshipped
-  spec and accepts a committed done spec without requiring network access.
+  missing verify profile, TODO placeholder verification, missing reviewer
+  verdict, and non-default `specs_dir`.
+- Cover retry states: active-only, archived-only uncommitted, both active and
+  archived, neither present, already done, and partially staged.
+- Extend PR tests so non-dry-run `mochiflow pr --spec <slug>` refuses an
+  unshipped spec before push and accepts a committed done spec on the manual
+  handoff path without requiring network access. Preserve the existing
+  path-like request-dir behavior.
 - Add conformance checks for engine guidance so the manual fallback uses the
   configured lifecycle parent pathspec instead of the moved-from slug path.
+- Add path parsing tests with spaces or shell-special characters to prove the
+  NUL-delimited Git helpers do not split paths incorrectly.
 
 ## Review Results
 
