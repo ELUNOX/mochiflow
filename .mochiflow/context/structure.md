@@ -20,9 +20,10 @@ source of truth; this is a forward-placed map to avoid first-move mistakes.
 
 - `cli/crates/mochiflow-cli` — clap binary (`main.rs`) and CLI integration tests
   (`tests/cli.rs`, `tests/conformance.rs`, `tests/first_run.rs`, `tests/pr.rs`).
-- `cli/crates/mochiflow-core` — library modules: `adapter`, `backlog`,
-  `config`, `detach`, `detect`, `doctor`, `freeze`, `index`, `init`, `join`,
-  `lint`, `manifest`, `pr`, `present`, `spec_meta`, `upgrade`.
+- `cli/crates/mochiflow-core` — library modules: `adapter`, `adr`, `backlog`,
+  `config`, `delivery`, `detach`, `detect`, `doctor`, `freeze`, `index`, `init`,
+  `join`, `lint`, `manifest`, `pr`, `present`, `ship`, `spec_meta`, `status`,
+  `upgrade`.
 - `docs/` — user-facing concepts, setup, configuration, versioning, and release
   verification.
 - `assets/` — logo / mark images used by README and distribution material.
@@ -35,8 +36,9 @@ source of truth; this is a forward-placed map to avoid first-move mistakes.
 - `.mochiflow/constitution.local.md` — gitignored user/machine-local always-loaded rules.
 - `.mochiflow/context/` — code/config-derived current-state maps (refresh:
   `product`, `structure`, `tech`).
-- `.mochiflow/adr/` — durable decision and pitfall records (fold:
-  `decisions`, `pitfalls`).
+- `.mochiflow/adr/` — durable decision and pitfall record stores (directory-
+  rooted: `decisions/`, `pitfalls/`; each record is one `{date}-{slug}.md` with
+  front-matter; a generated gitignored `INDEX.md` per store).
 - `.mochiflow/specs/` — specs (`_backlog/`, `{slug}/`, `_done/`).
 
 ## Adapter output layout
@@ -53,7 +55,7 @@ Kiro uses no dedicated build agent, no `toolsSettings`, and no per-verb steering
 
 ## Entry points
 
-- `mochiflow <command>` — `config`, `index`, `lint`, `doctor`, `adapter`,
-  `upgrade`, `ready`, `backlog`, `init`, `join`, `detach`, `guide`,
-  `completions`, `freeze`, `pr`.
+- `mochiflow <command>` — `accept`, `adapter`, `adr`, `backlog`, `completions`,
+  `config`, `detach`, `doctor`, `freeze`, `guide`, `index`, `init`, `join`,
+  `lint`, `pr`, `ready`, `status`, `upgrade`.
 - Verification surface: `cli` → `cargo test --manifest-path cli/Cargo.toml`.
