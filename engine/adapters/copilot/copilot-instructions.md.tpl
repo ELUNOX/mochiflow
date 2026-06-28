@@ -16,7 +16,7 @@ your standing instruction for any spec / implementation / PR work.
   `{{engine}}/commands/patch.md`
 - Non-phase commands: `{{engine}}/commands/{patch,review,refresh-context,onboard}.md`
 - Cross-cutting rules: `{{engine}}/reference/{workflow,risk,authoring,git,language,engineering-standards}.md`
-- Decision history / pitfalls — **on-demand** (*why*): `{{adr.decisions}}` / `{{adr.pitfalls}}`.
+- Decision history / pitfalls — **on-demand** (*why*): per-file records under `{{adr.decisions}}` / `{{adr.pitfalls}}` (generated gitignored `INDEX.md` per store; `mochiflow adr list | show | search`).
 - Project config: `mochiflow config show`
 - Artifact roles: `spec.md` is the product contract, `design.md` is the
   technical contract when required, `tasks.md` is the executable checklist when
@@ -34,7 +34,7 @@ your standing instruction for any spec / implementation / PR work.
 - Artifact language: `{{artifact_language}}`; conversation language:
   `{{conversation_language}}`. Follow `{{engine}}/reference/language.md` for
   user-facing wording and `auto` conversation behavior.
-- At open, fold durable knowledge into `{{adr.decisions}}` / `{{adr.pitfalls}}` into
-  the PR's close-out commit; the spec stays flat (no `_done/` move, never
+- At open, fold durable knowledge as new per-file records under `{{adr.decisions}}` / `{{adr.pitfalls}}` into
+  the PR's close-out commit (supersede earlier records, never rewrite; regenerate the gitignored `INDEX.md`); the spec stays flat (no `_done/` move, never
   `status: done`). Context (`{{context.product}}` / `{{context.structure}}` /
   `{{context.tech}}`) is refreshed from code (onboard / refresh-context), never folded.

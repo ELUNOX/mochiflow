@@ -540,8 +540,8 @@ fn escape_table_cell(value: &str) -> String {
 fn lifecycle_paths(cfg: &Config) -> Vec<PathBuf> {
     vec![
         rel_path(&cfg.repo_root, &cfg.specs_dir_path()),
-        rel_path(&cfg.repo_root, &cfg.decisions_path()),
-        rel_path(&cfg.repo_root, &cfg.pitfalls_path()),
+        rel_path(&cfg.repo_root, &cfg.decisions_dir()),
+        rel_path(&cfg.repo_root, &cfg.pitfalls_dir()),
     ]
 }
 
@@ -549,8 +549,8 @@ fn allowed_ship_paths(cfg: &Config, target: &Target) -> BTreeSet<String> {
     let mut allowed = BTreeSet::new();
     for path in [
         &target.active_dir,
-        &cfg.decisions_path(),
-        &cfg.pitfalls_path(),
+        &cfg.decisions_dir(),
+        &cfg.pitfalls_dir(),
     ] {
         allowed.insert(path_to_string(&rel_path(&cfg.repo_root, path)));
     }
@@ -809,8 +809,8 @@ mod tests {
     #![allow(clippy::unwrap_used)]
 
     use super::{
-        allowed_ship_paths, has_passing_review, is_allowed_ship_path, parse_name_status_z,
-        target_for_slug,
+        allowed_ship_paths, git_add_lifecycle, has_passing_review, is_allowed_ship_path,
+        parse_name_status_z, target_for_slug,
     };
     use crate::config::load_config;
 
@@ -861,5 +861,65 @@ mod tests {
         assert_eq!(parsed[1].paths, vec!["src/with space.rs"]);
         assert!(is_allowed_ship_path(&parsed[0].paths[0], &allowed));
         assert!(!is_allowed_ship_path(&parsed[1].paths[0], &allowed));
+    }
+
+    #[test]
+    fn accept_staging_includes_adr_record_dirs_but_never_index() {
+        use std::process::Command;
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = tmp.path();
+        let git = |args: &[&str]| {
+            assert!(
+                Command::new("git")
+                    .args(args)
+                    .current_dir(repo)
+                    .status()
+                    .unwrap()
+                    .success(),
+                "git {args:?}"
+            );
+        };
+        git(&["init", "-q", "-b", "main"]);
+        git(&["config", "user.email", "t@example.com"]);
+        git(&["config", "user.name", "Test"]);
+
+        std::fs::create_dir_all(repo.join(".mochiflow/adr/decisions")).unwrap();
+        std::fs::create_dir_all(repo.join(".mochiflow/adr/pitfalls")).unwrap();
+        std::fs::create_dir_all(repo.join(".mochiflow/specs")).unwrap();
+        // The bare `INDEX.md` ignore pattern already covers adr/**/INDEX.md.
+        std::fs::write(repo.join(".mochiflow/.gitignore"), "INDEX.md\nstate/\n").unwrap();
+        std::fs::write(
+            repo.join(".mochiflow/config.toml"),
+            "schema_version = 1\ninstall_dir = \".mochiflow\"\nspecs_dir = \".mochiflow/specs\"\nindex = \".mochiflow/INDEX.md\"\n\n[constitution]\nproject = \".mochiflow/constitution.md\"\nlocal = \".mochiflow/constitution.local.md\"\n\n[context]\nproduct = \".mochiflow/context/product.md\"\nstructure = \".mochiflow/context/structure.md\"\ntech = \".mochiflow/context/tech.md\"\n\n[adr]\ndecisions = \".mochiflow/adr/decisions\"\npitfalls = \".mochiflow/adr/pitfalls\"\n\n[git]\nbase_branch = \"main\"\n\n[adapter]\ntool = \"agents\"\n\n[surfaces.app]\ndescription = \"app\"\n\n[surfaces.app.verify]\ndefault = \"echo ok\"\n",
+        )
+        .unwrap();
+        std::fs::write(
+            repo.join(".mochiflow/adr/decisions/2026-06-22-x.md"),
+            "---\nid: 2026-06-22-x\ndate: 2026-06-22\nstatus: active\n---\n## body\n",
+        )
+        .unwrap();
+        std::fs::write(
+            repo.join(".mochiflow/adr/decisions/INDEX.md"),
+            "# Decision Records\n",
+        )
+        .unwrap();
+
+        let cfg = load_config(&repo.join(".mochiflow/config.toml")).unwrap();
+        git_add_lifecycle(&cfg).unwrap();
+
+        let staged = Command::new("git")
+            .args(["diff", "--cached", "--name-only"])
+            .current_dir(repo)
+            .output()
+            .unwrap();
+        let names = String::from_utf8_lossy(&staged.stdout);
+        assert!(
+            names.contains(".mochiflow/adr/decisions/2026-06-22-x.md"),
+            "record must be staged:\n{names}"
+        );
+        assert!(
+            !names.contains("INDEX.md"),
+            "gitignored ADR INDEX.md must never be staged:\n{names}"
+        );
     }
 }

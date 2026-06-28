@@ -24,6 +24,11 @@ enum Commands {
         #[command(subcommand)]
         command: ConfigCommand,
     },
+    /// Read-only ADR record store: list / show / search / lint
+    Adr {
+        #[command(subcommand)]
+        command: AdrCommand,
+    },
     /// Regenerate INDEX.md + state/index.json
     Index {
         /// Report drift without writing
@@ -182,6 +187,65 @@ enum ConfigCommand {
     Validate,
 }
 
+/// Which ADR store to operate on.
+#[derive(Clone, Copy, ValueEnum)]
+enum AdrKindArg {
+    Decisions,
+    Pitfalls,
+}
+
+impl AdrKindArg {
+    fn to_kind(self) -> mochiflow_core::adr::AdrKind {
+        match self {
+            AdrKindArg::Decisions => mochiflow_core::adr::AdrKind::Decisions,
+            AdrKindArg::Pitfalls => mochiflow_core::adr::AdrKind::Pitfalls,
+        }
+    }
+}
+
+#[derive(Subcommand)]
+enum AdrCommand {
+    /// List active record headers (filterable)
+    List {
+        #[arg(long)]
+        kind: Option<AdrKindArg>,
+        #[arg(long)]
+        area: Option<String>,
+        /// Status filter; `all` widens to full history (default: active set)
+        #[arg(long)]
+        status: Option<String>,
+        #[arg(long)]
+        spec: Option<String>,
+    },
+    /// Show a record's full body and supersession lineage
+    Show {
+        /// Record id (e.g. 2026-06-22-version-ssot)
+        id: String,
+        #[arg(long)]
+        kind: Option<AdrKindArg>,
+    },
+    /// Search record headers by keyword over the default-active set
+    Search {
+        /// Search term (case-insensitive)
+        term: String,
+        #[arg(long)]
+        kind: Option<AdrKindArg>,
+        #[arg(long)]
+        area: Option<String>,
+        /// Status filter; `all` widens to full history (default: active set)
+        #[arg(long)]
+        status: Option<String>,
+        #[arg(long)]
+        spec: Option<String>,
+    },
+    /// Deterministic structural lint of the ADR record stores
+    Lint {
+        /// Limit to one store (default: both)
+        #[arg(long)]
+        kind: Option<AdrKindArg>,
+    },
+}
+
 #[derive(Subcommand)]
 enum AdapterCommand {
     Generate {
@@ -204,6 +268,7 @@ enum BacklogCommand {
 #[derive(Clone, Copy, ValueEnum)]
 enum DoctorTarget {
     Config,
+    Adr,
     Specs,
     Adapter,
     Engine,
@@ -213,6 +278,7 @@ impl DoctorTarget {
     fn as_str(self) -> &'static str {
         match self {
             Self::Config => "config",
+            Self::Adr => "adr",
             Self::Specs => "specs",
             Self::Adapter => "adapter",
             Self::Engine => "engine",
@@ -240,6 +306,47 @@ fn main() -> Result<()> {
                 let warns = issues.iter().filter(|i| i.severity == "WARN").count();
                 println!("\nSummary: {fails} fail, {warns} warn");
                 if fails > 0 { 1 } else { 0 }
+            }
+        },
+        Commands::Adr { command } => match command {
+            AdrCommand::List {
+                kind,
+                area,
+                status,
+                spec,
+            } => {
+                let cfg = load_cfg(cli.config.as_deref())?;
+                let query = mochiflow_core::adr::AdrQuery {
+                    kind: kind.map(AdrKindArg::to_kind),
+                    area,
+                    status,
+                    spec,
+                };
+                mochiflow_core::adr::run_adr_list(&cfg, &query)
+            }
+            AdrCommand::Show { id, kind } => {
+                let cfg = load_cfg(cli.config.as_deref())?;
+                mochiflow_core::adr::run_adr_show(&cfg, &id, kind.map(AdrKindArg::to_kind))
+            }
+            AdrCommand::Search {
+                term,
+                kind,
+                area,
+                status,
+                spec,
+            } => {
+                let cfg = load_cfg(cli.config.as_deref())?;
+                let query = mochiflow_core::adr::AdrQuery {
+                    kind: kind.map(AdrKindArg::to_kind),
+                    area,
+                    status,
+                    spec,
+                };
+                mochiflow_core::adr::run_adr_search(&cfg, &term, &query)
+            }
+            AdrCommand::Lint { kind } => {
+                let cfg = load_cfg(cli.config.as_deref())?;
+                mochiflow_core::adr::run_adr_lint(&cfg, kind.map(AdrKindArg::to_kind))
             }
         },
         Commands::Index { check } => {
@@ -566,8 +673,8 @@ fn cmd_config_show(cfg: &mochiflow_core::config::Config, bundled_engine_version:
     println!("  structure    : {}", cfg.structure_path().display());
     println!("  tech         : {}", cfg.tech_path().display());
     println!("adr (fold)     :");
-    println!("  decisions    : {}", cfg.decisions_path().display());
-    println!("  pitfalls     : {}", cfg.pitfalls_path().display());
+    println!("  decisions    : {}", cfg.decisions_dir().display());
+    println!("  pitfalls     : {}", cfg.pitfalls_dir().display());
     println!(
         "git            : {} base={}",
         cfg.git.provider, cfg.git.base_branch

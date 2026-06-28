@@ -301,8 +301,8 @@ fn keep_default_project_data(cfg: &Config, report: &mut DetachReport) {
     let paths = vec![
         cfg.config_path.clone(),
         cfg.specs_dir_path(),
-        cfg.decisions_path(),
-        cfg.pitfalls_path(),
+        cfg.decisions_dir(),
+        cfg.pitfalls_dir(),
         cfg.product_path(),
         cfg.structure_path(),
         cfg.tech_path(),

@@ -905,7 +905,9 @@ fn detach_removes_managed_block_and_runtime_but_preserves_project_data() {
     assert!(!dir.path().join(".mochiflow/state").exists());
     assert!(dir.path().join(".mochiflow/config.toml").exists());
     assert!(dir.path().join(".mochiflow/specs").exists());
-    assert!(dir.path().join(".mochiflow/adr/decisions.md").exists());
+    assert!(dir.path().join(".mochiflow/adr/decisions").is_dir());
+    assert!(dir.path().join(".mochiflow/adr/pitfalls").is_dir());
+    assert!(!dir.path().join(".mochiflow/adr/decisions.md").exists());
     assert!(dir.path().join(".mochiflow/context/product.md").exists());
     assert!(dir.path().join(".mochiflow/constitution.md").exists());
 
@@ -2489,4 +2491,183 @@ fn index_orders_same_day_done_by_completion_time() {
         .args(["--config", config.to_str().unwrap(), "index", "--check"])
         .assert()
         .success();
+}
+
+/// Write a minimal config (directory-rooted adr) and seed decision records.
+fn setup_adr_project(dir: &Path) -> PathBuf {
+    let install = dir.join(".mochiflow");
+    let decisions = install.join("adr/decisions");
+    fs::create_dir_all(&decisions).unwrap();
+    fs::create_dir_all(install.join("adr/pitfalls")).unwrap();
+    fs::write(
+        install.join("config.toml"),
+        "schema_version = 1\ninstall_dir = \".mochiflow\"\nspecs_dir = \".mochiflow/specs\"\nindex = \".mochiflow/INDEX.md\"\n\n[constitution]\nproject = \".mochiflow/constitution.md\"\nlocal = \".mochiflow/constitution.local.md\"\n\n[context]\nproduct = \".mochiflow/context/product.md\"\nstructure = \".mochiflow/context/structure.md\"\ntech = \".mochiflow/context/tech.md\"\n\n[adr]\ndecisions = \".mochiflow/adr/decisions\"\npitfalls = \".mochiflow/adr/pitfalls\"\n\n[surfaces.cli]\ndescription = \"cli\"\n\n[surfaces.cli.verify]\ndefault = \"echo ok\"\n",
+    )
+    .unwrap();
+    // Active record (cli area).
+    fs::write(
+        decisions.join("2026-06-20-active-one.md"),
+        "---\nid: 2026-06-20-active-one\ndate: 2026-06-20\narea: [cli]\nspec: feature-x\nstatus: active\nsupersedes: 2026-06-01-old-one\n---\n## 2026-06-20 — Active one keyword-alpha\n",
+    )
+    .unwrap();
+    // Superseded record (excluded from default active set).
+    fs::write(
+        decisions.join("2026-06-01-old-one.md"),
+        "---\nid: 2026-06-01-old-one\ndate: 2026-06-01\narea: [cli]\nstatus: superseded\nsuperseded_by: 2026-06-20-active-one\n---\n## 2026-06-01 — Old one keyword-beta\n",
+    )
+    .unwrap();
+    install.join("config.toml")
+}
+
+#[test]
+fn adr_list_returns_only_active_headers_by_default() {
+    let dir = tempfile::tempdir().unwrap();
+    let cfg = setup_adr_project(dir.path());
+    let out = bin()
+        .args(["--config", cfg.to_str().unwrap(), "adr", "list"])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
+    assert!(stdout.contains("2026-06-20-active-one"), "{stdout}");
+    assert!(
+        !stdout.contains("2026-06-01-old-one"),
+        "superseded record must be excluded by default:\n{stdout}"
+    );
+    // Header only — no body text.
+    assert!(!stdout.contains("**Decision"), "{stdout}");
+}
+
+#[test]
+fn adr_list_status_all_includes_superseded() {
+    let dir = tempfile::tempdir().unwrap();
+    let cfg = setup_adr_project(dir.path());
+    let out = bin()
+        .args([
+            "--config",
+            cfg.to_str().unwrap(),
+            "adr",
+            "list",
+            "--status",
+            "all",
+        ])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
+    assert!(stdout.contains("2026-06-01-old-one"), "{stdout}");
+    assert!(stdout.contains("2026-06-20-active-one"), "{stdout}");
+}
+
+#[test]
+fn adr_search_defaults_to_active_set_and_widens_with_status_all() {
+    let dir = tempfile::tempdir().unwrap();
+    let cfg = setup_adr_project(dir.path());
+    // keyword-beta lives only in the superseded record's body.
+    let default_out = bin()
+        .args([
+            "--config",
+            cfg.to_str().unwrap(),
+            "adr",
+            "search",
+            "keyword-beta",
+        ])
+        .assert()
+        .success();
+    let default_stdout = String::from_utf8_lossy(&default_out.get_output().stdout).into_owned();
+    assert!(
+        !default_stdout.contains("2026-06-01-old-one"),
+        "default search must stay bounded to the active set:\n{default_stdout}"
+    );
+
+    let all_out = bin()
+        .args([
+            "--config",
+            cfg.to_str().unwrap(),
+            "adr",
+            "search",
+            "keyword-beta",
+            "--status",
+            "all",
+        ])
+        .assert()
+        .success();
+    let all_stdout = String::from_utf8_lossy(&all_out.get_output().stdout).into_owned();
+    assert!(
+        all_stdout.contains("2026-06-01-old-one"),
+        "--status all must scan superseded bodies:\n{all_stdout}"
+    );
+}
+
+#[test]
+fn adr_show_returns_body_and_lineage() {
+    let dir = tempfile::tempdir().unwrap();
+    let cfg = setup_adr_project(dir.path());
+    let out = bin()
+        .args([
+            "--config",
+            cfg.to_str().unwrap(),
+            "adr",
+            "show",
+            "2026-06-20-active-one",
+        ])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
+    assert!(
+        stdout.contains("supersedes: 2026-06-01-old-one"),
+        "{stdout}"
+    );
+    assert!(stdout.contains("## 2026-06-20 — Active one"), "{stdout}");
+}
+
+#[test]
+fn adr_show_unknown_id_fails() {
+    let dir = tempfile::tempdir().unwrap();
+    let cfg = setup_adr_project(dir.path());
+    bin()
+        .args([
+            "--config",
+            cfg.to_str().unwrap(),
+            "adr",
+            "show",
+            "2099-01-01-nope",
+        ])
+        .assert()
+        .failure();
+}
+
+#[test]
+fn adr_filters_by_area_and_spec() {
+    let dir = tempfile::tempdir().unwrap();
+    let cfg = setup_adr_project(dir.path());
+    // No record has area=ui -> empty.
+    let out = bin()
+        .args([
+            "--config",
+            cfg.to_str().unwrap(),
+            "adr",
+            "list",
+            "--area",
+            "ui",
+        ])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
+    assert!(stdout.contains("(no matching records)"), "{stdout}");
+
+    let spec_out = bin()
+        .args([
+            "--config",
+            cfg.to_str().unwrap(),
+            "adr",
+            "list",
+            "--spec",
+            "feature-x",
+        ])
+        .assert()
+        .success();
+    let spec_stdout = String::from_utf8_lossy(&spec_out.get_output().stdout).into_owned();
+    assert!(
+        spec_stdout.contains("2026-06-20-active-one"),
+        "{spec_stdout}"
+    );
 }

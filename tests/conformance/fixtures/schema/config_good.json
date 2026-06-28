@@ -17,8 +17,8 @@
     "tech": ".sf/context/tech.md"
   },
   "adr": {
-    "decisions": ".sf/adr/decisions.md",
-    "pitfalls": ".sf/adr/pitfalls.md"
+    "decisions": ".sf/adr/decisions",
+    "pitfalls": ".sf/adr/pitfalls"
   },
   "surfaces": { "app": { "description": "app", "verify": { "default": "echo ok" } } }
 }

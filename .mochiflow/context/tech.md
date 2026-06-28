@@ -18,9 +18,10 @@ Regenerated from code/config via `refresh-context`. Minimal, slow-changing slice
 - Default verification: `cargo test --manifest-path cli/Cargo.toml`.
 - CI checks: `cargo fmt --all -- --check`, `cargo clippy -- -D warnings`,
   `cargo test`.
-- Quality checks: `mochiflow lint`, `mochiflow doctor`, `mochiflow adapter
-  generate --check`, and `mochiflow index --check` cover specs, config,
-  adapters, engine integrity, and generated index drift.
+- Quality checks: `mochiflow lint`, `mochiflow doctor`, `mochiflow adr lint`,
+  `mochiflow adapter generate --check`, and `mochiflow index --check` cover
+  specs, config, ADR structural integrity, adapters, engine integrity, and
+  generated index drift.
 
 ## Generated / Frozen Artifacts
 

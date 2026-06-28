@@ -16,7 +16,8 @@ who want a disciplined, auditable spec-to-PR flow.
 
 ## Domain terms
 
-- **verb**: a lifecycle phase (`discuss`, `plan`, `build`, `ship`).
+- **verb**: a lifecycle phase (`discuss`, `plan`, `build`, `open`, `update`,
+  `close`).
 - **non-phase command**: workflow utilities outside the lifecycle, including
   `patch`, `review`, and `refresh-context`.
 - **patch**: a no-spec lane for concrete, local, reversible fixes.
@@ -27,8 +28,11 @@ who want a disciplined, auditable spec-to-PR flow.
   criteria to implementation, verification, evidence, and result.
 - **constitution**: user-authored always-loaded project / local rules.
 - **context**: code/config-derived current-state orientation refreshed by onboard / `refresh-context`.
-- **ADR**: durable decision and pitfall records folded at ship.
-- **fold**: appending dated *why* / active pitfalls to `[adr]` at ship.
+- **ADR**: durable decision and pitfall records under directory-rooted stores
+  (`[adr].decisions` / `[adr].pitfalls`), each one immutable per-file record
+  with front-matter + supersession lifecycle; folded at open.
+- **fold**: appending a per-file ADR record (dated *why* / active pitfall) to
+  `[adr]` at open, with supersession via `supersedes`/`superseded_by`.
 - **refresh**: regenerating `[context]` from code/config (onboard / refresh-context).
 - **adapter**: per-tool entrypoint generated from engine templates.
 - **vendored engine**: project-local `.mochiflow/engine` copy used by generated
@@ -42,8 +46,8 @@ who want a disciplined, auditable spec-to-PR flow.
   project-agnostic; project specifics live in `config.toml`.
 - The contract surface is frozen by `contracts.lock`; changing a schema requires
   regenerating the lock and bumping `engine/VERSION` in the same commit.
-- Exactly two delivery approval gates: approve-to-build and approve-PR. Only
-  `ship` sets `done`.
+- Exactly two delivery approval gates: approve-to-build and approve-PR.
+  `open` sets `accepted`; `done` is derived from merge, never written.
 - PR handoff is produced through `mochiflow pr`.
 - Engine source, adapter templates, schemas, and golden fixtures are the frozen
   contract surface guarded by manifests / locks and tests.

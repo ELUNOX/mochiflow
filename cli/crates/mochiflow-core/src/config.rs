@@ -69,11 +69,35 @@ pub struct RawContext {
     pub tech: String,
 }
 
-/// ADR layer — fold targets (`open` appends durable decisions and pitfalls).
+/// ADR layer — fold targets (`open` appends durable decision/pitfall records).
+///
+/// `decisions` and `pitfalls` are **directory roots**, not monolith files. Each
+/// holds one immutable record per decision/pitfall plus a generated, gitignored
+/// `INDEX.md`. There is no legacy monolith read path: an absent or empty
+/// directory is simply zero records.
 #[derive(Debug, Deserialize)]
 pub struct RawAdr {
     pub decisions: String,
     pub pitfalls: String,
+}
+
+/// List the record file paths (`*.md` except the generated `INDEX.md`) directly
+/// under an ADR store directory, sorted by file name. An absent or empty
+/// directory yields an empty list — there is no monolith fallback.
+pub fn adr_record_files(dir: &Path) -> Vec<PathBuf> {
+    let mut files: Vec<PathBuf> = std::fs::read_dir(dir)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|path| {
+            path.is_file()
+                && path.extension().is_some_and(|ext| ext == "md")
+                && path.file_name().is_some_and(|name| name != "INDEX.md")
+        })
+        .collect();
+    files.sort();
+    files
 }
 
 #[derive(Debug, Deserialize)]
@@ -211,12 +235,42 @@ impl Config {
         self.repo_root.join(&self.constitution.local)
     }
 
-    pub fn pitfalls_path(&self) -> PathBuf {
+    /// Directory root holding the decision records and their generated INDEX.md.
+    pub fn decisions_dir(&self) -> PathBuf {
+        self.repo_root.join(&self.adr.decisions)
+    }
+
+    /// Directory root holding the pitfall records and their generated INDEX.md.
+    pub fn pitfalls_dir(&self) -> PathBuf {
         self.repo_root.join(&self.adr.pitfalls)
     }
 
-    pub fn decisions_path(&self) -> PathBuf {
-        self.repo_root.join(&self.adr.decisions)
+    /// Generated, gitignored content index for the decisions store.
+    pub fn decisions_index(&self) -> PathBuf {
+        self.decisions_dir().join("INDEX.md")
+    }
+
+    /// Generated, gitignored content index for the pitfalls store.
+    pub fn pitfalls_index(&self) -> PathBuf {
+        self.pitfalls_dir().join("INDEX.md")
+    }
+
+    /// AC-10: an `[adr]` value that resolves to an existing **file** where a
+    /// record directory is expected is a config error, never a silently empty
+    /// store. An absent path is fine (it is just zero records).
+    pub fn validate_adr_dirs(&self) -> Result<(), ConfigError> {
+        for (key, dir) in [
+            ("adr.decisions", self.decisions_dir()),
+            ("adr.pitfalls", self.pitfalls_dir()),
+        ] {
+            if dir.exists() && !dir.is_dir() {
+                return Err(ConfigError::Invalid(format!(
+                    "{key} must resolve to a record directory, but {} is a file",
+                    dir.display()
+                )));
+            }
+        }
+        Ok(())
     }
 
     pub fn product_path(&self) -> PathBuf {
@@ -451,6 +505,8 @@ fn resolve(raw: RawConfig, config_path: &Path) -> Result<Config, ConfigError> {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used)]
+
     use super::*;
 
     #[test]
@@ -477,5 +533,78 @@ mod tests {
         assert!(is_valid_conversation_language("pt-BR"));
         assert!(!is_valid_conversation_language(""));
         assert!(!is_valid_conversation_language("../ja"));
+    }
+
+    fn write_min_config(repo: &Path, decisions: &str, pitfalls: &str) -> PathBuf {
+        let install = repo.join(".mochiflow");
+        std::fs::create_dir_all(&install).unwrap();
+        let text = format!(
+            "schema_version = 1\ninstall_dir = \".mochiflow\"\nspecs_dir = \".mochiflow/specs\"\nindex = \".mochiflow/INDEX.md\"\n\n[constitution]\nproject = \".mochiflow/constitution.md\"\nlocal = \".mochiflow/constitution.local.md\"\n\n[context]\nproduct = \".mochiflow/context/product.md\"\nstructure = \".mochiflow/context/structure.md\"\ntech = \".mochiflow/context/tech.md\"\n\n[adr]\ndecisions = \"{decisions}\"\npitfalls = \"{pitfalls}\"\n\n[surfaces.app]\ndescription = \"app\"\n\n[surfaces.app.verify]\ndefault = \"echo ok\"\n"
+        );
+        let path = install.join("config.toml");
+        std::fs::write(&path, text).unwrap();
+        path
+    }
+
+    #[test]
+    fn adr_accessors_resolve_directory_roots_and_indexes() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = tmp.path();
+        let path = write_min_config(repo, ".mochiflow/adr/decisions", ".mochiflow/adr/pitfalls");
+        let cfg = load_config(&path).unwrap();
+        assert!(cfg.decisions_dir().ends_with(".mochiflow/adr/decisions"));
+        assert!(cfg.pitfalls_dir().ends_with(".mochiflow/adr/pitfalls"));
+        assert!(
+            cfg.decisions_index()
+                .ends_with(".mochiflow/adr/decisions/INDEX.md")
+        );
+        assert!(
+            cfg.pitfalls_index()
+                .ends_with(".mochiflow/adr/pitfalls/INDEX.md")
+        );
+    }
+
+    #[test]
+    fn adr_absent_or_empty_store_yields_zero_records_no_fallback() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = tmp.path();
+        let path = write_min_config(repo, ".mochiflow/adr/decisions", ".mochiflow/adr/pitfalls");
+        let cfg = load_config(&path).unwrap();
+
+        // Absent directory: zero records, and validation passes (absent is fine).
+        assert!(adr_record_files(&cfg.decisions_dir()).is_empty());
+        cfg.validate_adr_dirs().unwrap();
+
+        // Empty directory plus a monolith-named file elsewhere is never read as
+        // a fallback: only `*.md` records inside the directory count.
+        std::fs::create_dir_all(cfg.decisions_dir()).unwrap();
+        std::fs::write(cfg.decisions_dir().join("INDEX.md"), "# index\n").unwrap();
+        assert!(adr_record_files(&cfg.decisions_dir()).is_empty());
+
+        std::fs::write(
+            cfg.decisions_dir().join("2026-06-28-example.md"),
+            "---\nid: 2026-06-28-example\n---\nbody\n",
+        )
+        .unwrap();
+        let records = adr_record_files(&cfg.decisions_dir());
+        assert_eq!(records.len(), 1);
+        assert!(records[0].ends_with("2026-06-28-example.md"));
+    }
+
+    #[test]
+    fn adr_value_resolving_to_file_is_a_config_error() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = tmp.path();
+        let path = write_min_config(repo, ".mochiflow/adr/decisions", ".mochiflow/adr/pitfalls");
+        let cfg = load_config(&path).unwrap();
+
+        std::fs::create_dir_all(repo.join(".mochiflow/adr")).unwrap();
+        std::fs::write(cfg.decisions_dir(), "# legacy monolith\n").unwrap();
+
+        let err = cfg.validate_adr_dirs().unwrap_err();
+        assert!(
+            matches!(err, ConfigError::Invalid(ref m) if m.contains("adr.decisions")),
+            "expected file-where-directory config error, got {err:?}"
+        );
     }
 }

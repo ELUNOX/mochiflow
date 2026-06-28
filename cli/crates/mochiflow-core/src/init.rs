@@ -22,9 +22,6 @@ pub const CONSTITUTION_STUB_BODY: &str =
 /// Boilerplate body of an unmodified `context/` (foundational) living-spec stub.
 pub const CONTEXT_STUB_BODY: &str =
     "mochiflow `onboard` / `refresh-context` regenerates this foundational map from code.";
-/// Boilerplate body of an unmodified `adr/` stub.
-pub const ADR_STUB_BODY: &str =
-    "mochiflow `open` folds durable decisions and active pitfalls here when needed.";
 
 /// Living-spec layer — determines stub wording and lifecycle.
 #[derive(Clone, Copy)]
@@ -33,8 +30,6 @@ pub enum LivingSpecLayer {
     Constitution,
     /// Foundational: refresh targets, always-loaded (product / structure / tech).
     Context,
-    /// ADR: fold targets (decisions / pitfalls).
-    Adr,
 }
 
 /// Render the deterministic stub for a living-spec file.
@@ -46,7 +41,6 @@ pub fn living_spec_stub(title: &str, layer: LivingSpecLayer) -> String {
         LivingSpecLayer::Context => {
             format!("# {title} (context — foundational)\n\n{CONTEXT_STUB_BODY}\n")
         }
-        LivingSpecLayer::Adr => format!("# {title} (adr — durable)\n\n{ADR_STUB_BODY}\n"),
     }
 }
 
@@ -59,7 +53,7 @@ pub fn is_living_spec_stub(content: &str) -> bool {
         if t.is_empty() || t.starts_with('#') {
             continue;
         }
-        if t == CONSTITUTION_STUB_BODY || t == CONTEXT_STUB_BODY || t == ADR_STUB_BODY {
+        if t == CONSTITUTION_STUB_BODY || t == CONTEXT_STUB_BODY {
             continue;
         }
         return false; // substantive authored content
@@ -196,8 +190,8 @@ structure = ".mochiflow/context/structure.md"
 tech = ".mochiflow/context/tech.md"
 
 [adr]
-decisions = ".mochiflow/adr/decisions.md"
-pitfalls = ".mochiflow/adr/pitfalls.md"
+decisions = ".mochiflow/adr/decisions"
+pitfalls = ".mochiflow/adr/pitfalls"
 
 {git_section}
 [adapter]
@@ -779,8 +773,6 @@ pub fn run_init(
                 ("product", cfg.product_path(), LivingSpecLayer::Context),
                 ("structure", cfg.structure_path(), LivingSpecLayer::Context),
                 ("tech", cfg.tech_path(), LivingSpecLayer::Context),
-                ("decisions", cfg.decisions_path(), LivingSpecLayer::Adr),
-                ("pitfalls", cfg.pitfalls_path(), LivingSpecLayer::Adr),
             ] {
                 if !path.exists() {
                     if let Some(parent) = path.parent()
@@ -794,6 +786,15 @@ pub fn run_init(
                         log!("FAIL: could not write {}: {e}", path.display());
                         return 1;
                     }
+                }
+            }
+            // ADR stores are directory-rooted: scaffold empty record directories
+            // instead of monolith stub files. `open` appends per-file records and
+            // regenerates the gitignored INDEX.md.
+            for adr_dir in [cfg.decisions_dir(), cfg.pitfalls_dir()] {
+                if let Err(e) = std::fs::create_dir_all(&adr_dir) {
+                    log!("FAIL: could not create {}: {e}", adr_dir.display());
+                    return 1;
                 }
             }
             let adapter_result = adapter::generate(&cfg, false, force);
@@ -1295,10 +1296,6 @@ mod tests {
         assert!(is_living_spec_stub(&living_spec_stub(
             "Product",
             LivingSpecLayer::Context
-        )));
-        assert!(is_living_spec_stub(&living_spec_stub(
-            "Decisions",
-            LivingSpecLayer::Adr
         )));
     }
 

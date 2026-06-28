@@ -75,11 +75,17 @@ approve-PR gate (e)**.
 
 4. `open` owns authoring the fold (not `accept`). Fold per
    `reference/git.md ## Living-spec fold`: append the *why* that code cannot
-   reproduce (decision rationale, rejected options) to `[adr].decisions` with a
-   date, and operational pitfalls to `[adr].pitfalls` using the active guardrail
-   format. Pitfalls captured during build are finalized here. Do not fold prose
-   that describes current state. Skip only when there is genuinely no new
-   rationale or pitfall.
+   reproduce (decision rationale, rejected options) as a **new per-file record**
+   under `[adr].decisions` (`{YYYY-MM-DD}-{slug}.md` with front-matter `id` /
+   `date` / `area` / `spec` / `status: active`), and operational pitfalls as a
+   new record under `[adr].pitfalls` using the active guardrail format. `area`
+   defaults to the spec's `surfaces`. When a new decision overrides an earlier
+   one, add the new record with `supersedes: <id>` and flip the superseded
+   record to `status: superseded` with the reciprocal `superseded_by: <id>`
+   (never rewrite the old record's body). Regenerate each affected store's
+   gitignored `INDEX.md` (never stage it). Pitfalls captured during build are
+   finalized here. Do not fold prose that describes current state. Skip only
+   when there is genuinely no new rationale or pitfall.
    - **Foundational context refresh check (not a fold)**: if the change
      introduced a coarse structural shift (new module / surface / moved entry
      point / technology or verification responsibility) that makes

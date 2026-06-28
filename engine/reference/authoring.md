@@ -40,7 +40,7 @@ Fix each fact in one place; reference by ID elsewhere.
 | reviewer / git / journal cadence | `risk.md` | not repeated |
 | user-authored standing rules | `[constitution]` (project / local), written by the user | always-loaded; never generated from code |
 | current-state orientation (purpose / layout / tech) | code/config, mapped into `[context]` (product / structure / tech) via onboard / `refresh-context` | always-loaded; never folded |
-| design rationale (*why*) / pitfalls history | `[adr]` (decisions / pitfalls), appended by open's fold | on-demand / phase load |
+| design rationale (*why*) / pitfalls history | `[adr]` (directory-rooted `decisions` / `pitfalls` stores: one immutable per-file record each, plus a generated gitignored `INDEX.md`), grown by open's fold via supersession | on-demand / phase load |
 
 The three durable guidance layers differ by lifecycle: `[constitution]` is
 user-authored standing guidance, `[context]` is a code-derived current-state map

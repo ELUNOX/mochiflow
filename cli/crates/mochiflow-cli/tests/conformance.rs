@@ -3209,3 +3209,114 @@ fn behavioral_adapter_all_tools_deterministic() {
         "adapter generation must be deterministic for all four tools: {out}"
     );
 }
+
+/// Minimal config rooted at `install`'s parent, with directory-rooted adr.
+fn write_adr_config(install: &Path) -> PathBuf {
+    std::fs::create_dir_all(install).unwrap();
+    let cfg = install.join("config.toml");
+    std::fs::write(
+        &cfg,
+        "schema_version = 1\n\
+         install_dir = \".mochiflow\"\n\
+         specs_dir = \".mochiflow/specs\"\n\
+         index = \".mochiflow/INDEX.md\"\n\n\
+         [constitution]\n\
+         project = \".mochiflow/constitution.md\"\n\
+         local = \".mochiflow/constitution.local.md\"\n\n\
+         [context]\n\
+         product = \".mochiflow/context/product.md\"\n\
+         structure = \".mochiflow/context/structure.md\"\n\
+         tech = \".mochiflow/context/tech.md\"\n\n\
+         [adr]\n\
+         decisions = \".mochiflow/adr/decisions\"\n\
+         pitfalls = \".mochiflow/adr/pitfalls\"\n\n\
+         [surfaces.cli]\n\
+         description = \"cli\"\n\n\
+         [surfaces.cli.verify]\n\
+         default = \"echo ok\"\n",
+    )
+    .unwrap();
+    cfg
+}
+
+fn write_decision(install: &Path, name: &str, front: &str, body: &str) {
+    let dir = install.join("adr/decisions");
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(dir.join(name), format!("---\n{front}---\n{body}")).unwrap();
+}
+
+#[test]
+fn doctor_adr_gates_on_dangling_reference() {
+    let tmp = tempfile::tempdir().unwrap();
+    let install = tmp.path().join(".mochiflow");
+    let cfg = write_adr_config(&install);
+    write_decision(
+        &install,
+        "2026-06-20-x.md",
+        "id: 2026-06-20-x\ndate: 2026-06-20\narea: [cli]\nstatus: active\nsupersedes: ghost\n",
+        "## 2026-06-20 — X\n",
+    );
+    let (code, out) = run_cli(&cfg, &["doctor", "adr"]);
+    assert_eq!(code, 1, "dangling supersedes must gate doctor:\n{out}");
+    assert!(out.contains("FAIL"), "{out}");
+}
+
+#[test]
+fn doctor_adr_warns_on_orphan_but_passes() {
+    let tmp = tempfile::tempdir().unwrap();
+    let install = tmp.path().join(".mochiflow");
+    let cfg = write_adr_config(&install);
+    // Deprecated record with no successor link and nothing referencing it:
+    // an orphan, which is a non-blocking warning.
+    write_decision(
+        &install,
+        "2026-06-10-dep.md",
+        "id: 2026-06-10-dep\ndate: 2026-06-10\narea: [cli]\nstatus: deprecated\n",
+        "## 2026-06-10 — Dep\n",
+    );
+    let (code, out) = run_cli(&cfg, &["doctor", "adr"]);
+    assert_eq!(code, 0, "orphan must not gate doctor:\n{out}");
+    assert!(out.contains("WARN"), "{out}");
+}
+
+#[test]
+fn doctor_adr_regenerates_stale_index_instead_of_failing() {
+    let tmp = tempfile::tempdir().unwrap();
+    let install = tmp.path().join(".mochiflow");
+    let cfg = write_adr_config(&install);
+    write_decision(
+        &install,
+        "2026-06-20-x.md",
+        "id: 2026-06-20-x\ndate: 2026-06-20\narea: cli\nstatus: active\n",
+        "## 2026-06-20 — X\n",
+    );
+    let index = install.join("adr/decisions/INDEX.md");
+    assert!(!index.exists(), "index absent before doctor");
+    let (code, out) = run_cli(&cfg, &["doctor", "adr"]);
+    assert_eq!(
+        code, 0,
+        "absent index must be regenerated, not gated:\n{out}"
+    );
+    assert!(index.exists(), "doctor must regenerate the ADR INDEX.md");
+    assert!(
+        std::fs::read_to_string(&index)
+            .unwrap()
+            .contains("| 2026-06-20 |")
+    );
+}
+
+#[test]
+fn doctor_adr_gates_on_unknown_area() {
+    let tmp = tempfile::tempdir().unwrap();
+    let install = tmp.path().join(".mochiflow");
+    let cfg = write_adr_config(&install); // surface = cli
+    write_decision(
+        &install,
+        "2026-06-20-bad-area.md",
+        "id: 2026-06-20-bad-area\ndate: 2026-06-20\narea: [nope]\nstatus: active\n",
+        "## 2026-06-20 — Bad area\n",
+    );
+    let (code, out) = run_cli(&cfg, &["adr", "lint"]);
+    assert_eq!(code, 1, "unknown area must gate adr lint:\n{out}");
+    assert!(out.contains("unknown area"), "{out}");
+}
