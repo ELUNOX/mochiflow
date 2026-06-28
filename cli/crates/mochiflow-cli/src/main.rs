@@ -68,8 +68,8 @@ enum Commands {
         /// Spec slug or directory
         spec: String,
     },
-    /// Complete deterministic ship close-out mechanics
-    Ship {
+    /// Settle the accept close-out: set accepted, stage the spec + fold, commit
+    Accept {
         /// Spec slug (default: infer from current feature branch)
         slug: Option<String>,
         /// Preview without verification, mutation, staging, or commit
@@ -309,9 +309,15 @@ fn main() -> Result<()> {
             let cfg = load_cfg(cli.config.as_deref())?;
             cmd_ready(&cfg, &spec)
         }
-        Commands::Ship { slug, dry_run } => {
+        Commands::Accept { slug, dry_run } => {
             let cfg = load_cfg(cli.config.as_deref())?;
-            mochiflow_core::ship::run_ship(&cfg, slug.as_deref(), dry_run)
+            let code = mochiflow_core::ship::run_accept(&cfg, slug.as_deref(), dry_run);
+            // Shared post-command board refresh: regenerate the gitignored
+            // INDEX.md to reflect the new accepted/Ready state. Never staged.
+            if !dry_run && code == 0 {
+                let _ = mochiflow_core::index::generate_index_quiet(&cfg);
+            }
+            code
         }
         Commands::Backlog { command } => {
             let cfg = load_cfg(cli.config.as_deref())?;

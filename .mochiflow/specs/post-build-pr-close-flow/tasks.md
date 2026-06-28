@@ -57,7 +57,7 @@ Critical Stop Conditions:
     - `.mochiflow/.gitignore`
   - Done: `INDEX.md` columns come from the same board computation as `status`, and `index.rs` rendering (`status_emoji` + pipeline counts) gains `accepted`; `init.rs` `write_install_gitignore` generates an install `.gitignore` that ignores the configured index filename (so new `mochiflow init` projects never track `INDEX.md`); this repo's `.mochiflow/.gitignore` ignores `INDEX.md` and its already-tracked `.mochiflow/INDEX.md` is untracked once with a manual `git rm --cached`; existing user repos perform the same one-time manual untrack (called out in the engine docs) — automated `join`/`upgrade` migration is explicitly out of scope for this change; a shared post-command step regenerates `INDEX.md` after state-changing commands (`accept`, `pr`, `index`) — never on `status`; no command stages/commits `INDEX.md`; the `ship`-referencing generated text is updated off `ship` (init.rs `ADR_STUB_BODY` and the config.rs fold-target comment point to `open`/the fold step); tests assert the generated install gitignore ignores the index and that `INDEX.md` is untracked after a state-changing command.
   - Stop: if `INDEX.md` is referenced as a committed artifact in freeze/doctor/manifest, reconcile before flipping it to gitignored.
-- [ ] T-006 [AC-05] Repurpose ship close-out into `accept` (no done/_done/INDEX)
+- [x] T-006 [AC-05] Repurpose ship close-out into `accept` (no done/_done/INDEX)
   - Depends on: T-001, T-005
   - Files:
     - `cli/crates/mochiflow-core/src/ship.rs`
