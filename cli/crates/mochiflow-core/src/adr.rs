@@ -727,6 +727,202 @@ pub fn record_name_is_safe(name: &str) -> bool {
         .any(|component| matches!(component, std::path::Component::ParentDir))
 }
 
+/// Read-only retrieval filters for `adr list` / `show` / `search`.
+#[derive(Debug, Default, Clone)]
+pub struct AdrQuery {
+    /// Restrict to one store; `None` covers both.
+    pub kind: Option<AdrKind>,
+    pub area: Option<String>,
+    /// Status filter. `None` means the default active set; `Some("all")` widens
+    /// to full history; any other value matches that exact status.
+    pub status: Option<String>,
+    pub spec: Option<String>,
+}
+
+impl AdrQuery {
+    fn kinds(&self) -> Vec<AdrKind> {
+        match self.kind {
+            Some(kind) => vec![kind],
+            None => vec![AdrKind::Decisions, AdrKind::Pitfalls],
+        }
+    }
+
+    /// True when the query scans the full history (`--status all`) rather than
+    /// the bounded default-active set.
+    fn scans_all(&self) -> bool {
+        self.status.as_deref() == Some("all")
+    }
+}
+
+/// Collect records across the queried stores that match the filters. By default
+/// only the active set is returned (bounded); `--status all` widens to the full
+/// history, and an explicit `--status <s>` matches that status exactly.
+fn collect_matching(
+    cfg: &Config,
+    query: &AdrQuery,
+) -> Result<Vec<AdrRecord>, crate::config::ConfigError> {
+    let mut out = Vec::new();
+    for kind in query.kinds() {
+        let store = load_store(cfg, kind)?;
+        let base: Vec<AdrRecord> = match query.status.as_deref() {
+            // Default (no --status): the bounded active set.
+            None => store.active_set().into_iter().cloned().collect(),
+            // Explicit wider scan over the full history.
+            Some("all") => store.records.clone(),
+            // Exact status match.
+            Some(status) => store
+                .records
+                .iter()
+                .filter(|r| r.status.as_str() == status)
+                .cloned()
+                .collect(),
+        };
+        for record in base {
+            if let Some(area) = &query.area
+                && !record.area.iter().any(|a| a == area)
+            {
+                continue;
+            }
+            if let Some(spec) = &query.spec
+                && record.spec.as_deref() != Some(spec.as_str())
+            {
+                continue;
+            }
+            out.push(record);
+        }
+    }
+    out.sort_by(|a, b| b.date.cmp(&a.date).then_with(|| a.id.cmp(&b.id)));
+    Ok(out)
+}
+
+fn header_line(record: &AdrRecord) -> String {
+    format!(
+        "{}  {}  [{}]  ({}) {}",
+        record.date,
+        record.id,
+        record.area.join(","),
+        record.status.as_str(),
+        record.title
+    )
+}
+
+/// `mochiflow adr list`: header rows for the matched records.
+pub fn run_adr_list(cfg: &Config, query: &AdrQuery) -> i32 {
+    match collect_matching(cfg, query) {
+        Err(e) => {
+            eprintln!("FAIL: {e}");
+            1
+        }
+        Ok(records) => {
+            if records.is_empty() {
+                println!("(no matching records)");
+            }
+            for record in &records {
+                println!("{}", header_line(record));
+            }
+            0
+        }
+    }
+}
+
+/// `mochiflow adr search <term>`: header rows whose front-matter or body contain
+/// `term` (case-insensitive), over the same bounded/default-active set as list.
+pub fn run_adr_search(cfg: &Config, term: &str, query: &AdrQuery) -> i32 {
+    let needle = term.to_lowercase();
+    match collect_matching(cfg, query) {
+        Err(e) => {
+            eprintln!("FAIL: {e}");
+            1
+        }
+        Ok(records) => {
+            let matches: Vec<&AdrRecord> = records
+                .iter()
+                .filter(|r| {
+                    r.id.to_lowercase().contains(&needle)
+                        || r.title.to_lowercase().contains(&needle)
+                        || r.body.to_lowercase().contains(&needle)
+                        || r.area.iter().any(|a| a.to_lowercase().contains(&needle))
+                })
+                .collect();
+            if matches.is_empty() {
+                let scope = if query.scans_all() {
+                    "full history"
+                } else {
+                    "active set"
+                };
+                println!("(no matches for `{term}` in the {scope})");
+            }
+            for record in matches {
+                println!("{}", header_line(record));
+            }
+            0
+        }
+    }
+}
+
+/// `mochiflow adr show <id>`: full body plus supersession lineage. Resolves the
+/// id across the queried stores (full history, so superseded records are
+/// reachable for lineage tracing). Returns non-zero when the id is unknown.
+pub fn run_adr_show(cfg: &Config, id: &str, kind_filter: Option<AdrKind>) -> i32 {
+    if !record_name_is_safe(id) {
+        eprintln!("FAIL: invalid record id `{id}`");
+        return 1;
+    }
+    let kinds = match kind_filter {
+        Some(kind) => vec![kind],
+        None => vec![AdrKind::Decisions, AdrKind::Pitfalls],
+    };
+    for kind in kinds {
+        let store = match load_store(cfg, kind) {
+            Ok(store) => store,
+            Err(e) => {
+                eprintln!("FAIL: {e}");
+                return 1;
+            }
+        };
+        if let Some(record) = store.find(id) {
+            print!("{}", render_show(&store, record));
+            return 0;
+        }
+    }
+    eprintln!("FAIL: no record with id `{id}`");
+    1
+}
+
+fn render_show(store: &AdrStore, record: &AdrRecord) -> String {
+    let mut out = String::new();
+    out.push_str(&format!("id: {}\n", record.id));
+    out.push_str(&format!("date: {}\n", record.date));
+    out.push_str(&format!("area: {}\n", record.area.join(", ")));
+    if let Some(spec) = &record.spec {
+        out.push_str(&format!("spec: {spec}\n"));
+    }
+    out.push_str(&format!("status: {}\n", record.status.as_str()));
+    // Supersession lineage.
+    if let Some(target) = &record.supersedes {
+        let known = if store.find(target).is_some() {
+            ""
+        } else {
+            " (unknown)"
+        };
+        out.push_str(&format!("supersedes: {target}{known}\n"));
+    }
+    if let Some(target) = &record.superseded_by {
+        let known = if store.find(target).is_some() {
+            ""
+        } else {
+            " (unknown)"
+        };
+        out.push_str(&format!("superseded_by: {target}{known}\n"));
+    }
+    out.push('\n');
+    out.push_str(&record.body);
+    if !out.ends_with('\n') {
+        out.push('\n');
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used)]
