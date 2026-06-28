@@ -3253,7 +3253,7 @@ fn doctor_adr_gates_on_dangling_reference() {
     write_decision(
         &install,
         "2026-06-20-x.md",
-        "id: 2026-06-20-x\ndate: 2026-06-20\nstatus: active\nsupersedes: ghost\n",
+        "id: 2026-06-20-x\ndate: 2026-06-20\narea: [cli]\nstatus: active\nsupersedes: ghost\n",
         "## 2026-06-20 — X\n",
     );
     let (code, out) = run_cli(&cfg, &["doctor", "adr"]);
@@ -3271,7 +3271,7 @@ fn doctor_adr_warns_on_orphan_but_passes() {
     write_decision(
         &install,
         "2026-06-10-dep.md",
-        "id: 2026-06-10-dep\ndate: 2026-06-10\nstatus: deprecated\n",
+        "id: 2026-06-10-dep\ndate: 2026-06-10\narea: [cli]\nstatus: deprecated\n",
         "## 2026-06-10 — Dep\n",
     );
     let (code, out) = run_cli(&cfg, &["doctor", "adr"]);

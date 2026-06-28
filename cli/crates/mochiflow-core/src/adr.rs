@@ -400,12 +400,19 @@ pub fn parse_record(path: &Path, kind: AdrKind) -> Result<AdrRecord, AdrProblem>
     })?;
     let fields = parse_front_matter(front);
 
-    let id = fields
+    let id = match fields
         .iter()
         .find(|(k, _)| k == "id")
-        .map(|(_, v)| v.clone())
-        .filter(|v| !v.is_empty())
-        .unwrap_or_else(|| file_stem.clone());
+        .map(|(_, v)| v.trim().to_string())
+    {
+        Some(v) if !v.is_empty() => v,
+        _ => {
+            return Err(schema_problem(format!(
+                "{}: required front-matter key `id` is missing or empty",
+                path.display()
+            )));
+        }
+    };
     if !record_name_is_safe(&file_stem) || !record_name_is_safe(&id) {
         return Err(AdrProblem {
             kind: AdrProblemKind::PathTraversal,
@@ -453,6 +460,12 @@ pub fn parse_record(path: &Path, kind: AdrKind) -> Result<AdrRecord, AdrProblem>
         .find(|(k, _)| k == "area")
         .map(|(_, v)| parse_list(v))
         .unwrap_or_default();
+    if area.is_empty() {
+        return Err(schema_problem(format!(
+            "{}: required front-matter key `area` is missing or empty",
+            path.display()
+        )));
+    }
     let spec = fields
         .iter()
         .find(|(k, _)| k == "spec")
@@ -786,11 +799,13 @@ fn collect_matching(
     for kind in query.kinds() {
         let store = load_store(cfg, kind)?;
         let base: Vec<AdrRecord> = match query.status.as_deref() {
-            // Default (no --status): the bounded active set.
-            None => store.active_set().into_iter().cloned().collect(),
+            // Default and explicit `active` both mean the effective active set:
+            // a record superseded by another is excluded even if its own status
+            // string still reads `active` (status lag).
+            None | Some("active") => store.active_set().into_iter().cloned().collect(),
             // Explicit wider scan over the full history.
             Some("all") => store.records.clone(),
-            // Exact status match.
+            // Exact status match for the other lifecycle states.
             Some(status) => store
                 .records
                 .iter()
@@ -1023,6 +1038,78 @@ mod tests {
     }
 
     #[test]
+    fn missing_id_or_area_is_a_schema_problem() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("decisions");
+        // Missing `id` key (filename is not a fallback).
+        let no_id = write_record(
+            &dir,
+            "2026-06-22-x.md",
+            "date: 2026-06-22\narea: [cli]\nstatus: active\n",
+            "## body\n",
+        );
+        assert_eq!(
+            parse_record(&no_id, AdrKind::Decisions).unwrap_err().kind,
+            AdrProblemKind::Schema
+        );
+        // Missing `area` key.
+        let no_area = write_record(
+            &dir,
+            "2026-06-22-y.md",
+            "id: 2026-06-22-y\ndate: 2026-06-22\nstatus: active\n",
+            "## body\n",
+        );
+        assert_eq!(
+            parse_record(&no_area, AdrKind::Decisions).unwrap_err().kind,
+            AdrProblemKind::Schema
+        );
+        // Empty `area` list.
+        let empty_area = write_record(
+            &dir,
+            "2026-06-22-z.md",
+            "id: 2026-06-22-z\ndate: 2026-06-22\narea: []\nstatus: active\n",
+            "## body\n",
+        );
+        assert_eq!(
+            parse_record(&empty_area, AdrKind::Decisions)
+                .unwrap_err()
+                .kind,
+            AdrProblemKind::Schema
+        );
+    }
+
+    #[test]
+    fn status_active_filter_excludes_status_lagged_superseded() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("decisions");
+        // `old` is superseded by `new` but its own status still reads active.
+        write_record(
+            &dir,
+            "2026-06-01-old.md",
+            "id: 2026-06-01-old\ndate: 2026-06-01\narea: cli\nstatus: active\n",
+            "## 2026-06-01 — Old\n",
+        );
+        write_record(
+            &dir,
+            "2026-06-20-new.md",
+            "id: 2026-06-20-new\ndate: 2026-06-20\narea: cli\nstatus: active\nsupersedes: 2026-06-01-old\n",
+            "## 2026-06-20 — New\n",
+        );
+        let cfg = test_cfg(tmp.path());
+        let query = AdrQuery {
+            status: Some("active".to_string()),
+            ..AdrQuery::default()
+        };
+        let matched = collect_matching(&cfg, &query).unwrap();
+        let ids: Vec<&str> = matched.iter().map(|r| r.id.as_str()).collect();
+        assert_eq!(
+            ids,
+            vec!["2026-06-20-new"],
+            "--status active must use the effective active set, not raw status"
+        );
+    }
+
+    #[test]
     fn render_index_is_deterministic_and_sorted_desc() {
         let tmp = tempfile::tempdir().unwrap();
         let dir = tmp.path().join("decisions");
@@ -1104,21 +1191,21 @@ mod tests {
         write_record(
             &dir,
             "2026-06-01-old.md",
-            "id: 2026-06-01-old\ndate: 2026-06-01\nstatus: active\n",
+            "id: 2026-06-01-old\ndate: 2026-06-01\narea: cli\nstatus: active\n",
             "## 2026-06-01 — Old\n",
         );
         // new: supersedes old, with reciprocal on old missing (one-sided).
         write_record(
             &dir,
             "2026-06-20-new.md",
-            "id: 2026-06-20-new\ndate: 2026-06-20\nstatus: active\nsupersedes: 2026-06-01-old\n",
+            "id: 2026-06-20-new\ndate: 2026-06-20\narea: cli\nstatus: active\nsupersedes: 2026-06-01-old\n",
             "## 2026-06-20 — New\n",
         );
         // deprecated standalone.
         write_record(
             &dir,
             "2026-06-10-dep.md",
-            "id: 2026-06-10-dep\ndate: 2026-06-10\nstatus: deprecated\n",
+            "id: 2026-06-10-dep\ndate: 2026-06-10\narea: cli\nstatus: deprecated\n",
             "## 2026-06-10 — Dep\n",
         );
         let cfg = test_cfg(tmp.path());
@@ -1142,7 +1229,7 @@ mod tests {
         write_record(
             &dir,
             "2026-06-20-x.md",
-            "id: 2026-06-20-x\ndate: 2026-06-20\nstatus: active\nsupersedes: does-not-exist\n",
+            "id: 2026-06-20-x\ndate: 2026-06-20\narea: cli\nstatus: active\nsupersedes: does-not-exist\n",
             "## 2026-06-20 — X\n",
         );
         let cfg = test_cfg(tmp.path());
@@ -1158,13 +1245,13 @@ mod tests {
         write_record(
             &dir,
             "a.md",
-            "id: a\ndate: 2026-06-20\nstatus: superseded\nsupersedes: b\nsuperseded_by: b\n",
+            "id: a\ndate: 2026-06-20\narea: cli\nstatus: superseded\nsupersedes: b\nsuperseded_by: b\n",
             "## A\n",
         );
         write_record(
             &dir,
             "b.md",
-            "id: b\ndate: 2026-06-21\nstatus: superseded\nsupersedes: a\nsuperseded_by: a\n",
+            "id: b\ndate: 2026-06-21\narea: cli\nstatus: superseded\nsupersedes: a\nsuperseded_by: a\n",
             "## B\n",
         );
         let cfg = test_cfg(tmp.path());
@@ -1180,13 +1267,13 @@ mod tests {
         write_record(
             &dir,
             "2026-06-01-old.md",
-            "id: 2026-06-01-old\ndate: 2026-06-01\nstatus: superseded\nsuperseded_by: 2026-06-20-new\n",
+            "id: 2026-06-01-old\ndate: 2026-06-01\narea: cli\nstatus: superseded\nsuperseded_by: 2026-06-20-new\n",
             "## Old\n",
         );
         write_record(
             &dir,
             "2026-06-20-new.md",
-            "id: 2026-06-20-new\ndate: 2026-06-20\nstatus: active\nsupersedes: 2026-06-01-old\n",
+            "id: 2026-06-20-new\ndate: 2026-06-20\narea: cli\nstatus: active\nsupersedes: 2026-06-01-old\n",
             "## New\n",
         );
         let cfg = test_cfg(tmp.path());
@@ -1204,7 +1291,7 @@ mod tests {
         write_record(
             &dir,
             "2026-06-20-x.md",
-            "id: 2026-06-20-x\ndate: 2026-06-20\nstatus: active\nsupersedes: ghost\n",
+            "id: 2026-06-20-x\ndate: 2026-06-20\narea: cli\nstatus: active\nsupersedes: ghost\n",
             "## 2026-06-20 — X\n",
         );
         let cfg = test_cfg(tmp.path());
