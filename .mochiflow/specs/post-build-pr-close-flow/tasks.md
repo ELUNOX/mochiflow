@@ -75,7 +75,7 @@ Critical Stop Conditions:
     - `cli/crates/mochiflow-cli/tests/pr.rs`
   - Done: pre-flight requires the active `{specs_dir}/{slug}/` committed with status `accepted` and a `Spec: {slug}` trailer present (rewriting `validate_pr_spec_closeout_committed` in `ship.rs`, which `pr.rs` calls, to drop the `_done/`+`done` check); the `behavioral_pr_*` conformance tests (`behavioral_pr_slug_guard_requires_committed_ship_closeout`, `behavioral_pr_path_like_spec_preserves_request_dir_behavior`) and `tests/pr.rs` (`mark_shipped` helper + the pre-flight expectations at its call sites) are reworked for the `accepted`+trailer pre-flight; pr tests updated and green.
   - Stop: keep the `pr` exit-code contract (`0`/`10`/`3`/`1`/`2`) unchanged.
-- [ ] T-008 [AC-18] Update doctor workflow vocabulary + conformance command set
+- [x] T-008 [AC-18] Update doctor workflow vocabulary + conformance command set
   - Depends on: T-004, T-006
   - Files:
     - `cli/crates/mochiflow-core/src/doctor.rs`

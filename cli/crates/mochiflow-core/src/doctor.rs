@@ -34,13 +34,15 @@ const TERMINAL_CLI_COMMAND_REFERENCES: &[&str] = &[
 
 const WORKFLOW_COMMAND_REFERENCES: &[&str] = &[
     "build",
+    "close",
     "discuss",
     "onboard",
+    "open",
     "patch",
     "plan",
     "refresh-context",
     "review",
-    "ship",
+    "update",
 ];
 
 struct TargetReport {
