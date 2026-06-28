@@ -235,14 +235,6 @@ impl Config {
         self.repo_root.join(&self.constitution.local)
     }
 
-    pub fn pitfalls_path(&self) -> PathBuf {
-        self.repo_root.join(&self.adr.pitfalls)
-    }
-
-    pub fn decisions_path(&self) -> PathBuf {
-        self.repo_root.join(&self.adr.decisions)
-    }
-
     /// Directory root holding the decision records and their generated INDEX.md.
     pub fn decisions_dir(&self) -> PathBuf {
         self.repo_root.join(&self.adr.decisions)

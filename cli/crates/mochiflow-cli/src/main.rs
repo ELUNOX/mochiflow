@@ -603,8 +603,8 @@ fn cmd_config_show(cfg: &mochiflow_core::config::Config, bundled_engine_version:
     println!("  structure    : {}", cfg.structure_path().display());
     println!("  tech         : {}", cfg.tech_path().display());
     println!("adr (fold)     :");
-    println!("  decisions    : {}", cfg.decisions_path().display());
-    println!("  pitfalls     : {}", cfg.pitfalls_path().display());
+    println!("  decisions    : {}", cfg.decisions_dir().display());
+    println!("  pitfalls     : {}", cfg.pitfalls_dir().display());
     println!(
         "git            : {} base={}",
         cfg.git.provider, cfg.git.base_branch

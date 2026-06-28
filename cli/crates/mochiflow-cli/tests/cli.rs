@@ -905,7 +905,9 @@ fn detach_removes_managed_block_and_runtime_but_preserves_project_data() {
     assert!(!dir.path().join(".mochiflow/state").exists());
     assert!(dir.path().join(".mochiflow/config.toml").exists());
     assert!(dir.path().join(".mochiflow/specs").exists());
-    assert!(dir.path().join(".mochiflow/adr/decisions.md").exists());
+    assert!(dir.path().join(".mochiflow/adr/decisions").is_dir());
+    assert!(dir.path().join(".mochiflow/adr/pitfalls").is_dir());
+    assert!(!dir.path().join(".mochiflow/adr/decisions.md").exists());
     assert!(dir.path().join(".mochiflow/context/product.md").exists());
     assert!(dir.path().join(".mochiflow/constitution.md").exists());
 

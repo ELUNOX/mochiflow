@@ -666,8 +666,8 @@ mod tests {
                 tech: ".mochiflow/context/tech.md".into(),
             },
             adr: RawAdr {
-                decisions: ".mochiflow/adr/decisions.md".into(),
-                pitfalls: ".mochiflow/adr/pitfalls.md".into(),
+                decisions: ".mochiflow/adr/decisions".into(),
+                pitfalls: ".mochiflow/adr/pitfalls".into(),
             },
             git: RawGit::default(),
             adapter: RawAdapter::default(),
@@ -690,11 +690,11 @@ mod tests {
         );
         assert_eq!(
             m.get("adr.decisions").map(String::as_str),
-            Some(".mochiflow/adr/decisions.md")
+            Some(".mochiflow/adr/decisions")
         );
         assert_eq!(
             m.get("adr.pitfalls").map(String::as_str),
-            Some(".mochiflow/adr/pitfalls.md")
+            Some(".mochiflow/adr/pitfalls")
         );
         assert_eq!(
             m.get("constitution.project").map(String::as_str),
@@ -804,8 +804,8 @@ mod tests {
                 tech: ".mochiflow/context/tech.md".into(),
             },
             adr: RawAdr {
-                decisions: ".mochiflow/adr/decisions.md".into(),
-                pitfalls: ".mochiflow/adr/pitfalls.md".into(),
+                decisions: ".mochiflow/adr/decisions".into(),
+                pitfalls: ".mochiflow/adr/pitfalls".into(),
             },
             git: RawGit::default(),
             adapter: RawAdapter::default(),
