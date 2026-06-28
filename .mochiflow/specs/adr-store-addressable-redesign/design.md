@@ -186,3 +186,23 @@
     skip-with-warning. Left as-is (lint is the gating surface).
   - LOW: some unrelated test fixtures still use the old monolith `*.md` config
     form (harmless — no file is created so validation never trips). Left as-is.
+
+### Second review pass (2026-06-28, delegated)
+
+- Verdict: pass-with-comments. Three MEDIUM findings; two resolved in code, one
+  is the build/open boundary:
+  - MEDIUM (AC-05): missing / empty `id` and `area` were not gated (`id` fell
+    back to the file stem; `area` defaulted to empty). **Resolved** — both are
+    now required front-matter keys; a missing / empty value is a gating schema
+    violation (`adr::tests::missing_id_or_area_is_a_schema_problem`).
+  - MEDIUM (AC-04 / AC-06): explicit `--status active` matched the raw status
+    string, re-surfacing a status-lagged superseded record. **Resolved** —
+    `--status active` now resolves to the effective active set
+    (`adr::tests::status_active_filter_excludes_status_lagged_superseded`).
+  - MEDIUM (AC-09 / QA-07): AC-09 is still `PENDING_HUMAN`. This is the
+    build/open boundary: per `commands/build.md` step 6 a human-checked AC is
+    recorded as `PENDING_HUMAN` at build, and the QA-07 doc-vs-behavior request
+    is made once, in `open`. The done-eligible token is settled at accept/open,
+    not build. AI-observed consistency was confirmed (discuss/plan, open, git,
+    authoring, and the four adapters describe the implemented behavior; adapter
+    `generate --check` reports 0 drift); final human sign-off remains for open.
