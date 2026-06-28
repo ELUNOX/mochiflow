@@ -41,8 +41,8 @@ produce one logical-unit build commit.
 
 Reviewer = `agents/independent-reviewer.md`, read-only. A recorded reviewer
 verdict (`pass` / `pass-with-comments`) is required when `risk ≥ elevated`; this
-is a build-completion gate and one of the acceptance conditions ship checks
-before setting `done` (`workflow.md ## AC Matrix`). Verified commit
+is a build-completion gate and one of the acceptance conditions open's accept
+close-out checks before setting `accepted` (`workflow.md ## AC Matrix`). Verified commit
 units may be committed before the mandatory reviewer run; reviewer findings are
 fixed, verified, and committed as follow-up work before build completes. Record
 mandatory reviewer runs in `design.md ## Review Results`, using `Reviewer mode:

@@ -445,12 +445,17 @@ fn router_merged_event_is_cleanup_only() {
         "merged-event routing must resume cleanup only; got: {merged_line}"
     );
     assert!(
-        merged_line.contains("{specs_dir}/_done/{slug}/"),
-        "merged-event routing must resolve archived specs first; got: {merged_line}"
+        merged_line.contains("commands/close.md"),
+        "merged-event routing must route to close; got: {merged_line}"
     );
     assert!(
-        merged_line.contains("Fold/archive already happened"),
-        "merged-event routing must state fold/archive already happened before PR; got: {merged_line}"
+        merged_line.contains("flat `{specs_dir}/{slug}/`")
+            && merged_line.contains("never moved to `_done/`"),
+        "merged-event routing must resolve the flat spec, not a _done archive; got: {merged_line}"
+    );
+    assert!(
+        merged_line.contains("`merged` is derived"),
+        "merged-event routing must state merged is derived; got: {merged_line}"
     );
     assert!(
         !merged_line.contains("fold → archive") && !merged_line.contains("fold -> archive"),
@@ -478,8 +483,8 @@ fn router_plan_requires_existing_draft_spec() {
     );
     assert!(
         router.contains("Event patterns `{slug} merged`")
-            && router.contains("{specs_dir}/_done/{slug}/"),
-        "router must retain the merged-event _done exception"
+            && router.contains("flat `{specs_dir}/{slug}/`"),
+        "router must resolve the merged-event against the flat spec"
     );
 }
 
@@ -498,52 +503,74 @@ fn branch_placeholders_use_prefix_slug() {
 }
 
 #[test]
-fn pr_feedback_restore_is_related_dirty_only_for_same_spec() {
-    let ship = read_repo_file("engine/commands/ship.md");
+fn pr_feedback_routes_to_update_without_restore() {
+    let update = read_repo_file("engine/commands/update.md");
     let build = read_repo_file("engine/commands/build.md");
-    let git = read_repo_file("engine/reference/git.md");
+    let router = read_repo_file("engine/router.md");
 
     assert!(
-        ship.contains("related lifecycle change")
-            && ship.contains("{specs_dir}/{slug}/**")
-            && ship.contains("{specs_dir}/_done/{slug}/**")
-            && ship.contains("Any other dirt still stops"),
-        "ship PR Feedback Loop must treat only active + archived same-spec paths as related"
+        update.contains("do not move it")
+            && update.contains("do not revert")
+            && update.contains("build` loop")
+            && update.contains("flat"),
+        "update must delegate to build without moving or reverting the flat spec"
     );
     assert!(
-        build.contains("when build resumes from `ship.md ## PR Feedback Loop`")
-            && build.contains("{specs_dir}/_done/{slug}/**")
+        build.contains("when build resumes from `commands/update.md`")
+            && build.contains("only `{specs_dir}/{slug}/**`")
             && build.contains("any other dirt still stops"),
-        "build dirty check must allow the archived same-spec path only for PR feedback resumes"
+        "build dirty check must allow only the flat same-spec path on update resumes"
     );
     assert!(
-        git.contains("Exception: only when returning from `ship.md ## PR Feedback Loop`")
-            && git.contains("exactly `{specs_dir}/{slug}/**` and `{specs_dir}/_done/{slug}/**`")
-            && git.contains("Other slugs")
-            && git
-                .contains("under `_done/`, other specs, source changes, and `state/` files remain"),
-        "git dirty rules must keep the feedback-loop exception narrow"
+        router.contains("commands/update.md") && !router.contains("commands/ship.md"),
+        "router PR feedback must route to update, not the removed ship command"
     );
 }
 
 #[test]
-fn ship_defers_context_refresh_until_after_pr_or_merge() {
-    let ship = read_repo_file("engine/commands/ship.md");
+fn engine_open_update_close_defined_no_ship_verb() {
+    for cmd in ["open", "update", "close"] {
+        let doc = read_repo_file(&format!("engine/commands/{cmd}.md"));
+        assert!(
+            doc.contains(&format!("mochiflow-{cmd}")) && doc.contains("triggers:"),
+            "{cmd}.md must define its explicit command and triggers"
+        );
+    }
+    let router = read_repo_file("engine/router.md");
+    assert!(
+        router.contains("commands/open.md")
+            && router.contains("commands/update.md")
+            && router.contains("commands/close.md"),
+        "router must reference open/update/close"
+    );
+    assert!(
+        !router.contains("commands/ship.md"),
+        "router must not reference the removed ship command"
+    );
+    assert!(
+        !repo_root().join("engine/commands/ship.md").exists(),
+        "engine/commands/ship.md must be deleted"
+    );
+}
+
+#[test]
+fn open_defers_context_refresh_until_after_pr_or_merge() {
+    let open = read_repo_file("engine/commands/open.md");
     let git = read_repo_file("engine/reference/git.md");
     let refresh = read_repo_file("engine/commands/refresh-context.md");
 
     assert!(
-        ship.contains("post-ship `refresh-context` follow-up after PR creation or after merge")
-            && ship.contains("Do **not** run or trigger `refresh-context` before the close-out commit or `mochiflow pr`")
-            && ship.contains("would dirty the tree before PR pre-flight"),
-        "ship must defer context refresh instead of prompting pre-PR execution"
+        open.contains("post-merge `refresh-context` follow-up after PR creation or")
+            && open.contains("Do **not** run or trigger `refresh-context` before the")
+            && open.contains("would dirty the tree before PR pre-flight"),
+        "open must defer context refresh instead of prompting pre-PR execution"
     );
     assert!(
-        !ship.contains("prompt the human to run `refresh-context`"),
-        "ship must not tell users to run refresh-context during close-out"
+        !open.contains("prompt the human to run `refresh-context`"),
+        "open must not tell users to run refresh-context during close-out"
     );
     assert!(
-        git.contains("flag a post-ship")
+        git.contains("flag a post-merge")
             && git.contains("follow-up instead of editing it")
             && git.contains("running it during close-out")
             && git.contains("separate work after PR creation / merge"),
@@ -554,31 +581,31 @@ fn ship_defers_context_refresh_until_after_pr_or_merge() {
             && refresh.contains("after PR creation / merge")
             && refresh.contains("as separate follow-up")
             && refresh.contains("trigger this during close-out"),
-        "refresh-context must remain no-auto-commit and safe outside ship close-out"
+        "refresh-context must remain no-auto-commit and safe outside open close-out"
     );
 }
 
 #[test]
-fn ship_guidance_uses_cli_and_stable_parent_pathspec_fallback() {
-    let ship = read_repo_file("engine/commands/ship.md");
+fn accept_guidance_uses_cli_and_stages_spec_and_adr() {
+    let open = read_repo_file("engine/commands/open.md");
     let git = read_repo_file("engine/reference/git.md");
 
     assert!(
-        ship.contains("Run `mochiflow ship {slug}`")
-            && ship.contains("`git add -A {specs_dir} {index} {adr_paths...}`")
-            && ship.contains("never a pathspec that requires the moved-from `{specs_dir}/{slug}`"),
-        "ship guidance must use CLI close-out and stable parent pathspec fallback"
+        open.contains("mochiflow accept {slug}")
+            && open.contains("git add {specs_dir}/{slug} {adr_paths...}")
+            && open.contains("Never stage"),
+        "open guidance must use the accept CLI close-out and never stage INDEX"
     );
     assert!(
-        git.contains("Use `mochiflow ship {slug}`")
-            && git.contains("git add -A {specs_dir} {index} {adr_paths...}")
+        git.contains("Use `mochiflow accept {slug}`")
+            && git.contains("git add {specs_dir}/{slug} {adr_paths...}")
             && git.contains("git diff --cached --name-status -z")
-            && git.contains("do not stage the moved-from\n`{specs_dir}/{slug}`"),
-        "git reference must document the safe manual fallback"
+            && git.contains("never stage `INDEX.md`"),
+        "git reference must document the flat accept staging and INDEX exclusion"
     );
     assert!(
         !git.contains("git mv {specs_dir}/{slug}/ {specs_dir}/_done/{slug}/` so both"),
-        "git reference must not require staging the moved-from path after the move"
+        "git reference must not require staging a _done move"
     );
 }
 
@@ -712,7 +739,7 @@ fn ac_matrix_pending_human_is_canonical_provisional_token() {
     let workflow = read_repo_file("engine/reference/workflow.md");
     let build = read_repo_file("engine/commands/build.md");
     let language = read_repo_file("engine/reference/language.md");
-    let ship = read_repo_file("engine/commands/ship.md");
+    let open = read_repo_file("engine/commands/open.md");
 
     assert!(workflow.contains("`PENDING_HUMAN`"), "{workflow}");
     assert!(
@@ -728,8 +755,8 @@ fn ac_matrix_pending_human_is_canonical_provisional_token() {
         "language reference must preserve the provisional token"
     );
     assert!(
-        ship.contains("`CONFIRMED`"),
-        "ship round-trip protocol must map human confirmation to the canonical Matrix token"
+        open.contains("`CONFIRMED`"),
+        "open round-trip protocol must map human confirmation to the canonical Matrix token"
     );
 }
 
@@ -765,27 +792,21 @@ fn workflow_todo_verify_is_not_runnable() {
 }
 
 #[test]
-fn no_pr_fast_path_skips_pr_gate_but_still_ships() {
+fn no_pr_fast_path_skips_pr_gate_but_still_accepts() {
     let workflow = read_repo_file("engine/reference/workflow.md");
     let git = read_repo_file("engine/reference/git.md");
-    let ship = read_repo_file("engine/commands/ship.md");
     let build = read_repo_file("engine/commands/build.md");
 
     assert!(
         workflow.contains("skips")
             && workflow.contains("**approve-PR**")
-            && workflow.contains("still runs `ship`"),
-        "workflow must describe the no-PR gate exception"
+            && workflow.contains("still runs `accept`"),
+        "workflow must describe the no-PR gate exception with accept"
     );
     assert!(
         git.contains("no-PR skips PR creation and the approve-PR gate")
-            && git.contains("still runs `ship` acceptance"),
-        "git reference must keep no-PR tied to ship acceptance"
-    );
-    assert!(
-        ship.contains("On the explicit no-PR fast path, skip this PR section")
-            && ship.contains("same close-out commit"),
-        "ship must skip PR work only after close-out"
+            && git.contains("still runs `accept`"),
+        "git reference must keep no-PR tied to accept"
     );
     assert!(
         build.contains("no-PR fast path branch choice") && !build.contains("no-PR fast commit"),

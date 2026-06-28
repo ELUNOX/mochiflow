@@ -83,7 +83,7 @@ Critical Stop Conditions:
     - `cli/crates/mochiflow-cli/src/main.rs`
   - Done: `workflow_command_references` reflects the open/update/close verb vocabulary (the `terminal_cli_command_references` allowlist is already updated in T-004/T-006); the conformance command-set/vocabulary assertions match the new set (`status` in, `ship` out); the allowlist test and `mochiflow doctor` pass.
   - Stop: do not loosen the allowlist test; keep it exact.
-- [ ] T-009 [AC-01] Remove user-facing `ship` across `engine/` SoT docs, adapters, and CLI-surfaced text/tests
+- [x] T-009 [AC-01] Remove user-facing `ship` across `engine/` SoT docs, adapters, and CLI-surfaced text/tests
   - Depends on: T-001, T-003, T-004, T-005, T-006, T-007
   - Files:
     - `engine/commands/open.md`
@@ -116,20 +116,20 @@ Critical Stop Conditions:
     - `engine/commands/build.md`
   - Done: build ends at `approved`, points to `open` for PR prep, explicitly does not set a terminal state / create a PR / move the spec; the completion card offers "Create the PR" (open) / resume.
   - Stop: do not change build's verification/AC-Matrix responsibilities.
-- [ ] T-011 [AC-13] Author `open` procedure (acceptance → accepted → fold → PR → gate)
+- [x] T-011 [AC-13] Author `open` procedure (acceptance → accepted → fold → PR → gate)
   - Depends on: T-009
   - Files:
     - `engine/commands/open.md`
     - `engine/templates/delivery/pr-description.md`
   - Done: `open.md` specifies ordered steps a–f — (a) acceptance incl. QA round-trip; (b) finalize the fold by writing durable ADR knowledge; (c) run `accept`, which sets `accepted` and creates the single close-out commit bundling the spec and the already-written ADR fold; (d) generate PR title/body; (e) approve-PR gate; (f) push + `mochiflow pr` — and states the PR is never created before the gate and that `open` (not `accept`) owns authoring the fold.
   - Stop: do not introduce a second human gate beyond approve-PR.
-- [ ] T-012 [AC-14] Author `update` procedure (delegate build, no move/revert)
+- [x] T-012 [AC-14] Author `update` procedure (delegate build, no move/revert)
   - Depends on: T-009
   - Files:
     - `engine/commands/update.md`
   - Done: `update.md` delegates code changes to the build loop, re-verifies, pushes, updates PR metadata and (when changed) the fold, and explicitly does not move the spec or revert asserted state.
   - Stop: do not reimplement build logic inside update.
-- [ ] T-013 [AC-15] Author `close` procedure (local hygiene only)
+- [x] T-013 [AC-15] Author `close` procedure (local hygiene only)
   - Depends on: T-009
   - Files:
     - `engine/commands/close.md`

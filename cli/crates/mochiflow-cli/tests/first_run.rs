@@ -252,8 +252,14 @@ fn qa07_guide_card_matches_golden_en_and_ja() {
         "mochiflow-discuss",
         "mochiflow-plan",
         "mochiflow-build",
-        "mochiflow-ship",
+        "mochiflow-open",
+        "mochiflow-update",
+        "mochiflow-close",
     ] {
         assert!(en.contains(cmd) && ja.contains(cmd), "missing {cmd}");
     }
+    assert!(
+        !en.contains("mochiflow-ship") && !ja.contains("mochiflow-ship"),
+        "guide card must not reference the removed ship verb"
+    );
 }

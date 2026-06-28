@@ -1,31 +1,37 @@
 # Workflow Reference
 
-The shared, cross-cutting rules for the four mochiflow verbs. Per-verb
-procedure lives in `commands/{discuss,plan,build,ship}.md`; this file holds the
-facts those commands share, each defined once.
+The shared, cross-cutting rules for the mochiflow verbs. Per-verb
+procedure lives in `commands/{discuss,plan,build,open,update,close}.md`; this
+file holds the facts those commands share, each defined once.
 
 ## Verbs and state
 
 ```
-discuss ──▶ plan ──▶ build ──▶ ship
+discuss ──▶ plan ──▶ build ──▶ open ──▶ (update) ──▶ close
 ```
 
 | state | meaning | set by |
 | --- | --- | --- |
 | `draft` | pitch agreed, not yet approved for implementation | discuss |
 | `approved` | human approved implementation start | delivery approval gate |
-| `done` | acceptance conditions met and accepted | ship |
+| `accepted` | acceptance conditions met (quality-complete) | open's accept close-out |
 
 State lives in `spec.yaml` `status`. There is no separate per-document status.
+The asserted states settle on the feature branch before merge. Delivery facts
+(`in_review` when a PR is open, `merged` after merge) are **derived** from
+VCS/provider and never stored; `done` is observed from the merge, never written.
+`mochiflow status` renders the live board (Backlog / Active / Ready / In Review /
+Done) from the asserted state unioned with the derived delivery state.
 
 ## Spec lane vs Patch lane
 
-The four verbs are the spec lane: they create, approve, implement, ship, fold,
-and archive durable spec artifacts.
+The spec lane verbs create, approve, implement, accept, and deliver durable spec
+artifacts: discuss / plan / build settle the work, then open / update / close
+handle PR delivery. Specs stay flat at `{specs_dir}/{slug}/` for their whole life.
 
 `patch` is a non-phase lane for concrete small edits that do not need durable
-spec artifacts. It has no `spec.yaml`, no `draft|approved|done` state, no AC
-Matrix, no ship, no archive, and no living-spec fold. If a patch needs a new
+spec artifacts. It has no `spec.yaml`, no `draft|approved|accepted` state, no AC
+Matrix, no open/close, no fold. If a patch needs a new
 product/design decision, public contract change, migration, security or
 data-loss judgment, multi-surface coordination, or human QA record, stop and
 route to `plan`.
@@ -40,10 +46,10 @@ delivery approval gates. The AI never sets `approved` without delivery approval
 gate 1 and never creates a PR before delivery approval gate 2. Setup, context
 refresh, and QA evidence may require human confirmations, but those confirmations
 are not delivery approval gates and do not change spec lifecycle state except
-where explicitly defined. `done` is not a gate: it is an acceptance state that
-`ship` sets directly (editing `spec.yaml` `status: done`, then re-running `lint`
-to confirm; there is no CLI transition command) when the acceptance conditions
-below hold.
+where explicitly defined. `accepted` is not a gate: it is an acceptance state that
+`open`'s accept close-out sets directly (editing `spec.yaml` `status: accepted`,
+then re-running `lint` to confirm; there is no CLI transition command) when the
+acceptance conditions below hold.
 
 When an approval gate is presented as a numbered choice card, selecting the
 visible approval action by label or by its displayed number is the gate input.
@@ -52,8 +58,9 @@ For example, a plan card may display "confirm the plan" as the action that sets
 approval words remain compatibility inputs, not the preferred user-facing label.
 
 The no-PR fast path exists only after explicit human opt-in. It skips
-**approve-PR** because no PR is created, but it still runs `ship`; `ship` still
-sets `done` from acceptance conditions and creates the same close-out commit.
+**approve-PR** because no PR is created, but it still runs `accept`; `accept`
+sets at most `accepted` from acceptance conditions and creates the same
+close-out commit (never `done`, never a `_done/` move).
 
 ## Choice cards
 
@@ -132,22 +139,24 @@ Deprecated aliases `人間確認済み` (equivalent to `CONFIRMED`) and
 `対象外（<reason>）` (equivalent to `N/A: <reason>`) are permanently accepted
 by lint for backward compatibility with archived specs.
 
-`done` is an acceptance state, not a human approval. There is no CLI transition
-command: `ship` edits `spec.yaml` `status: done` (and `updated`) directly once
-all of these conditions hold, then re-runs `lint` to confirm — no approval word
-is involved:
+`accepted` is an acceptance state, not a human approval. There is no CLI
+transition command: `open`'s accept close-out edits `spec.yaml`
+`status: accepted` (and `updated`) directly once all of these conditions hold,
+then re-runs `lint` to confirm — no approval word is involved:
 
 1. the AC Verification Matrix is present and complete — every spec AC appears as a row;
 2. every row has a done-eligible result token (`PASS`, `CONFIRMED`, or `N/A: <reason>`);
 3. when `risk ≥ elevated`, the reviewer verdict is recorded (condition owned by
    `risk.md ## Consequences`; referenced here, not redefined).
 
-For `status: done`, `lint` enforces matrix presence, AC↔task coverage, and final
-result tokens; `PENDING_HUMAN`, `UNVERIFIED`, `FAIL`, empty cells, and
+For `status: accepted`, `lint` enforces matrix presence, AC↔task coverage, and
+final result tokens; `PENDING_HUMAN`, `UNVERIFIED`, `FAIL`, empty cells, and
 unknown/free-text results fail. It also warns on `[NEEDS-CLARIFICATION]` and AC
-lines missing an EARS keyword (resolve before `approved`).
+lines missing an EARS keyword (resolve before `approved`). The legacy `done`
+status remains lint-valid only for archived specs already under `_done/`; the
+engine never writes `done` for an active spec.
 
-`build` never sets `done`.
+`build` never sets `accepted`.
 
 ## Verification profiles
 
@@ -183,9 +192,9 @@ change:
 If no runnable verification command exists, report that explicitly and do not
 auto-commit.
 
-## Acceptance adapters (ship)
+## Acceptance adapters (open)
 
-Ship identifies human-operated and visual QA items from `spec.md` QA Scenarios
+Open identifies human-operated and visual QA items from `spec.md` QA Scenarios
 (the `Type` column) and picks the adapter by `Scope` / kind:
 
 | Scope / kind | adapter | main checks |
@@ -197,7 +206,7 @@ Ship identifies human-operated and visual QA items from `spec.md` QA Scenarios
 | `human` | Human confirmation | physical device, judgement, visual, external service |
 | `cross-surface` | contract / workflow QA | contract or workflow across surfaces |
 
-Human/visual AC are requested once, in ship, via the QA round-trip protocol —
+Human/visual AC are requested once, in open, via the QA round-trip protocol —
 not during build. During build, mark those Matrix rows `PENDING_HUMAN` with the
 needed QA scenario and evidence expectation.
 

@@ -579,29 +579,33 @@ fn detected_json(report: &DetectionReport) -> serde_json::Value {
     })
 }
 
-/// Static usage-vocabulary card (AC-07): the four verbs (natural-language
+/// Static usage-vocabulary card: the spec-lane verbs (natural-language
 /// trigger + explicit command) and the two delivery approval gates. Content is fixed
 /// and project-independent; only the language of the framing text varies.
 pub fn render_guide(language: &str) -> String {
     if language == "ja" {
         "MochiFlow の使い方\n\
          \n\
-         4つの動詞 — AI に自然文で伝えるか、明示コマンドを使う:\n\
+         動詞 — AI に自然文で伝えるか、明示コマンドを使う:\n\
          \u{20}\u{20}• discuss — 目的/内容を壁打ち       (mochiflow-discuss)\n\
          \u{20}\u{20}• plan    — 仕様に落とす            (mochiflow-plan)\n\
          \u{20}\u{20}• build   — 承認済み仕様を実装       (mochiflow-build)\n\
-         \u{20}\u{20}• ship    — 検証して PR を出す       (mochiflow-ship)\n\
+         \u{20}\u{20}• open    — 受入して PR を作る        (mochiflow-open)\n\
+         \u{20}\u{20}• update  — PR フィードバック対応     (mochiflow-update)\n\
+         \u{20}\u{20}• close   — マージ後の整理           (mochiflow-close)\n\
          \n\
          承認は2回あなたが行う: build 前に仕様を承認し、PR 作成前に PR を承認する。\n"
             .to_string()
     } else {
         "MochiFlow — how to drive it\n\
          \n\
-         Four verbs — say it naturally to your AI, or use the explicit command:\n\
+         Verbs — say it naturally to your AI, or use the explicit command:\n\
          \u{20}\u{20}• discuss — talk through the why/what   (mochiflow-discuss)\n\
          \u{20}\u{20}• plan    — turn it into a spec         (mochiflow-plan)\n\
          \u{20}\u{20}• build   — implement the approved spec (mochiflow-build)\n\
-         \u{20}\u{20}• ship    — verify, then open the PR    (mochiflow-ship)\n\
+         \u{20}\u{20}• open    — accept, then open the PR    (mochiflow-open)\n\
+         \u{20}\u{20}• update  — address PR feedback         (mochiflow-update)\n\
+         \u{20}\u{20}• close   — wrap up after merge         (mochiflow-close)\n\
          \n\
          Two approvals are yours: approve the spec before build, and the PR before it is created.\n"
             .to_string()
@@ -814,10 +818,16 @@ mod tests {
                 "mochiflow-discuss",
                 "mochiflow-plan",
                 "mochiflow-build",
-                "mochiflow-ship",
+                "mochiflow-open",
+                "mochiflow-update",
+                "mochiflow-close",
             ] {
                 assert!(card.contains(cmd), "{lang} card missing {cmd}:\n{card}");
             }
+            assert!(
+                !card.contains("mochiflow-ship"),
+                "{lang} card must not reference the removed ship verb:\n{card}"
+            );
         }
         // language framing differs, commands are identical (static content)
         assert!(render_guide("ja").contains("使い方"));

@@ -10,7 +10,9 @@ references:
   - commands/discuss.md
   - commands/plan.md
   - commands/build.md
-  - commands/ship.md
+  - commands/open.md
+  - commands/update.md
+  - commands/close.md
   - commands/patch.md
   - commands/review.md
   - commands/refresh-context.md
@@ -31,7 +33,7 @@ loads this as a standing instruction. Do not load it from planning / reviewer ro
 2. **Artifacts are the state.** A spec's `status` (`draft|approved|done`) and the documents in its folder are the source of truth for current state. There is no separate conversation-history state machine.
 3. **Activation strength follows the trigger form.** An explicit command (`mochiflow-<verb>`) or a slug pattern (`{slug} <verb>`) is unambiguous — declare the verb in one line and activate immediately. A natural-language trigger (e.g. "実装して" / "レビューして" / "進めて") is an intent hint, not a command: activate immediately only when an active spec context already scopes it; with no such context, propose "Start <verb>?" in one line and wait. With no trigger at all, propose only on clear intent.
 4. **On a state/intent conflict, ask exactly one two-choice question.** Do not silently roll back — e.g. "rework the design" against an already-approved spec.
-5. **State lives in files; implementation is inline.** discuss / plan / build / ship are run inline by the main agent, which holds the whole picture. Review is the only separated procedure: run `agents/independent-reviewer.md` read-only, preferring delegated subagent dispatch when available and using inline reviewer role only when subagents are unavailable or dispatch fails for a runtime/tooling reason (`reference/risk.md ## Review transport`). A review trigger or user-approved build flow is an explicit request to use delegated reviewer transport when the runtime requires one. Pass just the slug, command path, a summary of the latest artifact, and a pointer to the spec — never the conversation history as evidence. This includes both risk-cadence review (automatic, per `reference/risk.md ## Consequences`) and ad-hoc review (user-triggered via `レビューして` / `mochiflow-review`; see `reference/risk.md ## Ad-hoc review`).
+5. **State lives in files; implementation is inline.** discuss / plan / build / open / update / close are run inline by the main agent, which holds the whole picture. Review is the only separated procedure: run `agents/independent-reviewer.md` read-only, preferring delegated subagent dispatch when available and using inline reviewer role only when subagents are unavailable or dispatch fails for a runtime/tooling reason (`reference/risk.md ## Review transport`). A review trigger or user-approved build flow is an explicit request to use delegated reviewer transport when the runtime requires one. Pass just the slug, command path, a summary of the latest artifact, and a pointer to the spec — never the conversation history as evidence. This includes both risk-cadence review (automatic, per `reference/risk.md ## Consequences`) and ad-hoc review (user-triggered via `レビューして` / `mochiflow-review`; see `reference/risk.md ## Ad-hoc review`).
 6. **Patch is non-spec and narrowly scoped.** For concrete, local, reversible changes that need no new product/design decision, route to `patch` instead of starting a spec. Patch never creates `{specs_dir}/{slug}/`, never changes spec status, never archives, never folds memory, and never creates PRs. If a new decision, risk, public contract, migration, or multi-surface scope appears, stop and propose `Start plan?`.
 
 ## Decision Flow
@@ -41,8 +43,8 @@ loads this as a standing instruction. Do not load it from planning / reviewer ro
 3. Match `{slug}` in `trigger_patterns` only against a spec slug that exists under `{specs_dir}/{slug}/`; on a match, declare the verb in one line and activate.
    - Exception: `{slug} discuss` resolves against a seed at `{specs_dir}/_backlog/{slug}.md` when the slug exists only there; if `{specs_dir}/{slug}/` already exists, re-open that spec instead.
    - `{slug} plan` requires an existing active spec directory at `{specs_dir}/{slug}/` created by discuss. If only `{specs_dir}/_backlog/{slug}.md` exists, do not activate plan — guide back to `{slug} discuss` because backlog files are raw seeds, not plan-ready handoffs.
-   - Event patterns `{slug} merged` / `{slug} マージ済み` / `{slug} 完了` are the only trigger-pattern exception for completed specs: resolve `{slug}` against `{specs_dir}/_done/{slug}/` first, then resume ship's post-merge local cleanup only, not a fresh ship. Fold/archive already happened in the feature branch close-out commit before PR.
-   - Feedback patterns `{slug} feedback` / `{slug} 修正依頼` / `{slug} PR feedback` also resolve `{slug}` against `{specs_dir}/_done/{slug}/` (since the spec is archived at the time PR feedback arrives), then route to `ship.md ## PR Feedback Loop` — not a fresh ship.
+   - Event patterns `{slug} merged` / `{slug} マージ済み` / `{slug} 完了` are the only trigger-pattern exception for delivered specs: resolve `{slug}` against the flat `{specs_dir}/{slug}/` (specs are never moved to `_done/`), then run close's post-merge local cleanup only (`commands/close.md`), not a fresh open. `merged` is derived (provider or the `Spec: {slug}` trailer in `origin/{base_branch}`); the fold already merged via the open PR's close-out commit, so close writes nothing to the base branch.
+   - Feedback patterns `{slug} feedback` / `{slug} 修正依頼` / `{slug} PR feedback` also resolve `{slug}` against the flat `{specs_dir}/{slug}/` (the spec stays flat the whole time), then route to `commands/update.md` — not a fresh open and no restore.
 4. With no active spec context, route concrete small-edit requests ("直して" / "fix this" / "仕様書なしで" / "quick fix") through the `commands/patch.md ## Eligibility` check before proposing a spec verb.
    - If eligible, declare `patch` in one line and proceed.
    - If ineligible or uncertain, propose `Start plan?` in one line and wait.
@@ -71,10 +73,11 @@ Never guess between multiple candidate specs.
 ## PR Feedback Loop Routing
 
 If PR feedback, CI failure, reviewer comments, or PR-body approval follow-up
-requires code changes before merge, route the work back to the shipped spec
-instead of `patch`, unless the change is unrelated to that spec. Restore the
-archived spec per `commands/ship.md ## PR Feedback Loop`, run the change through
-`build`, then re-run `ship` close-out and update the PR body when needed.
+requires code changes before merge, route the work to the in-review spec via
+`commands/update.md` instead of `patch`, unless the change is unrelated to that
+spec. The spec stays flat at `{specs_dir}/{slug}/` (no restore needed); `update`
+delegates the code change through `build`, re-verifies, pushes, and updates the
+PR body when needed.
 
 ## Verb Delegation
 
@@ -83,7 +86,9 @@ archived spec per `commands/ship.md ## PR Feedback Loop`, run the change through
 | discuss | inline | `commands/discuss.md` |
 | plan | inline | `commands/plan.md` |
 | build | main agent confirms eligibility (`mochiflow ready {slug}`), implements / verifies / commits inline; review uses independent-reviewer transport | `commands/build.md` |
-| ship | inline; through acceptance → close-out → PR → post-merge cleanup | `commands/ship.md` |
+| open | inline; through acceptance → fold → accept close-out → PR title/body → approve-PR gate → PR | `commands/open.md` |
+| update | inline; PR feedback / CI fixes delegated through build, re-verify, push, update PR metadata; no move, no revert | `commands/update.md` |
+| close | inline; post-merge local hygiene only; nothing written to the base branch | `commands/close.md` |
 | patch (non-phase) | inline; no spec artifacts; edit / verify / optional commit; escalate to plan when ineligible | `commands/patch.md` |
 | review (non-phase) | inline trigger; read-only review uses independent-reviewer transport; no state transition | `commands/review.md` |
 | refresh-context (non-phase) | inline; regenerate foundational context (`[context]`) from code under human confirm; no state transition | `commands/refresh-context.md` |
@@ -94,7 +99,7 @@ archived spec per `commands/ship.md ## PR Feedback Loop`, run the change through
 - discuss fixes current state from **code** and clarifies scope and trade-offs. The constitution (`[constitution]`) is user-authored always-loaded guidance, and the foundational context (`[context]`) is a code-derived current-state map (kept fresh via `refresh-context`); ADR (`[adr]`) is consulted only for *why*, never as the source of current state; re-verify any prose claim against code. A backlog seed is raw input for discuss.
 - When readiness is clear, propose the next verb in one line. Never chain verbs without user approval.
 - Let depth (spec.md / +design.md / +tasks.md) emerge per `reference/workflow.md ## Depth scaling`. Do not pick a lane up front.
-- Patch is not a transition. It does not enter or advance `draft|approved|done`. A patch that discovers product intent, contract shape, migration, security, data-loss, or multi-surface risk stops and routes to `plan`.
+- Patch is not a transition. It does not enter or advance `draft|approved|accepted`. A patch that discovers product intent, contract shape, migration, security, data-loss, or multi-surface risk stops and routes to `plan`.
 - At the end of each verb, present the artifact and the next stage or the human action needed next.
 
 ## Completion Output
