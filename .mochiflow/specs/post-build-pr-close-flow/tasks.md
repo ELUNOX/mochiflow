@@ -15,7 +15,7 @@ Critical Stop Conditions:
 
 ## Tasks
 
-- [ ] T-001 [AC-03, AC-04] Add `accepted` across the spec contract surface
+- [x] T-001 [AC-03, AC-04] Add `accepted` across the spec contract surface
   - Depends on: none
   - Files:
     - `contracts/spec.schema.json`

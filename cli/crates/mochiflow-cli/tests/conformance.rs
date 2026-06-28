@@ -1921,9 +1921,84 @@ fn lint_fails_on_invalid_status() {
     let (code, out) = run_lint_case(&yaml, md, None, None);
     assert_eq!(code, 1);
     assert!(
-        out.contains("status must be one of: draft, approved, done"),
+        out.contains("status must be one of: draft, approved, accepted, done"),
         "{out}"
     );
+}
+
+const ACCEPTED_MATRIX_MD: &str = "# S\n\n## Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
+     ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | PASS |\n";
+
+#[test]
+fn lint_passes_accepted_spec() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: accepted");
+    let (code, out) = run_lint_case(&yaml, ACCEPTED_MATRIX_MD, None, None);
+    assert_eq!(
+        code, 0,
+        "a well-formed accepted spec must lint clean: {out}"
+    );
+}
+
+#[test]
+fn lint_accepted_does_not_warn_on_missing_completed() {
+    // `accepted` never writes `completed`; the legacy completed WARN stays scoped
+    // to `done` reads only and must not fire on an accepted spec.
+    let yaml = GOOD_YAML.replace("status: approved", "status: accepted");
+    let (code, out) = run_lint_case(&yaml, ACCEPTED_MATRIX_MD, None, None);
+    assert_eq!(code, 0, "{out}");
+    assert!(!out.contains("`completed` timestamp is missing"), "{out}");
+}
+
+#[test]
+fn lint_accepted_fails_when_task_is_unchecked() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: accepted");
+    let md = "# S\n\n## Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
+              ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | PASS |\n";
+    let tasks = "# Tasks\n\n- [ ] T-001 [AC-01] Do x\n  - Depends on: none\n  - Files:\n    - `src/x.rs`\n  - Done:\n    - [ ] Verification passed\n  - Stop:\n    - stop\n";
+    let (code, out) = run_lint_case(&yaml, md, None, Some(tasks));
+    assert_eq!(code, 1, "{out}");
+    assert!(
+        out.contains("status is accepted but task T-001 is not checked"),
+        "{out}"
+    );
+}
+
+#[test]
+fn lint_accepted_fails_when_ac_untasked() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: accepted");
+    let md = "# S\n\n## Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL x.\n- AC-02: WHEN y, THE SYSTEM SHALL z.\n\n\
+              ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | PASS |\n| AC-02 | PASS |\n";
+    let tasks = "# Tasks\n\n- [x] T-001 [AC-01] Do x\n  - Depends on: none\n  - Files:\n    - `src/x.rs`\n  - Done:\n    - [ ] Verification passed\n  - Stop:\n    - stop\n";
+    let (code, out) = run_lint_case(&yaml, md, None, Some(tasks));
+    assert_eq!(code, 1, "{out}");
+    assert!(
+        out.contains("AC not covered by any task Covers AC: AC-02"),
+        "{out}"
+    );
+}
+
+#[test]
+fn lint_accepted_requires_reviewer_verdict_when_elevated() {
+    let yaml = "version: 1\nslug: s\ntitle: S\ntype: feature\nsurfaces:\n  - app\nintegration: none\nrisk: elevated\nstatus: accepted\n";
+    let md = "# S\n\n## Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
+              ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | PASS |\n";
+    let design = "# D\n\n## Review Results\n\n- Pending.\n";
+    let (code, out) = run_lint_case(yaml, md, Some(design), None);
+    assert_eq!(code, 1, "{out}");
+    assert!(
+        out.contains("reviewer verdict (pass/pass-with-comments) is not recorded"),
+        "{out}"
+    );
+}
+
+#[test]
+fn lint_accepts_elevated_accepted_with_reviewer_verdict() {
+    let yaml = "version: 1\nslug: s\ntitle: S\ntype: feature\nsurfaces:\n  - app\nintegration: none\nrisk: elevated\nstatus: accepted\n";
+    let md = "# S\n\n## Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
+              ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | PASS |\n";
+    let design = "# D\n\n## Review Results\n\n- Reviewer mode: delegated\n- Verdict: pass\n";
+    let (code, out) = run_lint_case(yaml, md, Some(design), None);
+    assert_eq!(code, 0, "{out}");
 }
 
 #[test]
