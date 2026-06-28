@@ -664,6 +664,27 @@ pub fn lint_store(
     let store = load_store(cfg, kind)?;
     let mut problems = store.problems.clone();
     problems.extend(store.analyze());
+    // Unknown `area`: a record tag that is not a configured surface is a schema
+    // violation (gating). `area` defaults to the spec's surfaces, so any value
+    // outside the known surface set is a mistake the lint must catch.
+    let known: std::collections::BTreeSet<String> = cfg.surface_names().into_iter().collect();
+    if !known.is_empty() {
+        for record in &store.records {
+            for area in &record.area {
+                if !known.contains(area) {
+                    problems.push(AdrProblem {
+                        kind: AdrProblemKind::Schema,
+                        store: kind,
+                        id: Some(record.id.clone()),
+                        message: format!(
+                            "`{}` has unknown area `{area}` (not a configured surface)",
+                            record.id
+                        ),
+                    });
+                }
+            }
+        }
+    }
     if is_index_stale(&store) {
         problems.push(AdrProblem {
             kind: AdrProblemKind::IndexStale,
@@ -1201,6 +1222,26 @@ mod tests {
     }
 
     #[test]
+    fn lint_flags_unknown_area_as_gating_schema() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("decisions");
+        write_record(
+            &dir,
+            "2026-06-20-x.md",
+            "id: 2026-06-20-x\ndate: 2026-06-20\narea: [bogus]\nstatus: active\n",
+            "## 2026-06-20 — X\n",
+        );
+        let cfg = test_cfg(tmp.path()); // surface = cli
+        let problems = lint_store(&cfg, AdrKind::Decisions).unwrap();
+        assert!(
+            problems
+                .iter()
+                .any(|p| p.kind == AdrProblemKind::Schema && p.message.contains("unknown area")),
+            "{problems:?}"
+        );
+    }
+
+    #[test]
     fn lint_clean_store_with_fresh_index_passes() {
         let tmp = tempfile::tempdir().unwrap();
         let dir = tmp.path().join("decisions");
@@ -1223,7 +1264,7 @@ mod tests {
         std::fs::create_dir_all(&install).unwrap();
         std::fs::write(
             install.join("config.toml"),
-            "schema_version = 1\ninstall_dir = \".mochiflow\"\nspecs_dir = \".mochiflow/specs\"\nindex = \".mochiflow/INDEX.md\"\n\n[constitution]\nproject = \".mochiflow/constitution.md\"\nlocal = \".mochiflow/constitution.local.md\"\n\n[context]\nproduct = \".mochiflow/context/product.md\"\nstructure = \".mochiflow/context/structure.md\"\ntech = \".mochiflow/context/tech.md\"\n\n[adr]\ndecisions = \"decisions\"\npitfalls = \"pitfalls\"\n\n[surfaces.app]\ndescription = \"app\"\n\n[surfaces.app.verify]\ndefault = \"echo ok\"\n",
+            "schema_version = 1\ninstall_dir = \".mochiflow\"\nspecs_dir = \".mochiflow/specs\"\nindex = \".mochiflow/INDEX.md\"\n\n[constitution]\nproject = \".mochiflow/constitution.md\"\nlocal = \".mochiflow/constitution.local.md\"\n\n[context]\nproduct = \".mochiflow/context/product.md\"\nstructure = \".mochiflow/context/structure.md\"\ntech = \".mochiflow/context/tech.md\"\n\n[adr]\ndecisions = \"decisions\"\npitfalls = \"pitfalls\"\n\n[surfaces.cli]\ndescription = \"cli\"\n\n[surfaces.cli.verify]\ndefault = \"echo ok\"\n",
         )
         .unwrap();
         crate::config::load_config(&install.join("config.toml")).unwrap()

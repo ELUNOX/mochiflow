@@ -3230,9 +3230,9 @@ fn write_adr_config(install: &Path) -> PathBuf {
          [adr]\n\
          decisions = \".mochiflow/adr/decisions\"\n\
          pitfalls = \".mochiflow/adr/pitfalls\"\n\n\
-         [surfaces.app]\n\
-         description = \"app\"\n\n\
-         [surfaces.app.verify]\n\
+         [surfaces.cli]\n\
+         description = \"cli\"\n\n\
+         [surfaces.cli.verify]\n\
          default = \"echo ok\"\n",
     )
     .unwrap();
@@ -3303,4 +3303,20 @@ fn doctor_adr_regenerates_stale_index_instead_of_failing() {
             .unwrap()
             .contains("| 2026-06-20 |")
     );
+}
+
+#[test]
+fn doctor_adr_gates_on_unknown_area() {
+    let tmp = tempfile::tempdir().unwrap();
+    let install = tmp.path().join(".mochiflow");
+    let cfg = write_adr_config(&install); // surface = cli
+    write_decision(
+        &install,
+        "2026-06-20-bad-area.md",
+        "id: 2026-06-20-bad-area\ndate: 2026-06-20\narea: [nope]\nstatus: active\n",
+        "## 2026-06-20 — Bad area\n",
+    );
+    let (code, out) = run_cli(&cfg, &["adr", "lint"]);
+    assert_eq!(code, 1, "unknown area must gate adr lint:\n{out}");
+    assert!(out.contains("unknown area"), "{out}");
 }
