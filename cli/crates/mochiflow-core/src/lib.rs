@@ -1,4 +1,5 @@
 pub mod adapter;
+pub mod adr;
 pub mod backlog;
 pub mod config;
 pub mod delivery;
