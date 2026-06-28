@@ -17,7 +17,10 @@ your standing instruction and follow it for any spec / implementation / PR work.
 - Non-phase commands: `{{engine}}/commands/{patch,review,refresh-context,onboard}.md`
 - Cross-cutting rules: `{{engine}}/reference/{workflow,risk,authoring,git,language,engineering-standards}.md`
 - Decision history / pitfalls — **on-demand** (*why*, not current state):
-  `{{adr.decisions}}` / `{{adr.pitfalls}}`.
+  per-file records under `{{adr.decisions}}` / `{{adr.pitfalls}}` (each store has
+  a generated, gitignored `INDEX.md`). Load the `INDEX.md` first, then open only
+  active records whose `area` intersects the spec's `surfaces`
+  (`mochiflow adr list | show | search`).
 - Project config (surfaces / verify commands / git): run `mochiflow config show`
 - Artifact roles: `spec.md` is the product contract, `design.md` is the
   technical contract when required, `tasks.md` is the executable checklist when
@@ -35,9 +38,12 @@ your standing instruction and follow it for any spec / implementation / PR work.
 - Artifact language: `{{artifact_language}}`; conversation language:
   `{{conversation_language}}`. Follow `{{engine}}/reference/language.md` for
   user-facing wording and `auto` conversation behavior.
-- At open, fold durable knowledge into `{{adr.decisions}}` (decisions) /
-  `{{adr.pitfalls}}` (pitfalls) into the PR's close-out commit; the spec stays
-  flat (no `_done/` move, never `status: done`). The
+- At open, fold durable knowledge as new per-file records under
+  `{{adr.decisions}}` (decisions) / `{{adr.pitfalls}}` (pitfalls) in the PR's
+  close-out commit, superseding earlier records via `supersedes` /
+  `superseded_by` rather than rewriting them; regenerate each store's gitignored
+  `INDEX.md` (never stage it). The spec stays flat (no `_done/` move, never
+  `status: done`). The
   context layer (`{{context.product}}` / `{{context.structure}}` /
   `{{context.tech}}`) is refreshed from code (onboard / refresh-context), never
   folded.

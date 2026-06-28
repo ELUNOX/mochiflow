@@ -122,10 +122,12 @@ follow-up before build completes.
   `.gitignore` is the single source of truth for whether specs are tracked: when
   the project tracks specs, git includes these files; when the project gitignores
   `{specs_dir}/{slug}/`, git skips them and the worktree was already clean.
-  The ADR under `[adr]` is committed regardless of this choice.
-- `state/` is gitignored, and the generated board `{index}` (`INDEX.md`) is
-  gitignored and **never staged or committed** by any command. The vendored
-  engine under the install dir is tracked by default.
+  The ADR record directories under `[adr]` (`decisions/` / `pitfalls/`) are
+  committed regardless of this choice; each store's generated `INDEX.md` is not.
+- `state/` is gitignored, and the generated board `{index}` (`INDEX.md`) plus
+  each ADR store's `INDEX.md` are gitignored and **never staged or committed** by
+  any command (the bare `INDEX.md` ignore pattern matches `adr/**/INDEX.md`). The
+  vendored engine under the install dir is tracked by default.
 
 ### Spec-lane lifecycle commits
 
@@ -255,12 +257,22 @@ reproduce**, as dated historical records — never as a "current state" descript
 
 - The *why* behind design decisions / contracts (why a new type, schema shape,
   ownership, registry rule, or persistence model was chosen, and which
-  alternatives were rejected) → append to the Decisions Log in
-  `[adr].decisions` as `### {YYYY-MM-DD} {slug}`. Write it as a fact *as of
-  that date*; never rewrite existing entries.
+  alternatives were rejected) → add a new per-file record under `[adr].decisions`
+  named `{YYYY-MM-DD}-{slug}.md` with front-matter (`id`, `date`, `area`
+  defaulting to the spec's `surfaces`, `spec`, `status: active`). Write it as a
+  fact *as of that date*; never rewrite an existing record. When a decision
+  overrides an earlier one, add the new record with `supersedes: <id>` and flip
+  the old record to `status: superseded` with the reciprocal `superseded_by:
+  <id>` (status/link change only — its body stays immutable).
 - Operational pitfalls found during implementation (to prevent recurrence) →
-  `[adr].pitfalls`, using `Applies to`, `Signal`, `Cause`, `Guardrail`, `Check`,
-  and `Status`.
+  a new per-file record under `[adr].pitfalls`, using `Applies to`, `Signal`,
+  `Cause`, `Guardrail`, `Check`, and `Status`. Resolved pitfalls flip to
+  `status: resolved` rather than being deleted.
+
+Each store keeps a generated, gitignored `INDEX.md` content catalog; regenerate
+it after adding a record and **never stage it** (consistent with the board
+`INDEX.md`). The record directories under `[adr]` are staged by `mochiflow
+accept`; the per-store `INDEX.md` files are not.
 
 Do not fold prose that describes current state ("how the system is put together
 now", "where things live"). The context layer (`[context].product` /
