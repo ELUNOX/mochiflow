@@ -31,7 +31,7 @@ Critical Stop Conditions:
     - `cli/crates/mochiflow-cli/tests/conformance.rs`
   - Done: `lint` accepts `done` only for specs located under `{specs_dir}/_done/` and rejects `status: done` on an active (non-`_done/`) spec; `index`/board still renders `_done/` specs in Done ordered by `completed`/`updated`; tests include a positive archived-`done` case and a negative case (an active flat spec with `status: done` fails lint).
   - Stop: do not rewrite or move any `_done/` content.
-- [ ] T-003 [AC-07, AC-08] Add the delivery-state derivation module
+- [x] T-003 [AC-07, AC-08] Add the delivery-state derivation module
   - Depends on: T-001
   - Files:
     - `cli/crates/mochiflow-core/src/delivery.rs`
