@@ -149,13 +149,13 @@ loads only the relevant active records instead of the entire history.
 
 | AC | Scope | Verification method | Planned test/QA | Implementation | Result | Evidence | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| AC-01 | cli | automated | `cargo test -p mochiflow-core config` | `cli/crates/mochiflow-core/src/config.rs` | UNVERIFIED |  |  |
-| AC-02 | cli | automated | `cargo test -p mochiflow-core` empty/absent-store no-fallback | `cli/crates/mochiflow-core/src/config.rs` | UNVERIFIED |  |  |
-| AC-03 | cli | automated | `cargo test -p mochiflow-core` staging + index (QA-06) | `cli/crates/mochiflow-core/src/{adr,ship}.rs` | UNVERIFIED |  |  |
-| AC-04 | cli | automated | `cargo test -p mochiflow-core adr` supersession (QA-03) | `cli/crates/mochiflow-core/src/adr.rs` | UNVERIFIED |  |  |
-| AC-05 | cli | automated | `cargo test` lint + doctor warn/gate (QA-03, QA-06) | `cli/crates/mochiflow-core/src/{adr,doctor}.rs` | UNVERIFIED |  |  |
-| AC-06 | cli | automated | `cargo test --test cli` adr commands (QA-01, QA-02) | `cli/crates/mochiflow-cli/src/main.rs` | UNVERIFIED |  |  |
-| AC-07 | cli | automated | verbatim body diff + commit-separation inspection (QA-04, QA-05) | `.mochiflow/adr/decisions/`, `.mochiflow/adr/pitfalls/` | UNVERIFIED |  |  |
-| AC-08 | cli | automated | `freeze --check` + conformance (QA-06) | `contracts/config.schema.json`, engine docs | UNVERIFIED |  |  |
-| AC-09 | cli | human | review docs vs behavior (QA-07) | `engine/commands/{discuss,plan}.md` | PENDING_HUMAN |  |  |
-| AC-10 | cli | automated | `cargo test -p mochiflow-core config` file-where-dir error | `cli/crates/mochiflow-core/src/config.rs` | UNVERIFIED |  |  |
+| AC-01 | cli | automated | `cargo test -p mochiflow-core config` | `cli/crates/mochiflow-core/src/config.rs` | PASS | `config::tests::adr_accessors_resolve_directory_roots_and_indexes` |  |
+| AC-02 | cli | automated | `cargo test -p mochiflow-core` empty/absent-store no-fallback | `cli/crates/mochiflow-core/src/config.rs` | PASS | `config::tests::adr_absent_or_empty_store_yields_zero_records_no_fallback`; `adr::tests::empty_store_renders_no_records_and_no_fallback` |  |
+| AC-03 | cli | automated | `cargo test -p mochiflow-core` staging + index (QA-06) | `cli/crates/mochiflow-core/src/{adr,ship}.rs` | PASS | `ship::tests::accept_staging_includes_adr_record_dirs_but_never_index`; `adr::tests::index_staleness_and_generate_roundtrip` |  |
+| AC-04 | cli | automated | `cargo test -p mochiflow-core adr` supersession (QA-03) | `cli/crates/mochiflow-core/src/adr.rs` | PASS | `adr::tests::{active_set_excludes_superseded_deprecated_and_status_lag,dangling_supersedes_is_detected,supersession_cycle_is_detected,well_formed_supersession_has_no_relational_problems}` |  |
+| AC-05 | cli | automated | `cargo test` lint + doctor warn/gate (QA-03, QA-06) | `cli/crates/mochiflow-core/src/{adr,doctor}.rs` | PASS | `adr::tests::{lint_classifies_gating_vs_warning_and_sets_exit,lint_flags_unknown_area_as_gating_schema}`; conformance `doctor_adr_{gates_on_dangling_reference,warns_on_orphan_but_passes,regenerates_stale_index_instead_of_failing,gates_on_unknown_area}` |  |
+| AC-06 | cli | automated | `cargo test --test cli` adr commands (QA-01, QA-02) | `cli/crates/mochiflow-cli/src/main.rs` | PASS | cli `adr_{list_returns_only_active_headers_by_default,list_status_all_includes_superseded,search_defaults_to_active_set_and_widens_with_status_all,show_returns_body_and_lineage,show_unknown_id_fails,filters_by_area_and_spec}` |  |
+| AC-07 | cli | automated | verbatim body diff + commit-separation inspection (QA-04, QA-05) | `.mochiflow/adr/decisions/`, `.mochiflow/adr/pitfalls/` | PASS | standalone migration commit `ca2fe24` touches only `.mochiflow/adr/**` + `config.toml`; record bodies byte-identical to deleted monolith sections; 15 decisions + 8 pitfalls entry-count parity (reviewer git-verified) |  |
+| AC-08 | cli | automated | `freeze --check` + conformance (QA-06) | `contracts/config.schema.json`, engine docs | PASS | `cargo run -- freeze --check` clean; conformance schema + golden-config tests; refrozen `contracts.lock` |  |
+| AC-09 | cli | human | review docs vs behavior (QA-07) | `engine/commands/{discuss,plan}.md` | PENDING_HUMAN |  | discuss/plan + open/git/authoring + 4 adapters updated and regenerated (0 drift); human doc-vs-behavior check requested at open |
+| AC-10 | cli | automated | `cargo test -p mochiflow-core config` file-where-dir error | `cli/crates/mochiflow-core/src/config.rs` | PASS | `config::tests::adr_value_resolving_to_file_is_a_config_error` |  |

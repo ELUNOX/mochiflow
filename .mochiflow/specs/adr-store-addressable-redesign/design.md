@@ -169,5 +169,20 @@
 
 ## Review Results
 
-- Pending: mandatory independent-reviewer run once after all tasks (elevated
-  cadence), recorded during build as `Reviewer mode:` and `Verdict:`.
+- Reviewer mode: delegated
+- Verdict: pass-with-comments
+- Date: 2026-06-28 (elevated cadence: independent-reviewer run once after all tasks)
+- Summary: All 10 ACs verified against implementation, tests, and git history;
+  hard cut confirmed (no `decisions_path`/`pitfalls_path`, no ADR stub, no
+  migrate command). AC-07 git-verified as an isolated migration commit with
+  byte-identical record bodies and 15/8 entry-count parity.
+- Findings (all non-blocking; no Critical/High):
+  - MEDIUM (AC-05/QA-03): unknown `area` was not validated. **Resolved** in
+    follow-up commit — `adr lint` / `doctor` now gate on an `area` that is not a
+    configured surface (unit + conformance coverage added).
+  - LOW: a `resolved` pitfall with no links emits a perpetual Orphan warning
+    (warning noise only; non-gating). Left as-is.
+  - LOW: `list`/`search` skip malformed records silently rather than
+    skip-with-warning. Left as-is (lint is the gating surface).
+  - LOW: some unrelated test fixtures still use the old monolith `*.md` config
+    form (harmless — no file is created so validation never trips). Left as-is.

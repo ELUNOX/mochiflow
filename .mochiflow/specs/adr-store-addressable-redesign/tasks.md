@@ -15,13 +15,13 @@ Critical Stop Conditions:
 
 ## Tasks
 
-- [ ] T-001 [AC-01, AC-02, AC-10] Make `[adr]` config directory-rooted
+- [x] T-001 [AC-01, AC-02, AC-10] Make `[adr]` config directory-rooted
   - Depends on: none
   - Files:
     - `cli/crates/mochiflow-core/src/config.rs`
   - Done: `RawAdr` resolves `decisions` / `pitfalls` as directory roots; accessors (`*_dir()` + `*_index()`) return each store's record directory and `INDEX.md` path; an absent/empty directory yields zero records with no monolith fallback; a value resolving to an existing file where a directory is expected returns a config error; unit tests cover resolution, the empty-store case, and the file-where-directory error.
   - Stop: if any consumer still expects a single monolith file, reconcile it here before proceeding.
-- [ ] T-002 [AC-08] Update config contract and refreeze
+- [x] T-002 [AC-08] Update config contract and refreeze
   - Depends on: T-001
   - Files:
     - `contracts/config.schema.json`
@@ -29,34 +29,34 @@ Critical Stop Conditions:
     - `cli/crates/mochiflow-cli/tests/conformance.rs`
   - Done: schema `adr` block documents the directory contract (presence + non-empty string per key); the file-vs-directory rejection is runtime config validation in `config.rs` (T-001), not a schema constraint; `contracts.lock` refrozen via `freeze`; conformance schema and golden-config tests updated and passing.
   - Stop: never hand-edit `contracts.lock`; regenerate with `freeze`. Do not claim the JSON schema can distinguish a file path from a directory path.
-- [ ] T-003 [AC-03] Generated gitignored INDEX and accept staging
+- [x] T-003 [AC-03] Generated gitignored INDEX and accept staging
   - Depends on: T-001
   - Files:
     - `cli/crates/mochiflow-core/src/adr.rs`
     - `cli/crates/mochiflow-core/src/ship.rs`
   - Done: each store's `INDEX.md` is rendered from record front-matter with a staleness check; `run_accept` stages the record directories and never `INDEX.md`, updating the `lifecycle_paths` / `allowed_ship_paths` call sites for the `decisions_path()` / `pitfalls_path()` -> `*_dir()` rename from T-001; tests assert staging includes the directories and excludes the index. The existing bare `INDEX.md` `.gitignore` pattern already matches `adr/**/INDEX.md`, so no new pattern is added.
   - Stop: if INDEX generation would need to be committed, revisit the derived-cache decision before coding.
-- [ ] T-004 [AC-04] Record model, front-matter, and supersession active-set
+- [x] T-004 [AC-04] Record model, front-matter, and supersession active-set
   - Depends on: T-001
   - Files:
     - `cli/crates/mochiflow-core/src/adr.rs`
   - Done: record parse (front-matter + body) for decisions and pitfalls; active-set computation excludes `superseded` / `deprecated`; `supersedes` marks the target superseded; cycles, dangling, and one-sided cross-refs are detected; path traversal in record names is rejected.
   - Stop: do not mutate record bodies to express supersession — status/links only.
-- [ ] T-005 [AC-05] `mochiflow adr lint` deterministic checks
+- [x] T-005 [AC-05] `mochiflow adr lint` deterministic checks
   - Depends on: T-004
   - Files:
     - `cli/crates/mochiflow-core/src/adr.rs`
     - `cli/crates/mochiflow-cli/src/main.rs`
   - Done: `adr lint` reports dangling `superseded_by`, orphan, stale, missing cross-ref, schema violation, and INDEX staleness, classified into gating vs warning; non-zero exit on gating failures; no semantic-contradiction heuristic is added.
   - Stop: if a check cannot be decided mechanically, leave it out (review judgment), do not approximate.
-- [ ] T-006 [AC-05] Wire deterministic subset into doctor
+- [x] T-006 [AC-05] Wire deterministic subset into doctor
   - Depends on: T-005
   - Files:
     - `cli/crates/mochiflow-core/src/doctor.rs`
     - `cli/crates/mochiflow-cli/tests/conformance.rs`
   - Done: doctor gates on dangling / missing cross-ref / schema; orphan, stale, and INDEX freshness surface as non-blocking warnings; an absent or stale INDEX is regenerated rather than failing (consistent with the board `INDEX.md`); tests cover gating vs warning vs regenerate behavior.
   - Stop: do not make orphan / stale / INDEX freshness block the quality gate.
-- [ ] T-007 [AC-07] One-time verbatim migration of the repo monoliths
+- [x] T-007 [AC-07] One-time verbatim migration of the repo monoliths
   - Depends on: T-003, T-004
   - Files:
     - `.mochiflow/adr/decisions/`
@@ -66,7 +66,7 @@ Critical Stop Conditions:
     - deleted: `.mochiflow/adr/pitfalls.md`
   - Done: each monolith entry is extracted verbatim into a per-file record with front-matter (`id` / `date` / `area` / `spec` / `status`); record bodies are byte-identical to source entries; the `[adr].decisions` / `[adr].pitfalls` values in `.mochiflow/config.toml` are repointed to the record directories; monoliths deleted; delivered as a standalone reversible commit separate from the engine / contract changes.
   - Stop: never reword a migrated body; if an entry lacks a parseable date/slug, stop and ask rather than inventing one.
-- [ ] T-008 [AC-06] `mochiflow adr list | show | search`
+- [x] T-008 [AC-06] `mochiflow adr list | show | search`
   - Depends on: T-004
   - Files:
     - `cli/crates/mochiflow-core/src/adr.rs`
@@ -74,14 +74,14 @@ Critical Stop Conditions:
     - `cli/crates/mochiflow-cli/tests/cli.rs`
   - Done: read-only `list/show/search` support `--kind` / `--area` / `--status` / `--spec`, default `--status active`, return headers for `list`/`search` and full body + lineage for `show`; CLI integration tests cover filters and output shape.
   - Stop: no embedding/index-search engine; front-matter / keyword derivation only.
-- [ ] T-009 [AC-09] Selective-load wording in discuss/plan
+- [x] T-009 [AC-09] Selective-load wording in discuss/plan
   - Depends on: T-004, T-008
   - Files:
     - `engine/commands/discuss.md`
     - `engine/commands/plan.md`
   - Done: both commands document loading `INDEX.md` first, then opening only records whose `area` intersects the spec `surfaces` and whose `status` is active; superseded/deprecated opened only when tracing lineage; engine-edit propagation per Defaults (freeze / upgrade --source engine / adapter generate --check).
   - Stop: keep current-state truth in code; do not turn ADR into a current-state source.
-- [ ] T-010 [AC-08] Fold and storage docs, adapter templates
+- [x] T-010 [AC-08] Fold and storage docs, adapter templates
   - Depends on: T-002, T-003
   - Files:
     - `engine/commands/open.md`
@@ -93,7 +93,7 @@ Critical Stop Conditions:
     - `engine/adapters/copilot/copilot-instructions.md.tpl`
   - Done: open.md fold appends a per-file record (with a supersession step) and regenerates the gitignored INDEX; git.md fold/staging/gitignore reflect the directory store; authoring SSOT row updated; the on-demand and fold wording in all four adapter templates (agents, kiro, claude-code, copilot) reflects per-file directory records and supersession; adapters regenerated via Defaults propagation and `adapter generate --check` plus `freeze --check` pass.
   - Stop: regenerate adapters via the tooling; do not hand-edit generated adapter targets or the vendored `.mochiflow/engine/` copy.
-- [ ] T-011 [AC-02, AC-08] Reconcile remaining `[adr]` accessor consumers
+- [x] T-011 [AC-02, AC-08] Reconcile remaining `[adr]` accessor consumers
   - Depends on: T-001
   - Files:
     - `cli/crates/mochiflow-core/src/init.rs`
