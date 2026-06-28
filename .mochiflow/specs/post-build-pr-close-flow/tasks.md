@@ -143,7 +143,7 @@ Critical Stop Conditions:
     - `engine/reference/git.md`
   - Done: discuss/branch-creation fetches and branches from `origin/{base_branch}` and warns when the local base is behind; the behavior is provider-independent and documented.
   - Stop: if this requires a new CLI subcommand, stop and confirm scope before adding one.
-- [ ] T-015 [chore: derived-file integrity + full verification] Freeze, re-vendor, and finalize verification
+- [x] T-015 [chore: derived-file integrity + full verification] Freeze, re-vendor, and finalize verification
   - Depends on: T-001, T-002, T-003, T-004, T-005, T-006, T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-014
   - Files:
     - `engine/MANIFEST.json`

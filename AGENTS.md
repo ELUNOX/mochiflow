@@ -12,7 +12,7 @@ your standing instruction and follow it for any spec / implementation / PR work.
   `.mochiflow/context/structure.md`, and `.mochiflow/context/tech.md`. This is the always-loaded
   current-state orientation; load it first.
 - Router (read this first): `.mochiflow/engine/router.md`
-- Verb procedures: `.mochiflow/engine/commands/{discuss,plan,build,ship}.md`; patch lane:
+- Verb procedures: `.mochiflow/engine/commands/{discuss,plan,build,open,update,close}.md`; patch lane:
   `.mochiflow/engine/commands/patch.md`
 - Non-phase commands: `.mochiflow/engine/commands/{patch,review,refresh-context,onboard}.md`
 - Cross-cutting rules: `.mochiflow/engine/reference/{workflow,risk,authoring,git,language,engineering-standards}.md`
@@ -35,8 +35,9 @@ your standing instruction and follow it for any spec / implementation / PR work.
 - Artifact language: `en`; conversation language:
   `ja`. Follow `.mochiflow/engine/reference/language.md` for
   user-facing wording and `auto` conversation behavior.
-- At ship, fold durable knowledge into `.mochiflow/adr/decisions.md` (decisions) /
-  `.mochiflow/adr/pitfalls.md` (pitfalls) before archiving to `.mochiflow/specs/_done/`. The
+- At open, fold durable knowledge into `.mochiflow/adr/decisions.md` (decisions) /
+  `.mochiflow/adr/pitfalls.md` (pitfalls) into the PR's close-out commit; the spec stays
+  flat (no `_done/` move, never `status: done`). The
   context layer (`.mochiflow/context/product.md` / `.mochiflow/context/structure.md` /
   `.mochiflow/context/tech.md`) is refreshed from code (onboard / refresh-context), never
   folded.
