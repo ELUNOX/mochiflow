@@ -8,7 +8,7 @@ description: |
   Verification Matrix. A trivial standard-risk spec may run with spec.md only
   and a no-PR fast path branch choice. Activate on the explicit
   command `mochiflow-build`, or natural phrasing like "実装して" / "進めて" /
-  "ビルドして". Does not create PRs, set `done`, or archive (that is ship).
+  "ビルドして". Does not create PRs, set a terminal state, or move the spec (that is open).
 triggers:
   - mochiflow-build
   - 実装して
@@ -36,12 +36,12 @@ references:
 
 ## Purpose
 
-Implement the approved spec and produce verification and the AC Verification Matrix. Do not create the PR or archive.
+Implement the approved spec and produce verification and the AC Verification Matrix. Do not create the PR or move the spec.
 
 ## Procedure
 
 1. Confirm build eligibility with `mochiflow ready {slug}`: it runs `lint`, requires `status: approved`, and checks every surface's `default` verification command is runnable (not a `TODO:` placeholder). `default` is the canonical build-completion profile: it should be the reliable local command whose success is sufficient to say the surface is ready for PR / merge, except for checks explicitly documented as human-operated or CI-only. A non-zero exit is a stop condition — resolve it before implementing. Then read `spec.yaml` (risk / type / surfaces), `pitch.md`, `spec.md` (plus `design.md` / `tasks.md` if present), the constitution (`[constitution].project` / `[constitution].local`), the foundational context (`[context].product` / `[context].structure` / `[context].tech`) for orientation, and `[adr].pitfalls`. If `mochiflow ready` is unavailable, fall back to reading `spec.yaml` and confirming `status: approved` and runnable verification manually.
-2. Define this build's **commit unit**: when `tasks.md` exists, the unit is one currently open task; when `tasks.md` is absent (taskless / micro specs), the unit is the whole logical change. Prepare the branch per `reference/git.md ## Branch`: verify the branch `{prefix}/{slug}` exists locally or on `origin`, switch to it, and error-stop if it does not exist. Verify the worktree has no changes other than this spec's own `{specs_dir}/{slug}/**` (else stop). Exception: when build resumes from `ship.md ## PR Feedback Loop`, the restore from `_done` is related, so `{specs_dir}/{slug}/**` and `{specs_dir}/_done/{slug}/**` are the only allowed dirty paths; any other dirt still stops.
+2. Define this build's **commit unit**: when `tasks.md` exists, the unit is one currently open task; when `tasks.md` is absent (taskless / micro specs), the unit is the whole logical change. Prepare the branch per `reference/git.md ## Branch`: verify the branch `{prefix}/{slug}` exists locally or on `origin`, switch to it, and error-stop if it does not exist. Verify the worktree has no changes other than this spec's own `{specs_dir}/{slug}/**` (else stop). Exception: when build resumes from `commands/update.md` (PR feedback), the spec is already flat at `{specs_dir}/{slug}/`, so only `{specs_dir}/{slug}/**` is allowed dirty; any other dirt still stops.
 3. **Task loop**: repeat 3a–3f for each open task.
    - 3a. Read surrounding source before editing; for logic changes use TDD (RED→GREEN→REFACTOR), match existing style, and keep changes minimal. Per `reference/engineering-standards.md`, for any dependency / tool / framework-idiom change or any deviation, confirm the upstream-recommended approach from primary sources before implementing and record its source.
    - 3b. Append seam decisions / ownership / dead-code handling to `design.md ## Integration Log` only when `design.md` exists and the integration-log column in `reference/risk.md` calls for it. For `standard`, do not create or require `design.md ## Integration Log`.
@@ -51,8 +51,8 @@ Implement the approved spec and produce verification and the AC Verification Mat
    - 3f. Follow the reviewer cadence in `reference/risk.md`; when required, run `agents/independent-reviewer.md` read-only via `reference/risk.md ## Review transport` (prefer delegated subagent when available; use inline reviewer role only when subagents are unavailable or dispatch fails for a runtime/tooling reason) and append the reviewer mode + verdict to `design.md ## Review Results`. For `critical`, this happens after each task.
 4. After all tasks complete, run final verification once more. Fix any FAIL and re-run to PASS.
 5. For `elevated`, run the required independent-reviewer once after all tasks using the same review transport. Record `Reviewer mode: delegated | inline` with the verdict in `design.md ## Review Results`.
-6. Record the AC Verification Matrix (at the end of tasks.md if present, else end of spec.md). Settle automated AC as `PASS` / `FAIL` / `N/A: <reason>`, mark an automated AC row not yet verified as the provisional `UNVERIFIED`, and record AC needing human/visual checking as `PENDING_HUMAN` without requesting that QA here (the request is made once, in ship). Provisional tokens (`UNVERIFIED`, `PENDING_HUMAN`) are build-time placeholders only and are not done-eligible (`reference/workflow.md ## AC Matrix`).
-7. Include the build-time AC Verification Matrix update in the final build commit for this phase, then stop. `ship` only commits Matrix rows or evidence changed by final verification / human QA, as part of the close-out commit.
+6. Record the AC Verification Matrix (at the end of tasks.md if present, else end of spec.md). Settle automated AC as `PASS` / `FAIL` / `N/A: <reason>`, mark an automated AC row not yet verified as the provisional `UNVERIFIED`, and record AC needing human/visual checking as `PENDING_HUMAN` without requesting that QA here (the request is made once, in open). Provisional tokens (`UNVERIFIED`, `PENDING_HUMAN`) are build-time placeholders only and are not done-eligible (`reference/workflow.md ## AC Matrix`).
+7. Include the build-time AC Verification Matrix update in the final build commit for this phase, then stop. `open` only commits Matrix rows or evidence changed by final verification / human QA, as part of the close-out commit.
 
 ## Presentation
 
@@ -65,10 +65,11 @@ Implement the approved spec and produce verification and the AC Verification Mat
   for wrap-up; do not lead with `risk`, `status`, or reviewer mode.
 - On build completion, always include: (1) the verification result (all items
   passed, or human confirmation items remain), and (2) a numbered choice card:
-  **Start PR preparation** (`ship` / `mochiflow-ship`) or
+  **Create the PR** (`open` / `mochiflow-open`) or
   **Create a resume prompt** (`resume` / `later`). The resume prompt is generated
   inline from the active slug and spec path and tells the next session to run
-  `{slug} ship`.
+  `{slug} open`. Build ends at `status: approved`; it does not set a terminal
+  state, create a PR, or move the spec.
 
 ## Resume from new session
 
@@ -93,5 +94,5 @@ When build resumes in a new session (no prior conversation state):
 - Do not implement when `status` is not `approved` or `spec.yaml` is missing (a non-zero `mochiflow ready {slug}` exit signals this).
 - Stop when an out-of-scope change or a new design decision is needed.
 - Do not finish build while verification or a required reviewer verdict is FAIL.
-- `build` never sets `status: done`. Setting `done` is ship's responsibility, on the acceptance conditions in `reference/workflow.md ## AC Verification Matrix`. At build's end the status stays `approved`.
-- Do not create the PR / move to `_done/` / request human checking (those are ship's responsibility).
+- `build` never sets `status: accepted`. Setting `accepted` is open's responsibility, on the acceptance conditions in `reference/workflow.md ## AC Verification Matrix`. At build's end the status stays `approved`.
+- Do not create the PR / set a terminal state / move the spec / request human checking (those are open's responsibility).
