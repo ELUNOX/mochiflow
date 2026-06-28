@@ -15,4 +15,5 @@ pub mod pr;
 pub mod present;
 pub mod ship;
 pub mod spec_meta;
+pub mod status;
 pub mod upgrade;

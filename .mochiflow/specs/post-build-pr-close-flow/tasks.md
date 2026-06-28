@@ -38,7 +38,7 @@ Critical Stop Conditions:
     - `cli/crates/mochiflow-core/src/lib.rs`
   - Done: a pure function resolves each spec to one delivery column using the precedence Done > In Review > Ready > Active (Done = provider-merged or `Spec: {slug}` trailer reachable from `origin/{base_branch}`; In Review = open PR, or for `provider = none` a pushed-and-unmerged branch; Ready = accepted-unpushed) with two merged signals only (no persisted human-report fallback); the `provider = none` and provider-unavailable paths work and never error; unit tests cover accepted-unpushed→Ready, accepted-pushed→In Review, merged→Done, a conflicting open-PR+merge-trailer case (Done wins), and provider-unavailable fallback.
   - Stop: do not persist any derived/human-report state; derivation is read-only observation.
-- [ ] T-004 [AC-09, AC-10] Add `mochiflow status` board command (read-only)
+- [x] T-004 [AC-09, AC-10] Add `mochiflow status` board command (read-only)
   - Depends on: T-003
   - Files:
     - `cli/crates/mochiflow-core/src/status.rs`

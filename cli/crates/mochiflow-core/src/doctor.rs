@@ -28,6 +28,7 @@ const TERMINAL_CLI_COMMAND_REFERENCES: &[&str] = &[
     "pr",
     "ready",
     "ship",
+    "status",
     "upgrade",
 ];
 

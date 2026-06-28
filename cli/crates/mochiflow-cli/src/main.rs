@@ -30,6 +30,12 @@ enum Commands {
         #[arg(long)]
         check: bool,
     },
+    /// Render the live delivery board (read-only): Backlog / Active / Ready / In Review / Done
+    Status {
+        /// Fetch origin before computing derived delivery state
+        #[arg(long)]
+        fetch: bool,
+    },
     /// Lint specs
     Lint {
         /// Single spec slug
@@ -253,6 +259,10 @@ fn main() -> Result<()> {
         Commands::Lint { spec } => {
             let cfg = load_cfg(cli.config.as_deref())?;
             mochiflow_core::lint::run_lint(&cfg, spec.as_deref(), false)
+        }
+        Commands::Status { fetch } => {
+            let cfg = load_cfg(cli.config.as_deref())?;
+            mochiflow_core::status::run_status(&cfg, fetch)
         }
         Commands::Doctor { json, target } => {
             let cfg = load_cfg(cli.config.as_deref())?;
