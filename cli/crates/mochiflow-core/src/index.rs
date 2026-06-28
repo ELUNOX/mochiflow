@@ -3,7 +3,8 @@
 use std::path::Path;
 
 use crate::config::Config;
-use crate::spec_meta::read_spec_metadata;
+use crate::delivery::{self, DeliveryColumn};
+use crate::spec_meta::{SpecMeta, read_spec_metadata};
 
 /// Backlog seed metadata (from markdown frontmatter).
 pub struct SeedInfo {
@@ -43,6 +44,7 @@ fn status_emoji(status: &str) -> &str {
     match status {
         "draft" => "📝",
         "approved" => "🟢",
+        "accepted" => "🔵",
         "done" => "✅",
         "seed" => "🌱",
         _ => "❓",
@@ -124,6 +126,15 @@ fn collect(cfg: &Config) -> (Vec<ActiveEntry>, Vec<DoneEntry>, Vec<SeedInfo>) {
     for entry in &dirs {
         let d = entry.path();
         if let Ok(m) = read_spec_metadata(&d) {
+            let slug = entry.file_name().to_string_lossy().to_string();
+            // Column membership comes from the same derivation the board uses
+            // (asserted ∪ derived), not from directory location: a flat spec
+            // whose PR has merged renders in Done even though it is not in _done.
+            let column = delivery::derive_column(cfg, &slug, m.status(), m.spec_type());
+            if column == DeliveryColumn::Done {
+                done.push(make_done_entry(&d, &slug, &m));
+                continue;
+            }
             let mut docs_parts = vec!["spec".to_string()];
             if d.join("design.md").exists() {
                 docs_parts.push("design".to_string());
@@ -132,7 +143,7 @@ fn collect(cfg: &Config) -> (Vec<ActiveEntry>, Vec<DoneEntry>, Vec<SeedInfo>) {
                 docs_parts.push("tasks".to_string());
             }
             active.push(ActiveEntry {
-                slug: entry.file_name().to_string_lossy().to_string(),
+                slug,
                 title: m.title().to_string(),
                 status: m.status().to_string(),
                 risk: m.risk().to_string(),
@@ -156,47 +167,16 @@ fn collect(cfg: &Config) -> (Vec<ActiveEntry>, Vec<DoneEntry>, Vec<SeedInfo>) {
         for entry in &done_dirs {
             let d = entry.path();
             if let Ok(m) = read_spec_metadata(&d) {
-                let completed = m.completed().map(str::to_string).filter(|s| !s.is_empty());
-                // Display/grouping date: prefer the completion date, then the
-                // updated date, then file mtime. Always reduced to YYYY-MM-DD.
-                let updated_field = m.updated().unwrap_or("").to_string();
-                let display_source = completed
-                    .clone()
-                    .filter(|s| !s.is_empty())
-                    .or_else(|| {
-                        if updated_field.is_empty() {
-                            None
-                        } else {
-                            Some(updated_field.clone())
-                        }
-                    })
-                    .unwrap_or_else(|| mtime_isodate(&d));
-                let updated = isodate_only(&display_source);
-                // Ordering key (full precision): completed → updated → mtime.
-                let sort_key = completed
-                    .clone()
-                    .filter(|s| !s.is_empty())
-                    .or_else(|| {
-                        if updated_field.is_empty() {
-                            None
-                        } else {
-                            Some(updated_field.clone())
-                        }
-                    })
-                    .unwrap_or_else(|| mtime_isodate(&d));
-                done.push(DoneEntry {
-                    slug: entry.file_name().to_string_lossy().to_string(),
-                    title: m.title().to_string(),
-                    spec_type: m.spec_type().to_string(),
-                    module: m.module().unwrap_or("—").to_string(),
-                    updated,
-                    completed,
-                    sort_key,
-                });
+                let slug = entry.file_name().to_string_lossy().to_string();
+                done.push(make_done_entry(&d, &slug, &m));
             }
         }
         // Sort: slug asc first (stable tiebreak), then completion key desc so the
         // most recently completed spec leads each day. Equal keys keep slug asc.
+        done.sort_by(|a, b| a.slug.cmp(&b.slug));
+        done.sort_by(|a, b| b.sort_key.cmp(&a.sort_key));
+    } else if !done.is_empty() {
+        // Derived-done flat specs (no _done dir present): keep deterministic order.
         done.sort_by(|a, b| a.slug.cmp(&b.slug));
         done.sort_by(|a, b| b.sort_key.cmp(&a.sort_key));
     }
@@ -224,6 +204,37 @@ fn collect(cfg: &Config) -> (Vec<ActiveEntry>, Vec<DoneEntry>, Vec<SeedInfo>) {
     }
 
     (active, done, seeds)
+}
+
+/// Build a `DoneEntry` for a spec directory, resolving its display/grouping date
+/// and ordering key from `completed` → `updated` → file mtime.
+fn make_done_entry(dir: &Path, slug: &str, m: &SpecMeta) -> DoneEntry {
+    let completed = m.completed().map(str::to_string).filter(|s| !s.is_empty());
+    let updated_field = m.updated().unwrap_or("").to_string();
+    let pick_source = || {
+        completed
+            .clone()
+            .filter(|s| !s.is_empty())
+            .or_else(|| {
+                if updated_field.is_empty() {
+                    None
+                } else {
+                    Some(updated_field.clone())
+                }
+            })
+            .unwrap_or_else(|| mtime_isodate(dir))
+    };
+    let updated = isodate_only(&pick_source());
+    let sort_key = pick_source();
+    DoneEntry {
+        slug: slug.to_string(),
+        title: m.title().to_string(),
+        spec_type: m.spec_type().to_string(),
+        module: m.module().unwrap_or("—").to_string(),
+        updated,
+        completed,
+        sort_key,
+    }
 }
 
 /// Reduce a date or ISO 8601 timestamp to its `YYYY-MM-DD` prefix for display
@@ -311,6 +322,10 @@ fn render_index(cfg: &Config, now: &str) -> String {
         format!(
             "| 🟢 approved | {} |",
             active.iter().filter(|a| a.status == "approved").count()
+        ),
+        format!(
+            "| 🔵 accepted | {} |",
+            active.iter().filter(|a| a.status == "accepted").count()
         ),
         format!("| ✅ done | {} |", done.len()),
         String::new(),

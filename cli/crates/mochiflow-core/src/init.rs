@@ -24,7 +24,7 @@ pub const CONTEXT_STUB_BODY: &str =
     "mochiflow `onboard` / `refresh-context` regenerates this foundational map from code.";
 /// Boilerplate body of an unmodified `adr/` stub.
 pub const ADR_STUB_BODY: &str =
-    "mochiflow `ship` folds durable decisions and active pitfalls here when needed.";
+    "mochiflow `open` folds durable decisions and active pitfalls here when needed.";
 
 /// Living-spec layer — determines stub wording and lifecycle.
 #[derive(Clone, Copy)]
@@ -552,7 +552,7 @@ fn write_install_gitignore(install_dir: &Path, force: bool) -> std::io::Result<b
     }
     std::fs::write(
         &path,
-        "# Managed by mochiflow init. Local runtime-derived files — do not track.\nstate/\nconstitution.local.md\n",
+        "# Managed by mochiflow init. Local runtime-derived files — do not track.\nstate/\nINDEX.md\nconstitution.local.md\n",
     )?;
     Ok(true)
 }

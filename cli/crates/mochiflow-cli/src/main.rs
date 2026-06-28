@@ -448,14 +448,23 @@ fn main() -> Result<()> {
             dry_run,
         } => {
             let cfg = load_cfg(cli.config.as_deref())?;
-            mochiflow_core::pr::run_pr(
+            let code = mochiflow_core::pr::run_pr(
                 &cfg,
                 spec.as_deref(),
                 title.as_deref(),
                 body_file.as_deref(),
                 draft,
                 dry_run,
-            )
+            );
+            // Shared post-command board refresh: regenerate the gitignored
+            // INDEX.md to reflect the new delivery state (e.g. In Review).
+            // Best-effort and never staged/committed; skipped on dry-run.
+            if !dry_run
+                && (code == mochiflow_core::pr::EXIT_OK || code == mochiflow_core::pr::EXIT_MANUAL)
+            {
+                let _ = mochiflow_core::index::generate_index_quiet(&cfg);
+            }
+            code
         }
         Commands::Freeze { root, check } => {
             let cwd = std::env::current_dir()?;

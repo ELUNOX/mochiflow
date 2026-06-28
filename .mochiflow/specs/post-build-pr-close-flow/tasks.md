@@ -47,7 +47,7 @@ Critical Stop Conditions:
     - `cli/crates/mochiflow-core/src/doctor.rs`
   - Done: `mochiflow status` prints Backlog/Active/Ready/In Review/Done computed from asserted ∪ derived state and writes no file (read-only); `--fetch` performs one `git fetch` first; exit 0 even with degraded derivation; `status` is added to `doctor.rs` `terminal_cli_command_references` so the exact-match allowlist test (`doctor_terminal_command_allowlist_matches_clap_subcommands`) stays green in this task; a unit test asserts column placement and that no file (incl. `INDEX.md`) is written.
   - Stop: `status` must never write `INDEX.md` or mutate any spec.
-- [ ] T-005 [AC-11, AC-12] Gitignore INDEX, derive its columns, auto-regenerate on state-changing commands
+- [x] T-005 [AC-11, AC-12] Gitignore INDEX, derive its columns, auto-regenerate on state-changing commands
   - Depends on: T-004
   - Files:
     - `cli/crates/mochiflow-core/src/index.rs`

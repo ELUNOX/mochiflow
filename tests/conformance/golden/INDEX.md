@@ -9,6 +9,7 @@
 | 🌱 backlog seed | 1 |
 | 📝 draft | 0 |
 | 🟢 approved | 1 |
+| 🔵 accepted | 0 |
 | ✅ done | 2 |
 
 ## Backlog seeds
