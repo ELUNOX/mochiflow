@@ -50,7 +50,12 @@ and drive to human approval for implementation. Do not start implementation.
    `{specs_dir}/{slug}/pitch.md`; proceed only when metadata status is `draft`.
    If only a raw `{specs_dir}/_backlog/{slug}.md` item exists, stop and route
    back to `{slug} discuss` rather than inventing decisions. Re-check any
-   current-state claims against code before using them.
+   current-state claims against code before using them. When consulting ADR for
+   *why*, load each store's generated `INDEX.md` first, then open only the
+   records whose `area` intersects the spec's `surfaces` and whose `status` is
+   active (`mochiflow adr list` / `search`); open superseded / deprecated
+   records only when explicitly tracing supersession lineage. ADR is never the
+   source of truth for current state.
 2. Check for slug duplicates under `_done/`, then create `spec.md` per
    `reference/authoring.md`, absorbing the pitch into
    `## Background and Design Rationale`. Use `templates/spec/spec.micro.md` for
