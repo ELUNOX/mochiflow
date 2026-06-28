@@ -19,15 +19,18 @@ struct ActiveEntry {
     slug: String,
     title: String,
     status: String,
+    column: DeliveryColumn,
     risk: String,
     module: String,
     docs: String,
+    path: String,
 }
 
 /// Done spec entry.
 struct DoneEntry {
     slug: String,
     title: String,
+    path: String,
     spec_type: String,
     module: String,
     /// Date shown in the table and used for month grouping (YYYY-MM-DD).
@@ -132,7 +135,7 @@ fn collect(cfg: &Config) -> (Vec<ActiveEntry>, Vec<DoneEntry>, Vec<SeedInfo>) {
             // whose PR has merged renders in Done even though it is not in _done.
             let column = delivery::derive_column(cfg, &slug, m.status(), m.spec_type());
             if column == DeliveryColumn::Done {
-                done.push(make_done_entry(&d, &slug, &m));
+                done.push(make_done_entry(&d, &slug, &slug, &m));
                 continue;
             }
             let mut docs_parts = vec!["spec".to_string()];
@@ -143,12 +146,14 @@ fn collect(cfg: &Config) -> (Vec<ActiveEntry>, Vec<DoneEntry>, Vec<SeedInfo>) {
                 docs_parts.push("tasks".to_string());
             }
             active.push(ActiveEntry {
-                slug,
+                slug: slug.clone(),
                 title: m.title().to_string(),
                 status: m.status().to_string(),
+                column,
                 risk: m.risk().to_string(),
                 module: m.module().unwrap_or("—").to_string(),
                 docs: docs_parts.join("+"),
+                path: slug,
             });
         }
     }
@@ -168,7 +173,7 @@ fn collect(cfg: &Config) -> (Vec<ActiveEntry>, Vec<DoneEntry>, Vec<SeedInfo>) {
             let d = entry.path();
             if let Ok(m) = read_spec_metadata(&d) {
                 let slug = entry.file_name().to_string_lossy().to_string();
-                done.push(make_done_entry(&d, &slug, &m));
+                done.push(make_done_entry(&d, &slug, &format!("_done/{slug}"), &m));
             }
         }
         // Sort: slug asc first (stable tiebreak), then completion key desc so the
@@ -208,7 +213,7 @@ fn collect(cfg: &Config) -> (Vec<ActiveEntry>, Vec<DoneEntry>, Vec<SeedInfo>) {
 
 /// Build a `DoneEntry` for a spec directory, resolving its display/grouping date
 /// and ordering key from `completed` → `updated` → file mtime.
-fn make_done_entry(dir: &Path, slug: &str, m: &SpecMeta) -> DoneEntry {
+fn make_done_entry(dir: &Path, slug: &str, path: &str, m: &SpecMeta) -> DoneEntry {
     let completed = m.completed().map(str::to_string).filter(|s| !s.is_empty());
     let updated_field = m.updated().unwrap_or("").to_string();
     let pick_source = || {
@@ -229,6 +234,7 @@ fn make_done_entry(dir: &Path, slug: &str, m: &SpecMeta) -> DoneEntry {
     DoneEntry {
         slug: slug.to_string(),
         title: m.title().to_string(),
+        path: path.to_string(),
         spec_type: m.spec_type().to_string(),
         module: m.module().unwrap_or("—").to_string(),
         updated,
@@ -299,6 +305,18 @@ fn normalize_index_timestamp(text: &str) -> String {
 
 fn render_index(cfg: &Config, now: &str) -> String {
     let (active, done, seeds) = collect(cfg);
+    let active_specs: Vec<_> = active
+        .iter()
+        .filter(|entry| entry.column == DeliveryColumn::Active)
+        .collect();
+    let ready_specs: Vec<_> = active
+        .iter()
+        .filter(|entry| entry.column == DeliveryColumn::Ready)
+        .collect();
+    let in_review_specs: Vec<_> = active
+        .iter()
+        .filter(|entry| entry.column == DeliveryColumn::InReview)
+        .collect();
 
     // Compute relative path from index file to specs_dir
     let index_path_buf = cfg.index_path();
@@ -315,18 +333,9 @@ fn render_index(cfg: &Config, now: &str) -> String {
         "| stage | count |".to_string(),
         "|:------|------:|".to_string(),
         format!("| 🌱 backlog seed | {} |", seeds.len()),
-        format!(
-            "| 📝 draft | {} |",
-            active.iter().filter(|a| a.status == "draft").count()
-        ),
-        format!(
-            "| 🟢 approved | {} |",
-            active.iter().filter(|a| a.status == "approved").count()
-        ),
-        format!(
-            "| 🔵 accepted | {} |",
-            active.iter().filter(|a| a.status == "accepted").count()
-        ),
+        format!("| 📝 active | {} |", active_specs.len()),
+        format!("| 🔵 ready | {} |", ready_specs.len()),
+        format!("| 🔎 in review | {} |", in_review_specs.len()),
         format!("| ✅ done | {} |", done.len()),
         String::new(),
         "## Backlog seeds".to_string(),
@@ -351,28 +360,9 @@ fn render_index(cfg: &Config, now: &str) -> String {
         }
     }
 
-    lines.push(String::new());
-    lines.push("## Active specs".to_string());
-    lines.push(String::new());
-
-    if active.is_empty() {
-        lines.push("（なし）".to_string());
-    } else {
-        lines.push("| Spec | Status | Risk | Docs | Module |".to_string());
-        lines.push("|:-----|:-------|:-----|:-----|:-------|".to_string());
-        for a in &active {
-            lines.push(format!(
-                "| [{}]({specs_rel}/{}/) | {} {} | {} | {} | {} |",
-                md_table_cell(&a.slug),
-                url_path_segment(&a.slug),
-                status_emoji(&a.status),
-                md_table_cell(&a.status),
-                md_table_cell(&a.risk),
-                md_table_cell(&a.docs),
-                md_table_cell(&a.module)
-            ));
-        }
-    }
+    push_spec_section(&mut lines, "Active specs", &active_specs, &specs_rel);
+    push_spec_section(&mut lines, "Ready specs", &ready_specs, &specs_rel);
+    push_spec_section(&mut lines, "In Review specs", &in_review_specs, &specs_rel);
 
     lines.push(String::new());
     lines.push("## Done (chronological)".to_string());
@@ -399,10 +389,10 @@ fn render_index(cfg: &Config, now: &str) -> String {
                 lines.push("|:--------|:-----|:------|:-----|".to_string());
             }
             lines.push(format!(
-                "| {} | [{}]({specs_rel}/_done/{}/) | {} | {} |",
+                "| {} | [{}]({specs_rel}/{}/) | {} | {} |",
                 md_table_cell(&d.updated),
                 md_table_cell(&d.slug),
-                url_path_segment(&d.slug),
+                url_path(&d.path),
                 md_table_cell(&d.title),
                 md_table_cell(&d.spec_type)
             ));
@@ -414,12 +404,51 @@ fn render_index(cfg: &Config, now: &str) -> String {
     lines.join("\n") + "\n"
 }
 
+fn push_spec_section(
+    lines: &mut Vec<String>,
+    heading: &str,
+    entries: &[&ActiveEntry],
+    specs_rel: &str,
+) {
+    lines.push(String::new());
+    lines.push(format!("## {heading}"));
+    lines.push(String::new());
+
+    if entries.is_empty() {
+        lines.push("（なし）".to_string());
+        return;
+    }
+
+    lines.push("| Spec | Status | Risk | Docs | Module |".to_string());
+    lines.push("|:-----|:-------|:-----|:-----|:-------|".to_string());
+    for entry in entries {
+        lines.push(format!(
+            "| [{}]({specs_rel}/{}/) | {} {} | {} | {} | {} |",
+            md_table_cell(&entry.slug),
+            url_path(&entry.path),
+            status_emoji(&entry.status),
+            md_table_cell(&entry.status),
+            md_table_cell(&entry.risk),
+            md_table_cell(&entry.docs),
+            md_table_cell(&entry.module)
+        ));
+    }
+}
+
 fn md_table_cell(value: &str) -> String {
     value.replace(['\r', '\n'], " ").replace('|', r"\|")
 }
 
 fn url_path_segment(value: &str) -> String {
     value.replace('\\', "%5C").replace(' ', "%20")
+}
+
+fn url_path(value: &str) -> String {
+    value
+        .split('/')
+        .map(url_path_segment)
+        .collect::<Vec<_>>()
+        .join("/")
 }
 
 pub fn is_index_stale(cfg: &Config) -> bool {
@@ -489,9 +518,11 @@ fn build_json(now: &str, active: &[ActiveEntry], done: &[DoneEntry], seeds: &[Se
                 "slug": a.slug,
                 "title": a.title,
                 "status": a.status,
+                "column": a.column.as_str(),
                 "risk": a.risk,
                 "module": a.module,
                 "docs": a.docs,
+                "path": a.path,
             })
         })
         .collect();
@@ -502,6 +533,7 @@ fn build_json(now: &str, active: &[ActiveEntry], done: &[DoneEntry], seeds: &[Se
             let mut obj = json!({
                 "slug": d.slug,
                 "title": d.title,
+                "path": d.path,
                 "type": d.spec_type,
                 "module": d.module,
                 "updated": d.updated,
@@ -582,11 +614,116 @@ pub fn read_seed_public(path: &Path) -> Option<SeedInfo> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+    use crate::config::load_config;
+    use std::process::Command;
 
     #[test]
     fn md_table_cell_escapes_pipes_and_newlines() {
         assert_eq!(md_table_cell("a|b\nc\rd"), r"a\|b c d");
+    }
+
+    fn git_ok(root: &Path, args: &[&str]) {
+        let status = Command::new("git")
+            .args(args)
+            .current_dir(root)
+            .status()
+            .unwrap();
+        assert!(
+            status.success(),
+            "git {args:?} failed in {}",
+            root.display()
+        );
+    }
+
+    fn write_config(repo: &Path) -> std::path::PathBuf {
+        let install = repo.join(".mochiflow");
+        std::fs::create_dir_all(install.join("specs")).unwrap();
+        std::fs::write(
+            install.join("config.toml"),
+            "schema_version = 1\ninstall_dir = \".mochiflow\"\nspecs_dir = \".mochiflow/specs\"\nindex = \".mochiflow/INDEX.md\"\n\n[constitution]\nproject = \".mochiflow/constitution.md\"\nlocal = \".mochiflow/constitution.local.md\"\n\n[context]\nproduct = \".mochiflow/context/product.md\"\nstructure = \".mochiflow/context/structure.md\"\ntech = \".mochiflow/context/tech.md\"\n\n[adr]\ndecisions = \".mochiflow/adr/decisions.md\"\npitfalls = \".mochiflow/adr/pitfalls.md\"\n\n[git]\nprovider = \"none\"\nbase_branch = \"main\"\n\n[adapter]\ntool = \"agents\"\n\n[surfaces.app]\ndescription = \"app\"\n\n[surfaces.app.verify]\ndefault = \"echo ok\"\n",
+        )
+        .unwrap();
+        install.join("config.toml")
+    }
+
+    fn write_spec(repo: &Path, rel: &str, slug: &str, status: &str) {
+        let dir = repo.join(".mochiflow/specs").join(rel);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("spec.yaml"),
+            format!(
+                "version: 1\nslug: {slug}\ntitle: {slug} title\ntype: feature\nsurfaces:\n  - app\nintegration: none\nrisk: standard\nstatus: {status}\nupdated: 2026-06-27\n"
+            ),
+        )
+        .unwrap();
+        std::fs::write(dir.join("spec.md"), format!("# {slug}\n")).unwrap();
+    }
+
+    #[test]
+    fn render_index_splits_derived_columns_and_preserves_flat_done_paths() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = tmp.path();
+        git_ok(repo, &["init", "-q", "-b", "main"]);
+        git_ok(repo, &["config", "user.email", "t@example.com"]);
+        git_ok(repo, &["config", "user.name", "Test"]);
+        std::fs::write(repo.join("README.md"), "base\n").unwrap();
+        git_ok(repo, &["add", "README.md"]);
+        git_ok(
+            repo,
+            &[
+                "commit",
+                "-q",
+                "-m",
+                "feat: flat done",
+                "-m",
+                "Spec: flat-done",
+            ],
+        );
+        git_ok(repo, &["update-ref", "refs/remotes/origin/main", "HEAD"]);
+        git_ok(repo, &["checkout", "-q", "-b", "feat/in-review"]);
+        std::fs::write(repo.join("README.md"), "branch\n").unwrap();
+        git_ok(repo, &["commit", "-q", "-am", "branch"]);
+        git_ok(
+            repo,
+            &["update-ref", "refs/remotes/origin/feat/in-review", "HEAD"],
+        );
+
+        let config = write_config(repo);
+        write_spec(repo, "active", "active", "approved");
+        write_spec(repo, "ready", "ready", "accepted");
+        write_spec(repo, "in-review", "in-review", "accepted");
+        write_spec(repo, "flat-done", "flat-done", "accepted");
+        write_spec(repo, "_done/archived", "archived", "done");
+
+        let cfg = load_config(&config).unwrap();
+        let out = render_index(&cfg, NORMALIZED_TIMESTAMP);
+
+        assert!(out.contains("## Active specs"), "{out}");
+        assert!(
+            out.contains("| [active](specs/active/) | 🟢 approved |"),
+            "{out}"
+        );
+        assert!(out.contains("## Ready specs"), "{out}");
+        assert!(
+            out.contains("| [ready](specs/ready/) | 🔵 accepted |"),
+            "{out}"
+        );
+        assert!(out.contains("## In Review specs"), "{out}");
+        assert!(
+            out.contains("| [in-review](specs/in-review/) | 🔵 accepted |"),
+            "{out}"
+        );
+        assert!(out.contains("| [flat-done](specs/flat-done/) |"), "{out}");
+        assert!(
+            out.contains("| [archived](specs/_done/archived/) |"),
+            "{out}"
+        );
+        assert!(
+            !out.contains("[flat-done](specs/_done/flat-done/)"),
+            "{out}"
+        );
     }
 }

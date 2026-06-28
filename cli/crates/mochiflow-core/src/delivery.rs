@@ -114,13 +114,16 @@ fn gather_signals(cfg: &Config, slug: &str, branch: &str) -> DeliverySignals {
     let base = &cfg.git.base_branch;
 
     let trailer_in_base = trailer_reachable_from_base(root, slug, base);
-    let branch_pushed = remote_branch_exists(root, branch);
-    let branch_pushed_unmerged = branch_pushed && !remote_branch_merged(root, branch, base);
-
     let (provider_merged, provider_open_pr) = match cfg.git.provider.as_str() {
         "github" => provider_pr_state(root, branch),
         // `provider = none` (and any unrecognized provider) uses local git only.
         _ => (false, false),
+    };
+    let branch_pushed_unmerged = if cfg.git.provider == "none" {
+        let branch_pushed = remote_branch_exists(root, branch);
+        branch_pushed && !remote_branch_merged(root, branch, base)
+    } else {
+        false
     };
 
     DeliverySignals {
@@ -214,6 +217,8 @@ fn git_capture(root: &Path, args: &[&str]) -> Option<String> {
 #[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+    use crate::config::load_config;
+    use std::process::Command;
 
     fn signals(
         provider_merged: bool,
@@ -229,6 +234,52 @@ mod tests {
         }
     }
 
+    fn git_ok(root: &Path, args: &[&str]) {
+        let status = Command::new("git")
+            .args(args)
+            .current_dir(root)
+            .status()
+            .unwrap();
+        assert!(
+            status.success(),
+            "git {args:?} failed in {}",
+            root.display()
+        );
+    }
+
+    fn write_config(repo: &Path, provider: &str) -> std::path::PathBuf {
+        let install = repo.join(".mochiflow");
+        std::fs::create_dir_all(&install).unwrap();
+        std::fs::write(
+            install.join("config.toml"),
+            format!(
+                "schema_version = 1\ninstall_dir = \".mochiflow\"\nspecs_dir = \".mochiflow/specs\"\nindex = \".mochiflow/INDEX.md\"\n\n[constitution]\nproject = \".mochiflow/constitution.md\"\nlocal = \".mochiflow/constitution.local.md\"\n\n[context]\nproduct = \".mochiflow/context/product.md\"\nstructure = \".mochiflow/context/structure.md\"\ntech = \".mochiflow/context/tech.md\"\n\n[adr]\ndecisions = \".mochiflow/adr/decisions.md\"\npitfalls = \".mochiflow/adr/pitfalls.md\"\n\n[git]\nprovider = \"{provider}\"\nbase_branch = \"main\"\n\n[adapter]\ntool = \"agents\"\n\n[surfaces.app]\ndescription = \"app\"\n\n[surfaces.app.verify]\ndefault = \"echo ok\"\n"
+            ),
+        )
+        .unwrap();
+        install.join("config.toml")
+    }
+
+    fn materialize_repo_with_unmerged_remote_branch() -> tempfile::TempDir {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = tmp.path();
+        git_ok(repo, &["init", "-q", "-b", "main"]);
+        git_ok(repo, &["config", "user.email", "t@example.com"]);
+        git_ok(repo, &["config", "user.name", "Test"]);
+        std::fs::write(repo.join("README.md"), "base\n").unwrap();
+        git_ok(repo, &["add", "README.md"]);
+        git_ok(repo, &["commit", "-q", "-m", "base"]);
+        git_ok(repo, &["update-ref", "refs/remotes/origin/main", "HEAD"]);
+        git_ok(repo, &["checkout", "-q", "-b", "feat/sample"]);
+        std::fs::write(repo.join("README.md"), "branch\n").unwrap();
+        git_ok(repo, &["commit", "-q", "-am", "branch"]);
+        git_ok(
+            repo,
+            &["update-ref", "refs/remotes/origin/feat/sample", "HEAD"],
+        );
+        tmp
+    }
+
     #[test]
     fn accepted_unpushed_is_ready() {
         assert_eq!(
@@ -241,6 +292,28 @@ mod tests {
     fn accepted_pushed_unmerged_is_in_review() {
         assert_eq!(
             resolve_column("accepted", &signals(false, false, false, true)),
+            DeliveryColumn::InReview
+        );
+    }
+
+    #[test]
+    fn github_pushed_without_open_pr_stays_ready() {
+        let tmp = materialize_repo_with_unmerged_remote_branch();
+        let config = write_config(tmp.path(), "github");
+        let cfg = load_config(&config).unwrap();
+        assert_eq!(
+            derive_column(&cfg, "sample", "accepted", "feature"),
+            DeliveryColumn::Ready
+        );
+    }
+
+    #[test]
+    fn provider_none_pushed_unmerged_is_in_review() {
+        let tmp = materialize_repo_with_unmerged_remote_branch();
+        let config = write_config(tmp.path(), "none");
+        let cfg = load_config(&config).unwrap();
+        assert_eq!(
+            derive_column(&cfg, "sample", "accepted", "feature"),
             DeliveryColumn::InReview
         );
     }
