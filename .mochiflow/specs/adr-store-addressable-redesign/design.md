@@ -189,8 +189,10 @@
 
 ### Second review pass (2026-06-28, delegated)
 
-- Verdict: pass-with-comments. Three MEDIUM findings; two resolved in code, one
-  is the build/open boundary:
+- Reviewer mode: delegated
+- Verdict: pass-with-comments
+- Findings (all non-blocking; no Critical/High): three MEDIUM; two resolved in
+  code, one is the build/open boundary:
   - MEDIUM (AC-05): missing / empty `id` and `area` were not gated (`id` fell
     back to the file stem; `area` defaulted to empty). **Resolved** — both are
     now required front-matter keys; a missing / empty value is a gating schema
