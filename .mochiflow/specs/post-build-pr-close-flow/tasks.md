@@ -23,7 +23,7 @@ Critical Stop Conditions:
     - `cli/crates/mochiflow-cli/tests/conformance.rs`
   - Done: `contracts/spec.schema.json` `status` enum includes `accepted` (keeps `done`); `lint.rs` `allowed_statuses` adds `accepted`; the terminal acceptance gate is ADDED at `accepted` — specifically (a) all AC Matrix results done-eligible, (b) reviewer verdict when `risk ≥ elevated`, (c) every task checked, and (d) every AC covered by a task (the four conditions previously gated at `done`) — while the `approved` AC-in-matrix coverage check is RETAINED at `approved`, and the `("done", None)` completed-timestamp WARN stays scoped to legacy `done` reads only (not relocated to `accepted`, which never writes `completed`); conformance `GOOD_YAML`/`status` fixtures updated (incl. the `lint_fails_on_invalid_status` message-string assertion, which now lists `accepted`); tests prove an `accepted` spec passes, an unmet `accepted` fails (unchecked task and untasked AC each rejected), a reviewer verdict is required at `accepted` when `risk ≥ elevated`, and no spurious completed-WARN fires on `accepted`. Per the Defaults frozen-surface rule, this task runs `mochiflow freeze` to regenerate `contracts/contracts.lock` + the version gate.
   - Stop: if the status set is owned outside `lint.rs`/schema, stop and confirm the single owner first.
-- [ ] T-002 [AC-06] Keep legacy `_done/`+`done` read-only compatible
+- [x] T-002 [AC-06] Keep legacy `_done/`+`done` read-only compatible
   - Depends on: T-001
   - Files:
     - `cli/crates/mochiflow-core/src/lint.rs`

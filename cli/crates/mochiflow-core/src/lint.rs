@@ -787,6 +787,17 @@ fn lint_spec_dir(
             message: "status must be one of: draft, approved, accepted, done".into(),
         });
     }
+    // `done` is a legacy terminal status retained only for archived specs under
+    // `_done/`. Active specs settle at `accepted`; the engine never writes `done`
+    // for an active spec. Reject `done` on a spec that is not under `_done/`.
+    let dir_is_archived = spec_dir.components().any(|c| c.as_os_str() == "_done");
+    if meta.status() == "done" && !dir_is_archived {
+        issues.push(Issue {
+            severity: "FAIL".into(),
+            path: meta.path.clone(),
+            message: "status: done is reserved for archived specs under _done/; active specs use draft → approved → accepted".into(),
+        });
+    }
     // `completed` is the completion timestamp recorded at the `done` transition.
     // It drives chronological ordering in INDEX.md. Missing on a done spec is a
     // WARN (legacy specs predate it); a present-but-malformed value is a FAIL.

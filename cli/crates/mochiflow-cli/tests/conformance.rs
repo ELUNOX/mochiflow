@@ -1059,7 +1059,14 @@ fn run_lint_case(
     )
     .unwrap();
 
-    let spec_dir = install.join("specs").join("s");
+    // A `done` status is valid only for archived specs under `_done/`; place such
+    // fixtures there so they exercise the archived-spec lint path (lint resolves
+    // `--spec s` against both the active and the `_done/` location).
+    let spec_dir = if spec_yaml.contains("status: done") {
+        install.join("specs").join("_done").join("s")
+    } else {
+        install.join("specs").join("s")
+    };
     std::fs::create_dir_all(&spec_dir).unwrap();
     std::fs::write(spec_dir.join("spec.yaml"), spec_yaml).unwrap();
     std::fs::write(spec_dir.join("spec.md"), spec_md).unwrap();
@@ -1129,7 +1136,13 @@ fn run_lint_case_with_optional_files(
     )
     .unwrap();
 
-    let spec_dir = install.join("specs").join("s");
+    // A `done` status is valid only for archived specs under `_done/`; route such
+    // fixtures there so they exercise the archived-spec lint path.
+    let spec_dir = if spec_yaml.contains("status: done") {
+        install.join("specs").join("_done").join("s")
+    } else {
+        install.join("specs").join("s")
+    };
     std::fs::create_dir_all(&spec_dir).unwrap();
     std::fs::write(spec_dir.join("spec.yaml"), spec_yaml).unwrap();
     if let Some(pitch) = pitch_md {
@@ -1284,6 +1297,88 @@ fn run_lint_case_with_dirty_file_state(
 
 /// Valid approved spec (standard risk, single surface) → lint passes.
 const GOOD_YAML: &str = "version: 1\nslug: s\ntitle: S\ntype: feature\nsurfaces:\n  - app\nintegration: none\nrisk: standard\nstatus: approved\n";
+
+/// Materialize a spec at the ACTIVE `specs/s` location (never `_done/`) and lint
+/// it. Used to prove an active spec cannot carry `status: done`.
+fn run_lint_case_active(spec_yaml: &str, spec_md: &str) -> (i32, String) {
+    let tmp = tempfile::tempdir().unwrap();
+    let install = tmp.path().join(".mochiflow");
+    let memory = install.join("memory");
+    std::fs::create_dir_all(&memory).unwrap();
+    for name in ["architecture.md", "pitfalls.md"] {
+        std::fs::write(memory.join(name), "# m\n").unwrap();
+    }
+    let context = install.join("context");
+    std::fs::create_dir_all(&context).unwrap();
+    for name in ["product.md", "structure.md", "tech.md"] {
+        std::fs::write(context.join(name), "# c\n").unwrap();
+    }
+    std::fs::write(
+        install.join("config.toml"),
+        "schema_version = 1\n\
+         install_dir = \".mochiflow\"\n\
+         specs_dir = \".mochiflow/specs\"\n\
+         index = \".mochiflow/INDEX.md\"\n\n\
+         [constitution]\n\
+         project = \".mochiflow/constitution.md\"\n\
+         local = \".mochiflow/constitution.local.md\"\n\n\
+         [context]\n\
+         product = \".mochiflow/context/product.md\"\n\
+         structure = \".mochiflow/context/structure.md\"\n\
+         tech = \".mochiflow/context/tech.md\"\n\n\
+         [adr]\n\
+         decisions = \".mochiflow/adr/decisions.md\"\n\
+         pitfalls = \".mochiflow/adr/pitfalls.md\"\n\n\
+         [surfaces.app]\n\
+         description = \"app\"\n\n\
+         [surfaces.app.verify]\n\
+         default = \"echo ok\"\n",
+    )
+    .unwrap();
+
+    let spec_dir = install.join("specs").join("s");
+    std::fs::create_dir_all(&spec_dir).unwrap();
+    std::fs::write(spec_dir.join("spec.yaml"), spec_yaml).unwrap();
+    std::fs::write(spec_dir.join("spec.md"), spec_md).unwrap();
+
+    let out = assert_cmd::Command::cargo_bin("mochiflow")
+        .unwrap()
+        .args([
+            "--config",
+            install.join("config.toml").to_str().unwrap(),
+            "lint",
+            "--spec",
+            install.join("specs").join("s").to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    (
+        out.status.code().unwrap_or(-1),
+        String::from_utf8_lossy(&out.stdout).into_owned(),
+    )
+}
+
+#[test]
+fn lint_passes_archived_done_spec() {
+    // Positive: a complete `done` spec under `_done/` lints clean (read-only
+    // legacy compatibility). run_lint_case routes `status: done` to `_done/`.
+    let yaml =
+        GOOD_YAML.replace("status: approved", "status: done") + "completed: 2026-06-21T22:16:03Z\n";
+    let (code, out) = run_lint_case(&yaml, DONE_MATRIX_MD, None, None);
+    assert_eq!(code, 0, "archived done spec must lint clean: {out}");
+}
+
+#[test]
+fn lint_rejects_done_on_active_spec() {
+    // Negative: `status: done` on an active (non-`_done/`) spec is rejected.
+    let yaml = GOOD_YAML.replace("status: approved", "status: done");
+    let (code, out) = run_lint_case_active(&yaml, DONE_MATRIX_MD);
+    assert_eq!(code, 1, "{out}");
+    assert!(
+        out.contains("status: done is reserved for archived specs under _done/"),
+        "{out}"
+    );
+}
 
 #[test]
 fn lint_passes_valid_approved_spec() {
