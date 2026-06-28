@@ -312,10 +312,10 @@ fn main() -> Result<()> {
         Commands::Accept { slug, dry_run } => {
             let cfg = load_cfg(cli.config.as_deref())?;
             let code = mochiflow_core::ship::run_accept(&cfg, slug.as_deref(), dry_run);
-            // Shared post-command board refresh: regenerate the gitignored
-            // INDEX.md to reflect the new accepted/Ready state. Never staged.
+            // Regenerate the gitignored board to reflect the new accepted/Ready
+            // state. Skipped on dry-run; never staged or committed.
             if !dry_run && code == 0 {
-                let _ = mochiflow_core::index::generate_index_quiet(&cfg);
+                refresh_board_after_state_change(&cfg);
             }
             code
         }
@@ -462,13 +462,12 @@ fn main() -> Result<()> {
                 draft,
                 dry_run,
             );
-            // Shared post-command board refresh: regenerate the gitignored
-            // INDEX.md to reflect the new delivery state (e.g. In Review).
-            // Best-effort and never staged/committed; skipped on dry-run.
+            // Regenerate the gitignored board to reflect the new delivery state
+            // (e.g. In Review). Skipped on dry-run; never staged or committed.
             if !dry_run
                 && (code == mochiflow_core::pr::EXIT_OK || code == mochiflow_core::pr::EXIT_MANUAL)
             {
-                let _ = mochiflow_core::index::generate_index_quiet(&cfg);
+                refresh_board_after_state_change(&cfg);
             }
             code
         }
@@ -522,6 +521,14 @@ fn main() -> Result<()> {
     };
 
     std::process::exit(exit_code);
+}
+
+/// Regenerate the gitignored board (`INDEX.md` + state index) after a
+/// state-changing CLI command. Best-effort: failures are ignored, and the file
+/// is never staged or committed. Callers gate this on a successful, non-dry-run
+/// invocation so the board reflects the new delivery state.
+fn refresh_board_after_state_change(cfg: &mochiflow_core::config::Config) {
+    let _ = mochiflow_core::index::generate_index_quiet(cfg);
 }
 
 fn bundled_engine_version() -> String {

@@ -127,7 +127,7 @@ pub fn run_accept(cfg: &Config, slug_arg: Option<&str>, dry_run: bool) -> i32 {
         return EXIT_FAIL;
     }
     if !readiness.is_empty() {
-        eprintln!("FAIL: spec is not ready to ship:");
+        eprintln!("FAIL: spec is not ready to accept:");
         for blocker in readiness {
             eprintln!("  - {blocker}");
         }
