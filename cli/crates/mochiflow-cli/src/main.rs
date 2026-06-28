@@ -235,6 +235,7 @@ enum BacklogCommand {
 #[derive(Clone, Copy, ValueEnum)]
 enum DoctorTarget {
     Config,
+    Adr,
     Specs,
     Adapter,
     Engine,
@@ -244,6 +245,7 @@ impl DoctorTarget {
     fn as_str(self) -> &'static str {
         match self {
             Self::Config => "config",
+            Self::Adr => "adr",
             Self::Specs => "specs",
             Self::Adapter => "adapter",
             Self::Engine => "engine",

@@ -6,7 +6,6 @@ use crate::config::Config;
 use crate::index;
 use crate::lint;
 use crate::manifest::{load_manifest, read_engine_version};
-
 pub struct DoctorIssue {
     pub severity: String,
     pub message: String,
@@ -299,10 +298,58 @@ pub fn check_state_ignored(cfg: &Config) -> Vec<DoctorIssue> {
     }
 }
 
+/// Deterministic ADR-store checks for `doctor`: gate on schema / dangling /
+/// missing-cross-ref / cycle / traversal; surface orphan / stale as non-blocking
+/// warnings. An absent or stale INDEX.md is regenerated rather than failed
+/// (consistent with the board INDEX.md), provided the store directory exists.
+pub fn check_adr(cfg: &Config) -> Vec<DoctorIssue> {
+    use crate::adr::{self, AdrKind, AdrProblemKind};
+    let mut issues = Vec::new();
+    for kind in [AdrKind::Decisions, AdrKind::Pitfalls] {
+        let problems = match adr::lint_store(cfg, kind) {
+            Ok(problems) => problems,
+            Err(e) => {
+                // A config error (e.g. a value resolving to a file where a record
+                // directory is expected, AC-10) gates.
+                issues.push(DoctorIssue {
+                    severity: "FAIL".into(),
+                    message: format!("[{}] {e}", kind.as_str()),
+                });
+                continue;
+            }
+        };
+        for problem in problems {
+            match problem.kind {
+                AdrProblemKind::IndexStale => {
+                    // Regenerate rather than fail; only when the store dir exists
+                    // (an absent store is simply zero records, no index needed).
+                    if kind.dir(cfg).exists()
+                        && let Ok(store) = adr::load_store(cfg, kind)
+                    {
+                        let _ = adr::generate_index(&store);
+                    }
+                }
+                other => {
+                    let severity = if other.is_gating() { "FAIL" } else { "WARN" };
+                    let id = problem
+                        .id
+                        .as_deref()
+                        .map(|s| format!("{s}: "))
+                        .unwrap_or_default();
+                    issues.push(DoctorIssue {
+                        severity: severity.into(),
+                        message: format!("[{}] {id}{}", kind.as_str(), problem.message),
+                    });
+                }
+            }
+        }
+    }
+    issues
+}
+
 pub fn check_engine(cfg: &Config) -> Vec<DoctorIssue> {
     check_engine_with_bundled(cfg, None)
 }
-
 pub fn check_engine_with_bundled(cfg: &Config, bundled_version: Option<&str>) -> Vec<DoctorIssue> {
     let mut issues = Vec::new();
     let engine_dir = cfg.engine_dir();
@@ -507,7 +554,7 @@ fn collect_reports(
 ) -> Vec<TargetReport> {
     let targets: Vec<&str> = match target {
         Some(t) => vec![t],
-        None => vec!["config", "specs", "adapter", "engine"],
+        None => vec!["config", "adr", "specs", "adapter", "engine"],
     };
 
     targets
@@ -515,6 +562,7 @@ fn collect_reports(
         .map(|name| {
             let issues = match *name {
                 "config" => validate_config(cfg),
+                "adr" => check_adr(cfg),
                 "specs" => {
                     if lint::run_lint(cfg, None, log_to_stderr) != 0 {
                         vec![DoctorIssue {
