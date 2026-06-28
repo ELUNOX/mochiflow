@@ -57,7 +57,10 @@ states from *derived* delivery facts.
 The fold is not a single instant: pitfalls are captured during `build`, the fold
 is finalized and committed at `open` so it lands in the PR (reviewed and merged
 with no post-merge base write), and `update` keeps it matching the final design.
-The no-PR fast path is reserved for trivial changes and skips the fold entirely.
+A no-PR fast path (for a trivial change) is out of scope for this redesign — it
+is not redefined here and inherits the global invariants (sets at most
+`accepted`, never `done`, no `_done/` move, no committed `INDEX.md`) and skips
+the fold.
 
 The primary UX is the next-action prompt: after build, "Create the PR"; on
 feedback, "Update the PR"; after merge, "Close the work". Direct command entry
@@ -75,10 +78,11 @@ still exists for advanced use.
   archive-before-PR and resurrection problems.
 
 `merged` derivation signal priority: provider API (e.g. GitHub) → a
-`Spec: {slug}` trailer present in `origin/{base_branch}` history → the human
-merge report as the final fallback. Contract: a merge must leave the
-`Spec: {slug}` trailer in the base branch — merge/rebase preserve it
-automatically; squash must carry the trailer into the squash commit.
+`Spec: {slug}` trailer present in `origin/{base_branch}` history (two signals
+only; refined in plan — see `spec.md` AC-07). The human merge report only
+initiates `close` locally and is never persisted as a merged signal. Contract: a
+merge must leave the `Spec: {slug}` trailer in the base branch — merge/rebase
+preserve it automatically; squash must carry the trailer into the squash commit.
 
 ### Flat specs and the board
 
