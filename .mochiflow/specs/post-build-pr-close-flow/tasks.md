@@ -136,7 +136,7 @@ Critical Stop Conditions:
     - `engine/reference/git.md`
   - Done: `close.md` performs only local hygiene (switch base, ff pull, delete branch, clear `state/{slug}/`, regenerate board) and states it writes nothing to the base branch; git.md post-merge section matches; the human merge report triggers `close` but persists no merged flag.
   - Stop: do not add any base-branch commit/push to close.
-- [ ] T-014 [AC-16] Stale-base guard at spec start
+- [x] T-014 [AC-16] Stale-base guard at spec start
   - Depends on: T-003, T-009
   - Files:
     - `engine/commands/discuss.md`
