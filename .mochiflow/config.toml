@@ -18,8 +18,8 @@ structure = ".mochiflow/context/structure.md"
 tech = ".mochiflow/context/tech.md"
 
 [adr]
-decisions = ".mochiflow/adr/decisions.md"
-pitfalls = ".mochiflow/adr/pitfalls.md"
+decisions = ".mochiflow/adr/decisions"
+pitfalls = ".mochiflow/adr/pitfalls"
 
 [git]
 provider = "github"
