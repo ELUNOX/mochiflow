@@ -178,26 +178,21 @@ pub fn is_path_like_spec_arg(value: &str) -> bool {
 
 pub fn validate_pr_spec_closeout_committed(cfg: &Config, slug: &str) -> Result<(), String> {
     let target = target_for_slug(cfg, slug);
-    if target.active_dir.exists() {
+    if !target.active_dir.exists() {
         return Err(format!(
-            "pre-flight FAIL: spec `{slug}` is still active; run `mochiflow ship {slug}` before PR handoff."
+            "pre-flight FAIL: spec `{slug}` was not found at {}.",
+            target.active_dir.display()
         ));
     }
-    if !target.done_dir.exists() {
+    let meta = read_spec_metadata(&target.active_dir)
+        .map_err(|e| format!("pre-flight FAIL: could not read spec `{slug}`: {e}"))?;
+    if meta.status() != "accepted" {
         return Err(format!(
-            "pre-flight FAIL: completed spec `{slug}` was not found under {}.",
-            cfg.specs_dir_path().join("_done").display()
-        ));
-    }
-    let meta = read_spec_metadata(&target.done_dir)
-        .map_err(|e| format!("pre-flight FAIL: could not read completed spec `{slug}`: {e}"))?;
-    if meta.status() != "done" {
-        return Err(format!(
-            "pre-flight FAIL: spec `{slug}` is archived but status is `{}`; expected `done`.",
+            "pre-flight FAIL: spec `{slug}` status is `{}`; run `mochiflow accept {slug}` to reach `accepted` before PR handoff.",
             meta.status()
         ));
     }
-    let done_rel = rel_path(&cfg.repo_root, &target.done_dir);
+    let active_rel = rel_path(&cfg.repo_root, &target.active_dir);
     let grep = format!("^Spec: {}$", regex::escape(slug));
     let output = Command::new("git")
         .args([
@@ -209,13 +204,13 @@ pub fn validate_pr_spec_closeout_committed(cfg: &Config, slug: &str) -> Result<(
             &grep,
             "--",
         ])
-        .arg(&done_rel)
+        .arg(&active_rel)
         .current_dir(&cfg.repo_root)
         .output()
         .map_err(|e| format!("pre-flight FAIL: git log failed: {e}"))?;
     if !output.status.success() || output.stdout.is_empty() {
         return Err(format!(
-            "pre-flight FAIL: completed spec `{slug}` is not committed with a `Spec: {slug}` trailer."
+            "pre-flight FAIL: spec `{slug}` is not committed with a `Spec: {slug}` trailer."
         ));
     }
     Ok(())

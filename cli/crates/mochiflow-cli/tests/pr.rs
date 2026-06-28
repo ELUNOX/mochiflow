@@ -72,23 +72,23 @@ fn setup(dir: &Path, git_block: &str, stay_on_main: bool) -> std::path::PathBuf 
 
 fn mark_shipped(dir: &Path, slug: &str) {
     let repo = dir.join("repo");
-    let done = repo.join(".mochiflow/specs/_done").join(slug);
-    fs::create_dir_all(&done).unwrap();
+    let spec = repo.join(".mochiflow/specs").join(slug);
+    fs::create_dir_all(&spec).unwrap();
     fs::write(
-        done.join("spec.yaml"),
+        spec.join("spec.yaml"),
         format!(
-            "version: 1\nslug: {slug}\ntitle: Done\ntype: fix\nsurfaces:\n  - app\nintegration: none\nrisk: standard\nstatus: done\n"
+            "version: 1\nslug: {slug}\ntitle: Done\ntype: fix\nsurfaces:\n  - app\nintegration: none\nrisk: standard\nstatus: accepted\n"
         ),
     )
     .unwrap();
-    fs::write(done.join("spec.md"), "# Done\n").unwrap();
+    fs::write(spec.join("spec.md"), "# Done\n").unwrap();
     git(
         &repo,
         &[
             "add",
             "-f",
-            done.join("spec.yaml").to_str().unwrap(),
-            done.join("spec.md").to_str().unwrap(),
+            spec.join("spec.yaml").to_str().unwrap(),
+            spec.join("spec.md").to_str().unwrap(),
         ],
     );
     git(
@@ -403,7 +403,12 @@ fn pr_driver_writes_under_state_slug_not_specs() {
             .join("repo/.mochiflow/state/my-slug/pr-request.json")
             .exists()
     );
-    assert!(!dir.path().join("repo/.mochiflow/specs/my-slug").exists());
+    // The driver writes under state/, never into the tracked spec tree.
+    assert!(
+        !dir.path()
+            .join("repo/.mochiflow/specs/my-slug/pr-request.json")
+            .exists()
+    );
 }
 
 /// A bare --spec token is always a slug (resolves under state/), even when a
@@ -466,8 +471,8 @@ fn pr_body_only_from_body_file() {
     );
     let cfg = setup(dir.path(), &block, false);
     mark_shipped(dir.path(), "my-slug");
-    // stray pr-description.md in the completed spec dir (gitignored under .mochiflow/) must be ignored
-    let specdir = dir.path().join("repo/.mochiflow/specs/_done/my-slug");
+    // stray pr-description.md in the spec dir (gitignored under .mochiflow/) must be ignored
+    let specdir = dir.path().join("repo/.mochiflow/specs/my-slug");
     fs::create_dir_all(&specdir).unwrap();
     fs::write(specdir.join("pr-description.md"), "STRAY BODY\n").unwrap();
     run_pr(&cfg, &["--spec", "my-slug", "--title", "Add"]).success();

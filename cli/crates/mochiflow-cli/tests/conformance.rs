@@ -2595,10 +2595,16 @@ fn behavioral_pr_slug_guard_requires_committed_ship_closeout() {
     let (cfg, repo) = materialize_ship_repo(tmp.path(), slug, ".mochiflow/specs");
 
     // An active (not-yet-accepted) spec is rejected by the pr pre-flight.
-    // The accepted+trailer success path is asserted in the pr pre-flight task.
     let (code, _out, err) = run_cli_capture(&cfg, &repo, &["pr", "--spec", slug, "--title", "Add"]);
     assert_eq!(code, 3, "{err}");
-    assert!(err.contains("still active"), "{err}");
+    assert!(err.contains("accept"), "{err}");
+
+    // After accept (flat, accepted, committed with a Spec: trailer), the
+    // pre-flight passes and pr reaches manual handoff (provider = none).
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["accept", slug]);
+    assert_eq!(code, 0, "stdout:\n{out}\nstderr:\n{err}");
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["pr", "--spec", slug, "--title", "Add"]);
+    assert_eq!(code, 10, "stdout:\n{out}\nstderr:\n{err}");
 }
 
 #[test]

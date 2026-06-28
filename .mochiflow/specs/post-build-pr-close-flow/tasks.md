@@ -66,7 +66,7 @@ Critical Stop Conditions:
     - `cli/crates/mochiflow-cli/tests/conformance.rs`
   - Done: the deterministic close-out sets `status: accepted` (+ `updated`), settles automated AC rows, lints, stages `{specs_dir}/{slug}/**` + ADR paths and creates the single close-out commit — with the `done`/`completed` write, the `_done/` `fs::rename`, and the in-close-out `index::generate` removed; the `Accept` clap subcommand replaces `Ship` and `doctor.rs` `terminal_cli_command_references` swaps `ship`→`accept` in the same task so the exact-match allowlist test stays green; the `behavioral_ship_*` conformance family (incl. `behavioral_ship_commits_active_spec_archive_with_safe_paths` and the `materialize_ship_repo`/`write_active_ship_spec` helpers) is rewritten for the `accept` semantics. `accept` commits whatever ADR fold the caller (`open`) has already written and does NOT author the fold itself; tests prove no `done`, no `_done/` move, no `INDEX` staged.
   - Stop: do not delete the module's clean-tree/readiness pre-flight; only change its target state and staged paths.
-- [ ] T-007 [AC-17] Update `mochiflow pr` pre-flight to `accepted`+trailer
+- [x] T-007 [AC-17] Update `mochiflow pr` pre-flight to `accepted`+trailer
   - Depends on: T-006
   - Files:
     - `cli/crates/mochiflow-core/src/pr.rs`
