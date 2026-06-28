@@ -183,6 +183,175 @@ pub struct AdrStore {
     pub problems: Vec<AdrProblem>,
 }
 
+impl AdrStore {
+    /// Find a record by id.
+    pub fn find(&self, id: &str) -> Option<&AdrRecord> {
+        self.records.iter().find(|r| r.id == id)
+    }
+
+    /// The set of ids that some other record validly supersedes (target exists).
+    fn superseded_target_ids(&self) -> std::collections::BTreeSet<String> {
+        self.records
+            .iter()
+            .filter_map(|r| r.supersedes.clone())
+            .filter(|target| self.find(target).is_some())
+            .collect()
+    }
+
+    /// Active set: records whose own status is active AND that are not the
+    /// target of a valid `supersedes` from another record (status may lag — the
+    /// supersession still wins for active computation; lint flags the lag).
+    pub fn active_set(&self) -> Vec<&AdrRecord> {
+        let superseded = self.superseded_target_ids();
+        self.records
+            .iter()
+            .filter(|r| r.status.is_active() && !superseded.contains(&r.id))
+            .collect()
+    }
+
+    /// Deterministic structural analysis of the supersession lifecycle: dangling
+    /// references, one-sided cross-refs, cycles, stale status, and orphans. Does
+    /// not include schema problems (those come from parsing) or INDEX staleness
+    /// (checked separately).
+    pub fn analyze(&self) -> Vec<AdrProblem> {
+        let mut problems = Vec::new();
+        let superseded = self.superseded_target_ids();
+
+        for record in &self.records {
+            // Dangling references.
+            if let Some(target) = &record.supersedes
+                && self.find(target).is_none()
+            {
+                problems.push(self.problem(
+                    AdrProblemKind::DanglingSupersedes,
+                    &record.id,
+                    format!(
+                        "`{}` supersedes `{target}`, which does not exist",
+                        record.id
+                    ),
+                ));
+            }
+            if let Some(target) = &record.superseded_by
+                && self.find(target).is_none()
+            {
+                problems.push(self.problem(
+                    AdrProblemKind::DanglingSupersededBy,
+                    &record.id,
+                    format!(
+                        "`{}` is superseded_by `{target}`, which does not exist",
+                        record.id
+                    ),
+                ));
+            }
+
+            // One-sided cross-reference (both records exist but reciprocal field
+            // is absent or mismatched).
+            if let Some(target) = &record.supersedes
+                && let Some(other) = self.find(target)
+                && other.superseded_by.as_deref() != Some(record.id.as_str())
+            {
+                problems.push(self.problem(
+                    AdrProblemKind::MissingCrossRef,
+                    &record.id,
+                    format!(
+                        "`{}` supersedes `{target}` but `{target}` is missing the reciprocal `superseded_by: {}`",
+                        record.id, record.id
+                    ),
+                ));
+            }
+            if let Some(target) = &record.superseded_by
+                && let Some(other) = self.find(target)
+                && other.supersedes.as_deref() != Some(record.id.as_str())
+            {
+                problems.push(self.problem(
+                    AdrProblemKind::MissingCrossRef,
+                    &record.id,
+                    format!(
+                        "`{}` is superseded_by `{target}` but `{target}` is missing the reciprocal `supersedes: {}`",
+                        record.id, record.id
+                    ),
+                ));
+            }
+
+            // Stale: target of a valid supersedes but status still active.
+            if superseded.contains(&record.id) && record.status.is_active() {
+                problems.push(self.problem(
+                    AdrProblemKind::Stale,
+                    &record.id,
+                    format!(
+                        "`{}` is superseded by another record but still has `status: active`",
+                        record.id
+                    ),
+                ));
+            }
+            // Stale: status superseded but no superseded_by recorded.
+            if record.status == AdrStatus::Superseded && record.superseded_by.is_none() {
+                problems.push(self.problem(
+                    AdrProblemKind::Stale,
+                    &record.id,
+                    format!(
+                        "`{}` has `status: superseded` but no `superseded_by` link",
+                        record.id
+                    ),
+                ));
+            }
+
+            // Orphan: non-active record with no successor link and not referenced.
+            if !record.status.is_active()
+                && record.superseded_by.is_none()
+                && !superseded.contains(&record.id)
+            {
+                problems.push(self.problem(
+                    AdrProblemKind::Orphan,
+                    &record.id,
+                    format!(
+                        "`{}` is `{}` but is not linked to a successor and nothing supersedes it",
+                        record.id,
+                        record.status.as_str()
+                    ),
+                ));
+            }
+        }
+
+        problems.extend(self.detect_cycles());
+        problems
+    }
+
+    /// Detect supersession cycles by following `supersedes` edges.
+    fn detect_cycles(&self) -> Vec<AdrProblem> {
+        let mut problems = Vec::new();
+        let mut reported: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+        for start in &self.records {
+            let mut slow = Some(start);
+            let mut seen: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+            while let Some(node) = slow {
+                if !seen.insert(node.id.clone()) {
+                    // Returned to a node already visited on this walk → cycle.
+                    if reported.insert(node.id.clone()) {
+                        problems.push(self.problem(
+                            AdrProblemKind::Cycle,
+                            &node.id,
+                            format!("supersession cycle detected involving `{}`", node.id),
+                        ));
+                    }
+                    break;
+                }
+                slow = node.supersedes.as_deref().and_then(|t| self.find(t));
+            }
+        }
+        problems
+    }
+
+    fn problem(&self, kind: AdrProblemKind, id: &str, message: String) -> AdrProblem {
+        AdrProblem {
+            kind,
+            store: self.kind,
+            id: Some(id.to_string()),
+            message,
+        }
+    }
+}
+
 /// Load every record in a store directory. Returns a config error only when the
 /// configured path resolves to a file where a directory is expected (AC-10);
 /// an absent or empty directory is simply zero records (AC-02).
@@ -237,6 +406,17 @@ pub fn parse_record(path: &Path, kind: AdrKind) -> Result<AdrRecord, AdrProblem>
         .map(|(_, v)| v.clone())
         .filter(|v| !v.is_empty())
         .unwrap_or_else(|| file_stem.clone());
+    if !record_name_is_safe(&file_stem) || !record_name_is_safe(&id) {
+        return Err(AdrProblem {
+            kind: AdrProblemKind::PathTraversal,
+            store: kind,
+            id: Some(file_stem.clone()),
+            message: format!(
+                "{}: record id / file name must not contain path separators or `..`",
+                path.display()
+            ),
+        });
+    }
     let date = fields
         .iter()
         .find(|(k, _)| k == "date")
@@ -621,6 +801,120 @@ mod tests {
         assert!(!record_name_is_safe("../escape"));
         assert!(!record_name_is_safe("a/b"));
         assert!(!record_name_is_safe(".."));
+    }
+
+    #[test]
+    fn traversal_in_id_is_rejected_during_parse() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("decisions");
+        let path = write_record(
+            &dir,
+            "evil.md",
+            "id: ../../etc/passwd\ndate: 2026-06-22\nstatus: active\n",
+            "## body\n",
+        );
+        let err = parse_record(&path, AdrKind::Decisions).unwrap_err();
+        assert_eq!(err.kind, AdrProblemKind::PathTraversal);
+    }
+
+    #[test]
+    fn active_set_excludes_superseded_deprecated_and_status_lag() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("decisions");
+        // old: status still active but superseded by new (status lags).
+        write_record(
+            &dir,
+            "2026-06-01-old.md",
+            "id: 2026-06-01-old\ndate: 2026-06-01\nstatus: active\n",
+            "## 2026-06-01 — Old\n",
+        );
+        // new: supersedes old, with reciprocal on old missing (one-sided).
+        write_record(
+            &dir,
+            "2026-06-20-new.md",
+            "id: 2026-06-20-new\ndate: 2026-06-20\nstatus: active\nsupersedes: 2026-06-01-old\n",
+            "## 2026-06-20 — New\n",
+        );
+        // deprecated standalone.
+        write_record(
+            &dir,
+            "2026-06-10-dep.md",
+            "id: 2026-06-10-dep\ndate: 2026-06-10\nstatus: deprecated\n",
+            "## 2026-06-10 — Dep\n",
+        );
+        let cfg = test_cfg(tmp.path());
+        let store = load_store(&cfg, AdrKind::Decisions).unwrap();
+        let active: Vec<&str> = store.active_set().iter().map(|r| r.id.as_str()).collect();
+        assert_eq!(
+            active,
+            vec!["2026-06-20-new"],
+            "only the successor is active"
+        );
+
+        let kinds: Vec<AdrProblemKind> = store.analyze().iter().map(|p| p.kind).collect();
+        assert!(kinds.contains(&AdrProblemKind::MissingCrossRef));
+        assert!(kinds.contains(&AdrProblemKind::Stale)); // old still active
+    }
+
+    #[test]
+    fn dangling_supersedes_is_detected() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("decisions");
+        write_record(
+            &dir,
+            "2026-06-20-x.md",
+            "id: 2026-06-20-x\ndate: 2026-06-20\nstatus: active\nsupersedes: does-not-exist\n",
+            "## 2026-06-20 — X\n",
+        );
+        let cfg = test_cfg(tmp.path());
+        let store = load_store(&cfg, AdrKind::Decisions).unwrap();
+        let kinds: Vec<AdrProblemKind> = store.analyze().iter().map(|p| p.kind).collect();
+        assert!(kinds.contains(&AdrProblemKind::DanglingSupersedes));
+    }
+
+    #[test]
+    fn supersession_cycle_is_detected() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("decisions");
+        write_record(
+            &dir,
+            "a.md",
+            "id: a\ndate: 2026-06-20\nstatus: superseded\nsupersedes: b\nsuperseded_by: b\n",
+            "## A\n",
+        );
+        write_record(
+            &dir,
+            "b.md",
+            "id: b\ndate: 2026-06-21\nstatus: superseded\nsupersedes: a\nsuperseded_by: a\n",
+            "## B\n",
+        );
+        let cfg = test_cfg(tmp.path());
+        let store = load_store(&cfg, AdrKind::Decisions).unwrap();
+        let kinds: Vec<AdrProblemKind> = store.analyze().iter().map(|p| p.kind).collect();
+        assert!(kinds.contains(&AdrProblemKind::Cycle), "{kinds:?}");
+    }
+
+    #[test]
+    fn well_formed_supersession_has_no_relational_problems() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("decisions");
+        write_record(
+            &dir,
+            "2026-06-01-old.md",
+            "id: 2026-06-01-old\ndate: 2026-06-01\nstatus: superseded\nsuperseded_by: 2026-06-20-new\n",
+            "## Old\n",
+        );
+        write_record(
+            &dir,
+            "2026-06-20-new.md",
+            "id: 2026-06-20-new\ndate: 2026-06-20\nstatus: active\nsupersedes: 2026-06-01-old\n",
+            "## New\n",
+        );
+        let cfg = test_cfg(tmp.path());
+        let store = load_store(&cfg, AdrKind::Decisions).unwrap();
+        assert!(store.analyze().is_empty(), "{:?}", store.analyze());
+        let active: Vec<&str> = store.active_set().iter().map(|r| r.id.as_str()).collect();
+        assert_eq!(active, vec!["2026-06-20-new"]);
     }
 
     /// Build a Config rooted at `repo` with adr dirs under `repo/decisions` and
