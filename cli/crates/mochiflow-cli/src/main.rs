@@ -24,6 +24,11 @@ enum Commands {
         #[command(subcommand)]
         command: ConfigCommand,
     },
+    /// Read-only ADR record store: list / show / search / lint
+    Adr {
+        #[command(subcommand)]
+        command: AdrCommand,
+    },
     /// Regenerate INDEX.md + state/index.json
     Index {
         /// Report drift without writing
@@ -182,6 +187,32 @@ enum ConfigCommand {
     Validate,
 }
 
+/// Which ADR store to operate on.
+#[derive(Clone, Copy, ValueEnum)]
+enum AdrKindArg {
+    Decisions,
+    Pitfalls,
+}
+
+impl AdrKindArg {
+    fn to_kind(self) -> mochiflow_core::adr::AdrKind {
+        match self {
+            AdrKindArg::Decisions => mochiflow_core::adr::AdrKind::Decisions,
+            AdrKindArg::Pitfalls => mochiflow_core::adr::AdrKind::Pitfalls,
+        }
+    }
+}
+
+#[derive(Subcommand)]
+enum AdrCommand {
+    /// Deterministic structural lint of the ADR record stores
+    Lint {
+        /// Limit to one store (default: both)
+        #[arg(long)]
+        kind: Option<AdrKindArg>,
+    },
+}
+
 #[derive(Subcommand)]
 enum AdapterCommand {
     Generate {
@@ -240,6 +271,12 @@ fn main() -> Result<()> {
                 let warns = issues.iter().filter(|i| i.severity == "WARN").count();
                 println!("\nSummary: {fails} fail, {warns} warn");
                 if fails > 0 { 1 } else { 0 }
+            }
+        },
+        Commands::Adr { command } => match command {
+            AdrCommand::Lint { kind } => {
+                let cfg = load_cfg(cli.config.as_deref())?;
+                mochiflow_core::adr::run_adr_lint(&cfg, kind.map(AdrKindArg::to_kind))
             }
         },
         Commands::Index { check } => {

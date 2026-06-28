@@ -15,6 +15,7 @@ pub struct DoctorIssue {
 const TERMINAL_CLI_COMMAND_REFERENCES: &[&str] = &[
     "accept",
     "adapter",
+    "adr",
     "backlog",
     "completions",
     "config",

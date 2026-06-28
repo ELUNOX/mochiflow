@@ -654,6 +654,68 @@ pub fn regenerate_all_indexes(cfg: &Config) -> Vec<PathBuf> {
     written
 }
 
+/// All deterministic structural problems for a store: parse problems (schema /
+/// traversal), supersession analysis (dangling / cross-ref / cycle / stale /
+/// orphan), and INDEX staleness. Pure: it does not regenerate the index.
+pub fn lint_store(
+    cfg: &Config,
+    kind: AdrKind,
+) -> Result<Vec<AdrProblem>, crate::config::ConfigError> {
+    let store = load_store(cfg, kind)?;
+    let mut problems = store.problems.clone();
+    problems.extend(store.analyze());
+    if is_index_stale(&store) {
+        problems.push(AdrProblem {
+            kind: AdrProblemKind::IndexStale,
+            store: kind,
+            id: None,
+            message: format!(
+                "{} INDEX.md is absent or stale; regenerate it (it is a gitignored cache)",
+                kind.as_str()
+            ),
+        });
+    }
+    Ok(problems)
+}
+
+/// `mochiflow adr lint`: report deterministic structural problems for one or
+/// both stores, classified into gating (FAIL) vs non-blocking (WARN). Returns a
+/// non-zero exit code only when a gating problem is present.
+pub fn run_adr_lint(cfg: &Config, kind_filter: Option<AdrKind>) -> i32 {
+    let kinds = match kind_filter {
+        Some(kind) => vec![kind],
+        None => vec![AdrKind::Decisions, AdrKind::Pitfalls],
+    };
+    let mut fail = 0usize;
+    let mut warn = 0usize;
+    for kind in kinds {
+        match lint_store(cfg, kind) {
+            Err(e) => {
+                eprintln!("FAIL: [{}] {e}", kind.as_str());
+                fail += 1;
+            }
+            Ok(problems) => {
+                for problem in problems {
+                    let id = problem
+                        .id
+                        .as_deref()
+                        .map(|s| format!(" {s}:"))
+                        .unwrap_or_default();
+                    if problem.kind.is_gating() {
+                        println!("FAIL: [{}]{id} {}", kind.as_str(), problem.message);
+                        fail += 1;
+                    } else {
+                        println!("WARN: [{}]{id} {}", kind.as_str(), problem.message);
+                        warn += 1;
+                    }
+                }
+            }
+        }
+    }
+    println!("\nadr lint: {fail} fail, {warn} warn");
+    if fail > 0 { 1 } else { 0 }
+}
+
 /// Record names that contain a path separator or `..` segment must never be
 /// accepted — they could escape the store directory.
 pub fn record_name_is_safe(name: &str) -> bool {
@@ -915,6 +977,47 @@ mod tests {
         assert!(store.analyze().is_empty(), "{:?}", store.analyze());
         let active: Vec<&str> = store.active_set().iter().map(|r| r.id.as_str()).collect();
         assert_eq!(active, vec!["2026-06-20-new"]);
+    }
+
+    #[test]
+    fn lint_classifies_gating_vs_warning_and_sets_exit() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("decisions");
+        // gating: dangling supersedes.
+        write_record(
+            &dir,
+            "2026-06-20-x.md",
+            "id: 2026-06-20-x\ndate: 2026-06-20\nstatus: active\nsupersedes: ghost\n",
+            "## 2026-06-20 — X\n",
+        );
+        let cfg = test_cfg(tmp.path());
+        let problems = lint_store(&cfg, AdrKind::Decisions).unwrap();
+        let kinds: Vec<AdrProblemKind> = problems.iter().map(|p| p.kind).collect();
+        assert!(kinds.contains(&AdrProblemKind::DanglingSupersedes));
+        // INDEX absent -> stale warning, never a gate.
+        assert!(kinds.contains(&AdrProblemKind::IndexStale));
+        assert!(AdrProblemKind::DanglingSupersedes.is_gating());
+        assert!(!AdrProblemKind::IndexStale.is_gating());
+        assert!(!AdrProblemKind::Orphan.is_gating());
+        assert!(!AdrProblemKind::Stale.is_gating());
+        // Command exit is non-zero because a gating problem is present.
+        assert_eq!(run_adr_lint(&cfg, Some(AdrKind::Decisions)), 1);
+    }
+
+    #[test]
+    fn lint_clean_store_with_fresh_index_passes() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("decisions");
+        write_record(
+            &dir,
+            "2026-06-20-x.md",
+            "id: 2026-06-20-x\ndate: 2026-06-20\narea: cli\nstatus: active\n",
+            "## 2026-06-20 — X\n",
+        );
+        let cfg = test_cfg(tmp.path());
+        let store = load_store(&cfg, AdrKind::Decisions).unwrap();
+        generate_index(&store).unwrap();
+        assert_eq!(run_adr_lint(&cfg, Some(AdrKind::Decisions)), 0);
     }
 
     /// Build a Config rooted at `repo` with adr dirs under `repo/decisions` and
