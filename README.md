@@ -4,7 +4,7 @@
 
 <p align="center">
   A spec-driven workflow for AI coding agents: discuss the idea, plan the design,
-  build the change, and ship the PR without losing context.
+  build the change, and open the PR without losing context.
 </p>
 
 <p align="center">
@@ -23,7 +23,7 @@ MochiFlow helps AI coding agents work like a disciplined teammate instead of
 jumping straight into code.
 
 - **Shape ideas before coding** — turn rough feature requests into scoped specs.
-- **Keep the agent on the rails** — design approval before implementation, PR approval before shipping.
+- **Keep the agent on the rails** — design approval before implementation, PR approval before opening.
 - **Carry knowledge forward** — decisions and pitfalls are recorded for the next change.
 
 No external runtime. MochiFlow ships as a single Rust binary.
@@ -87,8 +87,9 @@ MochiFlow keeps state in files, not in chat history. A spec lives under
 | AC Matrix | Traceability ledger inside `spec.md`: AC → implementation → verification → evidence → result. |
 
 Small patches skip spec artifacts. Normal work uses `discuss → plan → build →
-ship`; only two delivery approvals exist: approval to build, and approval of the
-PR content before `mochiflow pr`.
+open`, then `update` (PR feedback) and `close` (after merge); only two delivery
+approvals exist: approval to build, and approval of the PR content before the PR
+is opened.
 
 For a repository where MochiFlow is already tracked by the team, do not run a
 fresh setup. Cloning or pulling brings down the vendored engine and AI-tool
@@ -117,7 +118,9 @@ MochiFlow's public CLI commands are:
 | `mochiflow doctor` | Run quality gates for config, specs, adapters, and engine integrity. |
 | `mochiflow adapter` | Generate AI-tool adapter entrypoints. |
 | `mochiflow index` | Regenerate or check `INDEX.md` and state index output. |
+| `mochiflow status` | Render the live delivery board (Backlog / Active / Ready / In Review / Done); read-only. |
 | `mochiflow ready` | Check whether a spec can enter implementation. |
+| `mochiflow accept` | Settle the accept close-out: set `accepted`, stage the spec and ADR fold, and commit. |
 | `mochiflow backlog` | List, show, or validate backlog seeds. |
 | `mochiflow upgrade` | Replace the installed engine while preserving project data. |
 | `mochiflow freeze` | Regenerate derived version/integrity files from the workspace version. |
@@ -184,8 +187,10 @@ flowchart LR
     A["Brainstorm the feature"] --> B["Discuss scope"]
     B --> C["Plan the design"]
     C -->|"you approve"| D["Build + verify"]
-    D -->|"you approve"| E["Ship the PR"]
-    E -.-> F["Carry lessons into the next change"]
+    D -->|"you approve"| E["Open the PR"]
+    E --> G["Update on PR feedback"]
+    G --> H["Close after merge"]
+    H -.-> F["Carry lessons into the next change"]
 ```
 
 Next, ask the agent to turn the discussion into a design:
@@ -210,14 +215,35 @@ command, updates the AC Matrix, and reports what changed.
 When you are ready to open the PR:
 
 ```text
-mochiflow-ship
+mochiflow-open
 ```
 
-MochiFlow records the important decisions and pitfalls, then follows the
-project's PR path through `mochiflow pr`.
+MochiFlow runs acceptance, records the important decisions and pitfalls, sets the
+spec to `accepted`, and — after you approve the PR content — opens the PR through
+the project's PR path.
 
-`mochiflow-discuss`, `mochiflow-plan`, `mochiflow-build`, and `mochiflow-ship`
-are messages for your AI tool, not terminal commands.
+When PR review asks for changes:
+
+```text
+mochiflow-update
+```
+
+The agent applies the feedback through the build loop, re-verifies, pushes, and
+refreshes the PR. The spec stays in place; nothing is reverted or archived.
+
+After the PR merges:
+
+```text
+mochiflow-close
+```
+
+MochiFlow does local cleanup only — switch back to the base branch, fast-forward,
+delete the local branch, and refresh the board. It writes nothing to the base
+branch.
+
+`mochiflow-discuss`, `mochiflow-plan`, `mochiflow-build`, `mochiflow-open`,
+`mochiflow-update`, and `mochiflow-close` are messages for your AI tool, not
+terminal commands.
 
 ## Supported tools
 

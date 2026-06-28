@@ -1,4 +1,4 @@
-//! Deterministic ship close-out mechanics.
+//! Deterministic accept close-out mechanics.
 
 use std::collections::BTreeSet;
 use std::fs;
@@ -7,7 +7,6 @@ use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::config::Config;
-use crate::index;
 use crate::lint;
 use crate::spec_meta::{SpecMeta, read_spec_metadata};
 
@@ -41,8 +40,8 @@ struct StatusEntry {
     paths: Vec<String>,
 }
 
-/// Entry point for `mochiflow ship`. Returns the process exit code.
-pub fn run_ship(cfg: &Config, slug_arg: Option<&str>, dry_run: bool) -> i32 {
+/// Entry point for `mochiflow accept`. Returns the process exit code.
+pub fn run_accept(cfg: &Config, slug_arg: Option<&str>, dry_run: bool) -> i32 {
     let target = match resolve_target(cfg, slug_arg) {
         Ok(target) => target,
         Err(message) => {
@@ -63,13 +62,15 @@ pub fn run_ship(cfg: &Config, slug_arg: Option<&str>, dry_run: bool) -> i32 {
         eprintln!("FAIL: spec `{}` was not found.", target.slug);
         return EXIT_FAIL;
     }
+    if !active_exists {
+        eprintln!(
+            "FAIL: spec `{}` is archived under _done/; accept operates on active flat specs.",
+            target.slug
+        );
+        return EXIT_FAIL;
+    }
 
-    let meta_dir = if active_exists {
-        &target.active_dir
-    } else {
-        &target.done_dir
-    };
-    let meta = match read_spec_metadata(meta_dir) {
+    let meta = match read_spec_metadata(&target.active_dir) {
         Ok(meta) => meta,
         Err(e) => {
             eprintln!("FAIL: could not read spec metadata: {e}");
@@ -87,14 +88,11 @@ pub fn run_ship(cfg: &Config, slug_arg: Option<&str>, dry_run: bool) -> i32 {
         }
     };
     let blockers = unexpected_status_paths(&status_entries, &allowed);
-    let readiness = readiness_blockers(cfg, &target, &meta, active_exists);
+    let readiness = readiness_blockers(cfg, &target, &meta);
 
     if dry_run {
-        println!("ship target : {}", target.slug);
-        println!(
-            "state       : {}",
-            if active_exists { "active" } else { "archived" }
-        );
+        println!("accept target : {}", target.slug);
+        println!("state       : active");
         println!("lifecycle paths:");
         for path in &lifecycle_paths {
             println!("  - {}", path.display());
@@ -102,8 +100,8 @@ pub fn run_ship(cfg: &Config, slug_arg: Option<&str>, dry_run: bool) -> i32 {
         println!("planned actions:");
         println!("  - run final verification for declared surfaces");
         println!("  - update automated AC Matrix rows when eligible");
-        println!("  - set done metadata, move to _done, regenerate index");
-        println!("  - stage lifecycle parents and create close-out commit");
+        println!("  - set accepted metadata (no _done move, no INDEX write)");
+        println!("  - stage the spec and ADR fold, then create the close-out commit");
         if blockers.is_empty() && readiness.is_empty() {
             println!("readiness blockers: none");
         } else {
@@ -128,15 +126,11 @@ pub fn run_ship(cfg: &Config, slug_arg: Option<&str>, dry_run: bool) -> i32 {
         return EXIT_FAIL;
     }
     if !readiness.is_empty() {
-        eprintln!("FAIL: spec is not ready to ship:");
+        eprintln!("FAIL: spec is not ready to accept:");
         for blocker in readiness {
             eprintln!("  - {blocker}");
         }
         return EXIT_FAIL;
-    }
-
-    if !active_exists {
-        return resume_archived_closeout(cfg, &target, &allowed, &meta);
     }
 
     let verify_evidence = match run_final_verification(cfg, &meta) {
@@ -151,31 +145,18 @@ pub fn run_ship(cfg: &Config, slug_arg: Option<&str>, dry_run: bool) -> i32 {
         eprintln!("FAIL: {message}");
         return EXIT_FAIL;
     }
-    let completed = utc_now_timestamp();
-    if let Err(message) = update_spec_yaml(&target.active_dir.join("spec.yaml"), &completed) {
+    let updated = utc_now_timestamp();
+    if let Err(message) = update_spec_yaml(&target.active_dir.join("spec.yaml"), &updated) {
         eprintln!("FAIL: {message}");
         return EXIT_FAIL;
     }
-    if let Some(parent) = target.done_dir.parent()
-        && let Err(e) = fs::create_dir_all(parent)
-    {
-        eprintln!("FAIL: could not create {}: {e}", parent.display());
-        return EXIT_FAIL;
-    }
-    if let Err(e) = fs::rename(&target.active_dir, &target.done_dir) {
-        eprintln!(
-            "FAIL: could not move {} to {}: {e}",
-            target.active_dir.display(),
-            target.done_dir.display()
-        );
-        return EXIT_FAIL;
-    }
-    if let Err(e) = index::generate_index_quiet(cfg) {
-        eprintln!("FAIL: could not regenerate index: {e}");
-        return EXIT_FAIL;
-    }
+    // The spec stays flat at its active path: no `_done/` move, no `done` write,
+    // and no INDEX regeneration in the close-out (the board is gitignored and
+    // refreshed by the shared post-command step).
     if lint::run_lint(cfg, Some(&target.slug), true) != 0 {
-        eprintln!("FAIL: lint failed after setting done; lifecycle files are left for inspection.");
+        eprintln!(
+            "FAIL: lint failed after setting accepted; lifecycle files are left for inspection."
+        );
         return EXIT_FAIL;
     }
     stage_validate_commit(cfg, &target, &allowed, &meta)
@@ -188,26 +169,21 @@ pub fn is_path_like_spec_arg(value: &str) -> bool {
 
 pub fn validate_pr_spec_closeout_committed(cfg: &Config, slug: &str) -> Result<(), String> {
     let target = target_for_slug(cfg, slug);
-    if target.active_dir.exists() {
+    if !target.active_dir.exists() {
         return Err(format!(
-            "pre-flight FAIL: spec `{slug}` is still active; run `mochiflow ship {slug}` before PR handoff."
+            "pre-flight FAIL: spec `{slug}` was not found at {}.",
+            target.active_dir.display()
         ));
     }
-    if !target.done_dir.exists() {
+    let meta = read_spec_metadata(&target.active_dir)
+        .map_err(|e| format!("pre-flight FAIL: could not read spec `{slug}`: {e}"))?;
+    if meta.status() != "accepted" {
         return Err(format!(
-            "pre-flight FAIL: completed spec `{slug}` was not found under {}.",
-            cfg.specs_dir_path().join("_done").display()
-        ));
-    }
-    let meta = read_spec_metadata(&target.done_dir)
-        .map_err(|e| format!("pre-flight FAIL: could not read completed spec `{slug}`: {e}"))?;
-    if meta.status() != "done" {
-        return Err(format!(
-            "pre-flight FAIL: spec `{slug}` is archived but status is `{}`; expected `done`.",
+            "pre-flight FAIL: spec `{slug}` status is `{}`; run `mochiflow accept {slug}` to reach `accepted` before PR handoff.",
             meta.status()
         ));
     }
-    let done_rel = rel_path(&cfg.repo_root, &target.done_dir);
+    let active_rel = rel_path(&cfg.repo_root, &target.active_dir);
     let grep = format!("^Spec: {}$", regex::escape(slug));
     let output = Command::new("git")
         .args([
@@ -219,57 +195,16 @@ pub fn validate_pr_spec_closeout_committed(cfg: &Config, slug: &str) -> Result<(
             &grep,
             "--",
         ])
-        .arg(&done_rel)
+        .arg(&active_rel)
         .current_dir(&cfg.repo_root)
         .output()
         .map_err(|e| format!("pre-flight FAIL: git log failed: {e}"))?;
     if !output.status.success() || output.stdout.is_empty() {
         return Err(format!(
-            "pre-flight FAIL: completed spec `{slug}` is not committed with a `Spec: {slug}` trailer."
+            "pre-flight FAIL: spec `{slug}` is not committed with a `Spec: {slug}` trailer."
         ));
     }
     Ok(())
-}
-
-fn resume_archived_closeout(
-    cfg: &Config,
-    target: &Target,
-    allowed: &BTreeSet<String>,
-    meta: &SpecMeta,
-) -> i32 {
-    if meta.status() != "done" {
-        eprintln!(
-            "FAIL: archived spec `{}` has status `{}`; restore it to active or fix metadata before retrying.",
-            target.slug,
-            meta.status()
-        );
-        return EXIT_FAIL;
-    }
-    let status_entries = match git_status_z(&cfg.repo_root) {
-        Ok(entries) => entries,
-        Err(message) => {
-            eprintln!("FAIL: {message}");
-            return EXIT_FAIL;
-        }
-    };
-    let related_dirty = status_entries
-        .into_iter()
-        .flat_map(|entry| entry.paths)
-        .any(|path| {
-            allowed.contains(&path) || allowed.iter().any(|prefix| path.starts_with(prefix))
-        });
-    let staged = match git_cached_name_status_z(&cfg.repo_root) {
-        Ok(staged) => staged,
-        Err(message) => {
-            eprintln!("FAIL: {message}");
-            return EXIT_FAIL;
-        }
-    };
-    if !related_dirty && staged.is_empty() {
-        println!("ship: spec `{}` is already completed.", target.slug);
-        return EXIT_OK;
-    }
-    stage_validate_commit(cfg, target, allowed, meta)
 }
 
 fn stage_validate_commit(
@@ -304,7 +239,7 @@ fn stage_validate_commit(
     }
     if staged.is_empty() {
         println!(
-            "ship: no lifecycle changes are staged for `{}`.",
+            "accept: no lifecycle changes are staged for `{}`.",
             target.slug
         );
         return EXIT_OK;
@@ -320,7 +255,7 @@ fn stage_validate_commit(
         .status();
     match status {
         Ok(status) if status.success() => {
-            println!("ship: committed close-out for `{}`.", target.slug);
+            println!("accept: committed close-out for `{}`.", target.slug);
             EXIT_OK
         }
         Ok(_) => {
@@ -337,7 +272,7 @@ fn stage_validate_commit(
 fn resolve_target(cfg: &Config, slug_arg: Option<&str>) -> Result<Target, String> {
     if let Some(slug) = slug_arg {
         if slug.trim().is_empty() || is_path_like_spec_arg(slug) {
-            return Err("ship expects a spec slug, not a path.".to_string());
+            return Err("accept expects a spec slug, not a path.".to_string());
         }
         return Ok(target_for_slug(cfg, slug));
     }
@@ -363,28 +298,14 @@ fn target_for_slug(cfg: &Config, slug: &str) -> Target {
     }
 }
 
-fn readiness_blockers(
-    cfg: &Config,
-    target: &Target,
-    meta: &SpecMeta,
-    active_exists: bool,
-) -> Vec<String> {
+fn readiness_blockers(cfg: &Config, target: &Target, meta: &SpecMeta) -> Vec<String> {
     let mut blockers = Vec::new();
-    let spec_dir = if active_exists {
-        &target.active_dir
-    } else {
-        &target.done_dir
-    };
-    if active_exists {
-        if meta.status() != "approved" {
-            blockers.push(format!(
-                "active spec status is `{}`; expected `approved`",
-                meta.status()
-            ));
-        }
-    } else if meta.status() != "done" {
+    // accept operates only on active flat specs (the archived path is rejected
+    // earlier in run_accept), so readiness always targets the active spec dir.
+    let spec_dir = &target.active_dir;
+    if meta.status() != "approved" {
         blockers.push(format!(
-            "archived spec status is `{}`; expected `done` for retry",
+            "active spec status is `{}`; expected `approved`",
             meta.status()
         ));
     }
@@ -398,7 +319,7 @@ fn readiness_blockers(
             Err(e) => blockers.push(e.to_string()),
         }
     }
-    if active_exists && lint::run_lint(cfg, Some(&target.slug), true) != 0 {
+    if lint::run_lint(cfg, Some(&target.slug), true) != 0 {
         blockers.push("lint failed before mutation".to_string());
     }
     blockers.extend(matrix_readiness_blockers(
@@ -505,36 +426,30 @@ fn update_spec_md(spec_md: &Path, verify_evidence: &[(String, String)]) -> Resul
         .map_err(|e| format!("could not write {}: {e}", spec_md.display()))
 }
 
-fn update_spec_yaml(spec_yaml: &Path, completed: &str) -> Result<(), String> {
+fn update_spec_yaml(spec_yaml: &Path, timestamp: &str) -> Result<(), String> {
     let text = fs::read_to_string(spec_yaml)
         .map_err(|e| format!("could not read {}: {e}", spec_yaml.display()))?;
-    let date = completed.split('T').next().unwrap_or(completed);
+    let date = timestamp.split('T').next().unwrap_or(timestamp);
     let mut saw_status = false;
     let mut saw_updated = false;
-    let mut saw_completed = false;
     let mut lines = Vec::new();
     for line in text.lines() {
         if line.starts_with("status:") {
-            lines.push("status: \"done\"".to_string());
+            lines.push("status: \"accepted\"".to_string());
             saw_status = true;
         } else if line.starts_with("updated:") {
             lines.push(format!("updated: \"{date}\""));
             saw_updated = true;
-        } else if line.starts_with("completed:") {
-            lines.push(format!("completed: \"{completed}\""));
-            saw_completed = true;
         } else {
+            // `accepted` never writes `completed`; any existing line is left as-is.
             lines.push(line.to_string());
         }
     }
     if !saw_status {
-        lines.push("status: \"done\"".to_string());
+        lines.push("status: \"accepted\"".to_string());
     }
     if !saw_updated {
         lines.push(format!("updated: \"{date}\""));
-    }
-    if !saw_completed {
-        lines.push(format!("completed: \"{completed}\""));
     }
     fs::write(spec_yaml, lines.join("\n") + "\n")
         .map_err(|e| format!("could not write {}: {e}", spec_yaml.display()))
@@ -625,7 +540,6 @@ fn escape_table_cell(value: &str) -> String {
 fn lifecycle_paths(cfg: &Config) -> Vec<PathBuf> {
     vec![
         rel_path(&cfg.repo_root, &cfg.specs_dir_path()),
-        rel_path(&cfg.repo_root, &cfg.index_path()),
         rel_path(&cfg.repo_root, &cfg.decisions_path()),
         rel_path(&cfg.repo_root, &cfg.pitfalls_path()),
     ]
@@ -635,8 +549,6 @@ fn allowed_ship_paths(cfg: &Config, target: &Target) -> BTreeSet<String> {
     let mut allowed = BTreeSet::new();
     for path in [
         &target.active_dir,
-        &target.done_dir,
-        &cfg.index_path(),
         &cfg.decisions_path(),
         &cfg.pitfalls_path(),
     ] {
@@ -942,9 +854,8 @@ mod tests {
         let cfg = load_config(&repo.join(".mochiflow/config.toml")).unwrap();
         let target = target_for_slug(&cfg, "sample");
         let allowed = allowed_ship_paths(&cfg, &target);
-        let parsed = parse_name_status_z(
-            b"A\0.mochiflow/specs/_done/sample/spec.yaml\0A\0src/with space.rs\0",
-        );
+        let parsed =
+            parse_name_status_z(b"A\0.mochiflow/specs/sample/spec.yaml\0A\0src/with space.rs\0");
 
         assert_eq!(parsed.len(), 2);
         assert_eq!(parsed[1].paths, vec!["src/with space.rs"]);

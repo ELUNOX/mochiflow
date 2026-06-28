@@ -21,7 +21,7 @@ risk: standard       # standard | elevated | critical (ordered enum)
 status: draft        # draft | approved | done
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
-completed: YYYY-MM-DDTHH:MM:SSZ   # optional; set by ship at the done transition (orders the Done view)
+completed: YYYY-MM-DDTHH:MM:SSZ   # legacy: ordered the Done view for archived specs; the engine no longer writes it
 ```
 
 `status` flow is `draft → approved → done` (`workflow.md`). Whether `design.md` /
@@ -40,12 +40,12 @@ Fix each fact in one place; reference by ID elsewhere.
 | reviewer / git / journal cadence | `risk.md` | not repeated |
 | user-authored standing rules | `[constitution]` (project / local), written by the user | always-loaded; never generated from code |
 | current-state orientation (purpose / layout / tech) | code/config, mapped into `[context]` (product / structure / tech) via onboard / `refresh-context` | always-loaded; never folded |
-| design rationale (*why*) / pitfalls history | `[adr]` (decisions / pitfalls), appended by ship's fold | on-demand / phase load |
+| design rationale (*why*) / pitfalls history | `[adr]` (decisions / pitfalls), appended by open's fold | on-demand / phase load |
 
 The three durable guidance layers differ by lifecycle: `[constitution]` is
 user-authored standing guidance, `[context]` is a code-derived current-state map
 *refreshed* forward (onboard / `refresh-context`), and `[adr]` is dated history
-*folded* at ship (`reference/git.md ## Living-spec fold`). Code is always the
+*folded* at open (`reference/git.md ## Living-spec fold`). Code is always the
 source of truth for current state; prose is not.
 
 ## Durable vs ephemeral artifacts
@@ -56,7 +56,7 @@ post-merge per `reference/git.md ## Post-merge local cleanup`).
 
 | class | artifacts | home | archived |
 | --- | --- | --- | --- |
-| durable | `spec.yaml` · `pitch.md` · `spec.md` (incl. AC Verification Matrix) · `design.md` · `tasks.md` | `{specs_dir}/{slug}/` → `_done/` | yes |
+| durable | `spec.yaml` · `pitch.md` · `spec.md` (incl. AC Verification Matrix) · `design.md` · `tasks.md` | `{specs_dir}/{slug}/` (flat for life) | no |
 | ephemeral | PR body file (`pr-body.md`) · `pr-request.json` (pr_driver only) | `{install_dir}/state/{slug}/` | no |
 
 Ephemeral artifacts are regenerable from the durable spec; their durable record
@@ -66,8 +66,8 @@ in the tracked tree pollutes history and the archive.
 
 QA role split: `spec.md` QA Scenarios are the source of truth for *what* to test
 and *how* (steps + expected result). The **AC Verification Matrix** is the results
-ledger (result + evidence pointers). During ship, the agent presents QA items
-directly in conversation via the round-trip protocol (`commands/ship.md`
+ledger (result + evidence pointers). During open, the agent presents QA items
+directly in conversation via the round-trip protocol (`commands/open.md`
 Acceptance step 3); PR reviewers read the `## Testing` section in the PR
 description (derived from QA Scenarios). There is no intermediate QA file.
 

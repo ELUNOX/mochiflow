@@ -30,6 +30,12 @@ enum Commands {
         #[arg(long)]
         check: bool,
     },
+    /// Render the live delivery board (read-only): Backlog / Active / Ready / In Review / Done
+    Status {
+        /// Fetch origin before computing derived delivery state
+        #[arg(long)]
+        fetch: bool,
+    },
     /// Lint specs
     Lint {
         /// Single spec slug
@@ -62,8 +68,8 @@ enum Commands {
         /// Spec slug or directory
         spec: String,
     },
-    /// Complete deterministic ship close-out mechanics
-    Ship {
+    /// Settle the accept close-out: set accepted, stage the spec + fold, commit
+    Accept {
         /// Spec slug (default: infer from current feature branch)
         slug: Option<String>,
         /// Preview without verification, mutation, staging, or commit
@@ -254,6 +260,10 @@ fn main() -> Result<()> {
             let cfg = load_cfg(cli.config.as_deref())?;
             mochiflow_core::lint::run_lint(&cfg, spec.as_deref(), false)
         }
+        Commands::Status { fetch } => {
+            let cfg = load_cfg(cli.config.as_deref())?;
+            mochiflow_core::status::run_status(&cfg, fetch)
+        }
         Commands::Doctor { json, target } => {
             let cfg = load_cfg(cli.config.as_deref())?;
             let bundled = bundled_engine_version();
@@ -299,9 +309,15 @@ fn main() -> Result<()> {
             let cfg = load_cfg(cli.config.as_deref())?;
             cmd_ready(&cfg, &spec)
         }
-        Commands::Ship { slug, dry_run } => {
+        Commands::Accept { slug, dry_run } => {
             let cfg = load_cfg(cli.config.as_deref())?;
-            mochiflow_core::ship::run_ship(&cfg, slug.as_deref(), dry_run)
+            let code = mochiflow_core::ship::run_accept(&cfg, slug.as_deref(), dry_run);
+            // Regenerate the gitignored board to reflect the new accepted/Ready
+            // state. Skipped on dry-run; never staged or committed.
+            if !dry_run && code == 0 {
+                refresh_board_after_state_change(&cfg);
+            }
+            code
         }
         Commands::Backlog { command } => {
             let cfg = load_cfg(cli.config.as_deref())?;
@@ -438,14 +454,22 @@ fn main() -> Result<()> {
             dry_run,
         } => {
             let cfg = load_cfg(cli.config.as_deref())?;
-            mochiflow_core::pr::run_pr(
+            let code = mochiflow_core::pr::run_pr(
                 &cfg,
                 spec.as_deref(),
                 title.as_deref(),
                 body_file.as_deref(),
                 draft,
                 dry_run,
-            )
+            );
+            // Regenerate the gitignored board to reflect the new delivery state
+            // (e.g. In Review). Skipped on dry-run; never staged or committed.
+            if !dry_run
+                && (code == mochiflow_core::pr::EXIT_OK || code == mochiflow_core::pr::EXIT_MANUAL)
+            {
+                refresh_board_after_state_change(&cfg);
+            }
+            code
         }
         Commands::Freeze { root, check } => {
             let cwd = std::env::current_dir()?;
@@ -497,6 +521,14 @@ fn main() -> Result<()> {
     };
 
     std::process::exit(exit_code);
+}
+
+/// Regenerate the gitignored board (`INDEX.md` + state index) after a
+/// state-changing CLI command. Best-effort: failures are ignored, and the file
+/// is never staged or committed. Callers gate this on a successful, non-dry-run
+/// invocation so the board reflects the new delivery state.
+fn refresh_board_after_state_change(cfg: &mochiflow_core::config::Config) {
+    let _ = mochiflow_core::index::generate_index_quiet(cfg);
 }
 
 fn bundled_engine_version() -> String {

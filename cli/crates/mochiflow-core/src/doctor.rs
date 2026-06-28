@@ -13,6 +13,7 @@ pub struct DoctorIssue {
 }
 
 const TERMINAL_CLI_COMMAND_REFERENCES: &[&str] = &[
+    "accept",
     "adapter",
     "backlog",
     "completions",
@@ -27,19 +28,21 @@ const TERMINAL_CLI_COMMAND_REFERENCES: &[&str] = &[
     "lint",
     "pr",
     "ready",
-    "ship",
+    "status",
     "upgrade",
 ];
 
 const WORKFLOW_COMMAND_REFERENCES: &[&str] = &[
     "build",
+    "close",
     "discuss",
     "onboard",
+    "open",
     "patch",
     "plan",
     "refresh-context",
     "review",
-    "ship",
+    "update",
 ];
 
 struct TargetReport {

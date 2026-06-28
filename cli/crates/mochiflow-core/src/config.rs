@@ -69,7 +69,7 @@ pub struct RawContext {
     pub tech: String,
 }
 
-/// ADR layer — fold targets (`ship` appends durable decisions and pitfalls).
+/// ADR layer — fold targets (`open` appends durable decisions and pitfalls).
 #[derive(Debug, Deserialize)]
 pub struct RawAdr {
     pub decisions: String,

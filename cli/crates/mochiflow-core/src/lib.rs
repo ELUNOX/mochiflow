@@ -1,6 +1,7 @@
 pub mod adapter;
 pub mod backlog;
 pub mod config;
+pub mod delivery;
 pub mod detach;
 pub mod detect;
 pub mod doctor;
@@ -14,4 +15,5 @@ pub mod pr;
 pub mod present;
 pub mod ship;
 pub mod spec_meta;
+pub mod status;
 pub mod upgrade;

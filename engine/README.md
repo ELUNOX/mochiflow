@@ -6,7 +6,7 @@ and resolves every project path/command from `config.toml` (one level up, at
 `<install_dir>/config.toml`).
 
 - Natural-language entry → `router.md`
-- Lifecycle verbs → `commands/{discuss,plan,build,ship}.md`
+- Lifecycle verbs → `commands/{discuss,plan,build,open,update,close}.md`
 - Non-phase commands → `commands/{patch,review,refresh-context,onboard}.md`
 - Cross-cutting rules → `reference/{workflow,risk,authoring,git,language}.md`
 - Templates → `templates/`

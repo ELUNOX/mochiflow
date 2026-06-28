@@ -18,7 +18,7 @@
     },
     "integration": { "type": "string", "enum": ["none", "contract", "workflow"] },
     "risk": { "type": "string", "enum": ["standard", "elevated", "critical"] },
-    "status": { "type": "string", "enum": ["draft", "approved", "done"] },
+    "status": { "type": "string", "enum": ["draft", "approved", "accepted", "done"] },
     "created": { "type": "string" },
     "updated": { "type": "string" },
     "completed": { "type": "string" }

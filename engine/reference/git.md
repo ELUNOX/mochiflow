@@ -1,8 +1,9 @@
 # Git Reference
 
-Branch / commit / PR / fold / archive rules during mochiflow. Reviewer cadence
-and integration-log requirements are defined in `risk.md`; this file owns the
-git mechanics and the living-spec fold.
+Branch / commit / PR / fold rules during mochiflow. Reviewer cadence and
+integration-log requirements are defined in `risk.md`; this file owns the git
+mechanics and the living-spec fold. Specs stay flat at `{specs_dir}/{slug}/` for
+their whole life — there is no `_done/` move and no committed board.
 
 ## Branch
 
@@ -17,19 +18,17 @@ git mechanics and the living-spec fold.
   deletion at `{specs_dir}/_backlog/{slug}.md` is also related because seed
   promotion is committed atomically. The spec files just authored by discuss /
   plan are related and expected to be present before the phase commit — they
-  never block their own phase.
-  Exception: only when returning from `ship.md ## PR Feedback Loop`, the restore
-  from the archived shipped spec is also related, so the allowed dirty paths are
-  exactly `{specs_dir}/{slug}/**` and `{specs_dir}/_done/{slug}/**`. Other slugs
-  under `_done/`, other specs, source changes, and `state/` files remain
-  unrelated dirt. Any other dirt → stop instead of switching.
+  never block their own phase. Any other dirt → stop instead of switching.
 - Discuss creates `{branch}` from `origin/{[git].base_branch}` when agreement is
-  reached. Plan/build/ship use the existing branch; build must error-stop if it
-  cannot find or switch to `{branch}`.
+  reached, and warns when the local base branch is behind
+  `origin/{[git].base_branch}` (`commands/discuss.md`); never branch from a
+  stale local base. Plan/build/open/update use the existing branch; build must
+  error-stop if it cannot find or switch to `{branch}`.
 - Trivial `risk: standard` changes MAY use the current branch with no new branch
   and no PR only when the user explicitly opts in (no-PR fast path). Default is
   a feature branch + PR. no-PR skips PR creation and the approve-PR gate, but it
-  still runs `ship` acceptance and the close-out commit.
+  still runs `accept` and the close-out commit (it sets at most `accepted`, never
+  `done`, and never moves the spec).
 
 ## Commit
 
@@ -48,7 +47,7 @@ body (optional)
   (external-reviewer view).
 - Body: slug may appear as natural context (e.g. "implements the refresh logic
   from oauth-refresh-flow"). Avoid AC IDs and mochiflow vocabulary (`fold`,
-  `ship`, `build phase`, etc.) in the body. Body must not begin a line with `Spec:`
+  `open`, `build phase`, etc.) in the body. Body must not begin a line with `Spec:`
   (reserved for trailer parsing; see `## Trailers`).
 - Trailers are metadata (same category as `Signed-off-by`); `Spec:` and `Task:`
   trailers are required per `## Trailers` below.
@@ -71,12 +70,15 @@ Task: T-002
 ### Rules
 
 - `Spec: {slug}` — **required** on every spec-lane commit (discuss, plan, build,
-  ship). The value is the spec's `slug` from `spec.yaml`.
+  open, update). The value is the spec's `slug` from `spec.yaml`. A merge must
+  leave the `Spec: {slug}` trailer reachable from the base branch: merge/rebase
+  preserve it automatically; a squash merge must carry it into the squash commit
+  (it is the local-git `merged` derivation signal).
 - `Task: T-XXX` — **required** when `tasks.md` exists and the commit completes a
   specific task. Normal build commits complete one task and use one `Task:`
   line. Multiple `Task:` lines are kept for compatibility with existing history
-  and exceptional reconciliation commits. **Optional** on ship close-out commits
-  (which bundle multiple concerns).
+  and exceptional reconciliation commits. **Optional** on the accept close-out
+  commit (which bundles multiple concerns).
 - Patch lane commits have **no trailers** (no spec context exists).
 - `Spec:` and `Task:` keys are case-sensitive and use a single space after the
   colon.
@@ -109,7 +111,7 @@ git log --format="%s | %(trailers:key=Spec,valueonly)" -- path/to/file -5
 
 The AI auto-commits in all flows. Commit only after verification PASS; never
 commit on verification FAIL. When `risk.md` requires a reviewer verdict,
-reviewer PASS is a phase-completion / ship-acceptance gate, not a pre-commit gate.
+reviewer PASS is a phase-completion / acceptance gate, not a pre-commit gate.
 If reviewer FAIL findings require changes, fix them, verify, and commit the
 follow-up before build completes.
 
@@ -121,8 +123,9 @@ follow-up before build completes.
   the project tracks specs, git includes these files; when the project gitignores
   `{specs_dir}/{slug}/`, git skips them and the worktree was already clean.
   The ADR under `[adr]` is committed regardless of this choice.
-- `state/` is gitignored. The vendored engine under the install dir is tracked
-  by default.
+- `state/` is gitignored, and the generated board `{index}` (`INDEX.md`) is
+  gitignored and **never staged or committed** by any command. The vendored
+  engine under the install dir is tracked by default.
 
 ### Spec-lane lifecycle commits
 
@@ -131,16 +134,21 @@ follow-up before build completes.
 | discuss | create/switch `{prefix}/{slug}` from `origin/{base_branch}` | `spec.yaml (draft)`, `pitch.md`, optional `_backlog/{slug}.md` deletion |
 | plan | use existing `{prefix}/{slug}` | `spec.yaml (approved)`, `spec.md`, optional `design.md` / `tasks.md`, optional corrected `pitch.md` |
 | build | verify/switch existing `{prefix}/{slug}`; never create it | implementation, tests, task checkbox updates, AC Matrix updates |
-| ship | use existing `{prefix}/{slug}` | close-out commit: `status: done`, final AC Matrix, ADR fold, `_done/` move, regenerated index |
+| open | use existing `{prefix}/{slug}` | close-out commit: `status: accepted`, final AC Matrix, ADR fold (flat spec, no `_done/` move, no `INDEX` write) |
+| update | use existing `{prefix}/{slug}` | PR-feedback fixes via the build loop; the fold revised when a decision changes |
+| close | local hygiene on base | nothing committed/pushed to the base branch |
 
 Discuss and plan use `docs(spec): ...` commit subjects plus the required
 `Spec: {slug}` trailer. Build uses the spec's Conventional Commit type and
-`Task:` trailers when tasks complete. Ship follows `### Ship close-out commit`.
+`Task:` trailers when tasks complete. open follows `### Accept close-out commit`.
+Every spec-lane procedure commit step (discuss / plan / build / open / update /
+close) regenerates the board via `mochiflow index` so the gitignored `INDEX.md`
+stays fresh between CLI commands.
 
 ### Patch commit
 
-Patch runs on the current branch with no new branch, no PR, no spec archive, and
-no living-spec fold.
+Patch runs on the current branch with no new branch, no PR, and no living-spec
+fold.
 
 At patch start, run `git status --short` and identify the intended target files.
 If any target file is already dirty, patch may edit it only without overwriting
@@ -152,32 +160,33 @@ one Conventional Commit per `## Commit`. If verification could not be run, or
 any target file was dirty before the patch, leave the patch uncommitted and
 report the files and verification result.
 
-### Ship close-out commit
+### Accept close-out commit
 
-`ship` produces one **close-out commit** on the feature branch, after human QA and
+`open` produces one **close-out commit** on the feature branch, after human QA and
 **before** `mochiflow pr`. It bundles, in a single commit:
 
-- `spec.yaml` `status: done` (+ `updated`);
-- the AC Matrix rows added at ship (build already recorded the rest);
-- the ADR fold (`[adr].decisions` / `[adr].pitfalls`);
-- the archive move `{specs_dir}/{slug}/` → `{specs_dir}/_done/{slug}/`;
-- the regenerated `{index}`.
+- `spec.yaml` `status: accepted` (+ `updated`); never `done`, never `completed`;
+- the AC Matrix rows added at open (build already recorded the rest);
+- the ADR fold (`[adr].decisions` / `[adr].pitfalls`).
 
-Use `mochiflow ship {slug}` for the deterministic mechanics: it stages the
-configured lifecycle paths with `git add -A {specs_dir} {index} {adr_paths...}`,
-validates the staged name-status output, and creates the close-out commit. If
-manual fallback is required, use the same stable parent pathspecs and validate
-with `git diff --cached --name-status -z`; do not stage the moved-from
-`{specs_dir}/{slug}` as a required pathspec after the archive move. When specs
-are gitignored there may be nothing to stage under `{specs_dir}`.
+The spec stays flat: there is no `_done/` move and no `INDEX` regeneration in the
+commit.
+
+Use `mochiflow accept {slug}` for the deterministic mechanics: it stages the
+spec and ADR paths with `git add {specs_dir}/{slug} {adr_paths...}`, validates
+the staged name-status output, and creates the close-out commit. It never stages
+`{index}` (`INDEX.md`) and never moves the spec. If manual fallback is required,
+use the same stable pathspecs and validate with
+`git diff --cached --name-status -z`; never stage `INDEX.md`. When specs are
+gitignored there may be nothing to stage under `{specs_dir}`.
 
 The message follows
 the Commit convention above — Conventional Commits, artifact language, and **no
-spec slug, no AC IDs, no mochiflow vocabulary** (never "fold" / "archive" in the
-summary). This relocates what was formerly a post-merge base-branch push into the
-PR, so the durable record is reviewed; post-merge then does only local hygiene
-(`## Post-merge local cleanup`). The no-PR fast path makes the same close-out
-commit on the current branch, with no push.
+spec slug, no AC IDs, no mochiflow vocabulary** (never "fold" in the summary).
+This keeps the judgment-bearing durable record (the fold) inside the PR, under
+review, so it merges atomically with the code; `close` then does only local
+hygiene (`## Post-merge local cleanup`). The no-PR fast path makes the same
+close-out commit on the current branch, with no push.
 
 ## PR
 
@@ -185,13 +194,15 @@ On the normal PR path, the PR title/body (per
 `templates/delivery/pr-description.md`: artifact language, external-reviewer
 facing, no spec-internal references, no spec slug, no AC IDs, no mochiflow
 vocabulary) are generated after human gate 2 (`workflow.md`). On the explicit
-no-PR fast path, skip PR title/body generation and `mochiflow pr`; `ship`
-acceptance and the close-out commit still happen.
+no-PR fast path, skip PR title/body generation and `mochiflow pr`; `accept` and
+the close-out commit still happen.
 
-The ship procedure uses **`mochiflow pr`** for PR handoff. The command runs
-pre-flight (working tree clean / current branch is the source / source ≠ target),
-pushes the branch, resolves the backend, and reports its exit code (`0` created,
-`10` manual handoff, `3` pre-flight FAIL, `1`/`2` failure).
+The open procedure uses **`mochiflow pr`** for PR handoff. The command runs
+pre-flight (working tree clean / current branch is the source / source ≠ target /
+the spec committed at `{specs_dir}/{slug}/` with `status: accepted` and a
+`Spec: {slug}` trailer), pushes the branch, resolves the backend, and reports its
+exit code (`0` created, `10` manual handoff, `3` pre-flight FAIL, `1`/`2`
+failure).
 
 `mochiflow pr` resolves the creation backend in precedence order:
 
@@ -220,6 +231,19 @@ supersedes the earlier rule that manual handoff performed no push.)
 Duplicate-PR detection is provider-specific and is left to the driver / provider
 CLI; `mochiflow pr`'s agnostic pre-flight does not perform it.
 
+## Derived delivery state
+
+Delivery state is observed, never stored. `mochiflow status` and the regenerated
+`INDEX.md` compute it; `spec.yaml` keeps only the asserted states
+`draft → approved → accepted`.
+
+- `in_review` — a PR is open (provider reports it, or `provider = none` and the
+  spec branch is pushed to `origin` and unmerged).
+- `merged` — derived in priority order: the provider API when configured and
+  available, else a `Spec: {slug}` trailer reachable from
+  `origin/{[git].base_branch}` (two signals only). The human merge report only
+  initiates `close` locally and is never persisted as a merged signal.
+
 ## Living-spec fold (on the feature branch, before `mochiflow pr`)
 
 The fold happens **on the feature branch as part of the single close-out commit**
@@ -243,18 +267,18 @@ now", "where things live"). The context layer (`[context].product` /
 `[context].structure` / `[context].tech`) is **not** a fold target — it is a current-state
 orientation map regenerated from code via onboard / `refresh-context`, never
 appended to during fold. For coarse code-layout changes (new module,
-responsibility move, technology/verification change), flag a post-ship
+responsibility move, technology/verification change), flag a post-merge
 `refresh-context` (`commands/refresh-context.md`) follow-up instead of editing it
 inline or running it during close-out; code remains the source of truth. Context
 refresh is separate work after PR creation / merge unless the human explicitly
 runs and commits it as a separate change later.
 
 Fold is skipped when the change yields no new rationale or pitfall (e.g. a trivial
-display fix). Do not archive until the fold (or the decision that none is needed)
-is done.
+display fix). Do not create the close-out commit until the fold (or the decision
+that none is needed) is done.
 
-Knowledge discovered **at or after merge** is not appended to the already-archived
-spec (that would re-introduce an unreviewed base-branch edit). Route it to a
+Knowledge discovered **at or after merge** is not appended to the merged spec
+(that would re-introduce an unreviewed base-branch edit). Route it to a
 follow-up: a small `fix` spec when it carries a code change, or a backlog seed
 when it is pure rationale/pitfall for a later `discuss`.
 
@@ -262,8 +286,8 @@ when it is pure rationale/pitfall for a later `discuss`.
 
 When the human confirms merge (「完了」/「マージ済み」/「merged」), in the same
 session — **local git hygiene only; no content commit or push to the base
-branch** (the fold + archive `_done` move + `INDEX` were already merged via the
-PR's close-out commit):
+branch** (the fold and the spec were already merged via the PR's close-out
+commit):
 
 1. `git status --short` clean — else stop.
 2. `git switch {[git].base_branch}`
@@ -271,9 +295,10 @@ PR's close-out commit):
 4. `git branch -d {prefix}/{slug}` (safe delete; fails if unmerged → leave it, ask human). Resolve `prefix` from `type`: `feature` → `feat`; all other types use `type` as-is.
 5. Remote branch cleanup is outside post-merge local cleanup.
 6. Remove the spec's ephemeral delivery scratch: `rm -rf {install_dir}/state/{slug}/` (gitignored — PR body / `pr-request.json` are not archived).
+7. Regenerate the board (`mochiflow index`); `INDEX.md` is gitignored and never staged.
 
-The fold + archive (`_done` move + `INDEX`) are **not** performed here — they are
-part of the feature branch's close-out commit (`## Living-spec fold`,
-`## Auto-commit and staging`). The no-PR fast path makes that same close-out
-commit locally on the current branch after `ship` acceptance, with no
-base-branch push.
+Nothing is committed or pushed to the base branch here — the fold and the spec
+already merged via the PR's close-out commit, so `close` is local hygiene only.
+The no-PR fast path makes that same close-out commit locally on the current
+branch after `accept`, with no base-branch push. The spec is never moved into
+`_done/`; its merged state is observed (derived), not written.

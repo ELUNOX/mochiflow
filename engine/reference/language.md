@@ -53,7 +53,7 @@ language. Keep internal terms for file names, commands, metadata fields, schema
 enum values, and canonical table tokens required by tooling.
 
 Choice-card labels are user-facing action labels, so they follow the
-conversation language. Compatibility keywords such as `build`, `ship`, `review`,
+conversation language. Compatibility keywords such as `build`, `open`, `review`,
 `later`, and `approved` remain stable inputs, but they should be secondary to the
 plain action label displayed to the user.
 
@@ -68,9 +68,10 @@ Use these examples as meaning guides, not as a fixed dictionary:
 | `lint` | consistency check | 整合性チェック |
 | `doctor` | health check / quality check | 品質チェック |
 | `build` phase | implementation work | 実装作業 |
-| `ship` phase | wrap-up / PR preparation | 完了処理 / PR 作成準備 |
+| `open` phase | PR preparation | PR 作成準備 |
+| `update` phase | addressing PR feedback | PR フィードバック対応 |
+| `close` phase | post-merge wrap-up | マージ後の整理 |
 | `fold` | record durable learnings | 学びの記録 |
-| `archive` | move to completed work | 完了済みに整理 |
 | reviewer verdict | review result | レビュー結果 |
 | `seed` / backlog file | add to backlog | バックログに追加 |
 

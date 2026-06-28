@@ -19,7 +19,7 @@ always-on steering file:
 
 ## mochiflow
 
-- Verb procedures: `{{engine}}/commands/{discuss,plan,build,ship}.md`; patch lane:
+- Verb procedures: `{{engine}}/commands/{discuss,plan,build,open,update,close}.md`; patch lane:
   `{{engine}}/commands/patch.md`
 - Non-phase commands: `{{engine}}/commands/{patch,review,refresh-context,onboard}.md`
 - Cross-cutting rules: `{{engine}}/reference/{workflow,risk,authoring,git,language,engineering-standards}.md`
@@ -42,8 +42,9 @@ always-on steering file:
 - Artifact language: `{{artifact_language}}`; conversation language:
   `{{conversation_language}}`. Follow `{{engine}}/reference/language.md` for
   user-facing wording and `auto` conversation behavior.
-- At ship, fold durable knowledge into `{{adr.decisions}}` (decisions) /
-  `{{adr.pitfalls}}` (pitfalls) before archiving to `{{specs_dir}}/_done/`. The
+- At open, fold durable knowledge into `{{adr.decisions}}` (decisions) /
+  `{{adr.pitfalls}}` (pitfalls) into the PR's close-out commit; the spec stays
+  flat (no `_done/` move, never `status: done`). The
   context layer (`{{context.product}}` / `{{context.structure}}` /
   `{{context.tech}}`) is refreshed from code (onboard / refresh-context), never
   folded.

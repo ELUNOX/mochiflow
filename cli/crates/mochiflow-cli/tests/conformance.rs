@@ -445,12 +445,17 @@ fn router_merged_event_is_cleanup_only() {
         "merged-event routing must resume cleanup only; got: {merged_line}"
     );
     assert!(
-        merged_line.contains("{specs_dir}/_done/{slug}/"),
-        "merged-event routing must resolve archived specs first; got: {merged_line}"
+        merged_line.contains("commands/close.md"),
+        "merged-event routing must route to close; got: {merged_line}"
     );
     assert!(
-        merged_line.contains("Fold/archive already happened"),
-        "merged-event routing must state fold/archive already happened before PR; got: {merged_line}"
+        merged_line.contains("flat `{specs_dir}/{slug}/`")
+            && merged_line.contains("never moved to `_done/`"),
+        "merged-event routing must resolve the flat spec, not a _done archive; got: {merged_line}"
+    );
+    assert!(
+        merged_line.contains("`merged` is derived"),
+        "merged-event routing must state merged is derived; got: {merged_line}"
     );
     assert!(
         !merged_line.contains("fold → archive") && !merged_line.contains("fold -> archive"),
@@ -478,8 +483,8 @@ fn router_plan_requires_existing_draft_spec() {
     );
     assert!(
         router.contains("Event patterns `{slug} merged`")
-            && router.contains("{specs_dir}/_done/{slug}/"),
-        "router must retain the merged-event _done exception"
+            && router.contains("flat `{specs_dir}/{slug}/`"),
+        "router must resolve the merged-event against the flat spec"
     );
 }
 
@@ -498,52 +503,141 @@ fn branch_placeholders_use_prefix_slug() {
 }
 
 #[test]
-fn pr_feedback_restore_is_related_dirty_only_for_same_spec() {
-    let ship = read_repo_file("engine/commands/ship.md");
+fn pr_feedback_routes_to_update_without_restore() {
+    let update = read_repo_file("engine/commands/update.md");
     let build = read_repo_file("engine/commands/build.md");
-    let git = read_repo_file("engine/reference/git.md");
+    let router = read_repo_file("engine/router.md");
 
     assert!(
-        ship.contains("related lifecycle change")
-            && ship.contains("{specs_dir}/{slug}/**")
-            && ship.contains("{specs_dir}/_done/{slug}/**")
-            && ship.contains("Any other dirt still stops"),
-        "ship PR Feedback Loop must treat only active + archived same-spec paths as related"
+        update.contains("do not move it")
+            && update.contains("do not revert")
+            && update.contains("build` loop")
+            && update.contains("flat"),
+        "update must delegate to build without moving or reverting the flat spec"
     );
     assert!(
-        build.contains("when build resumes from `ship.md ## PR Feedback Loop`")
-            && build.contains("{specs_dir}/_done/{slug}/**")
+        build.contains("when build resumes from `commands/update.md`")
+            && build.contains("only `{specs_dir}/{slug}/**`")
             && build.contains("any other dirt still stops"),
-        "build dirty check must allow the archived same-spec path only for PR feedback resumes"
+        "build dirty check must allow only the flat same-spec path on update resumes"
     );
     assert!(
-        git.contains("Exception: only when returning from `ship.md ## PR Feedback Loop`")
-            && git.contains("exactly `{specs_dir}/{slug}/**` and `{specs_dir}/_done/{slug}/**`")
-            && git.contains("Other slugs")
-            && git
-                .contains("under `_done/`, other specs, source changes, and `state/` files remain"),
-        "git dirty rules must keep the feedback-loop exception narrow"
+        router.contains("commands/update.md") && !router.contains("commands/ship.md"),
+        "router PR feedback must route to update, not the removed ship command"
     );
 }
 
 #[test]
-fn ship_defers_context_refresh_until_after_pr_or_merge() {
-    let ship = read_repo_file("engine/commands/ship.md");
+fn engine_open_update_close_defined_no_ship_verb() {
+    for cmd in ["open", "update", "close"] {
+        let doc = read_repo_file(&format!("engine/commands/{cmd}.md"));
+        assert!(
+            doc.contains(&format!("mochiflow-{cmd}")) && doc.contains("triggers:"),
+            "{cmd}.md must define its explicit command and triggers"
+        );
+    }
+    let router = read_repo_file("engine/router.md");
+    assert!(
+        router.contains("commands/open.md")
+            && router.contains("commands/update.md")
+            && router.contains("commands/close.md"),
+        "router must reference open/update/close"
+    );
+    assert!(
+        !router.contains("commands/ship.md"),
+        "router must not reference the removed ship command"
+    );
+    assert!(
+        !repo_root().join("engine/commands/ship.md").exists(),
+        "engine/commands/ship.md must be deleted"
+    );
+}
+
+#[test]
+fn build_ends_at_approved_without_pr_or_move() {
+    let build = read_repo_file("engine/commands/build.md");
+    assert!(
+        build.contains("Build ends at `status: approved`")
+            && build.contains("create a PR, or move the spec"),
+        "build completion card must end at approved with no PR/terminal/move"
+    );
+    assert!(
+        build.contains("Create the PR** (`open`") && !build.contains("mochiflow-ship"),
+        "build must hand off to open, not ship"
+    );
+}
+
+#[test]
+fn open_orders_acceptance_fold_accept_pr_gate() {
+    let open = read_repo_file("engine/commands/open.md");
+    assert!(
+        open.contains("never created before the") && open.contains("approve-PR gate (e)"),
+        "open must state the PR is never created before the approve-PR gate"
+    );
+    for marker in [
+        "### (a) Acceptance",
+        "### (b) Finalize the fold",
+        "### (c) Accept close-out commit",
+        "### (d) Generate PR title/body",
+        "### (e) Approve-PR gate",
+        "### (f) Push and create the PR",
+    ] {
+        assert!(open.contains(marker), "open.md must document step {marker}");
+    }
+    assert!(
+        open.contains("owns authoring the fold (not `accept`)"),
+        "open (not accept) owns authoring the fold"
+    );
+}
+
+#[test]
+fn close_is_local_hygiene_only() {
+    let close = read_repo_file("engine/commands/close.md");
+    assert!(
+        close.contains("local hygiene") && close.contains("writes nothing to the base branch"),
+        "close must be local hygiene only with no base write"
+    );
+    assert!(
+        close.contains("`merged` is derived"),
+        "close must state merged is derived, not persisted"
+    );
+}
+
+#[test]
+fn discuss_branches_from_origin_with_stale_base_guard() {
+    let discuss = read_repo_file("engine/commands/discuss.md");
+    let git = read_repo_file("engine/reference/git.md");
+    assert!(
+        discuss.contains("from `origin/{[git].base_branch}`")
+            && discuss.contains("never from a stale local base")
+            && discuss.contains("is behind `origin/{[git].base_branch}`"),
+        "discuss must branch from origin and warn on a stale local base"
+    );
+    assert!(
+        git.contains("warns when the local base branch is behind")
+            && git.contains("stale local base"),
+        "git reference must document the stale-base guard"
+    );
+}
+
+#[test]
+fn open_defers_context_refresh_until_after_pr_or_merge() {
+    let open = read_repo_file("engine/commands/open.md");
     let git = read_repo_file("engine/reference/git.md");
     let refresh = read_repo_file("engine/commands/refresh-context.md");
 
     assert!(
-        ship.contains("post-ship `refresh-context` follow-up after PR creation or after merge")
-            && ship.contains("Do **not** run or trigger `refresh-context` before the close-out commit or `mochiflow pr`")
-            && ship.contains("would dirty the tree before PR pre-flight"),
-        "ship must defer context refresh instead of prompting pre-PR execution"
+        open.contains("post-merge `refresh-context` follow-up after PR creation or")
+            && open.contains("Do **not** run or trigger `refresh-context` before the")
+            && open.contains("would dirty the tree before PR pre-flight"),
+        "open must defer context refresh instead of prompting pre-PR execution"
     );
     assert!(
-        !ship.contains("prompt the human to run `refresh-context`"),
-        "ship must not tell users to run refresh-context during close-out"
+        !open.contains("prompt the human to run `refresh-context`"),
+        "open must not tell users to run refresh-context during close-out"
     );
     assert!(
-        git.contains("flag a post-ship")
+        git.contains("flag a post-merge")
             && git.contains("follow-up instead of editing it")
             && git.contains("running it during close-out")
             && git.contains("separate work after PR creation / merge"),
@@ -554,31 +648,31 @@ fn ship_defers_context_refresh_until_after_pr_or_merge() {
             && refresh.contains("after PR creation / merge")
             && refresh.contains("as separate follow-up")
             && refresh.contains("trigger this during close-out"),
-        "refresh-context must remain no-auto-commit and safe outside ship close-out"
+        "refresh-context must remain no-auto-commit and safe outside open close-out"
     );
 }
 
 #[test]
-fn ship_guidance_uses_cli_and_stable_parent_pathspec_fallback() {
-    let ship = read_repo_file("engine/commands/ship.md");
+fn accept_guidance_uses_cli_and_stages_spec_and_adr() {
+    let open = read_repo_file("engine/commands/open.md");
     let git = read_repo_file("engine/reference/git.md");
 
     assert!(
-        ship.contains("Run `mochiflow ship {slug}`")
-            && ship.contains("`git add -A {specs_dir} {index} {adr_paths...}`")
-            && ship.contains("never a pathspec that requires the moved-from `{specs_dir}/{slug}`"),
-        "ship guidance must use CLI close-out and stable parent pathspec fallback"
+        open.contains("mochiflow accept {slug}")
+            && open.contains("git add {specs_dir}/{slug} {adr_paths...}")
+            && open.contains("Never stage"),
+        "open guidance must use the accept CLI close-out and never stage INDEX"
     );
     assert!(
-        git.contains("Use `mochiflow ship {slug}`")
-            && git.contains("git add -A {specs_dir} {index} {adr_paths...}")
+        git.contains("Use `mochiflow accept {slug}`")
+            && git.contains("git add {specs_dir}/{slug} {adr_paths...}")
             && git.contains("git diff --cached --name-status -z")
-            && git.contains("do not stage the moved-from\n`{specs_dir}/{slug}`"),
-        "git reference must document the safe manual fallback"
+            && git.contains("never stage `INDEX.md`"),
+        "git reference must document the flat accept staging and INDEX exclusion"
     );
     assert!(
         !git.contains("git mv {specs_dir}/{slug}/ {specs_dir}/_done/{slug}/` so both"),
-        "git reference must not require staging the moved-from path after the move"
+        "git reference must not require staging a _done move"
     );
 }
 
@@ -712,7 +806,7 @@ fn ac_matrix_pending_human_is_canonical_provisional_token() {
     let workflow = read_repo_file("engine/reference/workflow.md");
     let build = read_repo_file("engine/commands/build.md");
     let language = read_repo_file("engine/reference/language.md");
-    let ship = read_repo_file("engine/commands/ship.md");
+    let open = read_repo_file("engine/commands/open.md");
 
     assert!(workflow.contains("`PENDING_HUMAN`"), "{workflow}");
     assert!(
@@ -728,8 +822,8 @@ fn ac_matrix_pending_human_is_canonical_provisional_token() {
         "language reference must preserve the provisional token"
     );
     assert!(
-        ship.contains("`CONFIRMED`"),
-        "ship round-trip protocol must map human confirmation to the canonical Matrix token"
+        open.contains("`CONFIRMED`"),
+        "open round-trip protocol must map human confirmation to the canonical Matrix token"
     );
 }
 
@@ -765,27 +859,21 @@ fn workflow_todo_verify_is_not_runnable() {
 }
 
 #[test]
-fn no_pr_fast_path_skips_pr_gate_but_still_ships() {
+fn no_pr_fast_path_skips_pr_gate_but_still_accepts() {
     let workflow = read_repo_file("engine/reference/workflow.md");
     let git = read_repo_file("engine/reference/git.md");
-    let ship = read_repo_file("engine/commands/ship.md");
     let build = read_repo_file("engine/commands/build.md");
 
     assert!(
         workflow.contains("skips")
             && workflow.contains("**approve-PR**")
-            && workflow.contains("still runs `ship`"),
-        "workflow must describe the no-PR gate exception"
+            && workflow.contains("still runs `accept`"),
+        "workflow must describe the no-PR gate exception with accept"
     );
     assert!(
         git.contains("no-PR skips PR creation and the approve-PR gate")
-            && git.contains("still runs `ship` acceptance"),
-        "git reference must keep no-PR tied to ship acceptance"
-    );
-    assert!(
-        ship.contains("On the explicit no-PR fast path, skip this PR section")
-            && ship.contains("same close-out commit"),
-        "ship must skip PR work only after close-out"
+            && git.contains("still runs `accept`"),
+        "git reference must keep no-PR tied to accept"
     );
     assert!(
         build.contains("no-PR fast path branch choice") && !build.contains("no-PR fast commit"),
@@ -1059,7 +1147,14 @@ fn run_lint_case(
     )
     .unwrap();
 
-    let spec_dir = install.join("specs").join("s");
+    // A `done` status is valid only for archived specs under `_done/`; place such
+    // fixtures there so they exercise the archived-spec lint path (lint resolves
+    // `--spec s` against both the active and the `_done/` location).
+    let spec_dir = if spec_yaml.contains("status: done") {
+        install.join("specs").join("_done").join("s")
+    } else {
+        install.join("specs").join("s")
+    };
     std::fs::create_dir_all(&spec_dir).unwrap();
     std::fs::write(spec_dir.join("spec.yaml"), spec_yaml).unwrap();
     std::fs::write(spec_dir.join("spec.md"), spec_md).unwrap();
@@ -1129,7 +1224,13 @@ fn run_lint_case_with_optional_files(
     )
     .unwrap();
 
-    let spec_dir = install.join("specs").join("s");
+    // A `done` status is valid only for archived specs under `_done/`; route such
+    // fixtures there so they exercise the archived-spec lint path.
+    let spec_dir = if spec_yaml.contains("status: done") {
+        install.join("specs").join("_done").join("s")
+    } else {
+        install.join("specs").join("s")
+    };
     std::fs::create_dir_all(&spec_dir).unwrap();
     std::fs::write(spec_dir.join("spec.yaml"), spec_yaml).unwrap();
     if let Some(pitch) = pitch_md {
@@ -1284,6 +1385,88 @@ fn run_lint_case_with_dirty_file_state(
 
 /// Valid approved spec (standard risk, single surface) → lint passes.
 const GOOD_YAML: &str = "version: 1\nslug: s\ntitle: S\ntype: feature\nsurfaces:\n  - app\nintegration: none\nrisk: standard\nstatus: approved\n";
+
+/// Materialize a spec at the ACTIVE `specs/s` location (never `_done/`) and lint
+/// it. Used to prove an active spec cannot carry `status: done`.
+fn run_lint_case_active(spec_yaml: &str, spec_md: &str) -> (i32, String) {
+    let tmp = tempfile::tempdir().unwrap();
+    let install = tmp.path().join(".mochiflow");
+    let memory = install.join("memory");
+    std::fs::create_dir_all(&memory).unwrap();
+    for name in ["architecture.md", "pitfalls.md"] {
+        std::fs::write(memory.join(name), "# m\n").unwrap();
+    }
+    let context = install.join("context");
+    std::fs::create_dir_all(&context).unwrap();
+    for name in ["product.md", "structure.md", "tech.md"] {
+        std::fs::write(context.join(name), "# c\n").unwrap();
+    }
+    std::fs::write(
+        install.join("config.toml"),
+        "schema_version = 1\n\
+         install_dir = \".mochiflow\"\n\
+         specs_dir = \".mochiflow/specs\"\n\
+         index = \".mochiflow/INDEX.md\"\n\n\
+         [constitution]\n\
+         project = \".mochiflow/constitution.md\"\n\
+         local = \".mochiflow/constitution.local.md\"\n\n\
+         [context]\n\
+         product = \".mochiflow/context/product.md\"\n\
+         structure = \".mochiflow/context/structure.md\"\n\
+         tech = \".mochiflow/context/tech.md\"\n\n\
+         [adr]\n\
+         decisions = \".mochiflow/adr/decisions.md\"\n\
+         pitfalls = \".mochiflow/adr/pitfalls.md\"\n\n\
+         [surfaces.app]\n\
+         description = \"app\"\n\n\
+         [surfaces.app.verify]\n\
+         default = \"echo ok\"\n",
+    )
+    .unwrap();
+
+    let spec_dir = install.join("specs").join("s");
+    std::fs::create_dir_all(&spec_dir).unwrap();
+    std::fs::write(spec_dir.join("spec.yaml"), spec_yaml).unwrap();
+    std::fs::write(spec_dir.join("spec.md"), spec_md).unwrap();
+
+    let out = assert_cmd::Command::cargo_bin("mochiflow")
+        .unwrap()
+        .args([
+            "--config",
+            install.join("config.toml").to_str().unwrap(),
+            "lint",
+            "--spec",
+            install.join("specs").join("s").to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    (
+        out.status.code().unwrap_or(-1),
+        String::from_utf8_lossy(&out.stdout).into_owned(),
+    )
+}
+
+#[test]
+fn lint_passes_archived_done_spec() {
+    // Positive: a complete `done` spec under `_done/` lints clean (read-only
+    // legacy compatibility). run_lint_case routes `status: done` to `_done/`.
+    let yaml =
+        GOOD_YAML.replace("status: approved", "status: done") + "completed: 2026-06-21T22:16:03Z\n";
+    let (code, out) = run_lint_case(&yaml, DONE_MATRIX_MD, None, None);
+    assert_eq!(code, 0, "archived done spec must lint clean: {out}");
+}
+
+#[test]
+fn lint_rejects_done_on_active_spec() {
+    // Negative: `status: done` on an active (non-`_done/`) spec is rejected.
+    let yaml = GOOD_YAML.replace("status: approved", "status: done");
+    let (code, out) = run_lint_case_active(&yaml, DONE_MATRIX_MD);
+    assert_eq!(code, 1, "{out}");
+    assert!(
+        out.contains("status: done is reserved for archived specs under _done/"),
+        "{out}"
+    );
+}
 
 #[test]
 fn lint_passes_valid_approved_spec() {
@@ -1921,9 +2104,84 @@ fn lint_fails_on_invalid_status() {
     let (code, out) = run_lint_case(&yaml, md, None, None);
     assert_eq!(code, 1);
     assert!(
-        out.contains("status must be one of: draft, approved, done"),
+        out.contains("status must be one of: draft, approved, accepted, done"),
         "{out}"
     );
+}
+
+const ACCEPTED_MATRIX_MD: &str = "# S\n\n## Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
+     ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | PASS |\n";
+
+#[test]
+fn lint_passes_accepted_spec() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: accepted");
+    let (code, out) = run_lint_case(&yaml, ACCEPTED_MATRIX_MD, None, None);
+    assert_eq!(
+        code, 0,
+        "a well-formed accepted spec must lint clean: {out}"
+    );
+}
+
+#[test]
+fn lint_accepted_does_not_warn_on_missing_completed() {
+    // `accepted` never writes `completed`; the legacy completed WARN stays scoped
+    // to `done` reads only and must not fire on an accepted spec.
+    let yaml = GOOD_YAML.replace("status: approved", "status: accepted");
+    let (code, out) = run_lint_case(&yaml, ACCEPTED_MATRIX_MD, None, None);
+    assert_eq!(code, 0, "{out}");
+    assert!(!out.contains("`completed` timestamp is missing"), "{out}");
+}
+
+#[test]
+fn lint_accepted_fails_when_task_is_unchecked() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: accepted");
+    let md = "# S\n\n## Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
+              ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | PASS |\n";
+    let tasks = "# Tasks\n\n- [ ] T-001 [AC-01] Do x\n  - Depends on: none\n  - Files:\n    - `src/x.rs`\n  - Done:\n    - [ ] Verification passed\n  - Stop:\n    - stop\n";
+    let (code, out) = run_lint_case(&yaml, md, None, Some(tasks));
+    assert_eq!(code, 1, "{out}");
+    assert!(
+        out.contains("status is accepted but task T-001 is not checked"),
+        "{out}"
+    );
+}
+
+#[test]
+fn lint_accepted_fails_when_ac_untasked() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: accepted");
+    let md = "# S\n\n## Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL x.\n- AC-02: WHEN y, THE SYSTEM SHALL z.\n\n\
+              ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | PASS |\n| AC-02 | PASS |\n";
+    let tasks = "# Tasks\n\n- [x] T-001 [AC-01] Do x\n  - Depends on: none\n  - Files:\n    - `src/x.rs`\n  - Done:\n    - [ ] Verification passed\n  - Stop:\n    - stop\n";
+    let (code, out) = run_lint_case(&yaml, md, None, Some(tasks));
+    assert_eq!(code, 1, "{out}");
+    assert!(
+        out.contains("AC not covered by any task Covers AC: AC-02"),
+        "{out}"
+    );
+}
+
+#[test]
+fn lint_accepted_requires_reviewer_verdict_when_elevated() {
+    let yaml = "version: 1\nslug: s\ntitle: S\ntype: feature\nsurfaces:\n  - app\nintegration: none\nrisk: elevated\nstatus: accepted\n";
+    let md = "# S\n\n## Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
+              ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | PASS |\n";
+    let design = "# D\n\n## Review Results\n\n- Pending.\n";
+    let (code, out) = run_lint_case(yaml, md, Some(design), None);
+    assert_eq!(code, 1, "{out}");
+    assert!(
+        out.contains("reviewer verdict (pass/pass-with-comments) is not recorded"),
+        "{out}"
+    );
+}
+
+#[test]
+fn lint_accepts_elevated_accepted_with_reviewer_verdict() {
+    let yaml = "version: 1\nslug: s\ntitle: S\ntype: feature\nsurfaces:\n  - app\nintegration: none\nrisk: elevated\nstatus: accepted\n";
+    let md = "# S\n\n## Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
+              ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | PASS |\n";
+    let design = "# D\n\n## Review Results\n\n- Reviewer mode: delegated\n- Verdict: pass\n";
+    let (code, out) = run_lint_case(yaml, md, Some(design), None);
+    assert_eq!(code, 0, "{out}");
 }
 
 #[test]
@@ -2088,7 +2346,11 @@ fn materialize_ship_repo(root: &Path, slug: &str, specs_dir: &str) -> (PathBuf, 
     std::fs::create_dir_all(specs.join(slug)).unwrap();
     std::fs::create_dir_all(install.join("context")).unwrap();
     std::fs::create_dir_all(install.join("adr")).unwrap();
-    std::fs::write(repo.join(".gitignore"), ".mochiflow/state/\n").unwrap();
+    std::fs::write(
+        repo.join(".gitignore"),
+        ".mochiflow/state/\n.mochiflow/INDEX.md\n",
+    )
+    .unwrap();
     for name in ["constitution.md", "constitution.local.md"] {
         std::fs::write(install.join(name), "# c\n").unwrap();
     }
@@ -2142,36 +2404,30 @@ fn write_active_ship_spec(spec_dir: &Path, slug: &str) {
 }
 
 #[test]
-fn behavioral_ship_commits_active_spec_archive_with_safe_paths() {
+fn behavioral_accept_commits_flat_spec_with_safe_paths() {
     let tmp = tempfile::tempdir().unwrap();
-    let slug = "ship-fixture";
+    let slug = "accept-fixture";
     let (cfg, repo) = materialize_ship_repo(tmp.path(), slug, ".mochiflow/specs");
 
-    let (code, out, err) = run_cli_capture(&cfg, &repo, &["ship"]);
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["accept"]);
     assert_eq!(code, 0, "stdout:\n{out}\nstderr:\n{err}");
-    assert!(!repo.join(format!(".mochiflow/specs/{slug}")).exists());
-    assert!(repo.join(format!(".mochiflow/specs/_done/{slug}")).exists());
+    // The spec stays flat: no `_done/` move.
+    assert!(repo.join(format!(".mochiflow/specs/{slug}")).exists());
+    assert!(!repo.join(format!(".mochiflow/specs/_done/{slug}")).exists());
 
-    let archived_yaml =
-        std::fs::read_to_string(repo.join(format!(".mochiflow/specs/_done/{slug}/spec.yaml")))
-            .unwrap();
+    let yaml =
+        std::fs::read_to_string(repo.join(format!(".mochiflow/specs/{slug}/spec.yaml"))).unwrap();
+    assert!(yaml.contains("status: \"accepted\""), "{yaml}");
     assert!(
-        archived_yaml.contains("status: \"done\""),
-        "{archived_yaml}"
+        !yaml.contains("status: \"done\"") && !yaml.contains("completed:"),
+        "accept must not write done or completed: {yaml}"
     );
-    assert!(
-        archived_yaml.contains("completed: \"20") && archived_yaml.contains("Z\""),
-        "{archived_yaml}"
-    );
-    let archived_spec =
-        std::fs::read_to_string(repo.join(format!(".mochiflow/specs/_done/{slug}/spec.md")))
-            .unwrap();
-    assert!(archived_spec.contains("| AC-01 | app | automated"));
-    assert!(archived_spec.contains(
+    let spec =
+        std::fs::read_to_string(repo.join(format!(".mochiflow/specs/{slug}/spec.md"))).unwrap();
+    assert!(spec.contains("| AC-01 | app | automated"));
+    assert!(spec.contains(
         "| PASS | behavioral fixture assertion<br>final verification: `echo test-pass` |"
     ));
-    assert!(repo.join(".mochiflow/INDEX.md").exists());
-    assert!(repo.join(".mochiflow/state/index.json").exists());
 
     let message = git_out(&repo, &["show", "-s", "--format=%B", "HEAD"]);
     assert!(
@@ -2184,19 +2440,26 @@ fn behavioral_ship_commits_active_spec_archive_with_safe_paths() {
         &["diff-tree", "--no-commit-id", "--name-status", "-r", "HEAD"],
     );
     assert!(
-        name_status.contains(&format!(".mochiflow/specs/_done/{slug}/spec.yaml")),
+        name_status.contains(&format!(".mochiflow/specs/{slug}/spec.yaml")),
         "{name_status}"
     );
+    // Neither the gitignored board nor its state file is ever staged/committed,
+    // and no _done move is staged.
+    assert!(!name_status.contains("INDEX.md"), "{name_status}");
     assert!(
         !name_status.contains(".mochiflow/state/index.json"),
         "{name_status}"
+    );
+    assert!(
+        !name_status.contains("_done/"),
+        "accept must not stage any _done move: {name_status}"
     );
     let status = git_out(&repo, &["status", "--short"]);
     assert_eq!(status, "", "{status}");
 }
 
 #[test]
-fn behavioral_ship_does_not_modify_legacy_done_specs() {
+fn behavioral_accept_does_not_modify_legacy_done_specs() {
     let tmp = tempfile::tempdir().unwrap();
     let slug = "legacy-active-fixture";
     let legacy_slug = "legacy-done-fixture";
@@ -2221,7 +2484,7 @@ fn behavioral_ship_does_not_modify_legacy_done_specs() {
     );
     git_ok(&repo, &["commit", "-q", "-m", "test: legacy done fixture"]);
 
-    let (code, out, err) = run_cli_capture(&cfg, &repo, &["ship", slug]);
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["accept", slug]);
     assert_eq!(code, 0, "stdout:\n{out}\nstderr:\n{err}");
     assert_eq!(std::fs::read(&legacy_yaml).unwrap(), before_yaml);
     assert_eq!(std::fs::read(&legacy_spec).unwrap(), before_spec);
@@ -2236,12 +2499,12 @@ fn behavioral_ship_does_not_modify_legacy_done_specs() {
 }
 
 #[test]
-fn behavioral_ship_dry_run_does_not_mutate_or_stage() {
+fn behavioral_accept_dry_run_does_not_mutate_or_stage() {
     let tmp = tempfile::tempdir().unwrap();
     let slug = "dry-run-fixture";
     let (cfg, repo) = materialize_ship_repo(tmp.path(), slug, ".mochiflow/specs");
 
-    let (code, out, err) = run_cli_capture(&cfg, &repo, &["ship", slug, "--dry-run"]);
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["accept", slug, "--dry-run"]);
     assert_eq!(code, 0, "stdout:\n{out}\nstderr:\n{err}");
     assert!(out.contains("dry-run: no verification"), "{out}");
     assert!(repo.join(format!(".mochiflow/specs/{slug}")).exists());
@@ -2252,14 +2515,14 @@ fn behavioral_ship_dry_run_does_not_mutate_or_stage() {
 }
 
 #[test]
-fn behavioral_ship_rejects_unrelated_staged_path_with_spaces() {
+fn behavioral_accept_rejects_unrelated_staged_path_with_spaces() {
     let tmp = tempfile::tempdir().unwrap();
     let slug = "dirty-fixture";
     let (cfg, repo) = materialize_ship_repo(tmp.path(), slug, ".mochiflow/specs");
     std::fs::write(repo.join("unrelated file.txt"), "x\n").unwrap();
     git_ok(&repo, &["add", "unrelated file.txt"]);
 
-    let (code, out, err) = run_cli_capture(&cfg, &repo, &["ship", slug]);
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["accept", slug]);
     assert_eq!(code, 1, "stdout:\n{out}\nstderr:\n{err}");
     assert!(err.contains("unrelated file.txt"), "{err}");
     assert!(repo.join(format!(".mochiflow/specs/{slug}")).exists());
@@ -2267,7 +2530,7 @@ fn behavioral_ship_rejects_unrelated_staged_path_with_spaces() {
 }
 
 #[test]
-fn behavioral_ship_stops_before_mutation_when_verification_cannot_pass() {
+fn behavioral_accept_stops_before_mutation_when_verification_cannot_pass() {
     let tmp = tempfile::tempdir().unwrap();
     let slug = "verify-fail-fixture";
     let (cfg, repo) = materialize_ship_repo(tmp.path(), slug, ".mochiflow/specs");
@@ -2281,7 +2544,7 @@ fn behavioral_ship_stops_before_mutation_when_verification_cannot_pass() {
         &["commit", "-q", "-m", "test: failing verify fixture"],
     );
 
-    let (code, out, err) = run_cli_capture(&cfg, &repo, &["ship", slug]);
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["accept", slug]);
     assert_eq!(code, 1, "stdout:\n{out}\nstderr:\n{err}");
     assert!(err.contains("verification failed"), "{err}");
     assert!(repo.join(format!(".mochiflow/specs/{slug}")).exists());
@@ -2294,7 +2557,7 @@ fn behavioral_ship_stops_before_mutation_when_verification_cannot_pass() {
     std::fs::write(&cfg, config).unwrap();
     git_ok(&repo, &["add", ".mochiflow/config.toml"]);
     git_ok(&repo, &["commit", "-q", "-m", "test: todo verify fixture"]);
-    let (code, out, err) = run_cli_capture(&cfg, &repo, &["ship", slug]);
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["accept", slug]);
     assert_eq!(code, 1, "stdout:\n{out}\nstderr:\n{err}");
     assert!(err.contains("not runnable"), "{err}");
     assert!(repo.join(format!(".mochiflow/specs/{slug}")).exists());
@@ -2308,7 +2571,7 @@ fn behavioral_ship_stops_before_mutation_when_verification_cannot_pass() {
         &repo,
         &["commit", "-q", "-m", "test: missing verify fixture"],
     );
-    let (code, out, err) = run_cli_capture(&cfg, &repo, &["ship", slug]);
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["accept", slug]);
     assert_eq!(code, 1, "stdout:\n{out}\nstderr:\n{err}");
     assert!(err.contains("has no verify profile"), "{err}");
     assert!(repo.join(format!(".mochiflow/specs/{slug}")).exists());
@@ -2326,7 +2589,7 @@ fn behavioral_ship_stops_before_mutation_for_pending_human_matrix_row() {
     );
     std::fs::write(&spec_md, text).unwrap();
 
-    let (code, out, err) = run_cli_capture(&cfg, &repo, &["ship", slug]);
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["accept", slug]);
     assert_eq!(code, 1, "stdout:\n{out}\nstderr:\n{err}");
     assert!(err.contains("PENDING_HUMAN"), "{err}");
     assert!(repo.join(format!(".mochiflow/specs/{slug}")).exists());
@@ -2344,7 +2607,7 @@ fn behavioral_ship_stops_before_mutation_for_generic_only_matrix_evidence() {
         .replace("behavioral fixture assertion", "");
     std::fs::write(&spec_md, text).unwrap();
 
-    let (code, out, err) = run_cli_capture(&cfg, &repo, &["ship", slug]);
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["accept", slug]);
     assert_eq!(code, 1, "stdout:\n{out}\nstderr:\n{err}");
     assert!(err.contains("needs AC-specific evidence"), "{err}");
     assert!(repo.join(format!(".mochiflow/specs/{slug}")).exists());
@@ -2362,7 +2625,7 @@ fn behavioral_ship_stops_before_mutation_for_non_automated_unverified_row() {
         .replace("| AC-01 | app | automated |", "| AC-01 | app | human |");
     std::fs::write(&spec_md, text).unwrap();
 
-    let (code, out, err) = run_cli_capture(&cfg, &repo, &["ship", slug]);
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["accept", slug]);
     assert_eq!(code, 1, "stdout:\n{out}\nstderr:\n{err}");
     assert!(
         err.contains("cannot be completed by final verification"),
@@ -2378,63 +2641,20 @@ fn behavioral_ship_honors_non_default_specs_dir() {
     let slug = "custom-specs-fixture";
     let (cfg, repo) = materialize_ship_repo(tmp.path(), slug, ".workflow/specs");
 
-    let (code, out, err) = run_cli_capture(&cfg, &repo, &["ship", slug]);
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["accept", slug]);
     assert_eq!(code, 0, "stdout:\n{out}\nstderr:\n{err}");
-    assert!(!repo.join(format!(".workflow/specs/{slug}")).exists());
-    assert!(repo.join(format!(".workflow/specs/_done/{slug}")).exists());
+    // Flat: the spec stays at its active path under the configured specs_dir.
+    assert!(repo.join(format!(".workflow/specs/{slug}")).exists());
+    assert!(!repo.join(format!(".workflow/specs/_done/{slug}")).exists());
     let name_status = git_out(
         &repo,
         &["diff-tree", "--no-commit-id", "--name-status", "-r", "HEAD"],
     );
     assert!(
-        name_status.contains(&format!(".workflow/specs/_done/{slug}/spec.yaml")),
+        name_status.contains(&format!(".workflow/specs/{slug}/spec.yaml")),
         "{name_status}"
     );
-    assert!(!name_status.contains(".mochiflow/specs/"), "{name_status}");
-}
-
-#[test]
-fn behavioral_ship_resumes_archived_only_uncommitted_closeout() {
-    let tmp = tempfile::tempdir().unwrap();
-    let slug = "resume-fixture";
-    let (cfg, repo) = materialize_ship_repo(tmp.path(), slug, ".mochiflow/specs");
-    let active = repo.join(format!(".mochiflow/specs/{slug}"));
-    let done = repo.join(format!(".mochiflow/specs/_done/{slug}"));
-    std::fs::create_dir_all(done.parent().unwrap()).unwrap();
-    std::fs::rename(&active, &done).unwrap();
-    let yaml = std::fs::read_to_string(done.join("spec.yaml"))
-        .unwrap()
-        .replace("status: approved", "status: done")
-        .replace("risk: standard", "risk: elevated")
-        + "completed: \"2026-06-27T00:00:00Z\"\n";
-    std::fs::write(done.join("spec.yaml"), yaml).unwrap();
-    let spec = std::fs::read_to_string(done.join("spec.md"))
-        .unwrap()
-        .replace(
-            "UNVERIFIED | behavioral fixture assertion |",
-            "PASS | interrupted close-out fixture |",
-        );
-    std::fs::write(done.join("spec.md"), spec).unwrap();
-    std::fs::write(
-        done.join("design.md"),
-        "# Design\n\n## Review Results\n\n- Reviewer mode: delegated\n- Verdict: pass\n",
-    )
-    .unwrap();
-    git_ok(
-        &repo,
-        &[
-            "add",
-            done.join("spec.yaml").to_str().unwrap(),
-            done.join("design.md").to_str().unwrap(),
-        ],
-    );
-
-    let (code, out, err) = run_cli_capture(&cfg, &repo, &["ship", slug]);
-    assert_eq!(code, 0, "stdout:\n{out}\nstderr:\n{err}");
-    let message = git_out(&repo, &["show", "-s", "--format=%B", "HEAD"]);
-    assert!(message.contains(&format!("Spec: {slug}")), "{message}");
-    let status = git_out(&repo, &["status", "--short"]);
-    assert_eq!(status, "", "{status}");
+    assert!(!name_status.contains("_done/"), "{name_status}");
 }
 
 #[test]
@@ -2446,32 +2666,14 @@ fn behavioral_ship_reports_both_or_missing_lifecycle_states_without_mutation() {
     let done = repo.join(format!(".mochiflow/specs/_done/{slug}"));
     write_active_ship_spec(&done, slug);
 
-    let (code, out, err) = run_cli_capture(&cfg, &repo, &["ship", slug]);
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["accept", slug]);
     assert_eq!(code, 1, "stdout:\n{out}\nstderr:\n{err}");
     assert!(err.contains("both active and archived"), "{err}");
     std::fs::remove_dir_all(&active).unwrap();
     std::fs::remove_dir_all(&done).unwrap();
-    let (code, out, err) = run_cli_capture(&cfg, &repo, &["ship", slug]);
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["accept", slug]);
     assert_eq!(code, 1, "stdout:\n{out}\nstderr:\n{err}");
     assert!(err.contains("was not found"), "{err}");
-}
-
-#[test]
-fn behavioral_ship_rerun_after_completed_closeout_is_noop() {
-    let tmp = tempfile::tempdir().unwrap();
-    let slug = "already-done-fixture";
-    let (cfg, repo) = materialize_ship_repo(tmp.path(), slug, ".mochiflow/specs");
-
-    let (code, out, err) = run_cli_capture(&cfg, &repo, &["ship", slug]);
-    assert_eq!(code, 0, "stdout:\n{out}\nstderr:\n{err}");
-    let first_head = git_out(&repo, &["rev-parse", "HEAD"]);
-    let (code, out, err) = run_cli_capture(&cfg, &repo, &["ship", slug]);
-    assert_eq!(code, 0, "stdout:\n{out}\nstderr:\n{err}");
-    assert!(out.contains("already completed"), "{out}");
-    let second_head = git_out(&repo, &["rev-parse", "HEAD"]);
-    assert_eq!(first_head, second_head);
-    let status = git_out(&repo, &["status", "--short"]);
-    assert_eq!(status, "", "{status}");
 }
 
 #[test]
@@ -2480,11 +2682,14 @@ fn behavioral_pr_slug_guard_requires_committed_ship_closeout() {
     let slug = "pr-guard-fixture";
     let (cfg, repo) = materialize_ship_repo(tmp.path(), slug, ".mochiflow/specs");
 
+    // An active (not-yet-accepted) spec is rejected by the pr pre-flight.
     let (code, _out, err) = run_cli_capture(&cfg, &repo, &["pr", "--spec", slug, "--title", "Add"]);
     assert_eq!(code, 3, "{err}");
-    assert!(err.contains("still active"), "{err}");
+    assert!(err.contains("accept"), "{err}");
 
-    let (code, out, err) = run_cli_capture(&cfg, &repo, &["ship", slug]);
+    // After accept (flat, accepted, committed with a Spec: trailer), the
+    // pre-flight passes and pr reaches manual handoff (provider = none).
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["accept", slug]);
     assert_eq!(code, 0, "stdout:\n{out}\nstderr:\n{err}");
     let (code, out, err) = run_cli_capture(&cfg, &repo, &["pr", "--spec", slug, "--title", "Add"]);
     assert_eq!(code, 10, "stdout:\n{out}\nstderr:\n{err}");

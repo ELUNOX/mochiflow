@@ -50,11 +50,16 @@ as `spec.yaml (draft)` + `pitch.md`. Do not write implementation code.
    prefix (`reference/git.md ## Branch`). Write `{specs_dir}/{slug}/pitch.md`
    from `templates/spec/pitch.md` with the agreed Problem, Appetite, Solution,
    Rabbit Holes, No-gos, Alternatives Considered, and Open Questions.
-7. Prepare the branch per `reference/git.md ## Branch`: create/switch to
-   `{prefix}/{slug}` from `origin/{[git].base_branch}` before committing. If a
-   raw seed exists at `{specs_dir}/_backlog/{slug}.md`, delete it in the same
-   change so seed promotion is atomic. Run `mochiflow lint --spec {slug}`; fix
-   any FAIL before committing.
+7. Prepare the branch per `reference/git.md ## Branch`: fetch `origin`, then
+   create/switch to `{prefix}/{slug}` **from `origin/{[git].base_branch}`** before
+   committing — never from a stale local base. Warn when the local
+   `{[git].base_branch}` is behind `origin/{[git].base_branch}` (this reduces the
+   "forgot to report merge → new spec on a stale base" accident, independent of
+   the provider). On a detached HEAD or non-spec branch, degrade gracefully with
+   a clear message rather than crashing. If a raw seed exists at
+   `{specs_dir}/_backlog/{slug}.md`, delete it in the same change so seed
+   promotion is atomic. Run `mochiflow lint --spec {slug}`; fix any FAIL before
+   committing.
 8. Commit the discuss artifacts with a `docs(spec): ...` Conventional Commit and
    `Spec: {slug}` trailer. Stage only `spec.yaml`, `pitch.md`, and the seed
    deletion when present.

@@ -779,12 +779,23 @@ fn lint_spec_dir(
             message: "risk must be one of: standard, elevated, critical".into(),
         });
     }
-    let allowed_statuses = ["draft", "approved", "done"];
+    let allowed_statuses = ["draft", "approved", "accepted", "done"];
     if !allowed_statuses.contains(&meta.status()) {
         issues.push(Issue {
             severity: "FAIL".into(),
             path: meta.path.clone(),
-            message: "status must be one of: draft, approved, done".into(),
+            message: "status must be one of: draft, approved, accepted, done".into(),
+        });
+    }
+    // `done` is a legacy terminal status retained only for archived specs under
+    // `_done/`. Active specs settle at `accepted`; the engine never writes `done`
+    // for an active spec. Reject `done` on a spec that is not under `_done/`.
+    let dir_is_archived = spec_dir.components().any(|c| c.as_os_str() == "_done");
+    if meta.status() == "done" && !dir_is_archived {
+        issues.push(Issue {
+            severity: "FAIL".into(),
+            path: meta.path.clone(),
+            message: "status: done is reserved for archived specs under _done/; active specs use draft → approved → accepted".into(),
         });
     }
     // `completed` is the completion timestamp recorded at the `done` transition.
@@ -988,7 +999,7 @@ fn lint_spec_dir(
             message: "status is approved but AC Matrix is missing".into(),
         });
     }
-    if matches!(meta.status(), "approved" | "done") && matrix.is_some() {
+    if matches!(meta.status(), "approved" | "accepted" | "done") && matrix.is_some() {
         let matrix_acs: BTreeSet<String> = matrix_rows.iter().map(|row| row.ac.clone()).collect();
         let uncovered: Vec<_> = spec_acs.difference(&matrix_acs).cloned().collect();
         if !uncovered.is_empty() {
@@ -1000,14 +1011,15 @@ fn lint_spec_dir(
         }
     }
 
-    if meta.status() == "done" {
+    if matches!(meta.status(), "accepted" | "done") {
+        let status_word = meta.status();
         if matrix.is_none() {
             issues.push(Issue {
                 severity: "FAIL".into(),
                 path: spec_dir.join("spec.yaml"),
-                message:
-                    "status is done but AC Verification Matrix is missing; AC Matrix is missing"
-                        .into(),
+                message: format!(
+                    "status is {status_word} but AC Verification Matrix is missing; AC Matrix is missing"
+                ),
             });
         } else {
             for row in &matrix_rows {
@@ -1021,7 +1033,7 @@ fn lint_spec_dir(
                         severity: "FAIL".into(),
                         path: spec_dir.join("spec.yaml"),
                         message: format!(
-                            "status is done but AC Matrix row {} has invalid result `{shown}`; expected PASS, CONFIRMED, or N/A: <reason> (also accepted: 人間確認済み, 対象外（<reason>）)",
+                            "status is {status_word} but AC Matrix row {} has invalid result `{shown}`; expected PASS, CONFIRMED, or N/A: <reason> (also accepted: 人間確認済み, 対象外（<reason>）)",
                             row.ac
                         ),
                     });
@@ -1033,7 +1045,7 @@ fn lint_spec_dir(
                 issues.push(Issue {
                     severity: "FAIL".into(),
                     path: tasks_md.clone(),
-                    message: format!("status is done but task {task_id} is not checked"),
+                    message: format!("status is {status_word} but task {task_id} is not checked"),
                 });
             }
             let untasked: Vec<_> = spec_acs.difference(&ac_ids_in_tasks(tt)).cloned().collect();
@@ -1062,11 +1074,12 @@ fn lint_spec_dir(
                 issues.push(Issue {
                     severity: "FAIL".into(),
                     path: spec_dir.join("spec.yaml"),
-                    message: "status is done but latest Review Results reviewer Verdict is fail"
-                        .into(),
+                    message: format!(
+                        "status is {status_word} but latest Review Results reviewer Verdict is fail"
+                    ),
                 });
             } else if latest_verdict.is_none() {
-                issues.push(Issue { severity: "FAIL".into(), path: spec_dir.join("spec.yaml"), message: "status is done but reviewer verdict (pass/pass-with-comments) is not recorded in design.md ## Review Results for risk>=elevated".into() });
+                issues.push(Issue { severity: "FAIL".into(), path: spec_dir.join("spec.yaml"), message: format!("status is {status_word} but reviewer verdict (pass/pass-with-comments) is not recorded in design.md ## Review Results for risk>=elevated") });
             }
             let pass_count = verdicts
                 .iter()
@@ -1079,7 +1092,7 @@ fn lint_spec_dir(
                         severity: "FAIL".into(),
                         path: spec_dir.join("spec.yaml"),
                         message: format!(
-                            "status is done but critical risk requires at least {required} passing reviewer verdict(s), found {pass_count}"
+                            "status is {status_word} but critical risk requires at least {required} passing reviewer verdict(s), found {pass_count}"
                         ),
                     });
                 }

@@ -74,8 +74,8 @@ When eligibility fails or becomes uncertain, stop and propose `Start plan?`.
 
 ## Stop Conditions
 
-- Patch stays outside the spec lifecycle: it does not create, update, approve,
-  ship, archive, or fold a spec.
+- Patch stays outside the spec lifecycle: it does not create, approve, accept,
+  deliver, or fold a spec.
 - Patch stays on the current branch and does not prepare PR metadata.
 - If any intended target file was already dirty before patch started, leave the
   patch uncommitted and report the files.

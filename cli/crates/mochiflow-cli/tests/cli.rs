@@ -2275,11 +2275,68 @@ fn init_writes_install_gitignore() {
     assert!(gi.exists(), "{} should exist", gi.display());
     let body = fs::read_to_string(&gi).unwrap();
     assert!(body.contains("state/"), "got:\n{body}");
+    assert!(body.contains("INDEX.md"), "got:\n{body}");
     assert!(body.contains("constitution.local.md"), "got:\n{body}");
     assert!(!body.contains("engine/"), "got:\n{body}");
     assert!(
         !dir.path().join(".gitignore").exists(),
         "top-level .gitignore must not be created"
+    );
+}
+
+/// AC-12: a state-changing command regenerates the gitignored INDEX.md without
+/// tracking or staging it. After `mochiflow index`, INDEX.md exists on disk but
+/// git neither tracks it nor reports it (the install .gitignore excludes it).
+#[test]
+fn index_is_untracked_after_state_changing_command() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    std::process::Command::new("git")
+        .args(["init", "-q"])
+        .current_dir(root)
+        .status()
+        .unwrap();
+    bin()
+        .args(["init", "--target", root.to_str().unwrap()])
+        .write_stdin("")
+        .assert()
+        .success();
+    let config = root.join(".mochiflow/config.toml");
+
+    // A state-changing command regenerates the board file.
+    bin()
+        .args(["--config", config.to_str().unwrap(), "index"])
+        .assert()
+        .success();
+    assert!(
+        root.join(".mochiflow/INDEX.md").exists(),
+        "index must write INDEX.md"
+    );
+
+    // git must not track it (gitignored), and `git add -A` must not stage it.
+    std::process::Command::new("git")
+        .args(["add", "-A"])
+        .current_dir(root)
+        .status()
+        .unwrap();
+    let tracked = std::process::Command::new("git")
+        .args(["ls-files", ".mochiflow/INDEX.md"])
+        .current_dir(root)
+        .output()
+        .unwrap();
+    assert!(
+        String::from_utf8_lossy(&tracked.stdout).trim().is_empty(),
+        "INDEX.md must never be tracked/staged"
+    );
+    let status = std::process::Command::new("git")
+        .args(["status", "--porcelain"])
+        .current_dir(root)
+        .output()
+        .unwrap();
+    let status_out = String::from_utf8_lossy(&status.stdout);
+    assert!(
+        !status_out.contains("INDEX.md"),
+        "INDEX.md must be gitignored (not shown by git status):\n{status_out}"
     );
 }
 

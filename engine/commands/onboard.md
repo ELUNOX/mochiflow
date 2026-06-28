@@ -118,7 +118,7 @@ defensible choices for surfaces, verification, and git.
 10. **Leave constitution and ADR for their owners**: do not fill
    `[constitution].project` / `[constitution].local`; they are user-authored
    always-loaded rules. Do not fill `[adr].decisions` / `[adr].pitfalls` during
-   onboarding; they grow only through ship-time folds. Present their paths and
+   onboarding; they grow only through open-time folds. Present their paths and
    explain their purpose.
 
 11. **Run doctor**: verify 0 fail. If fail, diagnose and fix (most common:
@@ -165,5 +165,5 @@ MochiFlow をセットアップしました。
 doctor: 0 fail ✓
 
 使い方（mochiflow guide）:
-  discuss / plan / build / ship の4動詞。承認は build 前とPR作成前の2回。
+  discuss / plan / build に続けて open / update / close。承認は build 前とPR作成前の2回。
 ```

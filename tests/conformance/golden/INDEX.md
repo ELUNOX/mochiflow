@@ -7,8 +7,9 @@
 | stage | count |
 |:------|------:|
 | 🌱 backlog seed | 1 |
-| 📝 draft | 0 |
-| 🟢 approved | 1 |
+| 📝 active | 1 |
+| 🔵 ready | 0 |
+| 🔎 in review | 0 |
 | ✅ done | 2 |
 
 ## Backlog seeds
@@ -22,6 +23,14 @@
 | Spec | Status | Risk | Docs | Module |
 |:-----|:-------|:-----|:-----|:-------|
 | [active-feature](specs/active-feature/) | 🟢 approved | elevated | spec | — |
+
+## Ready specs
+
+（なし）
+
+## In Review specs
+
+（なし）
 
 ## Done (chronological)
 

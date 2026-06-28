@@ -1,9 +1,11 @@
 MochiFlow の使い方
 
-4つの動詞 — AI に自然文で伝えるか、明示コマンドを使う:
+動詞 — AI に自然文で伝えるか、明示コマンドを使う:
   • discuss — 目的/内容を壁打ち       (mochiflow-discuss)
   • plan    — 仕様に落とす            (mochiflow-plan)
   • build   — 承認済み仕様を実装       (mochiflow-build)
-  • ship    — 検証して PR を出す       (mochiflow-ship)
+  • open    — 受入して PR を作る        (mochiflow-open)
+  • update  — PR フィードバック対応     (mochiflow-update)
+  • close   — マージ後の整理           (mochiflow-close)
 
 承認は2回あなたが行う: build 前に仕様を承認し、PR 作成前に PR を承認する。
