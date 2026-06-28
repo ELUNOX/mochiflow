@@ -234,4 +234,19 @@ mod tests {
             "status must not write any board file"
         );
     }
+
+    #[test]
+    fn status_fetch_degrades_without_remote() {
+        // `--fetch` performs a best-effort `git fetch` before computing; with no
+        // remote it degrades gracefully (exit 0) and still writes no file.
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = tmp.path();
+        write_config(repo);
+        write_spec(repo, "draft-spec", "draft-spec", "draft");
+
+        let cfg = load_config(&repo.join(".mochiflow/config.toml")).unwrap();
+        let code = run_status(&cfg, true);
+        assert_eq!(code, 0, "status --fetch must not fail without a remote");
+        assert!(!repo.join(".mochiflow/INDEX.md").exists());
+    }
 }

@@ -554,6 +554,73 @@ fn engine_open_update_close_defined_no_ship_verb() {
 }
 
 #[test]
+fn build_ends_at_approved_without_pr_or_move() {
+    let build = read_repo_file("engine/commands/build.md");
+    assert!(
+        build.contains("Build ends at `status: approved`")
+            && build.contains("create a PR, or move the spec"),
+        "build completion card must end at approved with no PR/terminal/move"
+    );
+    assert!(
+        build.contains("Create the PR** (`open`") && !build.contains("mochiflow-ship"),
+        "build must hand off to open, not ship"
+    );
+}
+
+#[test]
+fn open_orders_acceptance_fold_accept_pr_gate() {
+    let open = read_repo_file("engine/commands/open.md");
+    assert!(
+        open.contains("never created before the") && open.contains("approve-PR gate (e)"),
+        "open must state the PR is never created before the approve-PR gate"
+    );
+    for marker in [
+        "### (a) Acceptance",
+        "### (b) Finalize the fold",
+        "### (c) Accept close-out commit",
+        "### (d) Generate PR title/body",
+        "### (e) Approve-PR gate",
+        "### (f) Push and create the PR",
+    ] {
+        assert!(open.contains(marker), "open.md must document step {marker}");
+    }
+    assert!(
+        open.contains("owns authoring the fold (not `accept`)"),
+        "open (not accept) owns authoring the fold"
+    );
+}
+
+#[test]
+fn close_is_local_hygiene_only() {
+    let close = read_repo_file("engine/commands/close.md");
+    assert!(
+        close.contains("local hygiene") && close.contains("writes nothing to the base branch"),
+        "close must be local hygiene only with no base write"
+    );
+    assert!(
+        close.contains("`merged` is derived"),
+        "close must state merged is derived, not persisted"
+    );
+}
+
+#[test]
+fn discuss_branches_from_origin_with_stale_base_guard() {
+    let discuss = read_repo_file("engine/commands/discuss.md");
+    let git = read_repo_file("engine/reference/git.md");
+    assert!(
+        discuss.contains("from `origin/{[git].base_branch}`")
+            && discuss.contains("never from a stale local base")
+            && discuss.contains("is behind `origin/{[git].base_branch}`"),
+        "discuss must branch from origin and warn on a stale local base"
+    );
+    assert!(
+        git.contains("warns when the local base branch is behind")
+            && git.contains("stale local base"),
+        "git reference must document the stale-base guard"
+    );
+}
+
+#[test]
 fn open_defers_context_refresh_until_after_pr_or_merge() {
     let open = read_repo_file("engine/commands/open.md");
     let git = read_repo_file("engine/reference/git.md");
