@@ -62,13 +62,15 @@ pub fn run_accept(cfg: &Config, slug_arg: Option<&str>, dry_run: bool) -> i32 {
         eprintln!("FAIL: spec `{}` was not found.", target.slug);
         return EXIT_FAIL;
     }
+    if !active_exists {
+        eprintln!(
+            "FAIL: spec `{}` is archived under _done/; accept operates on active flat specs.",
+            target.slug
+        );
+        return EXIT_FAIL;
+    }
 
-    let meta_dir = if active_exists {
-        &target.active_dir
-    } else {
-        &target.done_dir
-    };
-    let meta = match read_spec_metadata(meta_dir) {
+    let meta = match read_spec_metadata(&target.active_dir) {
         Ok(meta) => meta,
         Err(e) => {
             eprintln!("FAIL: could not read spec metadata: {e}");
@@ -86,14 +88,11 @@ pub fn run_accept(cfg: &Config, slug_arg: Option<&str>, dry_run: bool) -> i32 {
         }
     };
     let blockers = unexpected_status_paths(&status_entries, &allowed);
-    let readiness = readiness_blockers(cfg, &target, &meta, active_exists);
+    let readiness = readiness_blockers(cfg, &target, &meta);
 
     if dry_run {
         println!("accept target : {}", target.slug);
-        println!(
-            "state       : {}",
-            if active_exists { "active" } else { "archived" }
-        );
+        println!("state       : active");
         println!("lifecycle paths:");
         for path in &lifecycle_paths {
             println!("  - {}", path.display());
@@ -131,14 +130,6 @@ pub fn run_accept(cfg: &Config, slug_arg: Option<&str>, dry_run: bool) -> i32 {
         for blocker in readiness {
             eprintln!("  - {blocker}");
         }
-        return EXIT_FAIL;
-    }
-
-    if !active_exists {
-        eprintln!(
-            "FAIL: spec `{}` is archived under _done/; accept operates on active flat specs.",
-            target.slug
-        );
         return EXIT_FAIL;
     }
 
@@ -307,28 +298,14 @@ fn target_for_slug(cfg: &Config, slug: &str) -> Target {
     }
 }
 
-fn readiness_blockers(
-    cfg: &Config,
-    target: &Target,
-    meta: &SpecMeta,
-    active_exists: bool,
-) -> Vec<String> {
+fn readiness_blockers(cfg: &Config, target: &Target, meta: &SpecMeta) -> Vec<String> {
     let mut blockers = Vec::new();
-    let spec_dir = if active_exists {
-        &target.active_dir
-    } else {
-        &target.done_dir
-    };
-    if active_exists {
-        if meta.status() != "approved" {
-            blockers.push(format!(
-                "active spec status is `{}`; expected `approved`",
-                meta.status()
-            ));
-        }
-    } else if meta.status() != "done" {
+    // accept operates only on active flat specs (the archived path is rejected
+    // earlier in run_accept), so readiness always targets the active spec dir.
+    let spec_dir = &target.active_dir;
+    if meta.status() != "approved" {
         blockers.push(format!(
-            "archived spec status is `{}`; expected `done` for retry",
+            "active spec status is `{}`; expected `approved`",
             meta.status()
         ));
     }
@@ -342,7 +319,7 @@ fn readiness_blockers(
             Err(e) => blockers.push(e.to_string()),
         }
     }
-    if active_exists && lint::run_lint(cfg, Some(&target.slug), true) != 0 {
+    if lint::run_lint(cfg, Some(&target.slug), true) != 0 {
         blockers.push("lint failed before mutation".to_string());
     }
     blockers.extend(matrix_readiness_blockers(
