@@ -30,7 +30,7 @@ loads this as a standing instruction. Do not load it from planning / reviewer ro
 ## Routing Principles
 
 1. **Do not activate without explicit intent.** Stay in normal conversation unless the user clearly intends to discuss / spec / implement / open a PR. Generic phrases alone ("organize this", "go ahead", "let's talk") do not activate. When in doubt, do not activate.
-2. **Artifacts are the state.** A spec's `status` (`draft|approved|done`) and the documents in its folder are the source of truth for current state. There is no separate conversation-history state machine.
+2. **Artifacts are the state.** A spec's `status` (`draft|approved|accepted`; `done` is legacy/derived only) and the documents in its folder are the source of truth for current state. There is no separate conversation-history state machine.
 3. **Activation strength follows the trigger form.** An explicit command (`mochiflow-<verb>`) or a slug pattern (`{slug} <verb>`) is unambiguous — declare the verb in one line and activate immediately. A natural-language trigger (e.g. "実装して" / "レビューして" / "進めて") is an intent hint, not a command: activate immediately only when an active spec context already scopes it; with no such context, propose "Start <verb>?" in one line and wait. With no trigger at all, propose only on clear intent.
 4. **On a state/intent conflict, ask exactly one two-choice question.** Do not silently roll back — e.g. "rework the design" against an already-approved spec.
 5. **State lives in files; implementation is inline.** discuss / plan / build / open / update / close are run inline by the main agent, which holds the whole picture. Review is the only separated procedure: run `agents/independent-reviewer.md` read-only, preferring delegated subagent dispatch when available and using inline reviewer role only when subagents are unavailable or dispatch fails for a runtime/tooling reason (`reference/risk.md ## Review transport`). A review trigger or user-approved build flow is an explicit request to use delegated reviewer transport when the runtime requires one. Pass just the slug, command path, a summary of the latest artifact, and a pointer to the spec — never the conversation history as evidence. This includes both risk-cadence review (automatic, per `reference/risk.md ## Consequences`) and ad-hoc review (user-triggered via `レビューして` / `mochiflow-review`; see `reference/risk.md ## Ad-hoc review`).
@@ -62,7 +62,7 @@ Resolve the active spec in this order:
 2. Explicit path to `{specs_dir}/{slug}/`.
 3. Current git branch matching the spec branch convention in
    `reference/git.md ## Branch` (`{prefix}/{slug}`).
-4. Exactly one non-done spec whose status allows the requested verb per the
+4. Exactly one active (non-merged) spec whose status allows the requested verb per the
    command prerequisites.
 5. Exactly one recently modified spec only when the user refers to "this spec"
    or "the current plan".

@@ -177,5 +177,27 @@ engine` (re-vendor into `.mochiflow/engine/`), and `mochiflow adapter generate
 
 ## Review Results
 
-- Pending: the independent-reviewer verdict (Reviewer mode + Verdict) is recorded
-  here during build, after all tasks, because risk is `elevated`.
+- Reviewer mode: delegated
+- Verdict: pass-with-comments
+- Date: 2026-06-27
+
+Independent reviewer (delegated, read-only) reviewed spec.md + AC Matrix,
+design.md, tasks.md, pitch.md, the full branch diff, the core CLI sources, the
+contract schema, and the SoT engine docs against the reported PASS of the full
+`default` verification profile. All 18 ACs satisfied; global invariants AC-05
+(no `status: done` / no `_done/` move for active specs) and AC-12 (`INDEX.md`
+never staged/committed) hold. No Critical/High/Medium findings. Two Low findings,
+both addressed in build:
+
+1. router.md still presented the status enum as `draft|approved|done` and resolved
+   "non-done" specs — updated to `draft|approved|accepted` (`done` legacy/derived)
+   and "active (non-merged)" resolution.
+2. `delivery::derive_column` probed git/provider even for already-`done` legacy
+   specs — now short-circuits to Done without any probe.
+
+The reviewer's optional suggestion to gate the `gh pr view` provider call behind
+`--fetch` is left as a follow-up: the default provider is `none` (pure local
+git), all probes degrade gracefully to `false` on failure (AC-08 holds), and the
+change would alter the derivation interface; tracked for a future refinement
+rather than this PR. AC-13 remains `PENDING_HUMAN` by design (human QA-08
+round-trip is exercised in `open`, not build).

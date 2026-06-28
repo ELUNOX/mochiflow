@@ -203,21 +203,21 @@ resurrecting archived work.
 
 | AC | Scope | Verification method | Planned test/QA | Implementation | Result | Evidence | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| AC-01 | cli | automated | conformance: no `ship` verb; open/update/close defined; `guide` card has no `ship` (QA-06) | `engine/**`, `present.rs`, `tests/conformance.rs` | UNVERIFIED | | |
-| AC-02 | cli | automated | conformance: build.md end-state (QA-06) | `engine/commands/build.md` | UNVERIFIED | | |
-| AC-03 | cli | automated | `cargo test` + conformance: schema/lint/fixtures accept `accepted` (QA-06) | `contracts/spec.schema.json`, `lint.rs`, `tests/conformance.rs` | UNVERIFIED | | |
-| AC-04 | cli | automated | `cargo test` reviewer-verdict gate at accepted | `lint.rs` | UNVERIFIED | | |
-| AC-05 | cli | automated | `cargo test` no done/_done/INDEX in close-out (QA-04) | `ship.rs` | UNVERIFIED | | |
-| AC-06 | cli | automated | `cargo test` archived done lints/renders + active done rejected (QA-05) | `lint.rs`, `index.rs` | UNVERIFIED | | |
-| AC-07 | cli | automated | `cargo test` merged signal: provider → trailer only (QA-07) | `delivery.rs` | UNVERIFIED | | |
-| AC-08 | cli | automated | `cargo test` delivery-state precedence + provider=none/unavailable fallback (QA-03) | `delivery.rs`, `status.rs` | UNVERIFIED | | |
-| AC-09 | cli | automated | `cargo test` status board placement + writes no file (QA-01) | `status.rs` | UNVERIFIED | | |
-| AC-10 | cli | automated | `cargo test` `--fetch` triggers fetch (QA-02) | `status.rs` | UNVERIFIED | | |
-| AC-11 | cli | automated | `cargo test` INDEX derived + auto-regen on state-changing only | `index.rs`, `main.rs` | UNVERIFIED | | |
-| AC-12 | cli | automated | `cargo test` INDEX untracked/never staged + install gitignore ignores index (QA-04) | `index.rs`, `init.rs`, `.mochiflow/.gitignore` | UNVERIFIED | | |
-| AC-13 | human | human | QA-08 open gate round-trip; conformance: open.md order | `engine/commands/open.md`, `pr.rs` | PENDING_HUMAN | | |
-| AC-14 | cli | automated | conformance: update.md no move/revert | `engine/commands/update.md` | UNVERIFIED | | |
-| AC-15 | cli | automated | conformance: close.md no base write | `engine/commands/close.md`, `engine/reference/git.md` | UNVERIFIED | | |
-| AC-16 | cli | automated | conformance: discuss/git stale-base guard | `engine/commands/discuss.md`, `engine/reference/git.md` | UNVERIFIED | | |
-| AC-17 | cli | automated | `cargo test` pr pre-flight accepted+trailer (QA-06) | `pr.rs`, `ship.rs` | UNVERIFIED | | |
-| AC-18 | cli | automated | `cargo test` doctor allowlist; `doctor` green (QA-06) | `doctor.rs`, `tests/conformance.rs` | UNVERIFIED | | |
+| AC-01 | cli | automated | conformance: no `ship` verb; open/update/close defined; `guide` card has no `ship` (QA-06) | `engine/**`, `present.rs`, `tests/conformance.rs` | PASS | `engine_open_update_close_defined_no_ship_verb`; `guide_card_is_static_with_verbs_commands_and_gates`; rg sweep clean | |
+| AC-02 | cli | automated | conformance: build.md end-state (QA-06) | `engine/commands/build.md` | PASS | `build_ends_at_approved_without_pr_or_move` | |
+| AC-03 | cli | automated | `cargo test` + conformance: schema/lint/fixtures accept `accepted` (QA-06) | `contracts/spec.schema.json`, `lint.rs`, `tests/conformance.rs` | PASS | `lint_passes_accepted_spec`; `lint_fails_on_invalid_status` lists `accepted`; schema enum gains `accepted` | |
+| AC-04 | cli | automated | `cargo test` reviewer-verdict gate at accepted | `lint.rs` | PASS | `lint_accepted_requires_reviewer_verdict_when_elevated`; `lint_accepts_elevated_accepted_with_reviewer_verdict` | |
+| AC-05 | cli | automated | `cargo test` no done/_done/INDEX in close-out (QA-04) | `ship.rs` | PASS | `behavioral_accept_commits_flat_spec_with_safe_paths` (accepted; no done/completed; no `_done`/INDEX staged) | |
+| AC-06 | cli | automated | `cargo test` archived done lints/renders + active done rejected (QA-05) | `lint.rs`, `index.rs` | PASS | `lint_passes_archived_done_spec`; `lint_rejects_done_on_active_spec`; `index_orders_same_day_done_by_completion_time` | |
+| AC-07 | cli | automated | `cargo test` merged signal: provider → trailer only (QA-07) | `delivery.rs` | PASS | `delivery::tests::merged_trailer_is_done`, `provider_merged_is_done`, `conflicting_open_pr_and_merge_trailer_done_wins` | |
+| AC-08 | cli | automated | `cargo test` delivery-state precedence + provider=none/unavailable fallback (QA-03) | `delivery.rs`, `status.rs` | PASS | `delivery::tests` precedence cases + `provider_unavailable_falls_back_to_local_signals`, `git_probes_never_error_in_non_repo_dir` | |
+| AC-09 | cli | automated | `cargo test` status board placement + writes no file (QA-01) | `status.rs` | PASS | `status::tests::board_places_specs_by_asserted_and_derived_state`, `status_is_read_only_and_writes_no_index` | |
+| AC-10 | cli | automated | `cargo test` `--fetch` triggers fetch (QA-02) | `status.rs` | PASS | `status::tests::status_fetch_degrades_without_remote` | |
+| AC-11 | cli | automated | `cargo test` INDEX derived + auto-regen on state-changing only | `index.rs`, `main.rs` | PASS | `index_is_untracked_after_state_changing_command`; `golden_index_matches` (derived columns) | |
+| AC-12 | cli | automated | `cargo test` INDEX untracked/never staged + install gitignore ignores index (QA-04) | `index.rs`, `init.rs`, `.mochiflow/.gitignore` | PASS | `init_writes_install_gitignore` (INDEX.md ignored); `index_is_untracked_after_state_changing_command` | |
+| AC-13 | human | human | QA-08 open gate round-trip; conformance: open.md order | `engine/commands/open.md`, `pr.rs` | PENDING_HUMAN | doc contract `open_orders_acceptance_fold_accept_pr_gate` (steps a–f; PR never before the approve-PR gate) | Human QA-08 round-trip is exercised in `open`, not build; deferred per build procedure |
+| AC-14 | cli | automated | conformance: update.md no move/revert | `engine/commands/update.md` | PASS | `pr_feedback_routes_to_update_without_restore` (update delegates to build; no move/revert) | |
+| AC-15 | cli | automated | conformance: close.md no base write | `engine/commands/close.md`, `engine/reference/git.md` | PASS | `close_is_local_hygiene_only` | |
+| AC-16 | cli | automated | conformance: discuss/git stale-base guard | `engine/commands/discuss.md`, `engine/reference/git.md` | PASS | `discuss_branches_from_origin_with_stale_base_guard` | |
+| AC-17 | cli | automated | `cargo test` pr pre-flight accepted+trailer (QA-06) | `pr.rs`, `ship.rs` | PASS | `behavioral_pr_slug_guard_requires_committed_ship_closeout`; `tests/pr.rs` (`mark_shipped` flat accepted+trailer) | |
+| AC-18 | cli | automated | `cargo test` doctor allowlist; `doctor` green (QA-06) | `doctor.rs`, `tests/conformance.rs` | PASS | `doctor_terminal_command_allowlist_matches_clap_subcommands`; `mochiflow doctor` 0 fail | |

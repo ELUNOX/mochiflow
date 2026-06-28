@@ -87,6 +87,11 @@ pub fn resolve_column(status: &str, signals: &DeliverySignals) -> DeliveryColumn
 /// Derive the delivery column for a spec, gathering signals from git/provider.
 /// Never errors; degrades to local/last-known signals.
 pub fn derive_column(cfg: &Config, slug: &str, status: &str, spec_type: &str) -> DeliveryColumn {
+    // Legacy archived specs already assert `done`; they resolve to Done without
+    // any git/provider probe (and never re-trigger network calls).
+    if status == "done" {
+        return DeliveryColumn::Done;
+    }
     let branch = branch_name(spec_type, slug);
     let signals = gather_signals(cfg, slug, &branch);
     resolve_column(status, &signals)
