@@ -59,11 +59,11 @@
     },
     "adr": {
       "type": "object",
-      "description": "Decision records and active operational pitfalls.",
+      "description": "Decision and pitfall record stores. `decisions` and `pitfalls` are directory roots, each holding one immutable record per entry plus a generated, gitignored INDEX.md. The JSON schema only constrains presence and non-empty strings; the file-vs-directory rejection is runtime config validation in config.rs.",
       "required": ["decisions", "pitfalls"],
       "properties": {
-        "decisions": { "type": "string", "minLength": 1 },
-        "pitfalls": { "type": "string", "minLength": 1 }
+        "decisions": { "type": "string", "minLength": 1, "description": "Directory root for decision records." },
+        "pitfalls": { "type": "string", "minLength": 1, "description": "Directory root for pitfall records." }
       }
     },
     "git": {
