@@ -161,9 +161,21 @@ MochiFlow generated marker.
 - Reviewed task: T-001 `[AC-01, AC-02]`.
 - Findings: none.
 
-Because `risk: elevated`, build now requires one independent-reviewer run after
-all tasks complete. The T-001 review above remains recorded because it already
-happened before the risk/cadence correction.
+- Reviewer mode: inline fallback
+- Verdict: pass
+- Date: 2026-06-29
+- Mode: final full-branch review after T-006 sync; delegated subagent launch
+  failed because the runtime usage limit was reached, so the reviewer transport
+  fell back to inline review.
+- Reviewed scope: branch diff since `origin/main` plus uncommitted T-006 sync
+  changes.
+- Findings: none.
+- Notes: active worker/orchestrator implementation delegation is absent from the
+  engine contract; remaining `spec-worker` references are deprecated-output
+  cleanup and tests.
+
+The T-001 review above remains recorded because it already happened before the
+risk/cadence correction.
 
 ## Integration Log
 
@@ -243,3 +255,30 @@ happened before the risk/cadence correction.
 - Full `cargo test --manifest-path cli/Cargo.toml -p mochiflow-cli --test conformance`
   was run and reached 142/150 passing; the remaining failures were expected
   `engine/MANIFEST.json` drift from unsynced engine source and are owned by T-006.
+
+### T-006 — Generated sync, verification, and final review
+
+- Ran `mochiflow freeze` to update `engine/MANIFEST.json`, then
+  `mochiflow upgrade --source engine` to sync the vendored `.mochiflow/engine/`
+  copy and generated adapter outputs.
+- Ran adapter generation with the branch CLI:
+  `cargo run --manifest-path cli/Cargo.toml -- adapter generate`; it removed the
+  markered working-tree `.kiro/agents/spec-worker.json`. The installed
+  `mochiflow 1.1.3` did not yet contain this branch's deprecated-output logic,
+  so branch-CLI adapter checks are the authoritative evidence for T-006.
+- Verified adapter sync with
+  `cargo run --manifest-path cli/Cargo.toml -- adapter generate --check`, which
+  reported `Summary: 0 drift, 0 failed`.
+- Ran the full default verification profile:
+  `cargo test --manifest-path cli/Cargo.toml`,
+  `cargo fmt --manifest-path cli/Cargo.toml --all -- --check`,
+  `cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings`,
+  and `cargo run --manifest-path cli/Cargo.toml -- freeze --check`; all passed.
+- Adjusted one CLI test summary expectation after worker retirement reduced the
+  Kiro generated target count in a candidate-parent failure case, and formatted
+  conformance tests.
+- Final review ran as inline fallback because delegated subagent launch hit the
+  runtime usage limit; verdict is `pass`.
+- PR preparation must still fold durable ADR records named in
+  `spec.md ## Completion Conditions` and run ADR validation during `open`; no
+  generated `INDEX.md` should be staged.

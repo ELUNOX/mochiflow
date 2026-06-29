@@ -59,12 +59,14 @@ Stop Conditions:
     - `cli/crates/mochiflow-core/src/adapter.rs`
   - Done: Tests that previously asserted worker/orchestrator behavior are removed or inverted to assert inline build, review-only delegation, inline rework, deprecated worker output self-heal, and session-recoverability; reviewer/lifecycle/adapter regression coverage remains.
   - Stop: Existing tests reveal an undocumented active worker dependency outside the planned files.
-- [ ] T-006 [AC-05] Sync engine, generated adapter output, and verification artifacts
+- [x] T-006 [AC-05] Sync engine, generated adapter output, and verification artifacts
   - Depends on: T-005
   - Files:
     - `engine/MANIFEST.json`
     - `.mochiflow/engine/`
     - `.kiro/`
+    - `cli/crates/mochiflow-cli/tests/cli.rs`
+    - `cli/crates/mochiflow-cli/tests/conformance.rs`
     - `.mochiflow/specs/retire-build-worker-orchestrator/spec.md`
     - `.mochiflow/specs/retire-build-worker-orchestrator/design.md`
     - `.mochiflow/specs/retire-build-worker-orchestrator/tasks.md`

@@ -955,7 +955,9 @@ fn behavioral_kiro_retires_spec_worker_agent_and_self_heals() {
     let tmp = tempfile::tempdir().unwrap();
     let cfg = materialize_full(tmp.path());
     let worker = tmp.path().join(".kiro/agents/spec-worker.json");
-    let reviewer = tmp.path().join(".kiro/agents/spec-independent-reviewer.json");
+    let reviewer = tmp
+        .path()
+        .join(".kiro/agents/spec-independent-reviewer.json");
 
     std::fs::create_dir_all(worker.parent().unwrap()).unwrap();
     std::fs::write(
@@ -966,14 +968,20 @@ fn behavioral_kiro_retires_spec_worker_agent_and_self_heals() {
 
     let (code, out) = run_cli(&cfg, &["adapter", "generate"]);
     assert_eq!(code, 0, "{out}");
-    assert!(reviewer.exists(), "the reviewer agent must still be generated");
+    assert!(
+        reviewer.exists(),
+        "the reviewer agent must still be generated"
+    );
     assert!(
         !worker.exists(),
         "markered retired spec-worker.json must be self-healed away"
     );
 
     let (code, out) = run_cli(&cfg, &["adapter", "generate", "--check"]);
-    assert_eq!(code, 0, "retired worker generation must be deterministic: {out}");
+    assert_eq!(
+        code, 0,
+        "retired worker generation must be deterministic: {out}"
+    );
 
     std::fs::write(&worker, "{\"name\":\"custom-worker\"}\n").unwrap();
     let (code, out) = run_cli(&cfg, &["adapter", "generate"]);
@@ -1047,7 +1055,8 @@ fn session_recoverability_is_authoring_rule_not_lint() {
         "authoring.md must define session-recoverability"
     );
     assert!(
-        authoring.contains("`spec.md`, `design.md`, the task row, committed code, and git trailers"),
+        authoring
+            .contains("`spec.md`, `design.md`, the task row, committed code, and git trailers"),
         "authoring.md must state the durable recoverability source set"
     );
     assert!(
