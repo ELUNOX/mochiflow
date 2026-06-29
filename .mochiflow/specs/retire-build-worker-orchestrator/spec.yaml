@@ -6,6 +6,6 @@ surfaces:
   - "cli"
 integration: "contract"
 risk: "critical"
-status: "draft"
+status: "approved"
 created: "2026-06-29"
 updated: "2026-06-29"
