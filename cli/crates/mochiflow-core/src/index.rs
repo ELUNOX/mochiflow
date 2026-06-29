@@ -4,7 +4,7 @@ use std::path::Path;
 
 use crate::config::Config;
 use crate::delivery::{self, DeliveryColumn};
-use crate::spec_meta::{SpecMeta, read_spec_metadata};
+use crate::spec_meta::{SpecMeta, parse_yaml_subset, read_spec_metadata};
 
 /// Backlog seed metadata (from markdown frontmatter).
 pub struct SeedInfo {
@@ -76,29 +76,20 @@ fn read_seed(path: &Path) -> Option<SeedInfo> {
 
     let end = text[4..].find("\n---\n")?;
     let fm_block = &text[4..4 + end];
-    let mut fields = std::collections::BTreeMap::new();
-    for line in fm_block.lines() {
-        let line = line.trim();
-        if line.is_empty() || line.starts_with('#') || !line.contains(':') {
-            continue;
-        }
-        let (key, value) = line.split_once(':')?;
-        fields.insert(key.trim().to_string(), value.trim().to_string());
-    }
+    // Parse the front-matter through the canonical YAML-subset parser so quoted
+    // values (`slug: "foo"`) and inline comments are handled identically to
+    // spec.yaml. A hand-rolled `split_once(':')` here previously leaked the
+    // surrounding quotes into the rendered INDEX.md.
+    let fields = parse_yaml_subset(fm_block).unwrap_or_default();
+    let get = |key: &str| fields.get(key).and_then(|v| v.as_str()).map(str::to_string);
 
-    let title = fields.get("title").cloned().unwrap_or_else(|| slug.clone());
+    let title = get("title").unwrap_or_else(|| slug.clone());
 
     Some(SeedInfo {
-        slug: fields.get("slug").cloned().unwrap_or_else(|| slug.clone()),
+        slug: get("slug").unwrap_or_else(|| slug.clone()),
         title,
-        maturity: fields
-            .get("maturity")
-            .cloned()
-            .unwrap_or_else(|| "—".to_string()),
-        source: fields
-            .get("source")
-            .cloned()
-            .unwrap_or_else(|| "—".to_string()),
+        maturity: get("maturity").unwrap_or_else(|| "—".to_string()),
+        source: get("source").unwrap_or_else(|| "—".to_string()),
     })
 }
 
@@ -623,6 +614,25 @@ mod tests {
     #[test]
     fn md_table_cell_escapes_pipes_and_newlines() {
         assert_eq!(md_table_cell("a|b\nc\rd"), r"a\|b c d");
+    }
+
+    #[test]
+    fn read_seed_strips_quoted_frontmatter_values() {
+        let tmp = tempfile::tempdir().unwrap();
+        let seed = tmp.path().join("quoted-seed.md");
+        std::fs::write(
+            &seed,
+            "---\nslug: \"quoted-seed\"\ntitle: \"A quoted title\"\nmaturity: \"seed\"\nsource: \"conversation\"\n---\n\n# Heading\n",
+        )
+        .unwrap();
+
+        let info = read_seed(&seed).unwrap();
+        assert_eq!(info.slug, "quoted-seed");
+        assert_eq!(info.title, "A quoted title");
+        assert_eq!(info.maturity, "seed");
+        assert_eq!(info.source, "conversation");
+        // Maturity must drive the seed emoji, not fall through to the unknown glyph.
+        assert_eq!(status_emoji(&info.maturity), "🌱");
     }
 
     fn git_ok(root: &Path, args: &[&str]) {
