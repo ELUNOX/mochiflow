@@ -856,10 +856,18 @@ fn behavioral_kiro_generates_spec_worker_agent_deterministically() {
         .iter()
         .map(|v| v.as_str().unwrap())
         .collect();
-    for t in ["read", "grep", "glob", "edit", "write", "bash"] {
+    for t in ["read", "write", "shell"] {
         assert!(
             tools.contains(&t),
             "worker agent must allow tool {t}: {tools:?}"
+        );
+    }
+    // Kiro recognizes only coarse tool categories (read/write/shell/aws);
+    // grep/glob/edit/bash are not categories and render as "unknown" in Kiro.
+    for bad in ["grep", "glob", "edit", "bash"] {
+        assert!(
+            !tools.contains(&bad),
+            "worker agent must not use non-category tool `{bad}` (unknown in Kiro): {tools:?}"
         );
     }
     assert!(

@@ -11,6 +11,6 @@
     "file://{{engine}}/reference/risk.md",
     "file://{{engine}}/reference/language.md"
   ],
-  "tools": ["read", "grep", "glob", "edit", "write", "bash"],
+  "tools": ["read", "write", "shell"],
   "model": "claude-opus-4.8"
 }

@@ -8,6 +8,6 @@
     "file://{{engine}}/reference/workflow.md",
     "file://{{engine}}/reference/language.md"
   ],
-  "tools": ["read", "grep", "glob"],
+  "tools": ["read"],
   "model": "claude-opus-4.8"
 }
