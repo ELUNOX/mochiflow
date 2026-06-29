@@ -585,7 +585,12 @@ fn derive_title(body: &str, id: &str) -> String {
 
 fn strip_leading_date(title: &str) -> Option<String> {
     let trimmed = title.trim_start();
-    if trimmed.len() < 10 || !is_iso_date(&trimmed[..10]) {
+    // Slice the candidate date prefix on a char boundary. `get` returns None
+    // when byte 10 is out of range or inside a multibyte char (e.g. a
+    // non-ASCII-leading title in a `ja` artifact-language project), so this
+    // never panics the way `&trimmed[..10]` would.
+    let prefix = trimmed.get(..10)?;
+    if !is_iso_date(prefix) {
         return None;
     }
     let rest = trimmed[10..].trim_start();
@@ -990,6 +995,39 @@ mod tests {
         assert_eq!(record.status, AdrStatus::Active);
         assert_eq!(record.title, "Version SSOT: one source");
         assert!(record.body.starts_with("## 2026-06-22"));
+    }
+
+    #[test]
+    fn multibyte_leading_title_does_not_panic() {
+        // A `ja` artifact-language project has non-ASCII-leading titles. The
+        // title-deriving slice must stay on a char boundary instead of slicing
+        // byte 10 inside a multibyte character.
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("pitfalls");
+
+        // No leading date: the whole multibyte heading is the title.
+        let no_date = write_record(
+            &dir,
+            "2026-06-18-source-origin.md",
+            "id: 2026-06-18-source-origin\ndate: 2026-06-18\narea: ios\nstatus: active\n",
+            "## 確定値の source を aggregation 種別から決めると手入力が ble に化ける\n\nbody\n",
+        );
+        let record = parse_record(&no_date, AdrKind::Pitfalls).unwrap();
+        assert_eq!(
+            record.title,
+            "確定値の source を aggregation 種別から決めると手入力が ble に化ける"
+        );
+
+        // Leading ISO date in front of a multibyte body: date is stripped,
+        // multibyte remainder survives.
+        let dated = write_record(
+            &dir,
+            "2026-06-18-dated.md",
+            "id: 2026-06-18-dated\ndate: 2026-06-18\narea: ios\nstatus: active\n",
+            "## 2026-06-18 マルチバイト見出し\n\nbody\n",
+        );
+        let record = parse_record(&dated, AdrKind::Pitfalls).unwrap();
+        assert_eq!(record.title, "マルチバイト見出し");
     }
 
     #[test]
