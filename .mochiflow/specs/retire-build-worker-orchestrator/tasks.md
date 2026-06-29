@@ -18,7 +18,7 @@ Critical Stop Conditions:
 
 ## Tasks
 
-- [ ] T-001 [AC-01, AC-02] Rewrite build and review transport contracts
+- [x] T-001 [AC-01, AC-02] Rewrite build and review transport contracts
   - Depends on: none
   - Files:
     - `engine/commands/build.md`

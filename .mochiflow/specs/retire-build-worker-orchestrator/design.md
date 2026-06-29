@@ -148,5 +148,18 @@ Because `risk: critical`, build requires independent-reviewer after each task.
 
 ## Integration Log
 
-Build will append seam decisions, ownership notes, and handoff details here after
-each critical-risk task when implementation starts.
+### T-001 — Build and review transport contracts
+
+- Removed the active build execution fan-out contract from `engine/commands/build.md`
+  and `engine/router.md`; implementation is now described as inline task units
+  on the main agent.
+- Narrowed `engine/reference/risk.md ## Review transport` to the read-only
+  independent reviewer. The transport still preserves delegated reviewer
+  preference, inline reviewer fallback, plan-quality review, risk-cadence review,
+  and verdict freshness.
+- `engine/commands/review.md` already referenced only the independent-reviewer
+  transport, so no source change was needed there.
+- Verification before commit: `mochiflow lint --spec retire-build-worker-orchestrator`
+  had no failures and only the expected warning for the not-yet-checked T-001;
+  targeted search found no worker/orchestrator build-delegation terms in the
+  T-001 active contract files.
