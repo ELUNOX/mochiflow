@@ -1,0 +1,11 @@
+version: 1
+slug: "worker-unit-contract-split"
+title: "Name the worker execution units: build-task vs rework"
+type: "refactor"
+surfaces:
+  - "cli"
+integration: "none"
+risk: "standard"
+status: "accepted"
+created: "2026-06-28"
+updated: "2026-06-29"
