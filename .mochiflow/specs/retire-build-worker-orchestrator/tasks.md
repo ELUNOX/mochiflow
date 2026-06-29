@@ -1,8 +1,8 @@
 # Retire the build worker/orchestrator — Tasks
 
 Implementation Summary: Remove the write-capable build worker/orchestrator path, keep independent review delegation, and sync adapter/generated contracts.
-risk: critical
-Critical Stop Conditions:
+risk: elevated
+Stop Conditions:
 - A replacement build subagent or second delegation transport appears necessary.
 - Removing `.kiro/agents/spec-worker.json` cannot preserve markerless user files.
 - Reviewer cadence or verdict freshness would need to be weakened.
@@ -10,10 +10,10 @@ Critical Stop Conditions:
 ## Defaults
 
 - Verification: `cargo test --manifest-path cli/Cargo.toml && cargo fmt --manifest-path cli/Cargo.toml --all -- --check && cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings && cargo run --manifest-path cli/Cargo.toml -- freeze --check`
-- Critical-risk cadence: after each completed task commit, append the relevant
-  seam / ownership / handoff note to `design.md ## Integration Log`, run the
-  independent reviewer against that task's diff, and record the result in
-  `design.md ## Review Results` before starting the next task.
+- Review cadence: run the independent reviewer once after all tasks complete,
+  using the full branch diff. T-001 was already reviewed under the earlier
+  critical-risk plan; that result remains recorded, but no further per-task
+  reviewer runs are required.
 - Shared stop conditions: out-of-scope change / new design decision needed / verification keeps failing
 
 ## Tasks
@@ -68,5 +68,5 @@ Critical Stop Conditions:
     - `.mochiflow/specs/retire-build-worker-orchestrator/spec.md`
     - `.mochiflow/specs/retire-build-worker-orchestrator/design.md`
     - `.mochiflow/specs/retire-build-worker-orchestrator/tasks.md`
-  - Done: `mochiflow freeze`, `mochiflow upgrade --source engine`, adapter generation/check, `mochiflow lint --spec retire-build-worker-orchestrator`, and the full `cli` default verification profile pass; adapter generation removes the markered working-tree `.kiro/agents/spec-worker.json` rather than a manual source-edit deletion doing it; AC Matrix rows are updated with implementation paths, results, and evidence; `design.md ## Integration Log` includes a note that `open` must fold the ADR supersession records named in `spec.md ## Completion Conditions` and run ADR validation during PR preparation; no generated `INDEX.md` is staged.
+  - Done: `mochiflow freeze`, `mochiflow upgrade --source engine`, adapter generation/check, `mochiflow lint --spec retire-build-worker-orchestrator`, and the full `cli` default verification profile pass; adapter generation removes the markered working-tree `.kiro/agents/spec-worker.json` rather than a manual source-edit deletion doing it; the independent reviewer runs once on the full branch diff and the result is recorded in `design.md ## Review Results`; AC Matrix rows are updated with implementation paths, results, and evidence; `design.md ## Integration Log` includes a note that `open` must fold the ADR supersession records named in `spec.md ## Completion Conditions` and run ADR validation during PR preparation; no generated `INDEX.md` is staged.
   - Stop: `freeze --check` or adapter generation reports drift that cannot be explained by the planned worker retirement.

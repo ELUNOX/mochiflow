@@ -25,8 +25,9 @@ context-budget management.
 This is worth a design-level cleanup rather than a narrow text edit. The change
 removes a recently added execution path and generated adapter output, and it must
 keep existing lifecycle, task commit cadence, AC Matrix settlement, review
-cadence, and PR feedback flows coherent. Treat it as `critical` because it
-reverses an engine contract and adapter generation behavior.
+cadence, and PR feedback flows coherent. Treat it as `elevated`: it changes an
+engine and adapter contract, but it is reversible, local to generated workflow
+surfaces, and has no schema migration, security, auth, or data-loss risk.
 
 ## Solution
 

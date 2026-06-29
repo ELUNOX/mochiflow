@@ -43,6 +43,11 @@ Primary source basis: this change follows MochiFlow's own artifact-state
 contract in `engine/router.md` and `engine/reference/workflow.md`; no external
 framework or dependency API is introduced.
 
+Risk basis: this is `elevated`, not `critical`. It changes engine and adapter
+generation contracts across multiple files, so design and independent review are
+required. It does not introduce a migration, schema break, auth/security impact,
+or user-data loss path, and failure recovers by reverting the branch.
+
 ## Architecture
 
 After implementation, there should be only one delegated role in the active
@@ -104,6 +109,10 @@ MochiFlow generated marker.
 - Run dogfood sync after editing repo-root `engine/`:
   `mochiflow freeze`, `mochiflow upgrade --source engine`, then adapter
   generation/check.
+- Run the independent reviewer once after all tasks complete, using the full
+  branch diff. T-001 was already reviewed while the plan still called for
+  critical per-task review; keep that result as historical evidence, but do not
+  continue per-task reviewer dispatch.
 - Run the configured `cli` default verification profile:
   `cargo test --manifest-path cli/Cargo.toml && cargo fmt --manifest-path cli/Cargo.toml --all -- --check && cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings && cargo run --manifest-path cli/Cargo.toml -- freeze --check`.
 
@@ -139,12 +148,22 @@ MochiFlow generated marker.
 - Date: 2026-06-29
 - Mode: plan-quality review, no implementation diff.
 - Findings addressed before approval:
-  - Medium: `tasks.md` now makes the critical-risk per-task Integration Log and
-    independent-reviewer cadence explicit in `## Defaults`.
+  - Medium: `tasks.md` originally made the critical-risk per-task Integration Log
+    and independent-reviewer cadence explicit in `## Defaults`; this was later
+    superseded by the approved elevated-risk final-review cadence.
   - Low: `tasks.md` now traces the ADR supersession / PR-prep fold requirement
     through T-006.
 
-Because `risk: critical`, build requires independent-reviewer after each task.
+- Reviewer mode: delegated
+- Verdict: pass
+- Date: 2026-06-29
+- Mode: post-implementation review for T-001 commit `ed1da75`.
+- Reviewed task: T-001 `[AC-01, AC-02]`.
+- Findings: none.
+
+Because `risk: elevated`, build now requires one independent-reviewer run after
+all tasks complete. The T-001 review above remains recorded because it already
+happened before the risk/cadence correction.
 
 ## Integration Log
 
