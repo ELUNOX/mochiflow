@@ -40,7 +40,7 @@ implementation exists, per `reference/risk.md ## Review transport`:
   (spec/design/tasks conformance + spec-artifact quality) and **do not** require
   or wait for a diff / changed-files / integration-log input; Stage 2 code
   quality is `N/A` because there is no code. Judge AC clarity and testability,
-  design coverage of the ACs, task executability and worker-recoverability, and
+  design coverage of the ACs, task executability and session-recoverability, and
   QA attack coverage against `reference/risk.md ## QA attack coverage`. The same
   verdict rule applies (`fail` on any Critical/High, `pass-with-comments` on
   Medium/Low only, `pass` when clean). Report the missing Stage 2 as

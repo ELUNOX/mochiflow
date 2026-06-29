@@ -35,7 +35,7 @@ Stop Conditions:
     - `engine/reference/git.md`
   - Done: QA-`FAIL` and PR-feedback code changes are described as bounded inline fixes using build discipline; no worker context pack, compact report, `unit_kind`, checkbox tick, or `Task:` trailer is referenced; `accepted` in-review state is preserved; stale reviewer verdict refresh still applies for `risk >= elevated`.
   - Stop: Rework needs a new lifecycle state or a new task type.
-- [ ] T-003 [AC-06] Replace worker-recoverability with session-recoverability
+- [x] T-003 [AC-06] Replace worker-recoverability with session-recoverability
   - Depends on: T-001
   - Files:
     - `engine/reference/authoring.md`

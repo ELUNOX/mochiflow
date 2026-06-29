@@ -195,3 +195,16 @@ happened before the risk/cadence correction.
   changes rather than worker-mechanism changes.
 - Verification before commit: targeted search found no worker, `unit_kind`,
   compact-report, or context-pack terms in the T-002 files.
+
+### T-003 — Session recoverability
+
+- Replaced worker-recoverability in `engine/reference/authoring.md` with
+  session-recoverability: the recoverable source set is now `spec.md`,
+  `design.md`, the task row, committed code, and git trailers.
+- Updated `engine/commands/plan.md` so plan authoring writes cross-task reasoning
+  for a later session rather than for a disposable worker.
+- Updated `engine/agents/independent-reviewer.md` so plan-quality review judges
+  task executability and session-recoverability.
+- Verification before commit: targeted search in the T-003 files found no
+  worker-recoverability, disposable-worker, context-pack, or orchestrator
+  references.
