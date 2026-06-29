@@ -136,13 +136,17 @@ follow-up before build completes.
 | discuss | create/switch `{prefix}/{slug}` from `origin/{base_branch}` | `spec.yaml (draft)`, `pitch.md`, optional `_backlog/{slug}.md` deletion |
 | plan | use existing `{prefix}/{slug}` | `spec.yaml (approved)`, `spec.md`, optional `design.md` / `tasks.md`, optional corrected `pitch.md` |
 | build | verify/switch existing `{prefix}/{slug}`; never create it | implementation, tests, task checkbox updates, AC Matrix updates |
-| open | use existing `{prefix}/{slug}` | close-out commit: `status: accepted`, final AC Matrix, ADR fold (flat spec, no `_done/` move, no `INDEX` write) |
+| open | use existing `{prefix}/{slug}` | optional `docs(context)` commit (regenerated `[context]` files) when a structural shift was detected, then the close-out commit: `status: accepted`, final AC Matrix, ADR fold (flat spec, no `_done/` move, no `INDEX` write) |
 | update | use existing `{prefix}/{slug}` | PR-feedback fixes via the build loop; the fold revised when a decision changes |
 | close | local hygiene on base | nothing committed/pushed to the base branch |
 
 Discuss and plan use `docs(spec): ...` commit subjects plus the required
 `Spec: {slug}` trailer. Build uses the spec's Conventional Commit type and
-`Task:` trailers when tasks complete. open follows `### Accept close-out commit`.
+`Task:` trailers when tasks complete. When `open` detects a coarse structural
+shift, it makes a separate `docs(context): ...` commit (regenerated `[context]`
+files only, with the `Spec: {slug}` trailer — a spec-lane commit) **before** the
+accept close-out commit, so the refresh ships in the PR while the close-out stays
+the single final state commit. open then follows `### Accept close-out commit`.
 
 **open QA-`FAIL` rework / update PR-feedback commits** (the worker-mechanism
 code changes in `commands/open.md` step 3e and `commands/update.md` step 2) are
@@ -174,7 +178,13 @@ report the files and verification result.
 ### Accept close-out commit
 
 `open` produces one **close-out commit** on the feature branch, after human QA and
-**before** `mochiflow pr`. It bundles, in a single commit:
+**before** `mochiflow pr`. When `open`'s step-4 context-refresh check ran (a
+coarse structural shift was detected and the human confirmed the regenerated
+context), a separate `docs(context)` commit — carrying only the `[context]` files
+with the `Spec: {slug}` trailer — is created **first**, after the
+fold/context-check and **before** this close-out commit; the close-out commit
+remains the single final state commit and `mochiflow pr` pre-flight still sees a
+clean tree. The close-out commit bundles, in a single commit:
 
 - `spec.yaml` `status: accepted` (+ `updated`); never `done`, never `completed`;
 - the AC Matrix rows added at open (build already recorded the rest);
@@ -288,11 +298,16 @@ now", "where things live"). The context layer (`[context].product` /
 `[context].structure` / `[context].tech`) is **not** a fold target — it is a current-state
 orientation map regenerated from code via onboard / `refresh-context`, never
 appended to during fold. For coarse code-layout changes (new module,
-responsibility move, technology/verification change), flag a post-merge
-`refresh-context` (`commands/refresh-context.md`) follow-up instead of editing it
-inline or running it during close-out; code remains the source of truth. Context
-refresh is separate work after PR creation / merge unless the human explicitly
-runs and commits it as a separate change later.
+responsibility move, technology/verification change) detected during `open`, run
+`refresh-context` (`commands/refresh-context.md`) on the feature branch under
+human confirmation and ship the regenerated context **inside the PR** as a
+separate `docs(context)` commit placed after the fold/context-check and before
+the accept close-out commit (see `## Auto-commit and staging`); code remains the
+source of truth and the refresh is never folded. Running the refresh in-branch
+before the PR is the primary path — never a post-merge base-branch edit. Context
+staleness discovered only **at or after merge** is the fallback: route it to a
+follow-up (a `fix` spec when it carries a code change, or a backlog seed for
+later `discuss`) rather than a base-branch edit.
 
 Fold is skipped when the change yields no new rationale or pitfall (e.g. a trivial
 display fix). Do not create the close-out commit until the fold (or the decision

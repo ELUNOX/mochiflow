@@ -7,8 +7,11 @@ description: |
   context is a current-state orientation map derived from code (forward-placed,
   refreshed), never a dated history log (the fold owns that, in `[adr]`).
   Activate when the user asks to refresh / regenerate project context. If open
-  detects a coarse structural shift, it records a follow-up; run this after PR
-  creation / merge or as separate work so pre-PR clean-tree checks stay clean.
+  detects a coarse structural shift, it runs this on the feature branch under
+  human confirmation and commits the result as a separate `docs(context)` commit
+  before the accept close-out, so the refresh ships inside the PR; this command
+  itself never auto-commits (branch / PR / commit handling is open's
+  responsibility).
 triggers:
   - コンテクスト更新して
   - コンテクストを再生成して
@@ -37,9 +40,14 @@ Code is the source of truth; this layer is a derived map, not new knowledge.
 
 - The user explicitly asks to refresh project context.
 - `open` detected a coarse structural shift (new module / surface / moved entry
-  point) and the human opted in after PR creation / merge, or as a separate
-  follow-up (`commands/open.md`). open never refreshes automatically and does not
-  trigger this during close-out; the regeneration happens here.
+  point) and runs this **on the feature branch, before the PR**, under human
+  confirmation (`commands/open.md` step 4). This is the primary open-triggered
+  path: open regenerates the context here, then commits it as a separate
+  `docs(context)` commit before the accept close-out so it ships inside the PR.
+  Staleness discovered only at or after merge is the fallback, handled as a
+  post-merge follow-up. open never refreshes automatically; the regeneration
+  happens here and the commit is open's responsibility (this command does not
+  auto-commit).
 
 ## Procedure
 
@@ -56,8 +64,10 @@ Code is the source of truth; this layer is a derived map, not new knowledge.
    Keep all three to the minimal slice that is costly to re-derive yet rarely changes.
 3. Present the regenerated context and the diff; the human confirms it matches
    current code before it is committed. Refresh does not auto-commit; if this
-   was triggered by open-detected drift, running it after PR creation / merge or
-   as separate follow-up avoids dirtying the pre-PR tree.
+   was triggered by open-detected drift, `open` makes the separate
+   `docs(context)` commit on the feature branch before the accept close-out
+   (`commands/open.md` step (c)), so the refresh ships inside the PR while this
+   command stays no-auto-commit.
 
 ## Stop conditions
 

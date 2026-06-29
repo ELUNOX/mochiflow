@@ -571,16 +571,17 @@ fn build_ends_at_approved_without_pr_or_move() {
 fn open_orders_acceptance_fold_accept_pr_gate() {
     let open = read_repo_file("engine/commands/open.md");
     assert!(
-        open.contains("never created before the") && open.contains("approve-PR gate (e)"),
+        open.contains("never created before the") && open.contains("approve-PR gate (f)"),
         "open must state the PR is never created before the approve-PR gate"
     );
     for marker in [
         "### (a) Acceptance",
         "### (b) Finalize the fold",
-        "### (c) Accept close-out commit",
-        "### (d) Generate PR title/body",
-        "### (e) Approve-PR gate",
-        "### (f) Push and create the PR",
+        "### (c) Context refresh commit (optional)",
+        "### (d) Accept close-out commit",
+        "### (e) Generate PR title/body",
+        "### (f) Approve-PR gate",
+        "### (g) Push and create the PR",
     ] {
         assert!(open.contains(marker), "open.md must document step {marker}");
     }
@@ -621,34 +622,106 @@ fn discuss_branches_from_origin_with_stale_base_guard() {
 }
 
 #[test]
-fn open_defers_context_refresh_until_after_pr_or_merge() {
+fn open_ships_context_refresh_in_pr_before_accept() {
+    // Change B: an open-detected coarse structural shift runs refresh-context
+    // on the feature branch under human confirmation and ships the regenerated
+    // context inside the PR as a separate docs(context) commit placed before the
+    // accept close-out commit. Post-merge refresh is only the at/after-merge
+    // fallback. No engine doc (body or frontmatter) may present post-merge
+    // refresh as the primary path for open-detected staleness.
     let open = read_repo_file("engine/commands/open.md");
     let git = read_repo_file("engine/reference/git.md");
     let refresh = read_repo_file("engine/commands/refresh-context.md");
+    let router = read_repo_file("engine/router.md");
 
+    // open.md: in-branch refresh, separate docs(context) commit before accept.
     assert!(
-        open.contains("post-merge `refresh-context` follow-up after PR creation or")
-            && open.contains("Do **not** run or trigger `refresh-context` before the")
-            && open.contains("would dirty the tree before PR pre-flight"),
-        "open must defer context refresh instead of prompting pre-PR execution"
+        open.contains(
+            "optional `docs(context)` commit → accept close-out → PR title/body → approve-PR →"
+        ),
+        "open.md (a)-(g) sequence must place the docs(context) commit before accept close-out"
     );
     assert!(
-        !open.contains("prompt the human to run `refresh-context`"),
-        "open must not tell users to run refresh-context during close-out"
+        open.contains("### (c) Context refresh commit (optional)"),
+        "open.md must have a dedicated context-refresh commit step before accept"
     );
     assert!(
-        git.contains("flag a post-merge")
-            && git.contains("follow-up instead of editing it")
-            && git.contains("running it during close-out")
-            && git.contains("separate work after PR creation / merge"),
-        "git fold guidance must make context refresh a separate follow-up"
+        open.contains(
+            "and creates a separate `docs(context): ...` commit on the feature branch with"
+        ),
+        "open.md must commit the regenerated context as a separate docs(context) commit"
     );
     assert!(
-        refresh.contains("Refresh does not auto-commit")
-            && refresh.contains("after PR creation / merge")
-            && refresh.contains("as separate follow-up")
-            && refresh.contains("trigger this during close-out"),
-        "refresh-context must remain no-auto-commit and safe outside open close-out"
+        open.contains(
+            "**after** the fold/context-check and **before** the accept close-out commit"
+        ),
+        "open.md must pin the docs(context) commit position before the accept close-out"
+    );
+    // Negative existence: the old post-merge-primary wording is gone.
+    assert!(
+        !open.contains("post-merge `refresh-context` follow-up after PR creation or")
+            && !open.contains("Do **not** run or trigger `refresh-context` before the")
+            && !open.contains("would dirty the tree before PR pre-flight"),
+        "open.md must not present a post-merge refresh as the primary path"
+    );
+
+    // refresh-context.md: in-branch-before-PR is primary; no-auto-commit kept.
+    assert!(
+        refresh
+            .contains("point) and runs this **on the feature branch, before the PR**, under human"),
+        "refresh-context.md 'When it runs' must make the in-branch-before-PR path primary"
+    );
+    assert!(
+        refresh.contains("This is the primary open-triggered"),
+        "refresh-context.md must name the open-triggered in-branch path as primary"
+    );
+    assert!(
+        refresh.contains(
+            "detects a coarse structural shift, it runs this on the feature branch under"
+        ),
+        "refresh-context.md frontmatter description must describe the in-branch-before-PR path"
+    );
+    assert!(
+        refresh.contains("Refresh does not auto-commit"),
+        "refresh-context.md must keep its no-auto-commit contract (commit is open's)"
+    );
+    // Negative existence: old post-merge-primary wording removed (incl. frontmatter).
+    assert!(
+        !refresh.contains("trigger this during close-out")
+            && !refresh.contains("after PR creation / merge")
+            && !refresh.contains("as separate follow-up"),
+        "refresh-context.md must not present a post-merge refresh as the primary path"
+    );
+
+    // git.md: in-PR primary path, preceding docs(context) commit, post-merge fallback.
+    assert!(
+        git.contains("human confirmation and ship the regenerated context **inside the PR** as a"),
+        "git.md fold guidance must ship the context refresh inside the PR"
+    );
+    assert!(
+        git.contains("before the PR is the primary path — never a post-merge base-branch edit."),
+        "git.md must make the in-branch refresh primary and post-merge the fallback"
+    );
+    assert!(
+        git.contains(
+            "shift, it makes a separate `docs(context): ...` commit (regenerated `[context]`"
+        ),
+        "git.md auto-commit section must document the preceding docs(context) spec-lane commit"
+    );
+    assert!(
+        git.contains("fold/context-check and **before** this close-out commit"),
+        "git.md must position the docs(context) commit before the single accept close-out commit"
+    );
+    // Negative existence: old post-merge-primary wording removed.
+    assert!(
+        !git.contains("Context refresh is separate work after PR creation / merge"),
+        "git.md must not present a post-merge refresh as the primary path"
+    );
+
+    // router.md: open summary mentions the optional docs(context) commit before accept.
+    assert!(
+        router.contains("optional `docs(context)` commit (regenerated `[context]`, before accept)"),
+        "router.md open summary must mention the optional docs(context) commit before accept"
     );
 }
 
