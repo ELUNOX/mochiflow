@@ -33,7 +33,7 @@ Critical Stop Conditions:
     - `engine/router.md`
   - Done: principle 5 is reworded to separate the invariant (judgment / gates / integration / fold stay single-threaded on the top model) from the execution transport (a verified code-change task's execution may fan out to disposable workers via the shared transport when available, else inline), and "Review is the only separated procedure" becomes "review and per-task build execution are the delegated procedures over one shared transport"; the Verb Delegation table is realigned so the `build` row reads inline-or-delegated per-task workers (reviewer transport reused), and the `open` / `update` rows reflect that they reuse the build worker only where code changes happen (open's QA-`FAIL` rework, update's PR-feedback change) while their judgment stays inline — keeping the table consistent with the AC-11 boundaries; no other principle is weakened. Runs `mochiflow freeze` per Defaults.
   - Stop: do not relax the judgment-single-threaded invariant; this is a wording refinement, not a behavioral relaxation. `engine/router.md` is the single owner of the Verb Delegation table — do not duplicate that table into open/update docs (T-005).
-- [ ] T-004 [AC-04, AC-07] Rewrite the build task loop as orchestrator + workers
+- [x] T-004 [AC-04, AC-07] Rewrite the build task loop as orchestrator + workers
   - Depends on: T-002, T-003
   - Files:
     - `engine/commands/build.md`

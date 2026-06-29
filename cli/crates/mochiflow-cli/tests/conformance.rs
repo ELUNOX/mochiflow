@@ -828,6 +828,64 @@ fn ac_matrix_pending_human_is_canonical_provisional_token() {
 }
 
 #[test]
+fn build_is_orchestrator_with_inline_fallback_and_commit_cadence() {
+    // AC-04 / AC-07 (QA-01, QA-02, QA-04, QA-06): build.md adds orchestrator
+    // mode gated on >=2 open tasks AND a subagent mechanism, sequential-only,
+    // with an explicit inline fallback and the unchanged per-task commit cadence.
+    let build = read_repo_file("engine/commands/build.md");
+
+    assert!(
+        build.contains("at least two open tasks") && build.contains("subagent mechanism"),
+        "build.md must gate orchestrator mode on >=2 open tasks AND a subagent mechanism"
+    );
+    assert!(
+        build.contains("disposable") && build.contains("worker") && build.contains("orchestrator"),
+        "build.md must describe disposable per-task workers and an orchestrator"
+    );
+    assert!(
+        build.contains("inline") && build.contains("fallback"),
+        "build.md must keep an explicit inline fallback"
+    );
+    // sequential only (QA-06)
+    assert!(
+        build.contains("one at a time")
+            && build.contains("no `[P]` parallelism")
+            && build.contains("single working tree"),
+        "build.md must state sequential-only on a single working tree"
+    );
+    // worker reuses the build per-task commit cadence; one task per commit
+    assert!(
+        build.contains("3e per-task commit cadence") || build.contains("3e"),
+        "build.md must keep the worker on the existing 3e commit cadence"
+    );
+    // write ownership: orchestrator owns AC Matrix rows, worker owns checkbox
+    assert!(
+        build.contains("Write ownership") && build.contains("no double-write"),
+        "build.md must make write ownership explicit (no per-task AC-Matrix double-write)"
+    );
+    // canonical AC Matrix location aligned, old phrasing replaced
+    assert!(
+        build.contains("`spec.md ## Verification Plan / AC Matrix`"),
+        "build.md must point the AC Matrix at its canonical spec.md location"
+    );
+    assert!(
+        !build.contains("at the end of tasks.md if present, else end of spec.md"),
+        "build.md must drop the old tasks.md-first matrix-location phrasing"
+    );
+    // reviewer cadence preserved, diff reconstructed from git
+    assert!(
+        build.contains("Reviewer cadence is preserved EXACTLY")
+            && build.contains("git diff origin/{base}...HEAD"),
+        "build.md must preserve the reviewer cadence and reconstruct the diff from git"
+    );
+    // frontmatter delegates to the worker role
+    assert!(
+        build.contains("agents/worker.md"),
+        "build.md must delegate_to agents/worker.md"
+    );
+}
+
+#[test]
 fn router_principle_5_splits_judgment_from_execution() {
     // AC-01: principle 5 separates the single-threaded judgment invariant from
     // the fan-out execution transport, and the build Verb Delegation row reads

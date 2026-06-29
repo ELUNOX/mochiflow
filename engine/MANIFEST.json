@@ -13,7 +13,7 @@
     "adapters/kiro/steering/mochiflow.md.tpl": "sha256:afbb9f51e06bde8c9652e4f742b7de517e775a90db78553adf54154ae296aa16",
     "agents/independent-reviewer.md": "sha256:8a2093d70df6563fa542723f08564b0a6e694b98fcec58782c66ccac3a2719be",
     "agents/worker.md": "sha256:2ae22ec298ee5ef607e2c626de92a7015237836c327453bbf50f20a5997c4522",
-    "commands/build.md": "sha256:c14b782aa179ada6d186c899b9ddb5da8385e80f56386ede5f950e5d19a75856",
+    "commands/build.md": "sha256:07d9a1b0a74c9ce864a3593dd3ee0e04400b08a0d21715aea160f7876b546032",
     "commands/close.md": "sha256:3044854f0f764e8d237f4ec6f5a4cbc5220f53d8f9ea740e766b9b038d8bd5fc",
     "commands/discuss.md": "sha256:22f73e11065d6456fe54589f23384148569fd0dfe79c6a352273643f62c8b253",
     "commands/onboard.md": "sha256:6551c58431730a520c4d74c722aaa162537db6b3b3299494e417f738db178555",
