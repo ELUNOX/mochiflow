@@ -224,3 +224,22 @@ happened before the risk/cadence correction.
 - Verification: `cargo test --manifest-path cli/Cargo.toml -p mochiflow-core adapter`
   passed. Targeted search showed remaining `spec-worker` references only in
   deprecated-output cleanup and tests.
+
+### T-005 — Conformance coverage
+
+- Replaced worker/orchestrator conformance assertions with coverage for inline
+  build, reviewer-only transport, bounded inline open/update rework, retired
+  Kiro worker generation, deprecated `spec-worker.json` cleanup, and
+  session-recoverability.
+- Updated the PR feedback routing test to assert bounded inline fixes instead of
+  build-worker delegation.
+- Verification: targeted conformance tests passed:
+  `pr_feedback_routes_to_update_without_restore`,
+  `inline_rework_lifecycle_and_adapter_lifecycle_are_specified`,
+  `behavioral_kiro_retires_spec_worker_agent_and_self_heals`,
+  `build_is_inline_and_review_transport_is_reviewer_only`,
+  `session_recoverability_is_authoring_rule_not_lint`, and
+  `worker_role_and_template_are_retired`.
+- Full `cargo test --manifest-path cli/Cargo.toml -p mochiflow-cli --test conformance`
+  was run and reached 142/150 passing; the remaining failures were expected
+  `engine/MANIFEST.json` drift from unsynced engine source and are owned by T-006.

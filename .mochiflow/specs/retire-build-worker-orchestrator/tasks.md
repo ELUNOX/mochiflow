@@ -52,7 +52,7 @@ Stop Conditions:
     - `cli/crates/mochiflow-core/src/adapter.rs`
   - Done: Kiro generation has no `spec-worker.json` target; adapter model-preservation logic applies only to the independent reviewer; markered `.kiro/agents/spec-worker.json` is listed as deprecated generated output and is removed/reported like other deprecated Kiro paths; markerless files at that path are preserved; the working-tree generated `.kiro/agents/spec-worker.json` is left for adapter generation in T-006 to remove.
   - Stop: Removing the generated worker target would delete markerless user content or require a schema change.
-- [ ] T-005 [AC-01, AC-02, AC-03, AC-04, AC-05, AC-06] Update conformance coverage
+- [x] T-005 [AC-01, AC-02, AC-03, AC-04, AC-05, AC-06] Update conformance coverage
   - Depends on: T-001, T-002, T-003, T-004
   - Files:
     - `cli/crates/mochiflow-cli/tests/conformance.rs`
