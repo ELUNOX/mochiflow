@@ -122,7 +122,9 @@ build orchestrator (top model, main thread; holds plan/contract only)
     row(s) for T from this report alone.
 - **kiro worker agent (`.kiro/agents/spec-worker.json`):** modeled on
   `spec-independent-reviewer.json` but write-capable —
-  `tools: ["read","grep","glob","edit","write","bash"]`, `model` = the top model
+  `tools: ["read","write","shell"]` (Kiro tool *categories*, aliases of
+  `fs_read` / `fs_write` / `execute_bash`; finer names like `grep` / `glob` /
+  `edit` / `bash` are not Kiro categories and render as "unknown"), `model` = the top model
   used by the reviewer, `prompt` = `engine/agents/worker.md`, resources include
   `worker.md` + the workflow/git/language references it needs. Generated from a
   new `engine/adapters/kiro/agents/spec-worker.json.tpl` + a `manifest.toml`
@@ -218,6 +220,11 @@ coherent and free of remaining contradictions. Findings (no Critical/High):
 
 - Reviewer mode: delegated
 - Verdict: pass-with-comments
+
+> Note: commits after the fresh-review diff (`b1b4c0d` review settlement, the
+> backlog-seed commit, and `f659e0e` the Kiro tool-category config fix) are small
+> config/doc fixes. Per the verdict-freshness rule a re-review would normally run
+> before accept; the user explicitly waived it for these post-review fixes.
 
 The reviewer reconstructed the full diff from git (`git diff
 origin/main...HEAD`, commits 7c5720b..c0dc669, 22 files), read every changed

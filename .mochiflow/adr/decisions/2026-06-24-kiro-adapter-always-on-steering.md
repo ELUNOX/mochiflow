@@ -2,7 +2,8 @@
 id: 2026-06-24-kiro-adapter-always-on-steering
 date: 2026-06-24
 area: [cli]
-status: active
+status: superseded
+superseded_by: 2026-06-28-kiro-adapter-adds-worker-agent
 ---
 ## 2026-06-24 — Kiro adapter: always-on steering replaces dedicated agent
 
