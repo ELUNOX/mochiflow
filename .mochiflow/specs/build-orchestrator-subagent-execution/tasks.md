@@ -21,7 +21,7 @@ Critical Stop Conditions:
     - `engine/reference/risk.md`
   - Done: the `## Review transport` section is generalized into a single shared delegation transport (prefer `delegated` subagent when the runtime supports it, else `inline`) described as reused by both the read-only `independent-reviewer` and the new write-capable `worker` role, with no second transport introduced; **the `## Review transport` heading is preserved** (only its body is generalized) so the by-name citations in `router.md` principle 5 and `build.md` step 3f stay resolvable — if a rename is unavoidable, update every by-name citation in lockstep; a statement is added that the mandatory risk-cadence review reconstructs the diff from git and never uses compact reports (or conversation history) as evidence; the reviewer cadence table in `## Consequences` is unchanged (standard=none / elevated=once after all tasks / critical=after each task). Per the Defaults frozen-surface rule this task runs `mochiflow freeze`.
   - Stop: do not change the reviewer cadence or the QA attack-coverage mapping; only generalize transport and add the evidence/diff rule.
-- [ ] T-002 [AC-03, AC-05, AC-06, AC-09] Author the worker role doc
+- [x] T-002 [AC-03, AC-05, AC-06, AC-09] Author the worker role doc
   - Depends on: T-001
   - Files:
     - `engine/agents/worker.md`

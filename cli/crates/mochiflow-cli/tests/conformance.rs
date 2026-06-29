@@ -870,6 +870,74 @@ fn risk_transport_is_single_shared_delegation_mechanism() {
 }
 
 #[test]
+fn worker_role_doc_defines_write_verify_commit_contract() {
+    // AC-03 / AC-05 / AC-06 / AC-09: worker.md defines a write+verify+commit
+    // role distinct from the read-only reviewer, with context pack, repo-wide
+    // read + contract-bounded write, compact report fields, top-model/no-
+    // downgrade, and the per-task commit cadence.
+    let worker = read_repo_file("engine/agents/worker.md");
+
+    // write + verify + commit role, distinct from the read-only reviewer
+    assert!(
+        worker.contains("writes, verifies, and commits")
+            || (worker.contains("write") && worker.contains("verif") && worker.contains("commit")),
+        "worker.md must define a write+verify+commit role"
+    );
+    assert!(
+        worker.contains("independent-reviewer"),
+        "worker.md must distinguish itself from the read-only independent-reviewer"
+    );
+    // (a) context pack
+    assert!(
+        worker.contains("Context pack")
+            && worker.contains("default")
+            && worker.contains("design.md` slice"),
+        "worker.md must describe the context pack it consumes"
+    );
+    // (b) repo-wide read, contract-bounded write, out-of-scope = blocked
+    assert!(
+        worker.contains("Read is repo-wide")
+            && worker.contains("Write is contract-bounded")
+            && worker.contains("not a read jail"),
+        "worker.md must specify repo-wide read with contract-bounded write"
+    );
+    // (c) compact report fields, no narrative
+    for field in [
+        "`task`",
+        "`status`",
+        "`files_changed`",
+        "`verify`",
+        "`commit`",
+        "`reason`",
+    ] {
+        assert!(
+            worker.contains(field),
+            "worker.md compact report must list {field}"
+        );
+    }
+    assert!(
+        worker.contains("no implementation narrative")
+            || worker.contains("never return the\n  implementation narrative")
+            || worker.contains("nothing else (no implementation narrative)"),
+        "worker.md must exclude the implementation narrative from the report"
+    );
+    // (d) top model, no downgrade
+    assert!(
+        worker.contains("top model") && worker.contains("no model downgrade"),
+        "worker.md must state the worker runs on the top model with no downgrade"
+    );
+    // (e) per-task commit cadence + STOP bubble-up
+    assert!(
+        worker.contains("one task per commit") && worker.contains("`Task:` trailer"),
+        "worker.md must keep the one-task-per-commit cadence"
+    );
+    assert!(
+        worker.contains("blocked: <reason>") || worker.contains("`blocked`"),
+        "worker.md must specify STOP bubble-up via a blocked return"
+    );
+}
+
+#[test]
 fn ad_hoc_review_is_report_only() {
     let review = read_repo_file("engine/commands/review.md");
     let risk = read_repo_file("engine/reference/risk.md");
