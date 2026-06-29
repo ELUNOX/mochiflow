@@ -1,0 +1,11 @@
+version: 1
+slug: "retire-build-worker-orchestrator"
+title: "Retire the build worker/orchestrator"
+type: "refactor"
+surfaces:
+  - "cli"
+integration: "contract"
+risk: "critical"
+status: "draft"
+created: "2026-06-29"
+updated: "2026-06-29"
