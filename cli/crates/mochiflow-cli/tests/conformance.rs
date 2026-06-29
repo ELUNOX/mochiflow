@@ -517,10 +517,14 @@ fn pr_feedback_routes_to_update_without_restore() {
         "update must apply bounded inline feedback fixes without moving or reverting the flat spec"
     );
     assert!(
-        build.contains("when build resumes from `commands/update.md`")
-            && build.contains("only `{specs_dir}/{slug}/**`")
-            && build.contains("any other dirt still stops"),
-        "build dirty check must allow only the flat same-spec path on update resumes"
+        router.contains("applies bounded inline fixes")
+            && !router.contains("delegates the code change through `build`"),
+        "router PR feedback must describe bounded inline update fixes, not build delegation"
+    );
+    assert!(
+        !build.contains("when build resumes from `commands/update.md`")
+            && !build.contains("update resumes"),
+        "build.md must not keep an update-resume path now that update fixes are inline"
     );
     assert!(
         router.contains("commands/update.md") && !router.contains("commands/ship.md"),

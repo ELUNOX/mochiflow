@@ -76,8 +76,8 @@ If PR feedback, CI failure, reviewer comments, or PR-body approval follow-up
 requires code changes before merge, route the work to the in-review spec via
 `commands/update.md` instead of `patch`, unless the change is unrelated to that
 spec. The spec stays flat at `{specs_dir}/{slug}/` (no restore needed); `update`
-delegates the code change through `build`, re-verifies, pushes, and updates the
-PR body when needed.
+applies bounded inline fixes, re-verifies, pushes, and updates the PR body when
+needed.
 
 ## Verb Delegation
 

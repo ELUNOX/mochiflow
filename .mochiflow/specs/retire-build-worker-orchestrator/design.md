@@ -161,7 +161,7 @@ MochiFlow generated marker.
 - Reviewed task: T-001 `[AC-01, AC-02]`.
 - Findings: none.
 
-- Reviewer mode: inline fallback
+- Reviewer mode: inline
 - Verdict: pass
 - Date: 2026-06-29
 - Mode: final full-branch review after T-006 sync; delegated subagent launch
