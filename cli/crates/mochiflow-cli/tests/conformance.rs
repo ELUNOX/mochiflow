@@ -901,6 +901,62 @@ fn behavioral_kiro_generates_spec_worker_agent_deterministically() {
 }
 
 #[test]
+fn worker_write_scope_resume_and_verdict_freshness_specified() {
+    // Second engine-coherence round:
+    // - worker write scope includes its own tasks.md checkbox line (else the
+    //   checkbox tick contradicts the Files bound).
+    // - build resume handles "all tasks done, post-processing pending".
+    // - reviewer verdict must be fresh; open/update post-review code change at
+    //   risk>=elevated re-runs the reviewer.
+    // - build.md frontmatter description reflects orchestrator/worker delegation.
+    let worker = read_repo_file("engine/agents/worker.md");
+    let build = read_repo_file("engine/commands/build.md");
+    let open = read_repo_file("engine/commands/open.md");
+    let update = read_repo_file("engine/commands/update.md");
+    let risk = read_repo_file("engine/reference/risk.md");
+
+    // worker write scope explicitly includes the checkbox line as an exception.
+    assert!(
+        worker.contains("its own task's checkbox line in")
+            && worker.contains("exception to the `Files` bound"),
+        "worker.md must broaden the write scope to its own tasks.md checkbox line"
+    );
+
+    // build resume: zero unchecked tasks -> completion path.
+    assert!(
+        build.contains("When zero tasks are unchecked") && build.contains("completion path"),
+        "build.md resume must define the all-tasks-done, post-processing-pending case"
+    );
+
+    // verdict freshness rule lives in risk.md and is referenced by open/update.
+    assert!(
+        risk.contains("Verdict freshness")
+            && risk.contains("makes the recorded\nverdict **stale**")
+            || risk.contains("makes the recorded") && risk.contains("stale"),
+        "risk.md must state reviewer verdict freshness"
+    );
+    assert!(
+        open.contains("stale") && open.contains("freshness)"),
+        "open.md rework must re-run the reviewer on the new diff when elevated"
+    );
+    assert!(
+        update.contains("stale") && update.contains("verdict freshness"),
+        "update.md must re-run the reviewer on the new diff when elevated"
+    );
+
+    // build.md frontmatter description is no longer inline-only / review-only.
+    assert!(
+        build.contains("Implement an approved spec as an orchestrator")
+            && build.contains("disposable per-task workers"),
+        "build.md description must reflect orchestrator/worker delegation"
+    );
+    assert!(
+        !build.contains("run only\n  read-only review through independent-reviewer transport"),
+        "build.md description must drop the stale review-only phrasing"
+    );
+}
+
+#[test]
 fn worker_reuse_unit_and_entry_gate_are_specified() {
     // Reviewer feedback: open/update reuse the worker mechanism but build is
     // complete (no open task), and build's approved/ready entry gate must not

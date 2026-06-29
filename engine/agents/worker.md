@@ -89,9 +89,16 @@ The pack **never** carries other tasks' transcripts or conversation history.
   adjacent files) happens inside the worker's context and is discarded on
   return, so it never bloats the orchestrator.
 - **Write is contract-bounded.** The worker writes only within the task's
-  declared surface (`Files`). `Files` is the write-scope anchor and the reading
+  declared surface (`Files`), **plus**, in build, its own task's checkbox line in
+  `tasks.md` (the `- [ ]` → `- [x]` tick for that one `T-###`). `tasks.md` is not
+  normally listed in `Files`, so this checkbox tick is an explicit, narrow
+  exception to the `Files` bound — not a license to edit any other part of
+  `tasks.md` (no task structure, no other rows, and never the AC Matrix, which
+  the orchestrator owns). `Files` is the write-scope anchor and the reading
   start point, **not a read jail**. A task that needs an edit outside its
-  declared surface returns `blocked` (see STOP) instead of widening scope.
+  declared surface (other than that checkbox tick) returns `blocked` (see STOP)
+  instead of widening scope. (In the open/update reuse there is no checkbox to
+  tick, so the write scope is just the bounded fix's files.)
 
 ## Model
 

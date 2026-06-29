@@ -249,3 +249,27 @@ Second feedback round (engine-procedure coherence, follow-up commit):
 
 All addressed additively (no behavior change beyond making the already-claimed
 reuse executable); pinned by `conformance::worker_reuse_unit_and_entry_gate_are_specified`.
+
+Third feedback round (engine-procedure coherence, follow-up commit):
+
+- High (worker write scope vs checkbox): `worker.md` write-scope was "only within
+  `Files`", which contradicts the worker ticking its own `tasks.md` checkbox
+  (`tasks.md` is not in `Files`). Broadened the write scope to "task `Files` +
+  the worker's own checkbox line in `tasks.md`" as an explicit narrow exception
+  (no other rows, no AC Matrix).
+- High (verdict freshness): added a `risk.md ## Consequences` rule that a recorded
+  reviewer verdict is valid only for the diff it reviewed; a later code change at
+  `risk ≥ elevated` (open QA-`FAIL` rework / update PR-feedback) makes it stale
+  and requires a fresh reviewer run before accept/push. `open.md` / `update.md`
+  reference and apply it.
+- Medium (build resume): `build.md` resume now defines the "all tasks committed,
+  post-processing pending" case — zero unchecked tasks proceeds to the completion
+  path (final verify / elevated review / AC Matrix / final commit).
+- Medium (inline fallback wording): already split in the second round — `risk.md`
+  distinguishes the reviewer's inline role switch from the worker's inline = the
+  orchestrator executing the unit itself (the `build.md` inline fallback).
+- Low/Medium (stale frontmatter): `build.md` `description` rewritten to describe
+  orchestrator/worker delegation instead of "implement inline / run only
+  read-only review".
+
+Pinned by `conformance::worker_write_scope_resume_and_verdict_freshness_specified`.

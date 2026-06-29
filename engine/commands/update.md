@@ -61,13 +61,18 @@ for its whole life, so there is nothing to restore.
 3. When feedback changes a decision or surfaces a new pitfall, revise the fold
    (`[adr].decisions` / `[adr].pitfalls`) so the durable record keeps matching
    the final design.
-4. Commit the changes on the feature branch (one task-sized commit per
+4. If the spec is `risk ≥ elevated` and step 2 changed code, the prior reviewer
+   verdict is now **stale**: re-run `agents/independent-reviewer.md` on the new
+   diff and record the fresh verdict in `design.md ## Review Results` before
+   pushing, per `reference/risk.md ## Consequences` (verdict freshness). A
+   PR-body-only correction (no code change) does not require a new review.
+5. Commit the changes on the feature branch (one task-sized commit per
    `reference/git.md`), then push the branch so the open PR updates.
-5. Update PR metadata when needed: regenerate the PR title/body into
+6. Update PR metadata when needed: regenerate the PR title/body into
    `{install_dir}/state/{slug}/pr-body.md` and update the PR via the provider
    (or re-run `mochiflow pr` for the configured backend). PR-body-only
    corrections skip the code loop.
-6. Each spec-lane commit step regenerates the board via `mochiflow index` so the
+7. Each spec-lane commit step regenerates the board via `mochiflow index` so the
    gitignored `INDEX.md` stays fresh; `INDEX.md` is never staged or committed.
 
 ## Presentation

@@ -48,9 +48,17 @@ fixed, verified, and committed as follow-up work before build completes. Record
 mandatory reviewer runs in `design.md ## Review Results`, using `Reviewer mode:
 delegated | inline` and `Verdict: pass | pass-with-comments | fail`. For
 `critical`, append one entry per required review run; for `elevated`, append the
-single post-task review entry. Branch / PR / archive mechanics live in
-`git.md`; the AC Matrix format and delivery approval gates live in
-`workflow.md`.
+single post-task review entry.
+
+**Verdict freshness.** A recorded reviewer verdict is valid only for the code
+diff it actually reviewed. Any later code change at `risk ≥ elevated` — including
+`open`'s QA-`FAIL` rework and `update`'s PR-feedback fix — makes the recorded
+verdict **stale**: a fresh reviewer run (same transport, on the new full diff
+from git) is required and its verdict recorded in `design.md ## Review Results`
+before that change is accepted (`mochiflow accept`) or pushed. A stale pass
+verdict must not be reused to clear the gate for an unreviewed diff. Branch / PR
+/ archive mechanics live in `git.md`; the AC Matrix format and delivery approval
+gates live in `workflow.md`.
 
 ## QA attack coverage
 

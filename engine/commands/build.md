@@ -2,13 +2,18 @@
 name: spec-build
 phase: build
 description: |
-  mochiflow's build phase. Implement an approved spec inline (read, write,
-  verify, self-review), maintain the integration log per risk, run only
-  read-only review through independent-reviewer transport, commit, and produce the AC
-  Verification Matrix. A trivial standard-risk spec may run with spec.md only
-  and a no-PR fast path branch choice. Activate on the explicit
-  command `mochiflow-build`, or natural phrasing like "実装して" / "進めて" /
-  "ビルドして". Does not create PRs, set a terminal state, or move the spec (that is open).
+  mochiflow's build phase. Implement an approved spec as an orchestrator: with
+  tasks.md and >=2 open tasks on a subagent-capable runtime, dispatch sequential
+  disposable per-task workers (agents/worker.md) that read/write/verify/commit;
+  otherwise implement inline (the unchanged fallback). Maintain the integration
+  log per risk, run read-only review through the independent-reviewer transport,
+  and produce the AC Verification Matrix. Judgment / integration / fold and the
+  risk-cadence review stay single-threaded on the main agent. A trivial
+  standard-risk spec may run with spec.md only and a
+  no-PR fast path branch choice.
+  Activate on the explicit command `mochiflow-build`, or natural phrasing
+  like "実装して" / "進めて" / "ビルドして". Does not create PRs, set a terminal
+  state, or move the spec (that is open).
 triggers:
   - mochiflow-build
   - 実装して
@@ -93,6 +98,12 @@ When build resumes in a new session (no prior conversation state):
      --format="%s | %(trailers:key=Task,valueonly)"
    ```
 3. If trailers and checkboxes agree, resume from the first unchecked task.
+   **When zero tasks are unchecked** (every task is committed) the per-task loop
+   is already complete: do not look for a task to resume: proceed to the
+   completion path (step 4 onward) — final verification, the `elevated`
+   reviewer run if not yet recorded for the latest diff, the AC Matrix
+   settlement, and the final build commit — performing only the steps not yet
+   done.
 4. If they disagree (a checked task lacks a matching `Task:` trailer in any
    commit, or a `Task:` trailer exists for an unchecked task), **stop and
    reconcile** before editing source files — read the relevant commits and
