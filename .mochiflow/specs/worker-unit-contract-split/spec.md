@@ -84,7 +84,10 @@ inferring the unit from an id-prefix convention.
   exactly the two values `build-task` and `rework` as the primary discriminator
   that selects worker behavior (the checkbox + `Task:` trailer cadence for
   `build-task` vs the host verb's commit convention for `rework`), rather than
-  selecting behavior by parsing the `unit` id prefix.
+  selecting behavior by parsing the `unit` id prefix, AND SHALL document
+  `unit_kind` as a dispatch-time field of the worker context pack
+  (`engine/agents/worker.md ## Context pack`), set by the orchestrator (build) or
+  the host verb (open/update).
 - AC-02: THE SYSTEM SHALL specify a single uniform compact-report schema in
   `engine/agents/worker.md` that includes the `unit_kind` field alongside `unit`,
   `status`, `files_changed`, `verify`, `commit`, and `reason`, and SHALL NOT
@@ -112,7 +115,7 @@ inferring the unit from an id-prefix convention.
 | QA-03 | P4 | cli | Automated | N/A check: no persisted data or state is read or written. | N/A: no data-integrity surface. |
 | QA-04 | P5 | cli | Automated | N/A check: no data/format migration; archived specs are untouched. | N/A: no migration surface. |
 | QA-05 | P6 | cli | Automated | Run the full `default` profile after the change: `cargo test`, `fmt --check`, `clippy -D warnings`, `freeze --check`; confirm the existing worker/adapter conformance tests and build/open/update behavior are unaffected. | All existing tests pass; `freeze --check` and `adapter generate --check` are green; no behavioral regression. |
-| QA-06 | P7 | cli | Automated | Compare `engine/agents/worker.md` and the verb references against the agreed contract: assert both `unit_kind` values are named, behavior is keyed on `unit_kind`, and the uniform report includes `unit_kind` with no per-unit id fields. | Conformance assertions confirm the documents match the agreed `unit_kind` contract. |
+| QA-06 | P7 | cli | Automated | Compare `engine/agents/worker.md` and the verb references against the agreed contract: assert both `unit_kind` values are named, behavior is keyed on `unit_kind`, `## Context pack` lists `unit_kind` as a dispatch-time input, and the uniform report includes `unit_kind` with no per-unit id fields. | Conformance assertions confirm the documents match the agreed `unit_kind` contract. |
 
 ## Completion Conditions
 
@@ -127,4 +130,4 @@ inferring the unit from an id-prefix convention.
 | AC-01 | cli | automated | QA-06 conformance assertion (worker.md names `build-task`/`rework`, behavior keyed on `unit_kind`) | `engine/agents/worker.md`, `cli/crates/mochiflow-cli/tests/conformance.rs` | UNVERIFIED | | |
 | AC-02 | cli | automated | QA-06 conformance assertion (uniform report includes `unit_kind`, no `feedback_id`/`qa_item`/`task`) | `engine/agents/worker.md`, `cli/crates/mochiflow-cli/tests/conformance.rs` | UNVERIFIED | | |
 | AC-03 | cli | automated | QA-06 conformance assertion (verb references use `unit_kind` vocabulary) | `engine/commands/build.md`, `engine/commands/open.md`, `engine/commands/update.md`, `cli/crates/mochiflow-cli/tests/conformance.rs` | UNVERIFIED | | |
-| AC-04 | cli | automated | QA-05 regression (`freeze --check`, `adapter generate --check`, worker conformance green; agent unchanged) | `engine/MANIFEST.json`, `contracts/contracts.lock`, `.mochiflow/engine/agents/worker.md` | UNVERIFIED | | |
+| AC-04 | cli | automated | QA-05 regression (`freeze --check`, `adapter generate --check`, worker conformance green; agent unchanged) | `engine/MANIFEST.json`, `contracts/contracts.lock` | UNVERIFIED | | |
