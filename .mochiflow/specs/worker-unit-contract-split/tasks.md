@@ -13,7 +13,7 @@ Critical Stop Conditions:
 
 ## Tasks
 
-- [ ] T-001 [AC-01, AC-02, AC-03, AC-04] Revise the worker contract and verb references; sync the vendored engine
+- [x] T-001 [AC-01, AC-02, AC-03, AC-04] Revise the worker contract and verb references; sync the vendored engine
   - Depends on: none
   - Files:
     - `engine/agents/worker.md`

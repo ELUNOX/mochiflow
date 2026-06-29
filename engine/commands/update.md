@@ -50,7 +50,8 @@ for its whole life, so there is nothing to restore.
    logic here. Apply the requested changes **through the build worker mechanism**
    (`commands/build.md` — delegated worker when available, else inline; read,
    edit, TDD where applicable); update defines no separate delegation path. The
-   reused worker's unit is the **bounded PR-feedback fix**, not an open
+   reused worker's unit is the **bounded PR-feedback fix**
+   (`unit_kind: rework`, unit `pr-feedback:<id>`), not an open
    `tasks.md` task (build is already complete): there is no checkbox to tick and
    no `Task:` trailer, and the worker commits per this verb's feedback-commit
    convention (step 4 / `reference/git.md`). build's eligibility gate
