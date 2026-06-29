@@ -901,6 +901,74 @@ fn behavioral_kiro_generates_spec_worker_agent_deterministically() {
 }
 
 #[test]
+fn worker_schema_commit_and_lifecycle_propagation() {
+    // Fourth engine-coherence round:
+    // - worker context pack + compact report generalize to the open/update unit;
+    // - open/update reference risk.md and define their commit convention;
+    // - adapter standing-layer templates use the current draft->approved->accepted
+    //   lifecycle (done = legacy/derived), not the stale draft->approved->done.
+    let worker = read_repo_file("engine/agents/worker.md");
+    let git = read_repo_file("engine/reference/git.md");
+    let open = read_repo_file("engine/commands/open.md");
+    let update = read_repo_file("engine/commands/update.md");
+
+    // unit id scheme in context pack + compact report.
+    assert!(
+        worker.contains("qa-fail:<id>") && worker.contains("pr-feedback:<id>"),
+        "worker.md must generalize the unit id to qa-fail / pr-feedback forms"
+    );
+    assert!(
+        worker.contains("`unit`: the unit id"),
+        "worker.md compact report must use a generalized `unit` id field"
+    );
+    assert!(
+        worker.contains("host fix\n    contract") || worker.contains("host fix contract"),
+        "worker.md context pack must offer a host fix contract instead of a task row on reuse"
+    );
+    // STOP route-back is host-phase specific.
+    assert!(
+        worker.contains("destination depends on"),
+        "worker.md STOP must split the blocked route-back per host phase"
+    );
+
+    // git.md defines the open rework / update feedback commit convention.
+    assert!(
+        git.contains("PR-feedback commits")
+            && git.contains("no** `Task:` trailer")
+            && git.contains("`Spec: {slug}` trailer"),
+        "git.md must define the open rework / update feedback commit convention"
+    );
+
+    // open/update reference risk.md (frontmatter) for verdict freshness.
+    assert!(
+        open.contains("- reference/risk.md"),
+        "open.md frontmatter must reference reference/risk.md"
+    );
+    assert!(
+        update.contains("- reference/risk.md"),
+        "update.md frontmatter must reference reference/risk.md"
+    );
+
+    // adapter standing-layer templates use the current lifecycle.
+    for tpl in [
+        "engine/adapters/kiro/steering/mochiflow.md.tpl",
+        "engine/adapters/agents/AGENTS.md.tpl",
+        "engine/adapters/claude-code/CLAUDE.md.tpl",
+        "engine/adapters/copilot/copilot-instructions.md.tpl",
+    ] {
+        let body = read_repo_file(tpl);
+        assert!(
+            body.contains("draft → approved → accepted"),
+            "{tpl} must use the draft -> approved -> accepted lifecycle"
+        );
+        assert!(
+            !body.contains("draft → approved → done"),
+            "{tpl} must not keep the stale draft -> approved -> done lifecycle"
+        );
+    }
+}
+
+#[test]
 fn worker_write_scope_resume_and_verdict_freshness_specified() {
     // Second engine-coherence round:
     // - worker write scope includes its own tasks.md checkbox line (else the
@@ -1273,7 +1341,7 @@ fn worker_role_doc_defines_write_verify_commit_contract() {
     );
     // (c) compact report fields, no narrative
     for field in [
-        "`task`",
+        "`unit`",
         "`status`",
         "`files_changed`",
         "`verify`",

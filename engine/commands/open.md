@@ -24,6 +24,7 @@ prerequisites:
 execution: inline
 references:
   - reference/workflow.md
+  - reference/risk.md
   - reference/git.md
   - templates/delivery/pr-description.md
 ---

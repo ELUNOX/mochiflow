@@ -143,6 +143,15 @@ follow-up before build completes.
 Discuss and plan use `docs(spec): ...` commit subjects plus the required
 `Spec: {slug}` trailer. Build uses the spec's Conventional Commit type and
 `Task:` trailers when tasks complete. open follows `### Accept close-out commit`.
+
+**open QA-`FAIL` rework / update PR-feedback commits** (the worker-mechanism
+code changes in `commands/open.md` step 3e and `commands/update.md` step 2) are
+ordinary feature-branch fix commits: a Conventional Commit subject describing the
+fix, the required `Spec: {slug}` trailer, and **no** `Task:` trailer (build is
+complete, so there is no `tasks.md` task to reference) and no checkbox tick. They
+are separate from open's single accept close-out commit (which carries
+`status: accepted` + the fold) and are not amended into it.
+
 Every spec-lane procedure commit step (discuss / plan / build / open / update /
 close) regenerates the board via `mochiflow index` so the gitignored `INDEX.md`
 stays fresh between CLI commands.

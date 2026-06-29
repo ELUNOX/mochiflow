@@ -273,3 +273,27 @@ Third feedback round (engine-procedure coherence, follow-up commit):
   read-only review".
 
 Pinned by `conformance::worker_write_scope_resume_and_verdict_freshness_specified`.
+
+Fourth feedback round (worker generalization propagation, follow-up commit):
+
+- High (#1 schema): `worker.md` context pack and compact report assumed a build
+  `tasks.md` row. Generalized: the context pack carries the build task row **or**
+  the host fix contract (`qa-fail:<id>` / `pr-feedback:<id>`), and the compact
+  report's id field is now `unit` (`T-###` | `qa-fail:<id>` | `pr-feedback:<id>`).
+- High (#2 references): `open.md` / `update.md` frontmatter now reference
+  `reference/risk.md`; update body already re-runs the reviewer on the new diff
+  at `risk ≥ elevated` (verdict freshness).
+- Medium (#3 commit convention): `git.md ## Spec-lane lifecycle commits` now
+  defines the open QA-`FAIL` rework / update PR-feedback commit as an ordinary
+  feature-branch fix commit — Conventional subject, required `Spec: {slug}`
+  trailer, no `Task:` trailer, no checkbox, separate from the accept close-out.
+- Medium (#4 STOP): `worker.md` splits the `blocked` route-back per host phase
+  (build → plan; open/update → host verb, a genuine new design decision → plan).
+- Medium (#5 lifecycle): the four adapter standing-layer templates (kiro / agents
+  / claude-code / copilot) and `authoring.md` now state
+  `draft → approved → accepted` (`done` = legacy/derived) instead of the stale
+  `draft → approved → done`; regenerated outputs.
+- Low (#6 description): `worker.md` frontmatter description updated to cover both
+  the build task and the open/update bounded-fix reuse.
+
+Pinned by `conformance::worker_schema_commit_and_lifecycle_propagation`.

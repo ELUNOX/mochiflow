@@ -18,15 +18,17 @@ surfaces:
   - ios              # ios | api | web
 integration: none    # none | contract | workflow
 risk: standard       # standard | elevated | critical (ordered enum)
-status: draft        # draft | approved | done
+status: draft        # draft | approved | accepted (done = legacy/derived)
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
 completed: YYYY-MM-DDTHH:MM:SSZ   # legacy: ordered the Done view for archived specs; the engine no longer writes it
 ```
 
-`status` flow is `draft → approved → done` (`workflow.md`). Whether `design.md` /
-`tasks.md` exist is expressed by file presence, not metadata. `completed` is
-written only when status becomes `done`; it is absent on draft/approved specs.
+`status` flow is `draft → approved → accepted` (`workflow.md`); `done` is a
+legacy/derived state for archived specs, not written by the current flow. Whether
+`design.md` / `tasks.md` exist is expressed by file presence, not metadata.
+`completed` is a legacy timestamp tied to `done`; the current flow does not write
+it.
 
 ## SSOT discipline
 

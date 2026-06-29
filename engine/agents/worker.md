@@ -2,13 +2,15 @@
 name: worker
 role: worker
 description: |
-  Tool-neutral disposable per-task worker for mochiflow build execution. A
-  worker executes exactly one verified code-change task from a context pack,
-  runs the surface's default verification, marks the task checkbox, commits the
-  task, and returns a compact report. It is distinct from the read-only
-  independent-reviewer: a worker writes, verifies, and commits. It can run as a
-  delegated subagent or as the inline build fallback over the shared delegation
-  transport.
+  Tool-neutral disposable worker for mochiflow build execution, reused by open
+  and update. A worker executes exactly one bounded code-change unit from a
+  context pack — in build, one tasks.md task (marking its checkbox and committing
+  with a Task: trailer); in the open (QA-FAIL rework) / update (PR-feedback)
+  reuse, one bounded fix committed per the host verb's convention. It runs the
+  surface's default verification and returns a compact report. It is distinct
+  from the read-only independent-reviewer: a worker writes, verifies, and
+  commits. It can run as a delegated subagent or as the inline fallback over the
+  shared delegation transport.
 phases:
   - build
 canonical_commands:
@@ -68,14 +70,20 @@ the bounded fix contract and the host verb's commit convention as above.
 
 ## Context pack (orchestrator → worker)
 
-The orchestrator hands over the minimum needed to execute one task as a
+The orchestrator hands over the minimum needed to execute **one unit** as a
 contract. The worker consumes:
 
 - the relevant `design.md` slice (the shared technical contract) as the **start
   point** — the worker reads the full `design.md` and the rest of the repo when
   it needs more,
-- the single `tasks.md` row for `T-###` — its `Files`, `Done`, `Stop`, and AC
-  references,
+- the **execution contract** for the unit:
+  - in **build**, the single `tasks.md` row for `T-###` — its `Files`, `Done`,
+    `Stop`, and AC references;
+  - in the **open / update reuse** (no `tasks.md` task), the **host fix
+    contract** instead of a task row — the failing QA item (`qa-fail:<id>`) or
+    the PR-feedback change (`pr-feedback:<id>`), with its affected files
+    (write-scope anchor), its acceptance condition (how the host verb decides the
+    fix is done), and any `Stop` / out-of-scope note;
 - the surface's `default` verify command,
 - pointers to the constitution (`[constitution]`),
   `reference/engineering-standards.md`, and the relevant `[adr].pitfalls`.
@@ -110,7 +118,8 @@ only lever. Implementation quality is unchanged from inline build.
 
 Return exactly these fields and nothing else (no implementation narrative):
 
-- `task`: the `T-###` id.
+- `unit`: the unit id — `T-###` in build, `qa-fail:<id>` for an open QA-`FAIL`
+  rework, or `pr-feedback:<id>` for an update PR-feedback fix.
 - `status`: `done` | `blocked`.
 - `files_changed`: list of paths written.
 - `verify`: the verification profile, its result (`PASS` | `FAIL`), and an
@@ -120,8 +129,8 @@ Return exactly these fields and nothing else (no implementation narrative):
   (out-of-scope change / new design decision needed / verification keeps
   failing).
 
-The orchestrator settles the AC Matrix row(s) for the task from this report
-alone, without reading the worker's transcript.
+The orchestrator (or the host verb on reuse) settles the AC Matrix row(s) for
+the unit from this report alone, without reading the worker's transcript.
 
 ## Commit cadence
 
@@ -140,16 +149,28 @@ is unchanged.
 
 ## STOP bubble-up
 
-A worker that hits a build stop condition does **not** improvise or make a design
-decision. It returns `blocked: <reason>` and stops, so the orchestrator can route
-back to `plan`. Stop conditions include:
+A worker that hits a stop condition does **not** improvise or make a design
+decision. It returns `blocked: <reason>` and stops; the **destination depends on
+the host phase**:
 
-- an out-of-scope change (an edit outside the task's declared `Files` surface),
+- **build**: the orchestrator stops the task loop and routes back to `plan`.
+- **open** (QA-`FAIL` rework) / **update** (PR-feedback): the host verb pauses.
+  A genuine **new design decision** (the contract does not cover the situation)
+  routes back to `plan` — which interrupts open/update, leaving the PR / its body
+  and metadata untouched until plan resolves it. An **ambiguity in the fix
+  contract itself** (the failing QA item / the PR feedback is unclear) goes back
+  to that verb's interpretation step — open's QA round-trip or update's feedback
+  handling — for human clarification, **not** silently to plan.
+
+Stop conditions include:
+
+- an out-of-scope change (an edit outside the unit's declared surface),
 - a new design decision is required (the contract in `design.md` does not cover
   the situation),
 - verification keeps failing after reasonable attempts.
 
-This keeps judgment single-threaded on the orchestrator at runtime.
+In every case judgment stays single-threaded on the orchestrator / host verb;
+the worker never decides the route itself.
 
 ## Operating rules
 
