@@ -6,19 +6,32 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-06-29
+
 ### Added
 
-- New delivery verbs `open` / `update` / `close` replace `ship`. `open` runs
-  acceptance, folds durable decisions/pitfalls, sets `accepted`, and opens the PR
-  after the approve-PR gate; `update` applies PR feedback through the build loop
-  and refreshes the PR; `close` does post-merge local cleanup and never writes to
-  the base branch.
-- New asserted spec status `accepted` (`draft → approved → accepted`). `done` is
-  retained only as a legacy read for archived `_done/` specs and is rejected on
-  active specs.
-- `mochiflow status`: a read-only live delivery board (Backlog / Active / Ready /
-  In Review / Done) computed from asserted `spec.yaml` state plus delivery state
-  derived from git/provider. `--fetch` refreshes `origin` first.
+- `mochiflow freeze` regenerates release-version and integrity artifacts from
+  the workspace version: `engine/VERSION`, `engine/MANIFEST.json`, and
+  `contracts/contracts.lock`. `--root` supports explicit source-repo checks from
+  scripts and CI, and `--check` reports derived-file drift without writing.
+- `mochiflow status` renders a read-only live delivery board (Backlog / Active /
+  Ready / In Review / Done) from asserted spec state plus git/provider-derived
+  delivery state. `--fetch` refreshes `origin` before computing the board.
+- `mochiflow accept` settles the deterministic PR close-out by setting the spec
+  to `accepted`, staging the flat spec and ADR fold, and creating the traceable
+  close-out commit.
+- `mochiflow adr list`, `show`, `search`, and `lint` expose the ADR record
+  stores as read-only CLI surfaces with active-set filtering and structural
+  validation.
+- New delivery verbs `open`, `update`, and `close` replace `ship` in the engine
+  workflow. `open` handles acceptance, durable fold, final QA, and PR creation;
+  `update` handles PR feedback through the bounded build loop; `close` performs
+  post-merge local cleanup only.
+- New asserted spec status `accepted` extends the active lifecycle to
+  `draft -> approved -> accepted`. `done` remains readable only for legacy
+  archived specs and is rejected on active specs.
+- Risk-scaled QA attack coverage and higher-risk plan review gates guide plan
+  authoring and reviewer checks before implementation.
 
 ### Changed
 
@@ -30,17 +43,51 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   state-changing commands and is never staged or committed; `mochiflow status`
   renders the same view on demand. Existing repos untrack it once with
   `git rm --cached`.
+- ADR stores are now directory roots containing one immutable record per
+  decision or pitfall plus a generated, gitignored store `INDEX.md`. The legacy
+  monolith files are no longer the active storage model.
 - `mochiflow pr` pre-flight now requires the active spec committed at
   `.mochiflow/specs/{slug}/` with status `accepted` and a `Spec: {slug}` trailer,
   instead of a `_done/` + `done` archive.
+- The Kiro adapter now uses an always-on steering file and a read-only
+  independent reviewer agent. The build worker/orchestrator experiment and
+  generated worker agent were retired in favor of inline top-model execution.
+- Local verification now matches the CI-quality gate more closely, and the quick
+  verify profile includes `freeze --check` so version/integrity drift is caught
+  during normal development.
+- AC Matrix and QA wording now standardize around ASCII-friendly tokens such as
+  `UNVERIFIED`, `CONFIRMED`, and `N/A: <reason>`.
 - New specs branch from `origin/{base_branch}` and warn when the local base
   branch is behind origin.
+- Plan, build, review, open, update, and close guidance now preserve the phase
+  boundaries more explicitly, including context refresh timing and reviewer
+  verdict freshness.
+
+### Fixed
+
+- Backlog seed frontmatter quotes are stripped before rendering the generated
+  board, preventing quoted titles from leaking into `INDEX.md`.
+- Planned deletion task entries are accepted by lint when a task intentionally
+  removes a file.
+- Delivery close-out staging now uses safer pathspec handling and keeps the
+  completed spec/fold staged without accidentally staging unrelated generated
+  indexes.
+- New spec branches start from `origin/{base_branch}` and warn when the local
+  base branch is stale.
+- Open/accept context refresh and delivery-record handling now run in the
+  delivery PR rather than drifting into a separate follow-up.
+- Updated `anyhow` to address `RUSTSEC-2026-0190`.
 
 ### Removed
 
 - `ship` as a user-facing verb, trigger, and `mochiflow-ship` message. The
   deterministic close-out is now `mochiflow accept` (set `accepted`, stage the
   spec and ADR fold, commit), invoked by the `open` procedure.
+- `_done/` archives and terminal `done` writes are no longer the normal delivery
+  path for new specs.
+- Legacy Kiro generated builder/worker agent outputs and per-verb steering files
+  were removed from generated adapter output.
+- The `[write]` config model was removed.
 
 ## [1.1.3] - 2026-06-21
 

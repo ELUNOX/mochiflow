@@ -89,6 +89,14 @@ pub fn compute_contracts_hash(repo_root: &Path) -> Result<String, String> {
 /// Build `MANIFEST.json` content for an engine directory with an explicit version.
 /// Pure builder: no I/O writes. Returns serialized JSON.
 pub fn build_manifest(engine_dir: &Path, version: &str) -> Result<String, String> {
+    build_manifest_with_overrides(engine_dir, version, &BTreeMap::new())
+}
+
+fn build_manifest_with_overrides(
+    engine_dir: &Path,
+    version: &str,
+    overrides: &BTreeMap<String, Vec<u8>>,
+) -> Result<String, String> {
     let mut files = BTreeMap::new();
     let mut all_files = Vec::new();
     collect_files_recursive(engine_dir, &mut all_files);
@@ -99,7 +107,10 @@ pub fn build_manifest(engine_dir: &Path, version: &str) -> Result<String, String
         if rel_str.contains("__pycache__") || rel_str == "MANIFEST.json" {
             continue;
         }
-        let bytes = std::fs::read(&entry).map_err(|e| format!("read {}: {e}", entry.display()))?;
+        let bytes = match overrides.get(&rel_str) {
+            Some(bytes) => bytes.clone(),
+            None => std::fs::read(&entry).map_err(|e| format!("read {}: {e}", entry.display()))?,
+        };
         let hash = Sha256::digest(&bytes);
         files.insert(rel_str, format!("sha256:{hash:x}"));
     }
@@ -153,7 +164,11 @@ pub fn freeze(repo_root: &Path, check: bool) -> Result<FreezeReport, String> {
     let lock_path = repo_root.join("contracts/contracts.lock");
 
     let desired_version = format!("{version}\n");
-    let desired_manifest = build_manifest(&engine_dir, &version)?;
+    let desired_manifest = build_manifest_with_overrides(
+        &engine_dir,
+        &version,
+        &BTreeMap::from([("VERSION".to_string(), desired_version.as_bytes().to_vec())]),
+    )?;
     let desired_lock = format!("{{\"version\": \"{version}\", \"hash\": \"{hash}\"}}\n");
 
     let targets: Vec<(PathBuf, String)> = vec![
@@ -316,6 +331,36 @@ mod tests {
         assert!(
             !report.stale.is_empty(),
             "mismatched version triple must be detected as stale"
+        );
+    }
+
+    #[test]
+    fn freeze_write_rehashes_manifest_after_workspace_version_bump() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        setup_fixture(root, "1.0.0");
+
+        freeze(root, false).unwrap();
+        std::fs::write(
+            root.join("cli/Cargo.toml"),
+            "[workspace]\nmembers = []\n[workspace.package]\nversion = \"1.1.0\"\n",
+        )
+        .unwrap();
+
+        freeze(root, false).unwrap();
+        let report = freeze(root, true).unwrap();
+        assert!(
+            report.stale.is_empty(),
+            "freeze must converge after a single version-bump write: {report:?}"
+        );
+
+        let version_bytes = std::fs::read(root.join("engine/VERSION")).unwrap();
+        let expected = format!("sha256:{:x}", Sha256::digest(&version_bytes));
+        let manifest_text = std::fs::read_to_string(root.join("engine/MANIFEST.json")).unwrap();
+        let manifest: serde_json::Value = serde_json::from_str(&manifest_text).unwrap();
+        assert_eq!(
+            manifest["files"]["VERSION"].as_str(),
+            Some(expected.as_str())
         );
     }
 
