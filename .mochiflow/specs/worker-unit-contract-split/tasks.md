@@ -24,7 +24,7 @@ Critical Stop Conditions:
     - `contracts/contracts.lock`
   - Done: `worker.md` defines `unit_kind ∈ {build-task, rework}` as the primary behavioral discriminator (checkbox + `Task:` trailer for `build-task`; host verb's commit convention for `rework`), documents `unit_kind` as a dispatch-time field of `## Context pack`, keys STOP routing on `unit_kind`, and specifies a single uniform compact report including `unit_kind` with no `feedback_id`/`qa_item`/`task` fields; `build.md`/`open.md`/`update.md` reference the unit using the `unit_kind` vocabulary consistently with `worker.md` and carry no contradictory prefix-only behavioral language; the dogfood sync (`mochiflow freeze`, `mochiflow upgrade --source engine`, `mochiflow adapter generate --check`) is run so the gitignored vendored `.mochiflow/engine` copy is regenerated wholesale and the generated `spec-worker.json` is unchanged; the `default` profile (including `freeze --check`) is green.
   - Stop: a second worker role/agent or transport, or any change to `spec-worker.json` tools/model/prompt, appears necessary (route back to plan).
-- [ ] T-002 [AC-01, AC-02, AC-03] Add conformance assertions for the worker unit_kind contract
+- [x] T-002 [AC-01, AC-02, AC-03] Add conformance assertions for the worker unit_kind contract
   - Depends on: T-001
   - Files:
     - `cli/crates/mochiflow-cli/tests/conformance.rs`
