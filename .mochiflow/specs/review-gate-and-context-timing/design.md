@@ -83,7 +83,7 @@ contract each carries:
   coarse structural shift is detected, run `refresh-context` on the feature
   branch (human confirm); `open` makes the `docs(context)` commit after the
   fold/context-check and before the `mochiflow accept` close-out commit. The
-  `(a)-(f)` sequence becomes acceptance → fold + context-check → optional
+  `(a)-(g)` sequence becomes acceptance → fold + context-check → optional
   `docs(context)` commit → accept close-out → PR body → approve-PR → `mochiflow
   pr`. Post-merge follow-up is the fallback for at/after-merge discovery.
 - `engine/commands/refresh-context.md`: "When it runs", procedure step 3, and the
@@ -139,6 +139,6 @@ contract each carries:
 
 ## Review Results
 
-The mandatory `risk: elevated` reviewer run is recorded here during build as
-`Reviewer mode: delegated | inline` and `Verdict: pass | pass-with-comments | fail`.
-Not yet run at plan time.
+- Reviewer mode: delegated
+- Verdict: pass-with-comments (mandatory elevated risk-cadence review, post-build, on `git diff origin/main...HEAD`).
+- Findings: one Low (spec/design shorthand `(a)-(f)` vs shipped `(a)-(g)`), fixed in spec.md/design.md. No Critical/High/Medium. AC-01..AC-11 all implemented and, where required, guarded by conformance tests (`plan_offers_pre_approval_review_before_confirm_for_elevated`, `open_ships_context_refresh_in_pr_before_accept`).

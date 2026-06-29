@@ -75,7 +75,7 @@ post-merge context commit that cannot land on the spec branch.
   - `engine/commands/open.md`: step-4 context-refresh check rewritten to an
     in-PR feature-branch refresh with post-merge fallback; the `docs(context)`
     commit placed explicitly after the fold/context-check and before the
-    `mochiflow accept` close-out commit; the `(a)-(f)` sequence updated.
+    `mochiflow accept` close-out commit; the `(a)-(g)` sequence updated.
   - `engine/commands/refresh-context.md`: "When it runs" + procedure **and the
     frontmatter `description`** updated to the in-branch-before-PR primary path,
     keeping its no-auto-commit contract (the commit is `open`'s responsibility).
@@ -203,14 +203,14 @@ post-merge context commit that cannot land on the spec branch.
 
 | AC | Scope | Verification method | Planned test/QA | Implementation | Result | Evidence | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| AC-01 | cli | automated | QA-01, QA-05 | `engine/commands/plan.md`, `cli/crates/mochiflow-cli/tests/conformance.rs` | UNVERIFIED | | Pre-approval review before confirm for risk>=elevated (AC-11 test) |
-| AC-02 | cli | AI-observed | QA-02, QA-03 | `engine/commands/plan.md` | UNVERIFIED | | Review fail keeps status draft, no plan commit |
-| AC-03 | cli | automated | QA-05 | `engine/commands/plan.md`, `cli/crates/mochiflow-cli/tests/conformance.rs` | UNVERIFIED | | standard order unchanged (AC-11 test) |
-| AC-04 | cli | AI-observed | QA-06 | `engine/commands/plan.md`, `engine/reference/workflow.md` | UNVERIFIED | | review documented as non-gate; two gates kept |
-| AC-05 | cli | AI-observed | QA-03 | `engine/commands/open.md`, `engine/reference/git.md`, `engine/router.md` | UNVERIFIED | | docs(context) commit precedes accept close-out; (a)-(f) order explicit |
-| AC-06 | cli | AI-observed | QA-03 | `engine/commands/refresh-context.md`, `engine/commands/open.md` | UNVERIFIED | | human confirms; open owns commit; refresh no-auto-commit |
-| AC-07 | cli | AI-observed | QA-04 | `engine/reference/git.md`, `engine/commands/open.md` | UNVERIFIED | | post-merge fallback routes to follow-up |
-| AC-08 | cli | automated | QA-06, QA-05 | `engine/commands/open.md`, `engine/commands/refresh-context.md`, `engine/reference/git.md`, `engine/router.md`, `cli/crates/mochiflow-cli/tests/conformance.rs` | UNVERIFIED | | no post-merge-primary (incl. frontmatter); Change B test re-pins new contract |
-| AC-09 | cli | automated | QA-05 | `engine/MANIFEST.json`, `cli/` | UNVERIFIED | | dogfood sync (freeze → upgrade --source engine → adapter generate --check) + default verify + lint |
-| AC-10 | cli | AI-observed | QA-06 | `engine/agents/independent-reviewer.md`, `engine/commands/review.md`, `engine/commands/plan.md`, `engine/reference/risk.md` | UNVERIFIED | | reviewer plan-quality mode for code-less specs; risk.md inputs note |
-| AC-11 | cli | automated | QA-05, QA-01 | `cli/crates/mochiflow-cli/tests/conformance.rs`, `engine/commands/plan.md` | UNVERIFIED | | conformance test for Change A ordering |
+| AC-01 | cli | automated | QA-01, QA-05 | `engine/commands/plan.md`, `cli/crates/mochiflow-cli/tests/conformance.rs` | PASS | `plan_offers_pre_approval_review_before_confirm_for_elevated` (cargo test PASS) | Pre-approval review before confirm for risk>=elevated |
+| AC-02 | cli | AI-observed | QA-02, QA-03 | `engine/commands/plan.md` | PASS | plan.md step 7 + Stop conditions (diff) | Review fail keeps status draft, no plan commit |
+| AC-03 | cli | automated | QA-05 | `engine/commands/plan.md`, `cli/crates/mochiflow-cli/tests/conformance.rs` | PASS | conformance test asserts standard order unchanged | standard order unchanged |
+| AC-04 | cli | AI-observed | QA-06 | `engine/commands/plan.md`, `engine/reference/workflow.md` | PASS | workflow.md ## Delivery approval gates note + plan.md (diff) | review documented as non-gate; two gates kept |
+| AC-05 | cli | AI-observed | QA-03 | `engine/commands/open.md`, `engine/reference/git.md`, `engine/router.md` | PASS | open.md step (c) + git.md; `open_ships_context_refresh_in_pr_before_accept` PASS | docs(context) commit precedes accept close-out; (a)-(g) order |
+| AC-06 | cli | AI-observed | QA-03 | `engine/commands/refresh-context.md`, `engine/commands/open.md` | PASS | open.md step 4/5 + refresh-context.md (diff) | human confirms; open owns commit; refresh no-auto-commit |
+| AC-07 | cli | AI-observed | QA-04 | `engine/reference/git.md`, `engine/commands/open.md` | PASS | at/after-merge fallback wording (diff) | post-merge fallback routes to follow-up |
+| AC-08 | cli | automated | QA-06, QA-05 | `engine/commands/open.md`, `engine/commands/refresh-context.md`, `engine/reference/git.md`, `engine/router.md`, `cli/crates/mochiflow-cli/tests/conformance.rs` | PASS | `open_ships_context_refresh_in_pr_before_accept` negative-existence checks PASS; grep confirms no post-merge-primary in body/frontmatter | Change B test re-pins new contract |
+| AC-09 | cli | automated | QA-05 | `engine/MANIFEST.json`, `cli/` | PASS | dogfood sync (freeze nothing-to-update, upgrade, adapter generate --check 0 drift) + cargo test/fmt/clippy + freeze --check up to date + lint 0/0 | full default verify after sync |
+| AC-10 | cli | AI-observed | QA-06 | `engine/agents/independent-reviewer.md`, `engine/commands/review.md`, `engine/commands/plan.md`, `engine/reference/risk.md` | PASS | independent-reviewer.md plan-quality mode + phases [plan, build]; review.md + risk.md notes (diff) | reviewer plan-quality mode for code-less specs |
+| AC-11 | cli | automated | QA-05, QA-01 | `cli/crates/mochiflow-cli/tests/conformance.rs`, `engine/commands/plan.md` | PASS | `plan_offers_pre_approval_review_before_confirm_for_elevated` (positional guard) PASS | conformance test for Change A ordering |
