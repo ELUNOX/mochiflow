@@ -48,10 +48,16 @@ for its whole life, so there is nothing to restore.
 2. **Delegate code changes to the `build` loop** — do not reimplement build
    logic here. Apply the requested changes **through the build worker mechanism**
    (`commands/build.md` — delegated worker when available, else inline; read,
-   edit, TDD where applicable); update defines no separate delegation path.
-   Re-verify with the surface's `default` command, and update the AC
-   Verification Matrix rows touched by the change. Feedback interpretation and
-   PR-metadata updates stay inline on the main agent.
+   edit, TDD where applicable); update defines no separate delegation path. The
+   reused worker's unit is the **bounded PR-feedback fix**, not an open
+   `tasks.md` task (build is already complete): there is no checkbox to tick and
+   no `Task:` trailer, and the worker commits per this verb's feedback-commit
+   convention (step 4 / `reference/git.md`). build's eligibility gate
+   (`mochiflow ready` / `status: approved`) is **not** re-run — the spec is
+   already `accepted` and in review, and that state is reused as-is (never
+   reverted to `approved`). Re-verify with the surface's `default` command, and
+   update the AC Verification Matrix rows touched by the change. Feedback
+   interpretation and PR-metadata updates stay inline on the main agent.
 3. When feedback changes a decision or surfaces a new pitfall, revise the fold
    (`[adr].decisions` / `[adr].pitfalls`) so the durable record keeps matching
    the final design.

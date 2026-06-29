@@ -113,8 +113,13 @@ request. Select the first available mode:
 
 1. `delegated`: dispatch a subagent when the adapter/runtime supports it.
 2. `inline`: only when subagents are unavailable or dispatch fails for a
-   runtime/tooling reason, the main agent temporarily switches to the target
-   role and executes the same procedure inline.
+   runtime/tooling reason, the procedure runs without a subagent. For the
+   **reviewer**, the main agent temporarily switches to the read-only reviewer
+   role and executes the same procedure inline. For the **worker**, there is no
+   separate worker role to switch into: the orchestrator/main agent simply
+   executes the unit itself — this is the inline build fallback in
+   `commands/build.md` (behavior-identical to today's inline build), still
+   honoring the task contract and the compact-report boundary.
 
 For review, run `agents/independent-reviewer.md` read-only. Inline review must
 read `agents/independent-reviewer.md`, use the same Stage 1 / Stage 2 / verdict

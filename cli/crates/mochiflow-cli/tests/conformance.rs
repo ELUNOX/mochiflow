@@ -901,6 +901,59 @@ fn behavioral_kiro_generates_spec_worker_agent_deterministically() {
 }
 
 #[test]
+fn worker_reuse_unit_and_entry_gate_are_specified() {
+    // Reviewer feedback: open/update reuse the worker mechanism but build is
+    // complete (no open task), and build's approved/ready entry gate must not
+    // block an accepted in-review spec. Also: worker inline = orchestrator self.
+    let worker = read_repo_file("engine/agents/worker.md");
+    let build = read_repo_file("engine/commands/build.md");
+    let open = read_repo_file("engine/commands/open.md");
+    let update = read_repo_file("engine/commands/update.md");
+    let risk = read_repo_file("engine/reference/risk.md");
+
+    // worker.md generalizes the unit across host phases.
+    assert!(
+        worker.contains("## Execution unit and host phases"),
+        "worker.md must define the execution unit across host phases"
+    );
+    assert!(
+        worker.contains("no open task"),
+        "worker.md must state open/update reuse usually has no open task"
+    );
+    assert!(
+        worker.contains("host verb's own commit convention")
+            || worker.contains("host verb's commit convention"),
+        "worker.md reuse must commit per the host verb's convention"
+    );
+
+    // build.md entry gate is phase-entry only, not re-run on reuse.
+    assert!(
+        build.contains("starting build as a phase") && build.contains("not** re-run"),
+        "build.md must scope the eligibility gate to phase entry, not reuse"
+    );
+
+    // open/update name the bounded fix unit (no task row / no Task: trailer).
+    assert!(
+        open.contains("QA-`FAIL` fix") && open.contains("no `Task:` trailer"),
+        "open.md rework must use a bounded fix unit with no Task: trailer"
+    );
+    assert!(
+        update.contains("bounded PR-feedback fix")
+            && update.contains("already `accepted`")
+            && update.contains("never\n   reverted to `approved`")
+            || (update.contains("bounded PR-feedback fix") && update.contains("not** re-run")),
+        "update.md must keep the accepted state and not re-run the entry gate"
+    );
+
+    // risk.md inline worker = orchestrator self, not a separate role.
+    assert!(
+        risk.contains("no\n   separate worker role to switch into")
+            || risk.contains("no separate worker role to switch into"),
+        "risk.md must clarify the worker has no separate inline role"
+    );
+}
+
+#[test]
 fn worker_recoverability_is_authoring_rule_not_lint() {
     // AC-10: plan.md and authoring.md document the worker-recoverability
     // invariant as plan authoring discipline enforced by reviewer judgment,

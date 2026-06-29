@@ -22,11 +22,35 @@ references:
 
 # Worker
 
+## Execution unit and host phases
+
+A worker executes **one bounded code-change unit** and is reused by more than one
+verb over the shared transport. The unit and its commit convention depend on the
+host phase:
+
+- **build** (primary): the unit is one open `tasks.md` task (`T-###`). The worker
+  marks the task checkbox and commits with one `Task:` trailer (the cadence
+  below). This is the only phase that ticks a checkbox or writes a `Task:`
+  trailer.
+- **open** (QA-`FAIL` rework) / **update** (PR-feedback code change): build is
+  already complete, so there is usually **no open task**. The unit is the single
+  bounded fix the host verb hands over (the failing QA item / the requested
+  feedback change). There is no `tasks.md` row to tick and no `Task:` trailer;
+  the worker commits per the **host verb's own commit convention**
+  (`commands/open.md` rework / `commands/update.md` feedback, see
+  `reference/git.md`). Everything else — transcript isolation, repo-wide read,
+  contract-bounded write, the compact report, STOP bubble-up, and the top model —
+  is identical to the build case.
+
+The remaining sections describe the build case; where they reference the
+`tasks.md` row, checkbox, or `Task:` trailer, the open/update reuse substitutes
+the bounded fix contract and the host verb's commit convention as above.
+
 ## Responsibilities
 
-- Execute exactly **one** task (`T-###`) handed over by the build orchestrator,
-  following the existing `commands/build.md` per-task procedure (read
-  surrounding source, TDD for logic changes, minimal diff, match existing
+- Execute exactly **one** unit handed over by the orchestrator — in build, one
+  task (`T-###`) — following the existing `commands/build.md` per-task procedure
+  (read surrounding source, TDD for logic changes, minimal diff, match existing
   style).
 - Run the surface's `default` verification command and fix FAIL to PASS before
   returning.
@@ -37,6 +61,10 @@ references:
 - A worker starts from a **fresh context** (the context pack only). It dispatches
   over the **shared delegation transport** defined in
   `reference/risk.md ## Review transport`; there is no separate worker transport.
+  In the `delegated` mode the worker is a subagent; in the `inline` fallback there
+  is no separate worker role — the orchestrator/main agent executes the unit
+  itself (today's inline build), still honoring the contract and the compact
+  report boundary.
 
 ## Context pack (orchestrator → worker)
 
@@ -97,6 +125,12 @@ implementation and verification PASS, first mark its checkbox in `tasks.md`
 the worker never combines multiple task completions and never writes the AC
 Matrix (the orchestrator owns the Matrix).
 
+When the worker is reused by `open` (QA-`FAIL` rework) or `update` (PR-feedback),
+there is no open task: the worker skips the checkbox tick and the `Task:` trailer
+and instead commits per the host verb's own convention (the open rework / update
+feedback commit in `reference/git.md`). The verification-then-commit discipline
+is unchanged.
+
 ## STOP bubble-up
 
 A worker that hits a build stop condition does **not** improvise or make a design
@@ -114,9 +148,11 @@ This keeps judgment single-threaded on the orchestrator at runtime.
 
 - The worker has **no authority** over acceptance, the living-spec fold, PR-body
   synthesis, or any human gate — those stay inline on the orchestrator.
-- Treat the approved `tasks.md` structure as a plan contract: change only the
-  task's own checkbox. Any task addition / split / renumber / `Files` / `Done` /
-  `Stop` change is a `blocked` return, not an in-worker edit.
-- Every fact needed to implement the task must be recoverable from `design.md` +
-  the task row + reading committed code; if it is not, the missing contract is a
-  `blocked` return (a plan gap), not an improvised decision.
+- Treat the approved `tasks.md` structure as a plan contract: in build, change
+  only the task's own checkbox. Any task addition / split / renumber / `Files` /
+  `Done` / `Stop` change is a `blocked` return, not an in-worker edit. (In the
+  open/update reuse there is no task row to edit.)
+- Every fact needed to implement the unit must be recoverable from `design.md` +
+  the task row (or, on reuse, the bounded fix contract the host verb hands over)
+  + reading committed code; if it is not, the missing contract is a `blocked`
+  return (a plan gap), not an improvised decision.

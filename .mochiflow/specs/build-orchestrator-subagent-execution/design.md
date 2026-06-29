@@ -227,3 +227,25 @@ Post-review feedback addressed (follow-up commit):
   write-capable build-worker agent alongside the read-only reviewer. The
   `[context]` map (`structure.md`) is intentionally not hand-edited; it is
   refreshed from code via `refresh-context` as a post-merge follow-up.
+
+Second feedback round (engine-procedure coherence, follow-up commit):
+
+- High (#2 worker reuse unit): `worker.md` was written around "exactly one
+  `T-###` task + checkbox + `Task:` trailer", which is undefined for `open`
+  (QA-`FAIL` rework) / `update` (PR-feedback) where build is already complete and
+  no open task remains. Added `worker.md ## Execution unit and host phases`: the
+  unit generalizes to one bounded code-change unit; build ticks a checkbox and
+  writes a `Task:` trailer, while the open/update reuse runs the bounded fix with
+  no checkbox/trailer and commits per the host verb's convention. `open.md` /
+  `update.md` state this explicitly.
+- High (#1 entry gate): `build.md` step 1 now scopes the `mochiflow ready` /
+  `status: approved` eligibility gate to *starting build as a phase*; it is not
+  re-run when `open` / `update` reuse the worker mechanism, and `update`'s
+  `accepted` in-review state is reused as-is (never reverted to `approved`).
+- Low (#3 inline worker): `risk.md ## Review transport` and `worker.md` clarify
+  that the worker's `inline` mode is the orchestrator/main agent executing the
+  unit itself (the inline build fallback), not a separate worker role switch; the
+  role-switch framing remains reviewer-specific.
+
+All addressed additively (no behavior change beyond making the already-claimed
+reuse executable); pinned by `conformance::worker_reuse_unit_and_entry_gate_are_specified`.
