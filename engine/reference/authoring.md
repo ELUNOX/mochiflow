@@ -144,25 +144,26 @@ Write when the change is multi-step. Carries:
 required blocks and a valid reference); authored tasks must match it or `plan`'s
 lint gate fails.
 
-## Worker-recoverability (plan authoring rule)
+## Session-recoverability (plan authoring rule)
 
-Build may dispatch each task to a disposable worker that sees only `design.md` +
-its task row + the committed code (`commands/build.md` 3·orchestrator). A worker
-can read a prior worker's committed *code* but not its *reasoning*. So plan must
-author tasks to be **worker-recoverable**:
+Build executes inline, but long work may resume in a new session. A new session
+must be able to recover the implementation contract from durable artifacts and
+committed state, not from hidden conversation memory. Author tasks to be
+**session-recoverable**:
 
-- Every fact needed to implement a task correctly must be recoverable from
-  (`design.md` + the task row + reading committed code). Cross-task reasoning
-  that an inline build would carry implicitly is written into `design.md` at plan
-  time — this is the practical form of "share the contract".
+- Every fact needed to implement or resume a task correctly must be recoverable
+  from `spec.md`, `design.md`, the task row, committed code, and git trailers.
+  Cross-task reasoning that the current session might otherwise carry implicitly
+  is written into `design.md` at plan time — this is the practical form of
+  "share the contract".
 - When a file appears in more than one task's `Files`, each such task's `Done`
-  states how it leaves the shared structure consistent, so a later worker can
+  states how it leaves the shared structure consistent, so a later session can
   pick up the file from its committed state alone.
 
 This is **plan authoring discipline enforced by reviewer Stage 1 judgment, not a
 new deterministic lint** — recoverability cannot be decided mechanically, so no
-lint check is added for it. A worker that finds a required fact missing returns
-`blocked` (a plan gap) rather than improvising.
+lint check is added for it. If implementation finds a required fact missing from
+the durable source set, stop and route back to `plan` rather than improvising.
 
 ## Consistency check (plan, once)
 

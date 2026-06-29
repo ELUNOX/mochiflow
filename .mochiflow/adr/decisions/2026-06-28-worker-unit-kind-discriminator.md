@@ -3,7 +3,8 @@ id: 2026-06-28-worker-unit-kind-discriminator
 date: 2026-06-28
 area: [cli]
 spec: worker-unit-contract-split
-status: active
+status: superseded
+superseded_by: 2026-06-29-retire-worker-unit-kind
 ---
 ## 2026-06-28 — Name worker execution units by an explicit unit_kind discriminator
 

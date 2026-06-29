@@ -3,9 +3,10 @@ name: spec-update
 phase: update
 description: |
   mochiflow's update action. Handle review feedback, CI failures, and PR-body
-  corrections while the work is in review. Code changes are delegated through the
-  same `build` loop (not reimplemented); update re-verifies, pushes, updates PR
-  metadata, and revises the fold when feedback changes a decision. The spec is
+  corrections while the work is in review. Code changes are applied as bounded
+  inline fixes using build discipline (not a separate phase restart); update
+  re-verifies, pushes, updates PR metadata, and revises the fold when feedback
+  changes a decision. The spec is
   never moved and never resurrected — it has stayed flat the whole time. Activate
   on the explicit command `mochiflow-update`, or natural phrasing like "修正依頼" /
   "PR feedback" / "PRを直して".
@@ -46,15 +47,11 @@ for its whole life, so there is nothing to restore.
    the current `{prefix}/{slug}` branch). The spec is already flat at
    `{specs_dir}/{slug}/`; **do not move it, and do not revert its asserted
    state** (it stays `accepted`).
-2. **Delegate code changes to the `build` loop** — do not reimplement build
-   logic here. Apply the requested changes **through the build worker mechanism**
-   (`commands/build.md` — delegated worker when available, else inline; read,
-   edit, TDD where applicable); update defines no separate delegation path. The
-   reused worker's unit is the **bounded PR-feedback fix**
-   (`unit_kind: rework`, unit `pr-feedback:<id>`), not an open
-   `tasks.md` task (build is already complete): there is no checkbox to tick and
-   no `Task:` trailer, and the worker commits per this verb's feedback-commit
-   convention (step 4 / `reference/git.md`). build's eligibility gate
+2. Apply requested code changes as a **bounded inline PR-feedback fix** using
+   build discipline (read, edit, TDD where applicable, verify, commit). This is
+   not an open `tasks.md` task (build is already complete): there is no checkbox
+   to tick and no `Task:` trailer. Commit per this verb's feedback-commit
+   convention (step 5 / `reference/git.md`). Build's eligibility gate
    (`mochiflow ready` / `status: approved`) is **not** re-run — the spec is
    already `accepted` and in review, and that state is reused as-is (never
    reverted to `approved`). Re-verify with the surface's `default` command, and
@@ -87,7 +84,8 @@ for its whole life, so there is nothing to restore.
 ## Stop conditions
 
 - Do not move the spec directory and do not revert the `accepted` asserted state.
-- Do not reimplement build logic inside update — delegate to `build`.
+- Do not restart the build phase inside update; apply only the bounded inline
+  fix needed for the PR feedback.
 - Do not write `status: done`, never archive to `_done/`, and never stage or
   commit `INDEX.md`.
 - If the feedback is unrelated to this spec, route it as its own spec or `patch`

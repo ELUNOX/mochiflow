@@ -3,8 +3,9 @@ id: 2026-06-28-kiro-adapter-adds-worker-agent
 date: 2026-06-28
 area: [cli]
 spec: build-orchestrator-subagent-execution
-status: active
+status: superseded
 supersedes: 2026-06-24-kiro-adapter-always-on-steering
+superseded_by: 2026-06-29-retire-kiro-worker-agent
 ---
 ## 2026-06-28 — Kiro adapter generates a third file: the write-capable worker agent
 

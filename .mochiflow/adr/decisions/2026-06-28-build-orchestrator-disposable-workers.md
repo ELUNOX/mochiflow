@@ -3,7 +3,8 @@ id: 2026-06-28-build-orchestrator-disposable-workers
 date: 2026-06-28
 area: [cli]
 spec: build-orchestrator-subagent-execution
-status: active
+status: superseded
+superseded_by: 2026-06-29-retire-build-worker-orchestrator
 ---
 ## 2026-06-28 — build runs as an orchestrator dispatching disposable per-task workers
 
