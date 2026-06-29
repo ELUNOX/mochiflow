@@ -828,6 +828,56 @@ fn ac_matrix_pending_human_is_canonical_provisional_token() {
 }
 
 #[test]
+fn behavioral_kiro_generates_spec_worker_agent_deterministically() {
+    // AC-12: the kiro adapter generates .kiro/agents/spec-worker.json (write-
+    // capable tools, top model) alongside the reviewer agent, and
+    // `adapter generate --check` stays green.
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg = materialize_full(tmp.path());
+
+    let (code, out) = run_cli(&cfg, &["adapter", "generate"]);
+    assert_eq!(code, 0, "{out}");
+
+    let worker = tmp.path().join(".kiro/agents/spec-worker.json");
+    assert!(worker.exists(), "spec-worker.json must be generated");
+    assert!(
+        tmp.path()
+            .join(".kiro/agents/spec-independent-reviewer.json")
+            .exists(),
+        "the reviewer agent must still be generated"
+    );
+
+    let body = std::fs::read_to_string(&worker).unwrap();
+    let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+    assert_eq!(json["name"].as_str(), Some("spec-worker"));
+    let tools: Vec<&str> = json["tools"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_str().unwrap())
+        .collect();
+    for t in ["read", "grep", "glob", "edit", "write", "bash"] {
+        assert!(
+            tools.contains(&t),
+            "worker agent must allow tool {t}: {tools:?}"
+        );
+    }
+    assert!(
+        json["prompt"]
+            .as_str()
+            .unwrap()
+            .ends_with("/agents/worker.md"),
+        "worker agent prompt must point at worker.md"
+    );
+
+    let (code, out) = run_cli(&cfg, &["adapter", "generate", "--check"]);
+    assert_eq!(
+        code, 0,
+        "worker agent generation must be deterministic: {out}"
+    );
+}
+
+#[test]
 fn worker_recoverability_is_authoring_rule_not_lint() {
     // AC-10: plan.md and authoring.md document the worker-recoverability
     // invariant as plan authoring discipline enforced by reviewer judgment,

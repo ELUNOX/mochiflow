@@ -54,7 +54,7 @@ Critical Stop Conditions:
     - `engine/reference/authoring.md`
   - Done: `plan.md` and `authoring.md` document the worker-recoverability invariant — every fact needed to implement a task must be recoverable from `design.md` + the task row + reading committed code, so cross-task reasoning that inline build would carry implicitly is written into `design.md` at plan time, and a file appearing in more than one task's `Files` documents its shared-state handling in each such task's `Done`; the rule is stated as plan authoring discipline enforced by reviewer Stage 1 judgment, explicitly NOT a new deterministic lint. Runs `mochiflow freeze` per Defaults.
   - Stop: do not add a lint check for recoverability; if a mechanical check seems necessary, stop and confirm scope.
-- [ ] T-007 [AC-12] Generate the kiro spec-worker agent
+- [x] T-007 [AC-12] Generate the kiro spec-worker agent
   - Depends on: T-002
   - Files:
     - `engine/adapters/kiro/agents/spec-worker.json.tpl`

@@ -1582,7 +1582,7 @@ fn adapter_generate_fails_when_candidate_parent_cannot_be_created() {
     assert!(out.contains("FAIL:"), "{out}");
     assert!(out.contains(".mochiflow/state/adapters"), "{out}");
     assert!(
-        out.contains("Summary: 1 written, 0 blocked, 1 failed"),
+        out.contains("Summary: 2 written, 0 blocked, 1 failed"),
         "{out}"
     );
 }
