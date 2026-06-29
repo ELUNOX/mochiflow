@@ -57,16 +57,44 @@ Agreed shape:
   review structurally clean-context (the worker writes; a separate role reads),
   which is the configuration that makes a generator-verifier loop most effective.
   No new evaluator, no new cadence.
+- **Isolate the transcript, not the filesystem.** Context isolation removes the
+  *accumulated conversation history* from the main thread, not the worker's
+  ability to read the repo. A worker starts with a fresh context (the task
+  contract only) but has full repo read/grep/glob. Discovery (e.g. an `rg` sweep
+  to find adjacent files) happens *inside the worker's context and is discarded
+  on return*, so it never bloats the orchestrator.
 - **Communication contract (principle only; fields go to plan).**
   - *context pack* (orchestrator -> worker): the minimum to execute one task as a
     contract — the relevant `design.md` slice, the single `tasks.md` row
-    (`Files` / `Done` / `Stop` / AC refs), the target files, the verify command,
-    and pointers to constitution / engineering-standards / pitfalls. Never the
-    whole repo, other tasks' transcripts, or conversation history.
+    (`Files` / `Done` / `Stop` / AC refs), the verify command, and pointers to
+    constitution / engineering-standards / pitfalls. `Files` is the **write-scope
+    anchor and reading start point, not a read jail**. Read is repo-wide; write
+    is contract-bounded — a worker needing to edit outside its declared surface
+    returns `blocked` (the STOP rule below) instead of widening scope. The pack
+    never carries other tasks' transcripts or conversation history.
   - *compact report* (worker -> orchestrator): the minimum to settle the AC Matrix
     and pick the next task without re-reading the worker's transcript — files
     changed, verify result + evidence pointer, commit ref, done/blocked + reason.
     Never the implementation narrative.
+- **git is the accumulator; review reads the full diff from git.** The
+  orchestrator never holds the cumulative diff in context, but the spec branch's
+  per-task commits do. The mandatory risk-cadence review reconstructs the diff
+  from git (`git diff origin/{base}...HEAD` for the completion-gate review; a
+  task's own commit for a per-task `critical` review) and reads the changed code
+  from scratch. Compact reports are **never** review evidence — extending
+  `risk.md`'s "never conversation history as evidence" to the reports. This keeps
+  the reviewer clean-context while still guaranteeing full-diff coverage.
+- **Worker-recoverability invariant (plan-time authoring rule).** A worker sees
+  only `design.md` + its task row + the committed code; it can read a prior
+  worker's committed *code* but not its *reasoning*. So every fact needed to
+  implement a task correctly must be recoverable from
+  (`design.md` + the task row + reading committed code). Cross-task reasoning that
+  inline build would carry implicitly is written into `design.md` at plan time
+  (the practical form of "share the contract"). When a file appears in more than
+  one task's `Files`, each such task's `Done` states how it leaves the shared
+  structure consistent. Enforcement is plan authoring discipline + reviewer
+  Stage 1 judgment, **not** a new deterministic lint (recoverability cannot be
+  decided mechanically).
 - **Worker commits its own task.** The worker follows the existing `build.md` 3e
   cadence (mark the `tasks.md` checkbox, then commit with one `Task:` trailer).
   Commit granularity stays one task per commit; the orchestrator records the AC
@@ -128,9 +156,8 @@ Agreed shape:
 
 ## Open Questions
 
-- Exact context-pack file-selection mechanism: how the orchestrator derives target
-  files from the task's `Files` without leaking the repo.
-- Exact compact-report field set and format.
+- Exact compact-report field set and format (the principle is fixed; the schema
+  is plan detail).
 - The worker role doc shape under `engine/agents/` and its adapter generation
   (a new generated per-tool agent, analogous to `spec-independent-reviewer`).
 - Orchestrator compaction fallback (Ralph-loop) for very large specs — include in
