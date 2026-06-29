@@ -18,15 +18,17 @@ surfaces:
   - ios              # ios | api | web
 integration: none    # none | contract | workflow
 risk: standard       # standard | elevated | critical (ordered enum)
-status: draft        # draft | approved | done
+status: draft        # draft | approved | accepted (done = legacy/derived)
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
 completed: YYYY-MM-DDTHH:MM:SSZ   # legacy: ordered the Done view for archived specs; the engine no longer writes it
 ```
 
-`status` flow is `draft → approved → done` (`workflow.md`). Whether `design.md` /
-`tasks.md` exist is expressed by file presence, not metadata. `completed` is
-written only when status becomes `done`; it is absent on draft/approved specs.
+`status` flow is `draft → approved → accepted` (`workflow.md`); `done` is a
+legacy/derived state for archived specs, not written by the current flow. Whether
+`design.md` / `tasks.md` exist is expressed by file presence, not metadata.
+`completed` is a legacy timestamp tied to `done`; the current flow does not write
+it.
 
 ## SSOT discipline
 
@@ -141,6 +143,26 @@ Write when the change is multi-step. Carries:
 `lint` enforces this structure (top-level `T-###` checkbox tasks with the four
 required blocks and a valid reference); authored tasks must match it or `plan`'s
 lint gate fails.
+
+## Worker-recoverability (plan authoring rule)
+
+Build may dispatch each task to a disposable worker that sees only `design.md` +
+its task row + the committed code (`commands/build.md` 3·orchestrator). A worker
+can read a prior worker's committed *code* but not its *reasoning*. So plan must
+author tasks to be **worker-recoverable**:
+
+- Every fact needed to implement a task correctly must be recoverable from
+  (`design.md` + the task row + reading committed code). Cross-task reasoning
+  that an inline build would carry implicitly is written into `design.md` at plan
+  time — this is the practical form of "share the contract".
+- When a file appears in more than one task's `Files`, each such task's `Done`
+  states how it leaves the shared structure consistent, so a later worker can
+  pick up the file from its committed state alone.
+
+This is **plan authoring discipline enforced by reviewer Stage 1 judgment, not a
+new deterministic lint** — recoverability cannot be decided mechanically, so no
+lint check is added for it. A worker that finds a required fact missing returns
+`blocked` (a plan gap) rather than improvising.
 
 ## Consistency check (plan, once)
 

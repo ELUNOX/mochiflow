@@ -27,6 +27,7 @@ prerequisites:
 execution: inline
 references:
   - reference/workflow.md
+  - reference/risk.md
   - reference/git.md
   - templates/delivery/pr-description.md
 ---
@@ -46,19 +47,33 @@ for its whole life, so there is nothing to restore.
    `{specs_dir}/{slug}/`; **do not move it, and do not revert its asserted
    state** (it stays `accepted`).
 2. **Delegate code changes to the `build` loop** — do not reimplement build
-   logic here. Apply the requested changes through `commands/build.md` (read,
-   edit, TDD where applicable), re-verify with the surface's `default` command,
-   and update the AC Verification Matrix rows touched by the change.
+   logic here. Apply the requested changes **through the build worker mechanism**
+   (`commands/build.md` — delegated worker when available, else inline; read,
+   edit, TDD where applicable); update defines no separate delegation path. The
+   reused worker's unit is the **bounded PR-feedback fix**, not an open
+   `tasks.md` task (build is already complete): there is no checkbox to tick and
+   no `Task:` trailer, and the worker commits per this verb's feedback-commit
+   convention (step 4 / `reference/git.md`). build's eligibility gate
+   (`mochiflow ready` / `status: approved`) is **not** re-run — the spec is
+   already `accepted` and in review, and that state is reused as-is (never
+   reverted to `approved`). Re-verify with the surface's `default` command, and
+   update the AC Verification Matrix rows touched by the change. Feedback
+   interpretation and PR-metadata updates stay inline on the main agent.
 3. When feedback changes a decision or surfaces a new pitfall, revise the fold
    (`[adr].decisions` / `[adr].pitfalls`) so the durable record keeps matching
    the final design.
-4. Commit the changes on the feature branch (one task-sized commit per
+4. If the spec is `risk ≥ elevated` and step 2 changed code, the prior reviewer
+   verdict is now **stale**: re-run `agents/independent-reviewer.md` on the new
+   diff and record the fresh verdict in `design.md ## Review Results` before
+   pushing, per `reference/risk.md ## Consequences` (verdict freshness). A
+   PR-body-only correction (no code change) does not require a new review.
+5. Commit the changes on the feature branch (one task-sized commit per
    `reference/git.md`), then push the branch so the open PR updates.
-5. Update PR metadata when needed: regenerate the PR title/body into
+6. Update PR metadata when needed: regenerate the PR title/body into
    `{install_dir}/state/{slug}/pr-body.md` and update the PR via the provider
    (or re-run `mochiflow pr` for the configured backend). PR-body-only
    corrections skip the code loop.
-6. Each spec-lane commit step regenerates the board via `mochiflow index` so the
+7. Each spec-lane commit step regenerates the board via `mochiflow index` so the
    gitignored `INDEX.md` stays fresh; `INDEX.md` is never staged or committed.
 
 ## Presentation

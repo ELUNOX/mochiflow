@@ -24,6 +24,7 @@ prerequisites:
 execution: inline
 references:
   - reference/workflow.md
+  - reference/risk.md
   - reference/git.md
   - templates/delivery/pr-description.md
 ---
@@ -64,8 +65,19 @@ approve-PR gate (e)**.
    - 3d. If any item is ambiguous (cannot determine pass or fail intent), re-ask
      for that specific item with a clear pass/fail question. Do not guess.
    - 3e. **Rework loop**: if any item is `FAIL`, pause open (status stays
-     `approved`). Run a build-equivalent fix loop (modify → verify → commit on
-     the feature branch). After the fix, re-present: (1) the failed items, plus
+     `approved`). Run the fix as a code change **through the build worker
+     mechanism** (`commands/build.md` — delegated worker when available, else
+     inline; modify → verify → commit on the feature branch); open does not
+     define its own delegation path. The reused worker's unit is the **bounded
+     QA-`FAIL` fix**, not an open `tasks.md` task (build is already complete):
+     there is no checkbox to tick and no `Task:` trailer, and the worker commits
+     per this verb's rework-commit convention (`reference/git.md`). Acceptance
+     judgment, the fold, PR-body synthesis, and the approve-PR gate stay inline
+     on the main agent. If the spec is `risk ≥ elevated`, a QA-`FAIL` rework that
+     changes code makes any prior reviewer verdict **stale**: re-run
+     `agents/independent-reviewer.md` on the new diff and record the fresh
+     verdict before accept, per `reference/risk.md ## Consequences` (verdict
+     freshness). After the fix, re-present: (1) the failed items, plus
      (2) any previously-passed items whose implementation files were modified by
      the fix (regression check). Repeat from 3b for the re-presented items only.
    - 3f. When all human QA items reach a done-eligible result (`CONFIRMED` or

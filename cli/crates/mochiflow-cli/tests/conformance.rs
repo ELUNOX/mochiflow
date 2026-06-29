@@ -828,6 +828,560 @@ fn ac_matrix_pending_human_is_canonical_provisional_token() {
 }
 
 #[test]
+fn behavioral_kiro_generates_spec_worker_agent_deterministically() {
+    // AC-12: the kiro adapter generates .kiro/agents/spec-worker.json (write-
+    // capable tools, top model) alongside the reviewer agent, and
+    // `adapter generate --check` stays green.
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg = materialize_full(tmp.path());
+
+    let (code, out) = run_cli(&cfg, &["adapter", "generate"]);
+    assert_eq!(code, 0, "{out}");
+
+    let worker = tmp.path().join(".kiro/agents/spec-worker.json");
+    assert!(worker.exists(), "spec-worker.json must be generated");
+    assert!(
+        tmp.path()
+            .join(".kiro/agents/spec-independent-reviewer.json")
+            .exists(),
+        "the reviewer agent must still be generated"
+    );
+
+    let body = std::fs::read_to_string(&worker).unwrap();
+    let json: serde_json::Value = serde_json::from_str(&body).unwrap();
+    assert_eq!(json["name"].as_str(), Some("spec-worker"));
+    let tools: Vec<&str> = json["tools"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_str().unwrap())
+        .collect();
+    for t in ["read", "write", "shell"] {
+        assert!(
+            tools.contains(&t),
+            "worker agent must allow tool {t}: {tools:?}"
+        );
+    }
+    // Kiro recognizes only coarse tool categories (read/write/shell/aws);
+    // grep/glob/edit/bash are not categories and render as "unknown" in Kiro.
+    for bad in ["grep", "glob", "edit", "bash"] {
+        assert!(
+            !tools.contains(&bad),
+            "worker agent must not use non-category tool `{bad}` (unknown in Kiro): {tools:?}"
+        );
+    }
+    assert!(
+        json["prompt"]
+            .as_str()
+            .unwrap()
+            .ends_with("/agents/worker.md"),
+        "worker agent prompt must point at worker.md"
+    );
+
+    let (code, out) = run_cli(&cfg, &["adapter", "generate", "--check"]);
+    assert_eq!(
+        code, 0,
+        "worker agent generation must be deterministic: {out}"
+    );
+
+    // AC-09: the worker carries the top model, and a user downgrade is real
+    // drift that --check flags and regenerate overwrites (no downgrade persists).
+    assert_eq!(
+        json["model"].as_str(),
+        Some("claude-opus-4.8"),
+        "worker agent must ship the top model"
+    );
+    let downgraded = body.replace("claude-opus-4.8", "cheap-model");
+    assert_ne!(downgraded, body, "fixture must actually change the model");
+    std::fs::write(&worker, &downgraded).unwrap();
+    let (code, out) = run_cli(&cfg, &["adapter", "generate", "--check"]);
+    assert_ne!(
+        code, 0,
+        "a worker model downgrade must be reported as drift: {out}"
+    );
+    let (code, _out) = run_cli(&cfg, &["adapter", "generate"]);
+    assert_eq!(code, 0);
+    let regenerated = std::fs::read_to_string(&worker).unwrap();
+    assert!(
+        regenerated.contains("claude-opus-4.8") && !regenerated.contains("cheap-model"),
+        "regenerate must restore the top model: {regenerated}"
+    );
+}
+
+#[test]
+fn worker_schema_commit_and_lifecycle_propagation() {
+    // Fourth engine-coherence round:
+    // - worker context pack + compact report generalize to the open/update unit;
+    // - open/update reference risk.md and define their commit convention;
+    // - adapter standing-layer templates use the current draft->approved->accepted
+    //   lifecycle (done = legacy/derived), not the stale draft->approved->done.
+    let worker = read_repo_file("engine/agents/worker.md");
+    let git = read_repo_file("engine/reference/git.md");
+    let open = read_repo_file("engine/commands/open.md");
+    let update = read_repo_file("engine/commands/update.md");
+
+    // unit id scheme in context pack + compact report.
+    assert!(
+        worker.contains("qa-fail:<id>") && worker.contains("pr-feedback:<id>"),
+        "worker.md must generalize the unit id to qa-fail / pr-feedback forms"
+    );
+    assert!(
+        worker.contains("`unit`: the unit id"),
+        "worker.md compact report must use a generalized `unit` id field"
+    );
+    assert!(
+        worker.contains("host fix\n    contract") || worker.contains("host fix contract"),
+        "worker.md context pack must offer a host fix contract instead of a task row on reuse"
+    );
+    // STOP route-back is host-phase specific.
+    assert!(
+        worker.contains("destination depends on"),
+        "worker.md STOP must split the blocked route-back per host phase"
+    );
+
+    // git.md defines the open rework / update feedback commit convention.
+    assert!(
+        git.contains("PR-feedback commits")
+            && git.contains("no** `Task:` trailer")
+            && git.contains("`Spec: {slug}` trailer"),
+        "git.md must define the open rework / update feedback commit convention"
+    );
+
+    // open/update reference risk.md (frontmatter) for verdict freshness.
+    assert!(
+        open.contains("- reference/risk.md"),
+        "open.md frontmatter must reference reference/risk.md"
+    );
+    assert!(
+        update.contains("- reference/risk.md"),
+        "update.md frontmatter must reference reference/risk.md"
+    );
+
+    // adapter standing-layer templates use the current lifecycle.
+    for tpl in [
+        "engine/adapters/kiro/steering/mochiflow.md.tpl",
+        "engine/adapters/agents/AGENTS.md.tpl",
+        "engine/adapters/claude-code/CLAUDE.md.tpl",
+        "engine/adapters/copilot/copilot-instructions.md.tpl",
+    ] {
+        let body = read_repo_file(tpl);
+        assert!(
+            body.contains("draft → approved → accepted"),
+            "{tpl} must use the draft -> approved -> accepted lifecycle"
+        );
+        assert!(
+            !body.contains("draft → approved → done"),
+            "{tpl} must not keep the stale draft -> approved -> done lifecycle"
+        );
+    }
+}
+
+#[test]
+fn worker_write_scope_resume_and_verdict_freshness_specified() {
+    // Second engine-coherence round:
+    // - worker write scope includes its own tasks.md checkbox line (else the
+    //   checkbox tick contradicts the Files bound).
+    // - build resume handles "all tasks done, post-processing pending".
+    // - reviewer verdict must be fresh; open/update post-review code change at
+    //   risk>=elevated re-runs the reviewer.
+    // - build.md frontmatter description reflects orchestrator/worker delegation.
+    let worker = read_repo_file("engine/agents/worker.md");
+    let build = read_repo_file("engine/commands/build.md");
+    let open = read_repo_file("engine/commands/open.md");
+    let update = read_repo_file("engine/commands/update.md");
+    let risk = read_repo_file("engine/reference/risk.md");
+
+    // worker write scope explicitly includes the checkbox line as an exception.
+    assert!(
+        worker.contains("its own task's checkbox line in")
+            && worker.contains("exception to the `Files` bound"),
+        "worker.md must broaden the write scope to its own tasks.md checkbox line"
+    );
+
+    // build resume: zero unchecked tasks -> completion path.
+    assert!(
+        build.contains("When zero tasks are unchecked") && build.contains("completion path"),
+        "build.md resume must define the all-tasks-done, post-processing-pending case"
+    );
+
+    // verdict freshness rule lives in risk.md and is referenced by open/update.
+    assert!(
+        risk.contains("Verdict freshness") && risk.contains("stale"),
+        "risk.md must state reviewer verdict freshness"
+    );
+    assert!(
+        open.contains("stale") && open.contains("freshness)"),
+        "open.md rework must re-run the reviewer on the new diff when elevated"
+    );
+    assert!(
+        update.contains("stale") && update.contains("verdict freshness"),
+        "update.md must re-run the reviewer on the new diff when elevated"
+    );
+
+    // build.md frontmatter description is no longer inline-only / review-only.
+    assert!(
+        build.contains("Implement an approved spec as an orchestrator")
+            && build.contains("disposable per-task workers"),
+        "build.md description must reflect orchestrator/worker delegation"
+    );
+    assert!(
+        !build.contains("run only\n  read-only review through independent-reviewer transport"),
+        "build.md description must drop the stale review-only phrasing"
+    );
+}
+
+#[test]
+fn worker_reuse_unit_and_entry_gate_are_specified() {
+    // Reviewer feedback: open/update reuse the worker mechanism but build is
+    // complete (no open task), and build's approved/ready entry gate must not
+    // block an accepted in-review spec. Also: worker inline = orchestrator self.
+    let worker = read_repo_file("engine/agents/worker.md");
+    let build = read_repo_file("engine/commands/build.md");
+    let open = read_repo_file("engine/commands/open.md");
+    let update = read_repo_file("engine/commands/update.md");
+    let risk = read_repo_file("engine/reference/risk.md");
+
+    // worker.md generalizes the unit across host phases.
+    assert!(
+        worker.contains("## Execution unit and host phases"),
+        "worker.md must define the execution unit across host phases"
+    );
+    assert!(
+        worker.contains("no open task"),
+        "worker.md must state open/update reuse usually has no open task"
+    );
+    assert!(
+        worker.contains("host verb's own commit convention")
+            || worker.contains("host verb's commit convention"),
+        "worker.md reuse must commit per the host verb's convention"
+    );
+
+    // build.md entry gate is phase-entry only, not re-run on reuse.
+    assert!(
+        build.contains("starting build as a phase") && build.contains("not** re-run"),
+        "build.md must scope the eligibility gate to phase entry, not reuse"
+    );
+
+    // open/update name the bounded fix unit (no task row / no Task: trailer).
+    assert!(
+        open.contains("QA-`FAIL` fix") && open.contains("no `Task:` trailer"),
+        "open.md rework must use a bounded fix unit with no Task: trailer"
+    );
+    assert!(
+        update.contains("bounded PR-feedback fix")
+            && update.contains("already `accepted`")
+            && update.contains("never\n   reverted to `approved`")
+            || (update.contains("bounded PR-feedback fix") && update.contains("not** re-run")),
+        "update.md must keep the accepted state and not re-run the entry gate"
+    );
+
+    // risk.md inline worker = orchestrator self, not a separate role.
+    assert!(
+        risk.contains("no\n   separate worker role to switch into")
+            || risk.contains("no separate worker role to switch into"),
+        "risk.md must clarify the worker has no separate inline role"
+    );
+}
+
+#[test]
+fn worker_recoverability_is_authoring_rule_not_lint() {
+    // AC-10: plan.md and authoring.md document the worker-recoverability
+    // invariant as plan authoring discipline enforced by reviewer judgment,
+    // explicitly NOT a new deterministic lint.
+    let plan = read_repo_file("engine/commands/plan.md");
+    let authoring = read_repo_file("engine/reference/authoring.md");
+
+    assert!(
+        authoring.contains("## Worker-recoverability"),
+        "authoring.md must add a Worker-recoverability section"
+    );
+    assert!(
+        authoring.contains("design.md` + the task row + reading committed code")
+            || authoring.contains("`design.md` + the task row + reading committed code"),
+        "authoring.md must state the recoverability source set"
+    );
+    assert!(
+        authoring.contains("more than one task's `Files`") && authoring.contains("`Done`"),
+        "authoring.md must require shared-file Done to document shared-state handling"
+    );
+    assert!(
+        authoring.contains("not a\nnew deterministic lint")
+            || authoring.contains("not a new deterministic lint"),
+        "authoring.md must state recoverability is not a new lint"
+    );
+    assert!(
+        plan.contains("worker-recoverable")
+            && plan.contains("reference/authoring.md ## Worker-recoverability"),
+        "plan.md must reference the worker-recoverability authoring rule"
+    );
+    assert!(
+        plan.contains("not a new lint"),
+        "plan.md must state the rule is not a new lint"
+    );
+}
+
+#[test]
+fn phase_boundaries_reuse_build_worker_and_close_delegates_nothing() {
+    // AC-11 (QA-07): open reuses the build worker only for QA-FAIL rework,
+    // update reuses it for the PR-feedback code change, close delegates nothing,
+    // and no verb defines its own separate delegation path.
+    let open = read_repo_file("engine/commands/open.md");
+    let update = read_repo_file("engine/commands/update.md");
+    let close = read_repo_file("engine/commands/close.md");
+
+    assert!(
+        open.contains("through the build worker\n     mechanism")
+            || open.contains("through the build worker mechanism"),
+        "open.md must reuse the build worker mechanism for the QA-FAIL rework"
+    );
+    assert!(
+        open.contains("open does not\n     define its own delegation path")
+            || open.contains("open does not define its own delegation path"),
+        "open.md must not define its own delegation path"
+    );
+    assert!(
+        open.contains("approve-PR gate stay inline")
+            || (open.contains("stay inline") && open.contains("approve-PR gate")),
+        "open.md must keep acceptance/fold/PR-body/approve-PR inline"
+    );
+    assert!(
+        update.contains("through the build worker mechanism")
+            && update.contains("update defines no separate delegation path"),
+        "update.md must reuse the build worker mechanism with no separate delegation path"
+    );
+    assert!(
+        update.contains("Feedback interpretation and\n   PR-metadata updates stay inline")
+            || update.contains("stay inline on the main agent"),
+        "update.md must keep feedback interpretation and PR-metadata updates inline"
+    );
+    assert!(
+        close.contains("delegates nothing"),
+        "close.md must state it delegates nothing"
+    );
+}
+
+#[test]
+fn build_is_orchestrator_with_inline_fallback_and_commit_cadence() {
+    // AC-04 / AC-07 (QA-01, QA-02, QA-04, QA-06): build.md adds orchestrator
+    // mode gated on >=2 open tasks AND a subagent mechanism, sequential-only,
+    // with an explicit inline fallback and the unchanged per-task commit cadence.
+    let build = read_repo_file("engine/commands/build.md");
+
+    assert!(
+        build.contains("at least two open tasks") && build.contains("subagent mechanism"),
+        "build.md must gate orchestrator mode on >=2 open tasks AND a subagent mechanism"
+    );
+    assert!(
+        build.contains("disposable") && build.contains("worker") && build.contains("orchestrator"),
+        "build.md must describe disposable per-task workers and an orchestrator"
+    );
+    assert!(
+        build.contains("inline") && build.contains("fallback"),
+        "build.md must keep an explicit inline fallback"
+    );
+    // sequential only (QA-06)
+    assert!(
+        build.contains("one at a time")
+            && build.contains("no `[P]` parallelism")
+            && build.contains("single working tree"),
+        "build.md must state sequential-only on a single working tree"
+    );
+    // worker reuses the build per-task commit cadence; one task per commit
+    assert!(
+        build.contains("3e per-task commit cadence") || build.contains("3e"),
+        "build.md must keep the worker on the existing 3e commit cadence"
+    );
+    // write ownership: orchestrator owns AC Matrix rows, worker owns checkbox
+    assert!(
+        build.contains("Write ownership") && build.contains("no double-write"),
+        "build.md must make write ownership explicit (no per-task AC-Matrix double-write)"
+    );
+    // canonical AC Matrix location aligned, old phrasing replaced
+    assert!(
+        build.contains("`spec.md ## Verification Plan / AC Matrix`"),
+        "build.md must point the AC Matrix at its canonical spec.md location"
+    );
+    assert!(
+        !build.contains("at the end of tasks.md if present, else end of spec.md"),
+        "build.md must drop the old tasks.md-first matrix-location phrasing"
+    );
+    // reviewer cadence preserved, diff reconstructed from git
+    assert!(
+        build.contains("Reviewer cadence is preserved EXACTLY")
+            && build.contains("git diff origin/{base}...HEAD"),
+        "build.md must preserve the reviewer cadence and reconstruct the diff from git"
+    );
+    // frontmatter delegates to the worker role
+    assert!(
+        build.contains("agents/worker.md"),
+        "build.md must delegate_to agents/worker.md"
+    );
+}
+
+#[test]
+fn router_principle_5_splits_judgment_from_execution() {
+    // AC-01: principle 5 separates the single-threaded judgment invariant from
+    // the fan-out execution transport, and the build Verb Delegation row reads
+    // inline-or-delegated rather than inline-only.
+    let router = read_repo_file("engine/router.md");
+
+    assert!(
+        router.contains(
+            "judgment, gates, integration, and the living-spec fold stay single-threaded"
+        ),
+        "principle 5 must state judgment/gates/integration/fold stay single-threaded"
+    );
+    assert!(
+        router.contains("may fan out to disposable per-task workers"),
+        "principle 5 must allow a verified code-change task's execution to fan out"
+    );
+    assert!(
+        router.contains("Review and per-task build execution are the delegated procedures over one shared transport"),
+        "principle 5 must replace 'review is the only separated procedure'"
+    );
+    assert!(
+        !router.contains("Review is the only separated procedure"),
+        "the old 'review is the only separated procedure' wording must be gone"
+    );
+    // build row is inline-or-delegated, not inline-only.
+    let build_row = router
+        .lines()
+        .find(|l| l.starts_with("| build |"))
+        .expect("router Verb Delegation build row exists");
+    assert!(
+        build_row.contains("agents/worker.md") && build_row.contains("inline"),
+        "build row must read inline-or-delegated per-task workers; got: {build_row}"
+    );
+    // open/update reuse the build worker only where code changes happen.
+    let open_row = router
+        .lines()
+        .find(|l| l.starts_with("| open |"))
+        .expect("router open row exists");
+    assert!(
+        open_row.contains("reuses the build worker mechanism"),
+        "open row must reuse the build worker for the QA-FAIL rework; got: {open_row}"
+    );
+    let update_row = router
+        .lines()
+        .find(|l| l.starts_with("| update |"))
+        .expect("router update row exists");
+    assert!(
+        update_row.contains("reuses the build worker mechanism"),
+        "update row must reuse the build worker for the PR-feedback change; got: {update_row}"
+    );
+}
+
+#[test]
+fn risk_transport_is_single_shared_delegation_mechanism() {
+    // AC-02 / AC-08: the Review transport heading is preserved (by-name
+    // citations in router/build stay resolvable), generalized into one shared
+    // delegated→inline transport reused by both roles, with the
+    // reports-are-not-evidence / full-diff-from-git rule added and no second
+    // transport introduced.
+    let risk = read_repo_file("engine/reference/risk.md");
+
+    assert!(
+        risk.contains("## Review transport"),
+        "the `## Review transport` heading must be preserved for by-name citations"
+    );
+    assert!(
+        risk.contains("shared delegation transport"),
+        "transport must be described as a single shared delegation mechanism"
+    );
+    assert!(
+        risk.contains("agents/independent-reviewer.md") && risk.contains("agents/worker.md"),
+        "the shared transport must name both the reviewer and the worker roles"
+    );
+    assert!(
+        risk.contains("no second transport"),
+        "risk must state no second transport is defined"
+    );
+    assert!(
+        risk.contains("never a worker's compact report, as evidence")
+            || risk.contains("never review evidence"),
+        "risk must state compact reports are never review evidence"
+    );
+    assert!(
+        risk.contains("git diff origin/{base}...HEAD"),
+        "risk must state the review reconstructs the full diff from git"
+    );
+    // The reviewer cadence table in Consequences is unchanged.
+    assert!(
+        risk.contains("| `elevated` | independent-reviewer once, after all tasks | optional |")
+            && risk.contains("| `critical` | independent-reviewer after **each** task | required, appended per task |"),
+        "the risk-cadence table must stay unchanged"
+    );
+}
+
+#[test]
+fn worker_role_doc_defines_write_verify_commit_contract() {
+    // AC-03 / AC-05 / AC-06 / AC-09: worker.md defines a write+verify+commit
+    // role distinct from the read-only reviewer, with context pack, repo-wide
+    // read + contract-bounded write, compact report fields, top-model/no-
+    // downgrade, and the per-task commit cadence.
+    let worker = read_repo_file("engine/agents/worker.md");
+
+    // write + verify + commit role, distinct from the read-only reviewer
+    assert!(
+        worker.contains("writes, verifies, and commits")
+            || (worker.contains("write") && worker.contains("verif") && worker.contains("commit")),
+        "worker.md must define a write+verify+commit role"
+    );
+    assert!(
+        worker.contains("independent-reviewer"),
+        "worker.md must distinguish itself from the read-only independent-reviewer"
+    );
+    // (a) context pack
+    assert!(
+        worker.contains("Context pack")
+            && worker.contains("default")
+            && worker.contains("design.md` slice"),
+        "worker.md must describe the context pack it consumes"
+    );
+    // (b) repo-wide read, contract-bounded write, out-of-scope = blocked
+    assert!(
+        worker.contains("Read is repo-wide")
+            && worker.contains("Write is contract-bounded")
+            && worker.contains("not a read jail"),
+        "worker.md must specify repo-wide read with contract-bounded write"
+    );
+    // (c) compact report fields, no narrative
+    for field in [
+        "`unit`",
+        "`status`",
+        "`files_changed`",
+        "`verify`",
+        "`commit`",
+        "`reason`",
+    ] {
+        assert!(
+            worker.contains(field),
+            "worker.md compact report must list {field}"
+        );
+    }
+    assert!(
+        worker.contains("no implementation narrative")
+            || worker.contains("never return the\n  implementation narrative")
+            || worker.contains("nothing else (no implementation narrative)"),
+        "worker.md must exclude the implementation narrative from the report"
+    );
+    // (d) top model, no downgrade
+    assert!(
+        worker.contains("top model") && worker.contains("no model downgrade"),
+        "worker.md must state the worker runs on the top model with no downgrade"
+    );
+    // (e) per-task commit cadence + STOP bubble-up
+    assert!(
+        worker.contains("one task per commit") && worker.contains("`Task:` trailer"),
+        "worker.md must keep the one-task-per-commit cadence"
+    );
+    assert!(
+        worker.contains("blocked: <reason>") || worker.contains("`blocked`"),
+        "worker.md must specify STOP bubble-up via a blocked return"
+    );
+}
+
+#[test]
 fn ad_hoc_review_is_report_only() {
     let review = read_repo_file("engine/commands/review.md");
     let risk = read_repo_file("engine/reference/risk.md");

@@ -39,7 +39,7 @@ always-on steering file:
 - Do not start a spec verb unless the user clearly intends it (`router.md` routing principles).
 - Use patch for concrete small fixes that do not need a spec; escalate to plan
   when a design decision, contract, migration, or higher risk appears.
-- Specs live under `{{specs_dir}}/{slug}/`; metadata is `spec.yaml` (status `draft → approved → done`).
+- Specs live under `{{specs_dir}}/{slug}/`; metadata is `spec.yaml` (status `draft → approved → accepted`; `done` is derived/legacy).
 - Run verification via the command for the spec's surface from `[surfaces.<surface>.verify]`.
 - Validate specs with `mochiflow lint`; quality gate is `mochiflow doctor`.
 - Artifact language: `{{artifact_language}}`; conversation language:

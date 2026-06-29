@@ -32,7 +32,9 @@ references:
 
 Local hygiene after a merge. `close` writes nothing to the base branch: the
 living-spec fold and the spec already merged via the `open` PR's close-out
-commit. The human merge report only initiates `close` locally; it is never
+commit. `close` **delegates nothing** — it is deterministic local hygiene with
+no code change, so there is no worker dispatch and no separate delegation path.
+The human merge report only initiates `close` locally; it is never
 persisted as a merged signal (`merged` is derived from the provider or the
 `Spec: {slug}` trailer reachable from `origin/{base_branch}`).
 
