@@ -165,16 +165,16 @@ cheap without losing implementation quality.
 
 | AC | Scope | Verification method | Planned test/QA | Implementation | Result | Evidence | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| AC-01 | cli | automated | QA-01 | `engine/router.md` | UNVERIFIED | | |
-| AC-02 | cli | automated | QA-02 | `engine/reference/risk.md` | UNVERIFIED | | |
-| AC-03 | cli | automated | QA-03 | `engine/agents/worker.md` | UNVERIFIED | | |
-| AC-04 | cli | automated | QA-01, QA-02, QA-06 | `engine/commands/build.md` | UNVERIFIED | | |
-| AC-05 | cli | automated | QA-03 | `engine/agents/worker.md` | UNVERIFIED | | |
-| AC-06 | cli | automated | QA-04 | `engine/agents/worker.md` | UNVERIFIED | | |
-| AC-07 | cli | automated | QA-04 | `engine/commands/build.md` | UNVERIFIED | | |
-| AC-08 | cli | automated | QA-03 | `engine/reference/risk.md` | UNVERIFIED | | |
-| AC-09 | cli | automated | worker.md no-downgrade assertion (conformance) | `engine/agents/worker.md` | UNVERIFIED | | |
-| AC-10 | cli | automated | QA-04 | `engine/commands/plan.md`, `engine/reference/authoring.md` | UNVERIFIED | | |
-| AC-11 | cli | automated | QA-07 | `engine/commands/open.md`, `engine/commands/update.md`, `engine/commands/close.md` | UNVERIFIED | | |
-| AC-12 | cli | automated | QA-05 | `cli/crates/mochiflow-core/src/adapter.rs`, `engine/adapters/kiro/agents/spec-worker.json.tpl`, `engine/adapters/kiro/manifest.toml` | UNVERIFIED | | |
-| AC-13 | cli | automated | QA-05 | `engine/MANIFEST.json`, `contracts/contracts.lock` | UNVERIFIED | | |
+| AC-01 | cli | automated | QA-01 | `engine/router.md` | PASS | `conformance::router_principle_5_splits_judgment_from_execution` | principle 5 split + build/open/update rows |
+| AC-02 | cli | automated | QA-02 | `engine/reference/risk.md` | PASS | `conformance::risk_transport_is_single_shared_delegation_mechanism` | one shared transport, both roles, no second |
+| AC-03 | cli | automated | QA-03 | `engine/agents/worker.md` | PASS | `conformance::worker_role_doc_defines_write_verify_commit_contract` | write+verify+commit role distinct from reviewer |
+| AC-04 | cli | automated | QA-01, QA-02, QA-06 | `engine/commands/build.md` | PASS | `conformance::build_is_orchestrator_with_inline_fallback_and_commit_cadence` | ≥2-task gate + subagent, else inline; sequential |
+| AC-05 | cli | automated | QA-03 | `engine/agents/worker.md` | PASS | `conformance::worker_role_doc_defines_write_verify_commit_contract` | context pack, repo-wide read, contract-bounded write |
+| AC-06 | cli | automated | QA-04 | `engine/agents/worker.md` | PASS | `conformance::worker_role_doc_defines_write_verify_commit_contract` | compact report fields; orchestrator settles Matrix |
+| AC-07 | cli | automated | QA-04 | `engine/commands/build.md` | PASS | `conformance::build_is_orchestrator_with_inline_fallback_and_commit_cadence` | one task per commit, `Task:` trailer, write ownership |
+| AC-08 | cli | automated | QA-03 | `engine/reference/risk.md` | PASS | `conformance::risk_transport_is_single_shared_delegation_mechanism` | full-diff-from-git; reports never evidence; cadence intact |
+| AC-09 | cli | automated | worker.md no-downgrade assertion (conformance) | `engine/agents/worker.md` | PASS | `conformance::worker_role_doc_defines_write_verify_commit_contract` | top model, no downgrade |
+| AC-10 | cli | automated | QA-04 | `engine/commands/plan.md`, `engine/reference/authoring.md` | PASS | `conformance::worker_recoverability_is_authoring_rule_not_lint` | authoring rule, reviewer-judged, not a lint |
+| AC-11 | cli | automated | QA-07 | `engine/commands/open.md`, `engine/commands/update.md`, `engine/commands/close.md` | PASS | `conformance::phase_boundaries_reuse_build_worker_and_close_delegates_nothing` | open/update reuse build worker; close delegates nothing |
+| AC-12 | cli | automated | QA-05 | `cli/crates/mochiflow-core/src/adapter.rs`, `engine/adapters/kiro/agents/spec-worker.json.tpl`, `engine/adapters/kiro/manifest.toml` | PASS | `conformance::behavioral_kiro_generates_spec_worker_agent_deterministically`; `mochiflow-core::adapter::tests::{kiro_agent_json_matches_reviewer_and_worker,kiro_worker_agent_is_full_file_managed_with_model_preserved}` | write-capable agent, full-file managed, `adapter generate --check` green |
+| AC-13 | cli | automated | QA-05 | `engine/MANIFEST.json`, `contracts/contracts.lock` | PASS | `freeze --check` clean; `upgrade --source engine` re-vendored; `adapter generate --check` 0 drift; full `default` verification green | frozen surface coherent |

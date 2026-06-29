@@ -184,6 +184,29 @@ one thing: a verified code-change task.
 
 ## Review Results
 
-Recorded during build — a mandatory `independent-reviewer` run is required for
-`risk: elevated` (`Reviewer mode: delegated | inline`, `Verdict: pass |
-pass-with-comments | fail`).
+Mandatory `independent-reviewer` run for `risk: elevated`, once after all tasks
+(`reference/risk.md ## Consequences`).
+
+- Reviewer mode: delegated
+- Verdict: pass-with-comments
+
+The reviewer reconstructed the full diff from git (`git diff
+origin/main...HEAD`, commits 7c5720b..c0dc669, 22 files), read every changed
+file and all spec artifacts, and independently re-ran the backing tests
+(`cargo test --test conformance` → 151 passed; `cargo test -p mochiflow-core
+adapter` → 13 passed; `freeze --check` clean). All 13 ACs satisfied and every
+constraint honored (additive; reviewer cadence byte-unchanged; no downgrade;
+sequential-only; no new lint; no new CLI subcommand; `## Review transport`
+heading preserved; edits confined to repo-root `engine/`).
+
+Findings (both non-blocking, no Critical/High):
+
+- Low (spec-conformance): the AC Matrix and these Review Results were still
+  unsettled at review time — expected, since the elevated review (build step 5)
+  precedes matrix settlement (step 6/7). Settled in this close-out: every AC row
+  carries a done-eligible token + the backing-test evidence pointer, and this
+  verdict is recorded here.
+- Low (maintainability): a few generalized lines in `risk.md ## Review
+  transport` are unwrapped relative to the file's ~76-col convention; cosmetic
+  only (tests assert content, not wrapping). Left as-is to avoid further
+  frozen-surface churn; fold on the next edit.
