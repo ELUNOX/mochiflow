@@ -977,6 +977,65 @@ fn worker_schema_commit_and_lifecycle_propagation() {
 }
 
 #[test]
+fn worker_unit_kind_discriminator_named_and_uniform_report() {
+    // worker-unit-contract-split: the two worker execution units are named via an
+    // explicit unit_kind discriminator (build-task | rework); behavior and STOP
+    // routing are keyed on unit_kind (not the unit id prefix); the context pack
+    // carries unit_kind; the compact report is a single uniform schema including
+    // unit_kind with no per-unit fields; and build/open/update use the vocabulary.
+    let worker = read_repo_file("engine/agents/worker.md");
+    let build = read_repo_file("engine/commands/build.md");
+    let open = read_repo_file("engine/commands/open.md");
+    let update = read_repo_file("engine/commands/update.md");
+
+    // AC-01: both unit_kind values named, behavior not selected by prefix parsing.
+    assert!(
+        worker.contains("`unit_kind: build-task`") && worker.contains("`unit_kind: rework`"),
+        "worker.md must name both unit_kind values build-task and rework"
+    );
+    assert!(
+        worker.contains("parsing the `unit` id prefix"),
+        "worker.md must state behavior is not selected by parsing the unit id prefix"
+    );
+    // AC-01: context pack carries unit_kind as a dispatch-time input.
+    assert!(
+        worker.contains("(`build-task` | `rework`) — the dispatch-time"),
+        "worker.md context pack must list unit_kind as a dispatch-time input"
+    );
+    // AC-01: STOP routing keyed on unit_kind.
+    assert!(
+        worker.contains("`unit_kind` / host phase"),
+        "worker.md STOP routing must be keyed on unit_kind"
+    );
+    // AC-02: single uniform compact report including unit_kind, no per-unit fields.
+    assert!(
+        worker.contains("`unit_kind`: `build-task` | `rework`"),
+        "worker.md compact report must include the unit_kind field"
+    );
+    assert!(
+        worker.contains("single uniform shape for both"),
+        "worker.md compact report must be one uniform schema for both unit_kinds"
+    );
+    assert!(
+        worker.contains("no `feedback_id`, `qa_item`, or `task`"),
+        "worker.md compact report must disclaim per-unit fields"
+    );
+    // AC-03: build/open/update reference the unit_kind vocabulary.
+    assert!(
+        build.contains("`unit_kind: build-task`"),
+        "build.md must reference the build-task unit_kind in the context pack"
+    );
+    assert!(
+        open.contains("`unit_kind: rework`"),
+        "open.md must reference the rework unit_kind for the QA-FAIL fix"
+    );
+    assert!(
+        update.contains("`unit_kind: rework`"),
+        "update.md must reference the rework unit_kind for the PR-feedback fix"
+    );
+}
+
+#[test]
 fn worker_write_scope_resume_and_verdict_freshness_specified() {
     // Second engine-coherence round:
     // - worker write scope includes its own tasks.md checkbox line (else the

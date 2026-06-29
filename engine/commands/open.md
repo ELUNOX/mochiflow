@@ -69,7 +69,8 @@ approve-PR gate (e)**.
      mechanism** (`commands/build.md` — delegated worker when available, else
      inline; modify → verify → commit on the feature branch); open does not
      define its own delegation path. The reused worker's unit is the **bounded
-     QA-`FAIL` fix**, not an open `tasks.md` task (build is already complete):
+     QA-`FAIL` fix** (`unit_kind: rework`, unit `qa-fail:<id>`), not an open
+     `tasks.md` task (build is already complete):
      there is no checkbox to tick and no `Task:` trailer, and the worker commits
      per this verb's rework-commit convention (`reference/git.md`). Acceptance
      judgment, the fold, PR-body synthesis, and the approve-PR gate stay inline
