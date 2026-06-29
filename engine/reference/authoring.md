@@ -142,6 +142,26 @@ Write when the change is multi-step. Carries:
 required blocks and a valid reference); authored tasks must match it or `plan`'s
 lint gate fails.
 
+## Worker-recoverability (plan authoring rule)
+
+Build may dispatch each task to a disposable worker that sees only `design.md` +
+its task row + the committed code (`commands/build.md` 3·orchestrator). A worker
+can read a prior worker's committed *code* but not its *reasoning*. So plan must
+author tasks to be **worker-recoverable**:
+
+- Every fact needed to implement a task correctly must be recoverable from
+  (`design.md` + the task row + reading committed code). Cross-task reasoning
+  that an inline build would carry implicitly is written into `design.md` at plan
+  time — this is the practical form of "share the contract".
+- When a file appears in more than one task's `Files`, each such task's `Done`
+  states how it leaves the shared structure consistent, so a later worker can
+  pick up the file from its committed state alone.
+
+This is **plan authoring discipline enforced by reviewer Stage 1 judgment, not a
+new deterministic lint** — recoverability cannot be decided mechanically, so no
+lint check is added for it. A worker that finds a required fact missing returns
+`blocked` (a plan gap) rather than improvising.
+
 ## Consistency check (plan, once)
 
 After authoring, verify once against the spec's own intent before `approved`:

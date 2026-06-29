@@ -47,7 +47,7 @@ Critical Stop Conditions:
     - `engine/commands/close.md`
   - Done: `open.md` states its QA-`FAIL` rework loop reuses the build worker mechanism and that acceptance / fold / PR-body / approve-PR gate stay inline; `update.md` states the PR-feedback code change reuses the build worker mechanism while feedback interpretation and PR-metadata updates stay inline; `close.md` states it delegates nothing (deterministic local hygiene); no verb defines its own separate delegation path. Runs `mochiflow freeze` per Defaults.
   - Stop: do not duplicate the worker mechanism into open/update; they only reference build's. Do not add a base-branch write to close.
-- [ ] T-006 [AC-10] Add the worker-recoverability authoring rule
+- [x] T-006 [AC-10] Add the worker-recoverability authoring rule
   - Depends on: T-004
   - Files:
     - `engine/commands/plan.md`

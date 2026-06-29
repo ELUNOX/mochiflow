@@ -828,6 +828,43 @@ fn ac_matrix_pending_human_is_canonical_provisional_token() {
 }
 
 #[test]
+fn worker_recoverability_is_authoring_rule_not_lint() {
+    // AC-10: plan.md and authoring.md document the worker-recoverability
+    // invariant as plan authoring discipline enforced by reviewer judgment,
+    // explicitly NOT a new deterministic lint.
+    let plan = read_repo_file("engine/commands/plan.md");
+    let authoring = read_repo_file("engine/reference/authoring.md");
+
+    assert!(
+        authoring.contains("## Worker-recoverability"),
+        "authoring.md must add a Worker-recoverability section"
+    );
+    assert!(
+        authoring.contains("design.md` + the task row + reading committed code")
+            || authoring.contains("`design.md` + the task row + reading committed code"),
+        "authoring.md must state the recoverability source set"
+    );
+    assert!(
+        authoring.contains("more than one task's `Files`") && authoring.contains("`Done`"),
+        "authoring.md must require shared-file Done to document shared-state handling"
+    );
+    assert!(
+        authoring.contains("not a\nnew deterministic lint")
+            || authoring.contains("not a new deterministic lint"),
+        "authoring.md must state recoverability is not a new lint"
+    );
+    assert!(
+        plan.contains("worker-recoverable")
+            && plan.contains("reference/authoring.md ## Worker-recoverability"),
+        "plan.md must reference the worker-recoverability authoring rule"
+    );
+    assert!(
+        plan.contains("not a new lint"),
+        "plan.md must state the rule is not a new lint"
+    );
+}
+
+#[test]
 fn phase_boundaries_reuse_build_worker_and_close_delegates_nothing() {
     // AC-11 (QA-07): open reuses the build worker only for QA-FAIL rework,
     // update reuses it for the PR-feedback code change, close delegates nothing,
