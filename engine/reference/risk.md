@@ -90,29 +90,45 @@ authored before this convention are not retrofitted.
 
 ## Review transport
 
-Reviewer cadence names the reviewer procedure, with delegated transport
-preferred whenever the adapter/runtime exposes a subagent mechanism. A user
-request that triggers ad-hoc review, or a user-approved build flow that reaches
-mandatory risk-cadence review, is also an explicit request to use the delegated
-reviewer when available. Do not fall back to inline merely because the host
-runtime says subagents require an explicit delegation request; this rule and the
-active review trigger provide that request. Run `agents/independent-reviewer.md`
-read-only using the first available mode:
+This section defines a single **shared delegation transport** — the selection
+discipline "prefer a delegated subagent when the adapter/runtime exposes one,
+else run inline". It is reused by **both** delegated roles, and no second transport is defined
+anywhere:
+
+- the read-only `agents/independent-reviewer.md` (review), and
+- the write-capable `agents/worker.md` (per-task build execution).
+
+The transport selects *where* a procedure runs; the **role**
+(system prompt + tool scope + permissions) is what differs — the reviewer is
+read-only, the worker writes, verifies, and commits. There is no per-role
+transport: one mechanism, role-specific definitions.
+
+Delegated transport is preferred whenever the adapter/runtime exposes a subagent
+mechanism. A user request that triggers ad-hoc review, or a user-approved build
+flow that reaches mandatory risk-cadence review or dispatches a build worker, is
+also an explicit request to use the delegated transport when available. Do not
+fall back to inline merely because the host runtime says subagents require an
+explicit delegation request; this rule and the active trigger provide that
+request. Select the first available mode:
 
 1. `delegated`: dispatch a subagent when the adapter/runtime supports it.
 2. `inline`: only when subagents are unavailable or dispatch fails for a
-   runtime/tooling reason, the main agent temporarily switches to the
-   independent-reviewer role and executes the same reviewer procedure inline.
+   runtime/tooling reason, the main agent temporarily switches to the target
+   role and executes the same procedure inline.
 
-Inline review must read `agents/independent-reviewer.md`, use the same Stage 1 /
-Stage 2 / verdict format, and record `Reviewer mode: inline`. While in reviewer
-role, the agent is read-only: do not edit files, update status, stage, commit,
-or create PR metadata. Review inputs are spec artifacts, full diff / changed
-files, integration log, and verification results — never conversation history as
-evidence. For mandatory risk-cadence review during `build`, after the verdict is
-produced, return to builder role before fixing findings or resuming the flow.
-For ad-hoc review, do not fix findings inline; report them and ask whether to
-enter the appropriate build/fix flow.
+For review, run `agents/independent-reviewer.md` read-only. Inline review must
+read `agents/independent-reviewer.md`, use the same Stage 1 / Stage 2 / verdict
+format, and record `Reviewer mode: inline`. While in reviewer role, the agent is
+read-only: do not edit files, update status, stage, commit, or create PR
+metadata. Review inputs are spec artifacts, full diff / changed files,
+integration log, and verification results — **never conversation history, and
+never a worker's compact report, as evidence**. The mandatory risk-cadence
+review reconstructs the full diff from git (`git diff origin/{base}...HEAD` for
+the completion-gate review, or a task's own commit for a per-task `critical`
+review) and reads the changed code from scratch; the worker's compact report is
+a routing artifact for the orchestrator, never review evidence.
+For mandatory risk-cadence review during `build`, after the verdict is produced, return to builder role before fixing findings or resuming the flow.
+For ad-hoc review, do not fix findings inline; report them and ask whether to enter the appropriate build/fix flow.
 
 ## design.md required condition
 

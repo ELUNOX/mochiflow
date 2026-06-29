@@ -828,6 +828,48 @@ fn ac_matrix_pending_human_is_canonical_provisional_token() {
 }
 
 #[test]
+fn risk_transport_is_single_shared_delegation_mechanism() {
+    // AC-02 / AC-08: the Review transport heading is preserved (by-name
+    // citations in router/build stay resolvable), generalized into one shared
+    // delegated→inline transport reused by both roles, with the
+    // reports-are-not-evidence / full-diff-from-git rule added and no second
+    // transport introduced.
+    let risk = read_repo_file("engine/reference/risk.md");
+
+    assert!(
+        risk.contains("## Review transport"),
+        "the `## Review transport` heading must be preserved for by-name citations"
+    );
+    assert!(
+        risk.contains("shared delegation transport"),
+        "transport must be described as a single shared delegation mechanism"
+    );
+    assert!(
+        risk.contains("agents/independent-reviewer.md") && risk.contains("agents/worker.md"),
+        "the shared transport must name both the reviewer and the worker roles"
+    );
+    assert!(
+        risk.contains("no second transport"),
+        "risk must state no second transport is defined"
+    );
+    assert!(
+        risk.contains("never a worker's compact report, as evidence")
+            || risk.contains("never review evidence"),
+        "risk must state compact reports are never review evidence"
+    );
+    assert!(
+        risk.contains("git diff origin/{base}...HEAD"),
+        "risk must state the review reconstructs the full diff from git"
+    );
+    // The reviewer cadence table in Consequences is unchanged.
+    assert!(
+        risk.contains("| `elevated` | independent-reviewer once, after all tasks | optional |")
+            && risk.contains("| `critical` | independent-reviewer after **each** task | required, appended per task |"),
+        "the risk-cadence table must stay unchanged"
+    );
+}
+
+#[test]
 fn ad_hoc_review_is_report_only() {
     let review = read_repo_file("engine/commands/review.md");
     let risk = read_repo_file("engine/reference/risk.md");

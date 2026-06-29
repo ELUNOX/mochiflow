@@ -15,7 +15,7 @@ Critical Stop Conditions:
 
 ## Tasks
 
-- [ ] T-001 [AC-02, AC-08] Generalize the delegation transport in risk.md
+- [x] T-001 [AC-02, AC-08] Generalize the delegation transport in risk.md
   - Depends on: none
   - Files:
     - `engine/reference/risk.md`
