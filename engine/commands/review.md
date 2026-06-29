@@ -40,8 +40,12 @@ single source of truth for this behavior):
    runtime/tooling reason. The explicit review trigger is also the user's
    request to use delegated reviewer transport when the runtime requires that
    permission. Target the active spec's latest artifacts (`spec.md`, plus
-   `design.md` / `tasks.md` when present). Pass only the slug, the command path,
-   a summary of the latest artifact, and a pointer to the spec — never the
+   `design.md` / `tasks.md` when present). When no implementation exists yet
+   (a code-less spec, e.g. ad-hoc review during plan), run the reviewer's
+   **plan-quality mode** (Stage 1 conformance + spec-artifact quality, no
+   diff/changed-files input) per `reference/risk.md ## Review transport`; when
+   code exists, run the post-implementation mode. Pass only the slug, the command
+   path, a summary of the latest artifact, and a pointer to the spec — never the
    conversation history (`router.md` routing principle 5).
 2. Report `Reviewer mode: delegated | inline` with the verdict and findings.
 3. On High or Critical findings, stop after reporting and ask whether to enter

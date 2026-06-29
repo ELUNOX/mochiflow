@@ -3,7 +3,8 @@ id: 2026-06-23-plan-to-build-transition-ux
 date: 2026-06-23
 area: [cli]
 spec: plan-to-build-transition-ux
-status: active
+status: superseded
+superseded_by: 2026-06-29-review-gate-and-context-timing
 ---
 ## 2026-06-23 — plan-to-build-transition-ux: 3-choice card after plan approval
 

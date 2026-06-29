@@ -86,7 +86,7 @@ PR body when needed.
 | discuss | inline | `commands/discuss.md` |
 | plan | inline | `commands/plan.md` |
 | build | main agent confirms eligibility (`mochiflow ready {slug}`), then orchestrates: with `tasks.md` and ≥2 open tasks on a subagent-capable runtime it dispatches sequential disposable per-task workers (`agents/worker.md`, reviewer transport reused) that implement / verify / commit; otherwise it implements inline. Judgment / integration / fold and the risk-cadence review stay on the main agent | `commands/build.md` |
-| open | inline; through acceptance → fold → accept close-out → PR title/body → approve-PR gate → PR. The QA-`FAIL` rework loop reuses the build worker mechanism for its code change; judgment / fold / PR-body / gates stay inline | `commands/open.md` |
+| open | inline; through acceptance → fold + context-check → optional `docs(context)` commit (regenerated `[context]`, before accept) → accept close-out → PR title/body → approve-PR gate → PR. The QA-`FAIL` rework loop reuses the build worker mechanism for its code change; judgment / fold / PR-body / gates stay inline | `commands/open.md` |
 | update | inline; the PR-feedback / CI-fix code change reuses the build worker mechanism, then re-verify, push, update PR metadata. Feedback interpretation and PR-metadata updates stay inline; no move, no revert | `commands/update.md` |
 | close | inline; post-merge local hygiene only; nothing written to the base branch | `commands/close.md` |
 | patch (non-phase) | inline; no spec artifacts; edit / verify / optional commit; escalate to plan when ineligible | `commands/patch.md` |

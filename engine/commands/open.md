@@ -40,8 +40,9 @@ is derived from VCS/provider, never written.
 
 ## Procedure
 
-`open` performs these steps in order (a–f). The PR is **never created before the
-approve-PR gate (e)**.
+`open` performs these steps in order (a–g): acceptance → fold + context-check →
+optional `docs(context)` commit → accept close-out → PR title/body → approve-PR →
+`mochiflow pr`. The PR is **never created before the approve-PR gate (f)**.
 
 ### (a) Acceptance
 
@@ -102,16 +103,38 @@ approve-PR gate (e)**.
    - **Foundational context refresh check (not a fold)**: if the change
      introduced a coarse structural shift (new module / surface / moved entry
      point / technology or verification responsibility) that makes
-     `[context].product` / `[context].structure` / `[context].tech` stale,
-     record/report a post-merge `refresh-context` follow-up after PR creation or
-     after merge. Do **not** run or trigger `refresh-context` before the
-     close-out commit or `mochiflow pr`; it writes context files and does not
-     auto-commit, which would dirty the tree before PR pre-flight. The context
-     layer is refreshed from code under human confirmation, never folded.
+     `[context].product` / `[context].structure` / `[context].tech` stale, run
+     `refresh-context` (`commands/refresh-context.md`) **on the feature branch
+     now**, under human confirmation that the regenerated context matches current
+     code. `refresh-context` regenerates the files but does **not** auto-commit;
+     `open` (not `refresh-context`) owns the `git add` of the `[context]` paths
+     and the separate `docs(context)` commit created in step (c) below — placed
+     after this check and **before** the `mochiflow accept` close-out commit, so
+     the refresh ships inside the PR and `mochiflow pr` pre-flight still sees a
+     clean tree. If the human does not confirm current-state accuracy, commit
+     nothing and record a post-merge follow-up instead. Staleness discovered only
+     **at or after merge** is the fallback case: route it to a post-merge
+     follow-up (a `fix` spec or a backlog seed per
+     `reference/git.md ## Living-spec fold`), never a base-branch edit. The
+     context layer is refreshed from code under human confirmation, never folded.
 
-### (c) Accept close-out commit
+### (c) Context refresh commit (optional)
 
-5. When the acceptance conditions in
+5. If step 4's context-refresh check ran `refresh-context` and the human
+   confirmed the regenerated context, `open` stages the `[context]` paths
+   (`git add` of `[context].product` / `[context].structure` / `[context].tech`)
+   and creates a separate `docs(context): ...` commit on the feature branch with
+   the `Spec: {slug}` trailer, per
+   `reference/git.md ## Auto-commit and staging`. This commit is positioned
+   **after** the fold/context-check and **before** the accept close-out commit
+   (step 6), so the accept close-out stays the single final state commit and the
+   working tree is clean for `mochiflow pr`. When no structural shift was
+   detected, or the human did not confirm, there is no `docs(context)` commit and
+   this step is skipped.
+
+### (d) Accept close-out commit
+
+6. When the acceptance conditions in
    `reference/workflow.md ## AC Verification Matrix` all hold (matrix complete,
    every result done-eligible, and the reviewer verdict recorded when
    `risk ≥ elevated`), run `mochiflow accept {slug}`. The command re-runs final
@@ -132,31 +155,31 @@ approve-PR gate (e)**.
      with an external-reviewer message (no spec slug, no AC IDs, no mochiflow
      vocabulary). Nothing is pushed to the base branch here.
 
-### (d) Generate PR title/body
+### (e) Generate PR title/body
 
-6. On the normal PR path, generate the PR title / description per
+7. On the normal PR path, generate the PR title / description per
    `templates/delivery/pr-description.md` (the spec lives flat under
    `{specs_dir}/{slug}/`), write the body to
    `{install_dir}/state/{slug}/pr-body.md` (ephemeral, gitignored — **never** the
    spec dir).
 
-### (e) Approve-PR gate
+### (f) Approve-PR gate
 
-7. Present the PR title/body and wait for human approval (gate 2). Present the
+8. Present the PR title/body and wait for human approval (gate 2). Present the
    approval action as **Create the PR** (`create pr` / `approved`) in a numbered
    choice card. If the user gives PR text corrections instead, revise the
    title/body and re-present the approval card. This is the only human gate in
    `open` — there is no second gate beyond approve-PR.
 
-### (f) Push and create the PR
+### (g) Push and create the PR
 
-8. After the **Create the PR** approval action, run
+9. After the **Create the PR** approval action, run
    `mochiflow pr --spec {slug} --title "<title>" --body-file {install_dir}/state/{slug}/pr-body.md`
    (add `--draft` if applicable). `open` is the sole producer of the body file;
    `mochiflow pr` only reads it (and writes `pr-request.json` under
    `state/{slug}/` for the `pr_driver` backend only). The working tree is clean
-   because the close-out commit (step 5) captured every tracked change. The CLI
-   runs pre-flight (clean tree / branch / base≠head and the `accepted`+`Spec:`
+   because the close-out commit (step 6) captured every tracked change (and any
+   context refresh was already committed in step 5). The CLI runs pre-flight (clean tree / branch / base≠head and the `accepted`+`Spec:`
    trailer spec check), pushes the branch, and resolves the backend per
    `reference/git.md ## PR`. Read its exit code:
    - `0` — PR created; capture the printed URL. The spec is now derived
