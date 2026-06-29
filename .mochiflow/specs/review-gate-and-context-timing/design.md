@@ -140,5 +140,11 @@ contract each carries:
 ## Review Results
 
 - Reviewer mode: delegated
-- Verdict: pass-with-comments (mandatory elevated risk-cadence review, post-build, on `git diff origin/main...HEAD`).
-- Findings: one Low (spec/design shorthand `(a)-(f)` vs shipped `(a)-(g)`), fixed in spec.md/design.md. No Critical/High/Medium. AC-01..AC-11 all implemented and, where required, guarded by conformance tests (`plan_offers_pre_approval_review_before_confirm_for_elevated`, `open_ships_context_refresh_in_pr_before_accept`).
+- Verdict: pass-with-comments
+
+Mandatory elevated risk-cadence review, post-build, on the full diff
+(`git diff origin/main...HEAD`). One Low finding (spec/design shorthand
+`(a)-(f)` vs shipped `(a)-(g)`), fixed in spec.md/design.md. No Critical/High/
+Medium. AC-01..AC-11 all implemented and, where required, guarded by conformance
+tests (`plan_offers_pre_approval_review_before_confirm_for_elevated`,
+`open_ships_context_refresh_in_pr_before_accept`).
