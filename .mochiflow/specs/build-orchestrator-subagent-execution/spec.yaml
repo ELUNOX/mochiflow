@@ -1,0 +1,11 @@
+version: 1
+slug: "build-orchestrator-subagent-execution"
+title: "Run build as an orchestrator dispatching disposable per-task workers to bound context"
+type: "feature"
+surfaces:
+  - "cli"
+integration: "workflow"
+risk: "elevated"
+status: "draft"
+created: "2026-06-28"
+updated: "2026-06-28"
