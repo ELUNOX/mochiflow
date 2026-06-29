@@ -91,22 +91,16 @@ pub fn render(template: &str, substitutions: &BTreeMap<String, String>) -> Strin
 }
 
 fn is_kiro_agent_json(out_rel: &str) -> bool {
-    matches!(
-        out_rel,
-        ".kiro/agents/spec-independent-reviewer.json" | ".kiro/agents/spec-worker.json"
-    )
+    matches!(out_rel, ".kiro/agents/spec-independent-reviewer.json")
 }
 
 /// Whether a generated Kiro agent JSON tolerates a user-pinned `model`.
 ///
 /// The read-only `spec-independent-reviewer` is model-customizable: a user may
 /// pin a different review model, so a model-only diff is not drift and the
-/// pinned model is preserved on regenerate. The write-capable `spec-worker` is
-/// NOT customizable — the spec contract is that workers always run on the top
-/// model with no downgrade (AC-09 / AC-12), so a model change is real drift and
-/// is overwritten with the rendered top model on regenerate.
+/// pinned model is preserved on regenerate.
 fn kiro_agent_preserves_model(out_rel: &str) -> bool {
-    is_kiro_agent_json(out_rel) && out_rel != ".kiro/agents/spec-worker.json"
+    is_kiro_agent_json(out_rel)
 }
 
 /// Kiro steering `.md` files are full-file managed targets, not block-embeddable
@@ -125,6 +119,7 @@ fn is_kiro_full_file_md(out_rel: &str) -> bool {
 /// can never disagree.
 const DEPRECATED_KIRO_PATHS: &[&str] = &[
     ".kiro/agents/spec-builder.json",
+    ".kiro/agents/spec-worker.json",
     ".kiro/steering/spec.md",
     ".kiro/steering/spec-discuss.md",
     ".kiro/steering/spec-plan.md",
@@ -855,6 +850,7 @@ mod tests {
         let root = tmp.path().to_path_buf();
         // markered deprecated outputs, including the legacy hook
         write_file(&root, ".kiro/agents/spec-builder.json", MARKERED);
+        write_file(&root, ".kiro/agents/spec-worker.json", MARKERED);
         write_file(&root, ".kiro/steering/spec-plan.md", MARKERED);
         write_file(
             &root,
@@ -868,6 +864,7 @@ mod tests {
 
         for rel in [
             ".kiro/agents/spec-builder.json",
+            ".kiro/agents/spec-worker.json",
             ".kiro/steering/spec-plan.md",
             ".kiro/hooks/generate-project-index.kiro.hook",
         ] {
@@ -887,6 +884,11 @@ mod tests {
         let root = tmp.path().to_path_buf();
         // listed-but-markerless (user-edited): must be preserved, not deleted
         write_file(&root, ".kiro/steering/spec.md", "hand edited, no marker\n");
+        write_file(
+            &root,
+            ".kiro/agents/spec-worker.json",
+            "{\"name\":\"custom-worker\"}\n",
+        );
         // unlisted user file: never scanned, removed, or reported
         write_file(&root, ".kiro/steering/release.md", "release notes\n");
         let cfg = config_with_root(root.clone());
@@ -903,9 +905,18 @@ mod tests {
             result.preserved
         );
         assert!(
+            result
+                .preserved
+                .iter()
+                .any(|r| r == ".kiro/agents/spec-worker.json"),
+            "expected markerless worker residue preserved: {:?}",
+            result.preserved
+        );
+        assert!(
             root.join(".kiro/steering/spec.md").exists(),
             "markerless listed file must be kept"
         );
+        assert!(root.join(".kiro/agents/spec-worker.json").exists());
         assert!(root.join(".kiro/steering/release.md").exists());
         assert!(
             result.removed.is_empty(),
@@ -924,6 +935,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let root = tmp.path().to_path_buf();
         write_file(&root, ".kiro/agents/spec-builder.json", MARKERED);
+        write_file(&root, ".kiro/agents/spec-worker.json", MARKERED);
         write_file(&root, ".kiro/steering/spec.md", "no marker\n");
         let cfg = config_with_root(root.clone());
         let mut result = empty_result();
@@ -938,44 +950,41 @@ mod tests {
             "markered residue must drift in check mode: {:?}",
             result.drift
         );
+        assert!(
+            result
+                .drift
+                .iter()
+                .any(|r| r == ".kiro/agents/spec-worker.json"),
+            "markered worker residue must drift in check mode: {:?}",
+            result.drift
+        );
         // markerless listed file is not drift, and the file is left in place
         assert!(!result.drift.iter().any(|r| r == ".kiro/steering/spec.md"));
         assert!(root.join(".kiro/agents/spec-builder.json").exists());
     }
 
     #[test]
-    fn kiro_agent_json_matches_reviewer_and_worker() {
-        // AC-12: both the reviewer and the new write-capable worker agent are
-        // full-file managed kiro agent JSON targets.
+    fn kiro_agent_json_matches_reviewer_only() {
+        // Only the read-only reviewer remains a generated Kiro agent JSON target.
         assert!(is_kiro_agent_json(
             ".kiro/agents/spec-independent-reviewer.json"
         ));
-        assert!(is_kiro_agent_json(".kiro/agents/spec-worker.json"));
+        assert!(!is_kiro_agent_json(".kiro/agents/spec-worker.json"));
         assert!(!is_kiro_agent_json(".kiro/agents/spec-builder.json"));
         assert!(!is_kiro_agent_json(".kiro/steering/mochiflow.md"));
     }
 
     #[test]
-    fn kiro_worker_agent_enforces_top_model_no_preserve() {
-        // AC-09 / AC-12: the write-capable worker agent must always carry the
-        // top model. Unlike the reviewer, a user-pinned model is NOT preserved
-        // (it is overwritten with the rendered top model) and a model-only diff
-        // counts as real drift so `adapter generate --check` flags a downgrade.
+    fn removed_kiro_worker_is_deprecated_not_model_preserved() {
+        // The retired worker is no longer a generated agent target. A markered
+        // residue is handled by deprecated-output self-heal, not model
+        // preservation.
         let worker = ".kiro/agents/spec-worker.json";
         let reviewer = ".kiro/agents/spec-independent-reviewer.json";
-        let rendered = "{\n  \"name\": \"spec-worker\",\n  \"model\": \"claude-opus-4.8\",\n  \"_generated\": \"generated by mochiflow adapter=kiro version=1.0.0\"\n}\n";
-        let downgraded = "{\n  \"name\": \"spec-worker\",\n  \"model\": \"cheap-model\",\n  \"_generated\": \"generated by mochiflow adapter=kiro version=1.0.0\"\n}\n";
 
-        // worker is a managed agent json, but it does NOT preserve the model.
-        assert!(is_kiro_agent_json(worker));
+        assert!(!is_kiro_agent_json(worker));
         assert!(!kiro_agent_preserves_model(worker));
         assert!(kiro_agent_preserves_model(reviewer));
-
-        // a model-only change is real drift for the worker (caught by --check).
-        assert!(!kiro_agent_matches_rendered(worker, downgraded, rendered));
-        // and the rendered top model wins on regenerate (no downgrade persists).
-        let merged = preserve_kiro_agent_model(worker, Some(downgraded), rendered);
-        assert!(merged.contains("claude-opus-4.8") && !merged.contains("cheap-model"));
 
         // reviewer still preserves a user-pinned model (regression guard).
         let r_rendered = "{\n  \"name\": \"spec-independent-reviewer\",\n  \"model\": \"claude-opus-4.8\",\n  \"_generated\": \"generated by mochiflow adapter=kiro version=1.0.0\"\n}\n";

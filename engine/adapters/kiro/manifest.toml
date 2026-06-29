@@ -3,4 +3,3 @@ tool = "kiro"
 [files]
 ".kiro/steering/mochiflow.md" = "steering/mochiflow.md.tpl"
 ".kiro/agents/spec-independent-reviewer.json" = "agents/spec-independent-reviewer.json.tpl"
-".kiro/agents/spec-worker.json" = "agents/spec-worker.json.tpl"

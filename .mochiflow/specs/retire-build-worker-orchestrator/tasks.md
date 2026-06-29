@@ -43,7 +43,7 @@ Stop Conditions:
     - `engine/agents/independent-reviewer.md`
   - Done: Plan authoring guidance says tasks and design must be recoverable from durable artifacts, committed code, and git trailers after a session boundary; reviewer plan-quality checks use the same session-recoverability concept; no active instruction requires a disposable worker's context pack.
   - Stop: The replacement wording cannot give a reviewer a concrete source set to check.
-- [ ] T-004 [AC-04] Remove Kiro worker generation and add deprecated-output cleanup
+- [x] T-004 [AC-04] Remove Kiro worker generation and add deprecated-output cleanup
   - Depends on: T-001
   - Files:
     - deleted: `engine/agents/worker.md`

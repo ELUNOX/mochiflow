@@ -208,3 +208,19 @@ happened before the risk/cadence correction.
 - Verification before commit: targeted search in the T-003 files found no
   worker-recoverability, disposable-worker, context-pack, or orchestrator
   references.
+
+### T-004 — Kiro worker generation removal
+
+- Deleted the source worker role and Kiro worker template:
+  `engine/agents/worker.md` and
+  `engine/adapters/kiro/agents/spec-worker.json.tpl`.
+- Removed `.kiro/agents/spec-worker.json` from the Kiro source manifest without
+  manually deleting the generated working-tree output; T-006 adapter generation
+  owns that cleanup.
+- Updated adapter logic so only `.kiro/agents/spec-independent-reviewer.json` is
+  a managed Kiro agent JSON with model preservation.
+- Added `.kiro/agents/spec-worker.json` to deprecated Kiro outputs so markered
+  generated residue is removed/reported while markerless files are preserved.
+- Verification: `cargo test --manifest-path cli/Cargo.toml -p mochiflow-core adapter`
+  passed. Targeted search showed remaining `spec-worker` references only in
+  deprecated-output cleanup and tests.
