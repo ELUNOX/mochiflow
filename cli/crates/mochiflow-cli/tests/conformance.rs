@@ -653,6 +653,55 @@ fn open_defers_context_refresh_until_after_pr_or_merge() {
 }
 
 #[test]
+fn plan_offers_pre_approval_review_before_confirm_for_elevated() {
+    // Change A: for risk >= elevated, the plan readiness card offers a
+    // pre-approval Review (in the reviewer's plan-quality mode) before the
+    // confirm-plan (approve-to-build) action; the standard-risk order is
+    // unchanged (confirm as today, review only post-approval at step 10).
+    let plan = read_repo_file("engine/commands/plan.md");
+
+    assert!(
+        plan.contains("When `risk >= elevated`: present **Review**"),
+        "plan.md must offer Review in the readiness card for risk >= elevated"
+    );
+    assert!(
+        plan.contains("**before** **Confirm the plan**"),
+        "plan.md must order pre-approval Review before the confirm-plan action for risk >= elevated"
+    );
+    assert!(
+        plan.contains("reviewer's plan-quality mode"),
+        "plan.md pre-approval review must use the reviewer's plan-quality mode"
+    );
+    assert!(
+        plan.contains("leave `spec.yaml` `status: draft`, make no plan commit"),
+        "plan.md pre-approval review fail must leave status draft with no plan commit"
+    );
+
+    // Standard risk keeps the prior approve-then-optional-review order.
+    assert!(
+        plan.contains("When `risk = standard`: present **Confirm the plan** as today"),
+        "plan.md must keep the standard-risk approve-then-review order unchanged"
+    );
+    assert!(
+        plan.contains("**Review** (`risk = standard` only)"),
+        "plan.md step 10 must keep post-approval Review for standard risk only"
+    );
+
+    // Positional guard: the elevated pre-approval Review offer precedes the
+    // step-10 post-approval next-step card.
+    let elevated_review = plan
+        .find("When `risk >= elevated`: present **Review**")
+        .expect("elevated pre-approval review offer present");
+    let post_approval_card = plan
+        .find("After the approved consistency check passes and the plan commit is created")
+        .expect("step-10 post-approval card present");
+    assert!(
+        elevated_review < post_approval_card,
+        "the pre-approval review offer must precede the post-approval next-step card"
+    );
+}
+
+#[test]
 fn accept_guidance_uses_cli_and_stages_spec_and_adr() {
     let open = read_repo_file("engine/commands/open.md");
     let git = read_repo_file("engine/reference/git.md");

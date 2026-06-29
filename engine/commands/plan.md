@@ -84,13 +84,32 @@ and drive to human approval for implementation. Do not start implementation.
    When talking to the user, call this a consistency check unless the exact
    command matters.
 7. Present readiness in conversation-language plain wording: what will change and
-   what was checked. Then present a numbered choice card whose approval action is
-   **Confirm the plan** (`approve plan` / `approved`). The action means: edit
+   what was checked. Then present a numbered choice card. The approval action is
+   **Confirm the plan** (`approve plan` / `approved`); it means: edit
    `spec.yaml` `status: approved` and `updated` directly, re-run consistency
    checks, and commit the plan artifacts. It does not start implementation; the
-   next-step card in step 10 decides whether to review, build, or generate a
-   resume prompt. Free-form correction feedback revises the plan and re-presents
+   next-step card in step 10 decides whether to build or generate a resume
+   prompt. Free-form correction feedback revises the plan and re-presents
    readiness instead of adding a separate "fix the plan" command.
+
+   Review is a quality assist, not a delivery approval gate
+   (`reference/workflow.md ## Delivery approval gates`): the two gates stay
+   approve-to-build and approve-PR, and review never sets `status` by itself.
+   The card's ordering depends on risk:
+   - When `risk >= elevated`: present **Review** (recommended; `review` /
+     `mochiflow-review`) **before** **Confirm the plan**, so the recommended
+     quality check can inform the approve-to-build decision instead of running
+     only after the spec has locked to `approved`. **Review** runs
+     `mochiflow-review` on the draft spec in the reviewer's plan-quality mode
+     (`agents/independent-reviewer.md`; Stage 1 spec/design/tasks conformance +
+     spec-artifact quality, no diff/changed-files input, per
+     `reference/risk.md ## Review transport`). On `pass` /
+     `pass-with-comments`, re-present **Confirm the plan**. On `fail`, report the
+     findings and stop: leave `spec.yaml` `status: draft`, make no plan commit,
+     and let the user revise and re-review or confirm directly. Review stays
+     optional — the user may choose **Confirm the plan** without taking review.
+   - When `risk = standard`: present **Confirm the plan** as today; review is not
+     offered pre-approval and remains available post-approval at step 10.
 8. Re-run `mochiflow lint --spec {slug}` after setting `status: approved`; fix any FAIL before ending plan.
 9. Commit the plan artifacts on the existing `{prefix}/{slug}` branch with a
    `docs(spec): ...` Conventional Commit and `Spec: {slug}` trailer. Stage only
@@ -104,17 +123,20 @@ and drive to human approval for implementation. Do not start implementation.
     `later` as compatibility keywords.
 
     Display order depends on risk:
-    - When `risk >= elevated`: **Review** (recommended; `review` /
-      `mochiflow-review`) / **Start implementation** (`build` /
+    - When `risk >= elevated`: **Start implementation** (`build` /
       `mochiflow-build`) / **Create a resume prompt** (`resume` / `later`).
+      Pre-approval review was already offered at step 7, so it is **not**
+      re-offered here; ad-hoc `mochiflow-review` remains available on request but
+      is not a listed action.
     - When `risk = standard`: **Start implementation** / **Review** /
       **Create a resume prompt**.
 
     Behavior per choice:
-    - **Review** — run `mochiflow-review` (spec/design quality review, not code
-      review) on the current spec. On `pass` / `pass-with-comments`, re-present
-      **Start implementation** / **Create a resume prompt** only. On `fail`, report findings
-      and stop; the user decides whether to fix and re-review or proceed.
+    - **Review** (`risk = standard` only) — run `mochiflow-review` (spec/design
+      quality review, not code review) on the current spec. On `pass` /
+      `pass-with-comments`, re-present **Start implementation** /
+      **Create a resume prompt** only. On `fail`, report findings and stop; the
+      user decides whether to fix and re-review or proceed.
     - **Start implementation** — proceed to `mochiflow-build` in the same session.
     - **Create a resume prompt** — stop here; output a resume note (rendered from
       `templates/handoff/build-session-prompt.md`, includes `{slug}` and
@@ -129,10 +151,15 @@ and drive to human approval for implementation. Do not start implementation.
   before `approved`.
 - Do not ask for implementation approval until `mochiflow lint --spec {slug}` passes on the draft spec.
 - Do not set `status: approved` without the approve-to-build choice action or a
-  compatibility approval word.
+  compatibility approval word. When `risk >= elevated` and pre-approval review
+  returned `fail`, do not set `status: approved` or create the plan commit until
+  the user re-confirms (review is a quality assist, not a gate; it never sets
+  `status` by itself).
 - Do not touch implementation code / build / PR / archive.
 - Continue to `mochiflow-build` in the same session only when the user chooses
   **Start implementation** (or `build`) from the step-10 choice card; do not
   require or suggest a slug for that same-session phrase. **Create a resume
-  prompt** (or `later`) outputs the handoff prompt and stops. **Review** (or `review`)
-  runs ad-hoc review and, on pass, re-presents build / resume.
+  prompt** (or `later`) outputs the handoff prompt and stops. For
+  `risk >= elevated`, pre-approval review is offered at step 7 and is not
+  re-offered at step 10; for `risk = standard`, **Review** (or `review`) at step
+  10 runs ad-hoc review and, on pass, re-presents build / resume.

@@ -51,6 +51,13 @@ where explicitly defined. `accepted` is not a gate: it is an acceptance state th
 then re-running `lint` to confirm; there is no CLI transition command) when the
 acceptance conditions below hold.
 
+Independent review (`agents/independent-reviewer.md`, whether the mandatory
+risk-cadence run, `plan.md`'s pre-approval review for `risk >= elevated`, or
+ad-hoc `mochiflow-review`) is a **quality assist, not a delivery approval gate**.
+It informs the human's gate decision and a recorded `pass` / `pass-with-comments`
+is one of the acceptance conditions, but review never sets `status` by itself and
+never adds a third gate — there are exactly the two gates above.
+
 When an approval gate is presented as a numbered choice card, selecting the
 visible approval action by label or by its displayed number is the gate input.
 For example, a plan card may display "confirm the plan" as the action that sets

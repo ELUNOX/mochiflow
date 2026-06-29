@@ -16,7 +16,7 @@ Critical Stop Conditions:
 
 ## Tasks
 
-- [ ] T-001 [AC-01, AC-02, AC-03, AC-04, AC-10, AC-11] Change A: pre-approval review for risk>=elevated + reviewer plan-quality mode + non-gate clarification
+- [x] T-001 [AC-01, AC-02, AC-03, AC-04, AC-10, AC-11] Change A: pre-approval review for risk>=elevated + reviewer plan-quality mode + non-gate clarification
   - Depends on: none
   - Files:
     - `engine/commands/plan.md`

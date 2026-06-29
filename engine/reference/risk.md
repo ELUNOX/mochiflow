@@ -135,11 +135,16 @@ format, and record `Reviewer mode: inline`. While in reviewer role, the agent is
 read-only: do not edit files, update status, stage, commit, or create PR
 metadata. Review inputs are spec artifacts, full diff / changed files,
 integration log, and verification results — **never conversation history, and
-never a worker's compact report, as evidence**. The mandatory risk-cadence
-review reconstructs the full diff from git (`git diff origin/{base}...HEAD` for
-the completion-gate review, or a task's own commit for a per-task `critical`
-review) and reads the changed code from scratch; the worker's compact report is
-a routing artifact for the orchestrator, never review evidence.
+never a worker's compact report, as evidence**. A **code-less spec** (no
+implementation yet — `plan.md`'s pre-approval review for `risk >= elevated`, or
+ad-hoc review on a spec with no code) uses the reviewer's **plan-quality mode**:
+Stage 1 conformance + spec-artifact quality only, with **no diff / changed-files
+/ integration-log input** required (Stage 2 is `N/A` until code exists). The
+mandatory risk-cadence review reconstructs the full diff from git
+(`git diff origin/{base}...HEAD` for the completion-gate review, or a task's own
+commit for a per-task `critical` review) and reads the changed code from scratch;
+the worker's compact report is a routing artifact for the orchestrator, never
+review evidence.
 For mandatory risk-cadence review during `build`, after the verdict is produced, return to builder role before fixing findings or resuming the flow.
 For ad-hoc review, do not fix findings inline; report them and ask whether to enter the appropriate build/fix flow.
 
@@ -164,6 +169,10 @@ run `agents/independent-reviewer.md` via `## Review transport` regardless of
 risk level. Ad-hoc review is report-only and read-only.
 
 - Target: the active spec's latest artifacts (spec.md, design.md, tasks.md as applicable).
+- A code-less spec (no implementation yet) uses the reviewer's plan-quality mode
+  (Stage 1 conformance + spec-artifact quality, no diff/changed-files input) per
+  `## Review transport`; once code exists, ad-hoc review uses the
+  post-implementation mode.
 - On High or Critical findings: report findings only, then ask whether to enter
   the appropriate build/fix flow. Do not edit files as part of ad-hoc review.
 - On PASS / pass-with-comments: report the result and resume the interrupted flow.
