@@ -27,7 +27,7 @@ Critical Stop Conditions:
     - `engine/agents/worker.md`
   - Done: a new `engine/agents/worker.md` defines a write + verify + commit worker role distinct from the read-only reviewer; it specifies (a) the context pack it consumes (relevant `design.md` slice, the single `tasks.md` row with `Files`/`Done`/`Stop`/AC refs, the `default` verify command, and constitution/standards/pitfalls pointers), (b) repo-wide read but contract-bounded write — an out-of-scope edit returns `blocked` instead of widening scope, (c) the compact report it returns (`task`, `status` done|blocked, `files_changed`, `verify` profile+result+evidence pointer, `commit` ref, `reason` when blocked) excluding any implementation narrative, (d) that it runs on the top model with no downgrade, and (e) that it performs the build per-task commit cadence. The doc is project-agnostic English consistent with `engine/agents/independent-reviewer.md` style. Runs `mochiflow freeze` per Defaults.
   - Stop: do not give the worker authority over acceptance, fold, PR, or human gates; if the role would need to make a design decision, that is a `blocked` return by contract.
-- [ ] T-003 [AC-01] Refine router principle 5 and the Verb Delegation table
+- [x] T-003 [AC-01] Refine router principle 5 and the Verb Delegation table
   - Depends on: T-001, T-002
   - Files:
     - `engine/router.md`

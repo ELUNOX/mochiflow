@@ -828,6 +828,59 @@ fn ac_matrix_pending_human_is_canonical_provisional_token() {
 }
 
 #[test]
+fn router_principle_5_splits_judgment_from_execution() {
+    // AC-01: principle 5 separates the single-threaded judgment invariant from
+    // the fan-out execution transport, and the build Verb Delegation row reads
+    // inline-or-delegated rather than inline-only.
+    let router = read_repo_file("engine/router.md");
+
+    assert!(
+        router.contains(
+            "judgment, gates, integration, and the living-spec fold stay single-threaded"
+        ),
+        "principle 5 must state judgment/gates/integration/fold stay single-threaded"
+    );
+    assert!(
+        router.contains("may fan out to disposable per-task workers"),
+        "principle 5 must allow a verified code-change task's execution to fan out"
+    );
+    assert!(
+        router.contains("Review and per-task build execution are the delegated procedures over one shared transport"),
+        "principle 5 must replace 'review is the only separated procedure'"
+    );
+    assert!(
+        !router.contains("Review is the only separated procedure"),
+        "the old 'review is the only separated procedure' wording must be gone"
+    );
+    // build row is inline-or-delegated, not inline-only.
+    let build_row = router
+        .lines()
+        .find(|l| l.starts_with("| build |"))
+        .expect("router Verb Delegation build row exists");
+    assert!(
+        build_row.contains("agents/worker.md") && build_row.contains("inline"),
+        "build row must read inline-or-delegated per-task workers; got: {build_row}"
+    );
+    // open/update reuse the build worker only where code changes happen.
+    let open_row = router
+        .lines()
+        .find(|l| l.starts_with("| open |"))
+        .expect("router open row exists");
+    assert!(
+        open_row.contains("reuses the build worker mechanism"),
+        "open row must reuse the build worker for the QA-FAIL rework; got: {open_row}"
+    );
+    let update_row = router
+        .lines()
+        .find(|l| l.starts_with("| update |"))
+        .expect("router update row exists");
+    assert!(
+        update_row.contains("reuses the build worker mechanism"),
+        "update row must reuse the build worker for the PR-feedback change; got: {update_row}"
+    );
+}
+
+#[test]
 fn risk_transport_is_single_shared_delegation_mechanism() {
     // AC-02 / AC-08: the Review transport heading is preserved (by-name
     // citations in router/build stay resolvable), generalized into one shared
