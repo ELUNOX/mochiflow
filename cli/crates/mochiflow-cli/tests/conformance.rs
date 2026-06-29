@@ -998,9 +998,7 @@ fn worker_write_scope_resume_and_verdict_freshness_specified() {
 
     // verdict freshness rule lives in risk.md and is referenced by open/update.
     assert!(
-        risk.contains("Verdict freshness")
-            && risk.contains("makes the recorded\nverdict **stale**")
-            || risk.contains("makes the recorded") && risk.contains("stale"),
+        risk.contains("Verdict freshness") && risk.contains("stale"),
         "risk.md must state reviewer verdict freshness"
     );
     assert!(

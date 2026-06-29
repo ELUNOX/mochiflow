@@ -188,8 +188,33 @@ one thing: a verified code-change task.
 
 ## Review Results
 
-Mandatory `independent-reviewer` run for `risk: elevated`, once after all tasks
-(`reference/risk.md ## Consequences`).
+Mandatory `independent-reviewer` runs for `risk: elevated`. Per the verdict
+freshness rule (`reference/risk.md ## Consequences`), the **current gate verdict**
+is the fresh review over the full accumulated diff at open/accept time.
+
+### Current gate verdict (open close-out — full diff)
+
+- Reviewer mode: delegated
+- Verdict: pass-with-comments
+
+Fresh review at `open` over `git diff origin/main...HEAD` (16 commits
+`…..f02ff90`, 31 files), required because the four post-build feedback rounds
+changed engine docs + the Rust adapter after the initial build review. The
+reviewer reconstructed the full diff from git, re-ran the cited tests, and
+confirmed all 13 ACs hold and every constraint is honored (additive; reviewer
+cadence byte-unchanged; no downgrade; sequential-only; no new lint; no new CLI
+subcommand; edits confined to repo-root `engine/`), with all four feedback rounds
+coherent and free of remaining contradictions. Findings (no Critical/High):
+
+- Medium (fixed in this close-out): the AC-12 evidence pointer in `spec.md` cited
+  a renamed/nonexistent test (`kiro_worker_agent_is_full_file_managed_with_model_preserved`);
+  corrected to `kiro_worker_agent_enforces_top_model_no_preserve`.
+- Low (fixed): `build.md` orchestrator dispatch bullet now states the worker
+  write scope includes its own checkbox line (matching `worker.md`).
+- Low (fixed): tightened the verdict-freshness conformance assertion's boolean
+  grouping to require the `Verdict freshness` rule unconditionally.
+
+### Initial build verdict (historical — pre-feedback diff)
 
 - Reviewer mode: delegated
 - Verdict: pass-with-comments
