@@ -64,8 +64,12 @@ approve-PR gate (e)**.
    - 3d. If any item is ambiguous (cannot determine pass or fail intent), re-ask
      for that specific item with a clear pass/fail question. Do not guess.
    - 3e. **Rework loop**: if any item is `FAIL`, pause open (status stays
-     `approved`). Run a build-equivalent fix loop (modify → verify → commit on
-     the feature branch). After the fix, re-present: (1) the failed items, plus
+     `approved`). Run the fix as a code change **through the build worker
+     mechanism** (`commands/build.md` — delegated worker when available, else
+     inline; modify → verify → commit on the feature branch); open does not
+     define its own delegation path. Acceptance judgment, the fold, PR-body
+     synthesis, and the approve-PR gate stay inline on the main agent. After the
+     fix, re-present: (1) the failed items, plus
      (2) any previously-passed items whose implementation files were modified by
      the fix (regression check). Repeat from 3b for the re-presented items only.
    - 3f. When all human QA items reach a done-eligible result (`CONFIRMED` or

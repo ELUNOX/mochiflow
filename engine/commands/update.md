@@ -46,9 +46,12 @@ for its whole life, so there is nothing to restore.
    `{specs_dir}/{slug}/`; **do not move it, and do not revert its asserted
    state** (it stays `accepted`).
 2. **Delegate code changes to the `build` loop** — do not reimplement build
-   logic here. Apply the requested changes through `commands/build.md` (read,
-   edit, TDD where applicable), re-verify with the surface's `default` command,
-   and update the AC Verification Matrix rows touched by the change.
+   logic here. Apply the requested changes **through the build worker mechanism**
+   (`commands/build.md` — delegated worker when available, else inline; read,
+   edit, TDD where applicable); update defines no separate delegation path.
+   Re-verify with the surface's `default` command, and update the AC
+   Verification Matrix rows touched by the change. Feedback interpretation and
+   PR-metadata updates stay inline on the main agent.
 3. When feedback changes a decision or surfaces a new pitfall, revise the fold
    (`[adr].decisions` / `[adr].pitfalls`) so the durable record keeps matching
    the final design.

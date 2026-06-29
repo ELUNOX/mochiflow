@@ -828,6 +828,46 @@ fn ac_matrix_pending_human_is_canonical_provisional_token() {
 }
 
 #[test]
+fn phase_boundaries_reuse_build_worker_and_close_delegates_nothing() {
+    // AC-11 (QA-07): open reuses the build worker only for QA-FAIL rework,
+    // update reuses it for the PR-feedback code change, close delegates nothing,
+    // and no verb defines its own separate delegation path.
+    let open = read_repo_file("engine/commands/open.md");
+    let update = read_repo_file("engine/commands/update.md");
+    let close = read_repo_file("engine/commands/close.md");
+
+    assert!(
+        open.contains("through the build worker\n     mechanism")
+            || open.contains("through the build worker mechanism"),
+        "open.md must reuse the build worker mechanism for the QA-FAIL rework"
+    );
+    assert!(
+        open.contains("open does not\n     define its own delegation path")
+            || open.contains("open does not define its own delegation path"),
+        "open.md must not define its own delegation path"
+    );
+    assert!(
+        open.contains("approve-PR gate stay inline")
+            || (open.contains("stay inline") && open.contains("approve-PR gate")),
+        "open.md must keep acceptance/fold/PR-body/approve-PR inline"
+    );
+    assert!(
+        update.contains("through the build worker mechanism")
+            && update.contains("update defines no separate delegation path"),
+        "update.md must reuse the build worker mechanism with no separate delegation path"
+    );
+    assert!(
+        update.contains("Feedback interpretation and\n   PR-metadata updates stay inline")
+            || update.contains("stay inline on the main agent"),
+        "update.md must keep feedback interpretation and PR-metadata updates inline"
+    );
+    assert!(
+        close.contains("delegates nothing"),
+        "close.md must state it delegates nothing"
+    );
+}
+
+#[test]
 fn build_is_orchestrator_with_inline_fallback_and_commit_cadence() {
     // AC-04 / AC-07 (QA-01, QA-02, QA-04, QA-06): build.md adds orchestrator
     // mode gated on >=2 open tasks AND a subagent mechanism, sequential-only,
