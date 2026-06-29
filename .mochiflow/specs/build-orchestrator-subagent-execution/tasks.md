@@ -62,7 +62,7 @@ Critical Stop Conditions:
     - `cli/crates/mochiflow-core/src/adapter.rs`
   - Done: a new `spec-worker.json.tpl` modeled on `spec-independent-reviewer.json.tpl` is added with write-capable tools (`read`, `grep`, `glob`, `edit`, `write`, `bash`), the same top model, `prompt` pointing at `engine/agents/worker.md`, and resources including `worker.md` + the references it needs; `manifest.toml` maps `.kiro/agents/spec-worker.json` to it; `adapter.rs is_kiro_agent_json` is extended to also match `.kiro/agents/spec-worker.json` (full-file managed) and its co-located unit tests assert the new agent is generated as a full-file managed target while the reviewer agent still generates; `adapter generate --check` is green for the regenerated set. Edits `engine/**` so runs `mochiflow freeze` per Defaults; the vendored re-install + `adapter generate` happen in T-008.
   - Stop: do not hand-edit generated adapter outputs; if the worker agent needs a deny/trust wiring beyond the reviewer's per-call model, stop and confirm rather than reintroducing a baked tool policy.
-- [ ] T-008 [AC-13] Freeze, re-vendor, regenerate adapters, finalize verification
+- [x] T-008 [AC-13] Freeze, re-vendor, regenerate adapters, finalize verification
   - Depends on: T-001, T-002, T-003, T-004, T-005, T-006, T-007
   - Files:
     - `engine/MANIFEST.json`
