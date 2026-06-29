@@ -1,7 +1,7 @@
 {
   "files": {
     "README.md": "sha256:1e77dec7687a5e5e8da9232222bd3ca5d2dc027a7a648905c55a70be8f807c52",
-    "VERSION": "sha256:5dae0c0a5ed3cdaa78704e25bb38d72c31018311e933283d06ed4f93360bfc6c",
+    "VERSION": "sha256:1e5b51cde515396a9fa762909cf8ca6584ccc564b325d2eebeea76175fe95c4d",
     "adapters/agents/AGENTS.md.tpl": "sha256:5f2ce761dec42b0331c54f37ae504b4445761a428a51792670695d9a6f629c8f",
     "adapters/agents/manifest.toml": "sha256:3f399b8c4b0b0fae527152686294b082e29920284e109a58ca49e52e902edb4a",
     "adapters/claude-code/CLAUDE.md.tpl": "sha256:a72d59c4f008565747eec58893c994a8ff06d759f3663bf83571ac62cb621a73",
@@ -43,5 +43,5 @@
     "templates/spec/spec.yaml": "sha256:984ce5f045a9886475405f7ad99f4da884acc3a4c993688f7c84a972fbf87b97",
     "templates/spec/tasks.md": "sha256:fc5126b0bc109bbdfd6415ebcacb44665a2c97623f8b8ddfd3cc679c4f93fe5d"
   },
-  "version": "1.1.3"
+  "version": "1.2.0"
 }

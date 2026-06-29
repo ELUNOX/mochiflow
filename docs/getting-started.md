@@ -16,7 +16,7 @@ For Linux or macOS without Homebrew, copy the shell installer command from the
 specific version, use the versioned release URL:
 
 ```bash
-curl --proto '=https' --tlsv1.2 -LsSf https://github.com/ELUNOX/mochiflow/releases/download/v1.1.3/mochiflow-cli-installer.sh | sh
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/ELUNOX/mochiflow/releases/download/v1.2.0/mochiflow-cli-installer.sh | sh
 ```
 
 From source:
