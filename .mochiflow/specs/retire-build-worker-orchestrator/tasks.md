@@ -27,7 +27,7 @@ Stop Conditions:
     - `engine/commands/review.md`
   - Done: `build.md` describes inline-only implementation with no worker/orchestrator dispatch branch; `router.md` routing principle #5 removes the execution fan-out invariant and states that judgment stays single-threaded while implementation stays inline and review may delegate; `risk.md ## Review transport` names only `agents/independent-reviewer.md`; reviewer cadence and verdict freshness remain intact; any frontmatter `delegate_to` entry for `agents/worker.md` is removed.
   - Stop: A second delegation transport or replacement build subagent appears necessary.
-- [ ] T-002 [AC-03] Rewrite open/update rework language for inline fixes
+- [x] T-002 [AC-03] Rewrite open/update rework language for inline fixes
   - Depends on: T-001
   - Files:
     - `engine/commands/open.md`

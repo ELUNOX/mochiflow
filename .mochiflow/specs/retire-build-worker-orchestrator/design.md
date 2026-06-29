@@ -182,3 +182,16 @@ happened before the risk/cadence correction.
   had no failures and only the expected warning for the not-yet-checked T-001;
   targeted search found no worker/orchestrator build-delegation terms in the
   T-001 active contract files.
+
+### T-002 — Open/update inline rework
+
+- Replaced `open` QA-`FAIL` rework and `update` PR-feedback code-change wording
+  with bounded inline fixes that use build discipline without restarting the
+  build phase or calling `mochiflow ready`.
+- Preserved the state and commit boundaries: no task checkbox, no `Task:`
+  trailer, accepted in-review state stays accepted, and stale reviewer verdicts
+  still require refresh for `risk >= elevated`.
+- Updated `reference/git.md` to describe these commits as bounded inline code
+  changes rather than worker-mechanism changes.
+- Verification before commit: targeted search found no worker, `unit_kind`,
+  compact-report, or context-pack terms in the T-002 files.

@@ -137,7 +137,7 @@ follow-up before build completes.
 | plan | use existing `{prefix}/{slug}` | `spec.yaml (approved)`, `spec.md`, optional `design.md` / `tasks.md`, optional corrected `pitch.md` |
 | build | verify/switch existing `{prefix}/{slug}`; never create it | implementation, tests, task checkbox updates, AC Matrix updates |
 | open | use existing `{prefix}/{slug}` | optional `docs(context)` commit (regenerated `[context]` files) when a structural shift was detected, then the close-out commit: `status: accepted`, final AC Matrix, ADR fold (flat spec, no `_done/` move, no `INDEX` write) |
-| update | use existing `{prefix}/{slug}` | PR-feedback fixes via the build loop; the fold revised when a decision changes |
+| update | use existing `{prefix}/{slug}` | PR-feedback fixes as bounded inline code changes; the fold revised when a decision changes |
 | close | local hygiene on base | nothing committed/pushed to the base branch |
 
 Discuss and plan use `docs(spec): ...` commit subjects plus the required
@@ -148,7 +148,7 @@ files only, with the `Spec: {slug}` trailer — a spec-lane commit) **before** t
 accept close-out commit, so the refresh ships in the PR while the close-out stays
 the single final state commit. open then follows `### Accept close-out commit`.
 
-**open QA-`FAIL` rework / update PR-feedback commits** (the worker-mechanism
+**open QA-`FAIL` rework / update PR-feedback commits** (the bounded inline
 code changes in `commands/open.md` step 3e and `commands/update.md` step 2) are
 ordinary feature-branch fix commits: a Conventional Commit subject describing the
 fix, the required `Spec: {slug}` trailer, and **no** `Task:` trailer (build is
