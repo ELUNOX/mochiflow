@@ -1,0 +1,11 @@
+version: 1
+slug: "review-gate-and-context-timing"
+title: "Pre-approval review gate and PR-shipped context refresh"
+type: "fix"
+surfaces:
+  - "cli"
+integration: "none"
+risk: "elevated"
+status: "draft"
+created: "2026-06-29"
+updated: "2026-06-29"
