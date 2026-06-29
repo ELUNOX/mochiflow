@@ -249,7 +249,7 @@ terminal commands.
 
 | Tool | How it integrates |
 | --- | --- |
-| Kiro | Always-on steering (`.kiro/steering/mochiflow.md`) + read-only reviewer |
+| Kiro | Always-on steering (`.kiro/steering/mochiflow.md`) + read-only reviewer and write-capable per-task build-worker agents |
 | Claude Code | Generates `CLAUDE.md` |
 | GitHub Copilot | Generates `.github/` integration |
 | Generic agents | Generates `AGENTS.md` |

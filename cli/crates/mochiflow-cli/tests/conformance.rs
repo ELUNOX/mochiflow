@@ -875,6 +875,29 @@ fn behavioral_kiro_generates_spec_worker_agent_deterministically() {
         code, 0,
         "worker agent generation must be deterministic: {out}"
     );
+
+    // AC-09: the worker carries the top model, and a user downgrade is real
+    // drift that --check flags and regenerate overwrites (no downgrade persists).
+    assert_eq!(
+        json["model"].as_str(),
+        Some("claude-opus-4.8"),
+        "worker agent must ship the top model"
+    );
+    let downgraded = body.replace("claude-opus-4.8", "cheap-model");
+    assert_ne!(downgraded, body, "fixture must actually change the model");
+    std::fs::write(&worker, &downgraded).unwrap();
+    let (code, out) = run_cli(&cfg, &["adapter", "generate", "--check"]);
+    assert_ne!(
+        code, 0,
+        "a worker model downgrade must be reported as drift: {out}"
+    );
+    let (code, _out) = run_cli(&cfg, &["adapter", "generate"]);
+    assert_eq!(code, 0);
+    let regenerated = std::fs::read_to_string(&worker).unwrap();
+    assert!(
+        regenerated.contains("claude-opus-4.8") && !regenerated.contains("cheap-model"),
+        "regenerate must restore the top model: {regenerated}"
+    );
 }
 
 #[test]

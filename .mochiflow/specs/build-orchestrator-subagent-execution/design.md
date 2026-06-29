@@ -126,8 +126,12 @@ build orchestrator (top model, main thread; holds plan/contract only)
   used by the reviewer, `prompt` = `engine/agents/worker.md`, resources include
   `worker.md` + the workflow/git/language references it needs. Generated from a
   new `engine/adapters/kiro/agents/spec-worker.json.tpl` + a `manifest.toml`
-  entry; `adapter.rs is_kiro_agent_json` is extended to treat it as a full-file
-  managed agent.
+  entry; `adapter.rs is_kiro_agent_json` is extended to recognize it as a managed
+  agent JSON. Unlike the reviewer, the worker is **not** model-customizable: a
+  separate `kiro_agent_preserves_model` predicate keeps model-preservation
+  reviewer-only, so the worker always renders the top model (AC-09 no-downgrade)
+  and a user model change is real drift that `adapter generate --check` flags and
+  regenerate overwrites.
 
 ## Error Handling
 
@@ -210,3 +214,16 @@ Findings (both non-blocking, no Critical/High):
   transport` are unwrapped relative to the file's ~76-col convention; cosmetic
   only (tests assert content, not wrapping). Left as-is to avoid further
   frozen-surface churn; fold on the next edit.
+
+Post-review feedback addressed (follow-up commit):
+
+- High (AC-09/AC-12): the worker agent was initially opted into the reviewer's
+  model-preservation, which would let a user downgrade persist silently. Fixed by
+  a reviewer-only `kiro_agent_preserves_model` predicate — the worker now always
+  renders the top model and a model change is real drift
+  (`conformance::behavioral_kiro_generates_spec_worker_agent_deterministically`,
+  `adapter::tests::kiro_worker_agent_enforces_top_model_no_preserve`).
+- Medium (docs): `README.md` and `docs/configuration.md` updated to describe the
+  write-capable build-worker agent alongside the read-only reviewer. The
+  `[context]` map (`structure.md`) is intentionally not hand-edited; it is
+  refreshed from code via `refresh-context` as a post-merge follow-up.
