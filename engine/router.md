@@ -2,10 +2,11 @@
 name: spec
 not_a_phase: true
 description: |
-  Natural-language routing and lifecycle conductor for mochiflow. Aggregates
-  triggers and trigger_patterns from commands/*.md to decide which verb to
-  enter. Loaded directly by adapter entrypoints such as Kiro steering or
-  generated agent instructions.
+  Compact standing router for mochiflow. Aggregates triggers and
+  trigger_patterns from commands/*.md to decide whether to stay in normal
+  conversation, use patch, enter a lifecycle verb, or run a non-phase command.
+  Loaded directly by adapter entrypoints such as Kiro steering or generated
+  agent instructions.
 references:
   - commands/discuss.md
   - commands/plan.md
@@ -24,9 +25,25 @@ references:
 
 # spec
 
-Router for the mochiflow verbs. A tool adapter entrypoint (e.g. Kiro steering or
-generated agent instructions) loads this as a standing instruction. Do not load
-it from planning / reviewer roles.
+Compact standing router for the mochiflow verbs and non-phase commands. A tool
+adapter entrypoint (e.g. Kiro steering or generated agent instructions) loads
+this as a standing instruction. Do not load it from planning / reviewer roles.
+
+## Standing Load Contract
+
+`router.md` is the only standing router artifact. Do not create a second route
+card for normal operation. The standing layer is:
+
+- the adapter entrypoint;
+- the configured constitution and foundational context;
+- this router;
+- project config when verification / git / surface details are needed.
+
+The `references` frontmatter above is a lazy-load catalog, not an instruction to
+read every file before routing. After the router selects a lifecycle verb or
+non-phase command, read the matching `commands/{verb}.md` and that command's
+frontmatter `references` (reference / templates). Read ADR records only on
+demand by loading the store `INDEX.md` first, then the relevant active records.
 
 ## Routing Principles
 

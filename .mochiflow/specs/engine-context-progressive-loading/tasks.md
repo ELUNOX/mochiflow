@@ -14,7 +14,7 @@ Critical Stop Conditions:
 
 ## Tasks
 
-- [ ] T-001 [AC-01, AC-02, AC-04] Compact the router into a standing load contract
+- [x] T-001 [AC-01, AC-02, AC-04] Compact the router into a standing load contract
   - Depends on: none
   - Files:
     - `engine/router.md`
