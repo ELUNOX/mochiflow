@@ -121,3 +121,20 @@ that writes the generated board files.
   `mochiflow adapter generate --check`.
 
 ## Review Results
+
+- Reviewer mode: delegated
+- Verdict: pass-with-comments
+- Scope: full diff `origin/main...HEAD` after T-001..T-003 (engine delivery
+  guidance, `pr.rs` next action, `delivery.rs` / `status.rs` / `index.rs`
+  next-action derivation and JSON board contract) with all CLI verification
+  passing.
+- Findings (both Low, non-blocking, accepted as optional follow-ups):
+  - test-gap (AC-01): only the driver and manual PR success paths assert the
+    printed next action; the github and legacy-command paths print it via the
+    same `pr_next_action` helper (unit-tested EN/JA) but lack a dedicated
+    success-path assertion.
+  - maintainability (AC-04/AC-05): `mochiflow status` renders the `↳` hint line
+    while the generated `INDEX.md` dashboard does not; the machine contract lives
+    in `state/index.json`. This asymmetry is design-sanctioned (Data Model:
+    "Markdown/status output may choose its wording, but tests must pin the JSON
+    field names and kind values") and is not a conformance gap against AC-04/AC-05.

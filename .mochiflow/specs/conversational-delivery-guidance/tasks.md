@@ -41,7 +41,7 @@ Critical Stop Conditions:
     - `cli/crates/mochiflow-cli/tests/conformance.rs`
   - Done: In-review specs render a merge-then-report next action and JSON `next_action.kind = "report_merge"`; done-derived specs with local branch or scratch render `local cleanup pending`, JSON `next_action.kind = "local_cleanup_pending"`, and `local_cleanup_pending = true`; after the local branch and scratch are removed, the same done-derived spec no longer renders `local cleanup pending` and JSON returns `next_action = null`, `local_cleanup_pending = false`; `status` remains read-only; generated board JSON/Markdown expose the hint consistently.
   - Stop: Cleanup-pending detection cannot be derived from local branch or scratch state without persisting new metadata.
-- [ ] T-004 [AC-01, AC-02, AC-03, AC-04, AC-05, AC-06, AC-07] Regenerate engine artifacts and verify
+- [x] T-004 [AC-01, AC-02, AC-03, AC-04, AC-05, AC-06, AC-07] Regenerate engine artifacts and verify
   - Depends on: T-003
   - Files:
     - `engine/MANIFEST.json`
