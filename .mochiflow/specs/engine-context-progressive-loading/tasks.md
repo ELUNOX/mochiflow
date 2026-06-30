@@ -20,7 +20,7 @@ Critical Stop Conditions:
     - `engine/router.md`
   - Done: `router.md` keeps the initial routing behavior and explicitly tells agents to load `commands/{verb}.md` plus command frontmatter `references` only after route selection; it does not introduce a second router artifact, section anchors, or context-budget command.
   - Stop: moving a routing invariant out of `router.md` would make initial routing ambiguous or dependent on a command file that has not yet been selected.
-- [ ] T-002 [AC-03, AC-05] Separate standing and load-on-demand sections in adapter templates
+- [x] T-002 [AC-03, AC-05] Separate standing and load-on-demand sections in adapter templates
   - Depends on: T-001
   - Files:
     - `engine/adapters/agents/AGENTS.md.tpl`

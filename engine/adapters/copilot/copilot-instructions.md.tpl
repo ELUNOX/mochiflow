@@ -1,10 +1,13 @@
 <!-- {{marker}} -->
 # Copilot Instructions
 
-This project uses MochiFlow (engine at `{{engine}}`). Follow the router as
-your standing instruction for any spec / implementation / PR work.
+This project uses MochiFlow (engine at `{{engine}}`). Load the standing inputs
+below before any spec / implementation / PR work, then follow the router to load
+only the command-specific details needed for the selected workflow.
 
 ## MochiFlow
+
+### Standing inputs
 
 - Constitution — **always loaded**: `{{constitution.project}}` and
   `{{constitution.local}}` (user-authored project / local rules).
@@ -12,12 +15,15 @@ your standing instruction for any spec / implementation / PR work.
   `{{context.structure}}`, and `{{context.tech}}`. Always-loaded current-state
   orientation; load it first.
 - Router (read first): `{{engine}}/router.md`
+- Project config: `mochiflow config show`
+
+### Load on demand
+
 - Verb procedures: `{{engine}}/commands/{discuss,plan,build,open,update,close}.md`; patch lane:
   `{{engine}}/commands/patch.md`
 - Non-phase commands: `{{engine}}/commands/{patch,review,refresh-context,onboard}.md`
 - Cross-cutting rules: `{{engine}}/reference/{workflow,risk,authoring,git,language,engineering-standards}.md`
 - Decision history / pitfalls — **on-demand** (*why*): per-file records under `{{adr.decisions}}` / `{{adr.pitfalls}}` (generated gitignored `INDEX.md` per store; `mochiflow adr list | show | search`).
-- Project config: `mochiflow config show`
 - Artifact roles: `spec.md` is the product contract, `design.md` is the
   technical contract when required, `tasks.md` is the executable checklist when
   required, and the AC Matrix in `spec.md` tracks AC → implementation →

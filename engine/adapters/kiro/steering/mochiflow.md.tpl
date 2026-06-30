@@ -5,8 +5,9 @@ inclusion: always
 # mochiflow
 
 This project uses mochiflow (vendored engine at `{{engine}}`). This file is the
-single always-on standing layer for Kiro: load the router and the references
-below, then follow the router for any spec / implementation / PR work.
+single always-on standing layer for Kiro: load the standing file references
+below, then follow the router to load only the command-specific details needed
+for the selected workflow.
 
 ## Always loaded
 
@@ -18,6 +19,8 @@ always-on steering file:
 - Project context (current-state orientation): #[[file:{{context.product}}]] · #[[file:{{context.structure}}]] · #[[file:{{context.tech}}]]
 
 ## mochiflow
+
+### Load on demand
 
 - Verb procedures: `{{engine}}/commands/{discuss,plan,build,open,update,close}.md`; patch lane:
   `{{engine}}/commands/patch.md`
