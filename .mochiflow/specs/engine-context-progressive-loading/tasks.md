@@ -36,7 +36,7 @@ Critical Stop Conditions:
     - `cli/crates/mochiflow-cli/tests/cli.rs`
   - Done: tests guard the router lazy-load contract, no-go decisions, adapter standing/load-on-demand wording, Kiro always-on references, and the existing routing parity cases without brittle long-prose matching. Routing parity evidence names explicit command routing, natural-language hints, backlog discuss promotion, backlog plan rejection, patch eligibility, review trigger, PR feedback/update routing, and merged-event close routing.
   - Stop: adequate coverage requires a new test harness or parser for command frontmatter.
-- [ ] T-004 [AC-05] Regenerate engine artifacts and verify
+- [x] T-004 [AC-05] Regenerate engine artifacts and verify
   - Depends on: T-003
   - Files:
     - `engine/MANIFEST.json`

@@ -526,7 +526,9 @@ fn adapters_separate_standing_inputs_from_load_on_demand() {
         );
         assert!(
             body.contains("commands/{discuss,plan,build,open,update,close}.md")
-                && body.contains("reference/{workflow,risk,authoring,git,language,engineering-standards}.md"),
+                && body.contains(
+                    "reference/{workflow,risk,authoring,git,language,engineering-standards}.md"
+                ),
             "{path} must keep command/reference files in the load-on-demand section"
         );
     }
