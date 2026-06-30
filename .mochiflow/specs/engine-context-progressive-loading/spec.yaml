@@ -1,0 +1,11 @@
+version: 1
+slug: "engine-context-progressive-loading"
+title: "Define a compact standing router and verb-scoped engine loading"
+type: "refactor"
+surfaces:
+  - "cli"
+integration: "none"
+risk: "elevated"
+status: "accepted"
+created: "2026-06-30"
+updated: "2026-06-30"

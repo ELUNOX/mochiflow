@@ -5,8 +5,9 @@ inclusion: always
 # mochiflow
 
 This project uses mochiflow (vendored engine at `.mochiflow/engine`). This file is the
-single always-on standing layer for Kiro: load the router and the references
-below, then follow the router for any spec / implementation / PR work.
+single always-on standing layer for Kiro: load the standing file references
+below, then follow the router to load only the command-specific details needed
+for the selected workflow.
 
 ## Always loaded
 
@@ -19,6 +20,8 @@ always-on steering file:
 
 ## mochiflow
 
+### Load on demand
+
 - Verb procedures: `.mochiflow/engine/commands/{discuss,plan,build,open,update,close}.md`; patch lane:
   `.mochiflow/engine/commands/patch.md`
 - Non-phase commands: `.mochiflow/engine/commands/{patch,review,refresh-context,onboard}.md`
@@ -29,7 +32,10 @@ always-on steering file:
   active records whose `area` intersects the spec's `surfaces`
   (`mochiflow adr list | show | search`).
 - Project config (surfaces / verify commands / git): run `mochiflow config show`
-- Artifact roles: `spec.md` is the product contract, `design.md` is the
+
+### Artifact roles
+
+- `spec.md` is the product contract, `design.md` is the
   technical contract when required, `tasks.md` is the executable checklist when
   required, and the AC Matrix in `spec.md` tracks AC → implementation →
   verification → evidence → result.

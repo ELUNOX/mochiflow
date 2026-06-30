@@ -1,10 +1,14 @@
 <!-- {{marker}} -->
 # AGENTS.md
 
-This project uses mochiflow (vendored engine at `{{engine}}`). Load the router as
-your standing instruction and follow it for any spec / implementation / PR work.
+This project uses mochiflow (vendored engine at `{{engine}}`). Load the router
+as the standing route contract before any spec / implementation / PR work, then
+follow it to load only the command-specific details needed for the selected
+workflow.
 
 ## mochiflow
+
+### Standing inputs
 
 - Constitution — **always loaded**: `{{constitution.project}}` and
   `{{constitution.local}}` (user-authored project / local rules).
@@ -12,6 +16,10 @@ your standing instruction and follow it for any spec / implementation / PR work.
   `{{context.structure}}`, and `{{context.tech}}`. This is the always-loaded
   current-state orientation; load it first.
 - Router (read this first): `{{engine}}/router.md`
+- Project config (surfaces / verify commands / git): run `mochiflow config show`
+
+### Load on demand
+
 - Verb procedures: `{{engine}}/commands/{discuss,plan,build,open,update,close}.md`; patch lane:
   `{{engine}}/commands/patch.md`
 - Non-phase commands: `{{engine}}/commands/{patch,review,refresh-context,onboard}.md`
@@ -21,8 +29,10 @@ your standing instruction and follow it for any spec / implementation / PR work.
   a generated, gitignored `INDEX.md`). Load the `INDEX.md` first, then open only
   active records whose `area` intersects the spec's `surfaces`
   (`mochiflow adr list | show | search`).
-- Project config (surfaces / verify commands / git): run `mochiflow config show`
-- Artifact roles: `spec.md` is the product contract, `design.md` is the
+
+### Artifact roles
+
+- `spec.md` is the product contract, `design.md` is the
   technical contract when required, `tasks.md` is the executable checklist when
   required, and the AC Matrix in `spec.md` tracks AC → implementation →
   verification → evidence → result.
