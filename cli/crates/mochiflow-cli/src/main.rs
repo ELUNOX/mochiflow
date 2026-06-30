@@ -418,7 +418,7 @@ fn main() -> Result<()> {
         }
         Commands::Accept { slug, dry_run } => {
             let cfg = load_cfg(cli.config.as_deref())?;
-            let code = mochiflow_core::ship::run_accept(&cfg, slug.as_deref(), dry_run);
+            let code = mochiflow_core::accept::run_accept(&cfg, slug.as_deref(), dry_run);
             // Regenerate the gitignored board to reflect the new accepted/Ready
             // state. Skipped on dry-run; never staged or committed.
             if !dry_run && code == 0 {

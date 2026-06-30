@@ -1,3 +1,4 @@
+pub mod accept;
 pub mod adapter;
 pub mod adr;
 pub mod backlog;
@@ -14,7 +15,6 @@ pub mod lint;
 pub mod manifest;
 pub mod pr;
 pub mod present;
-pub mod ship;
 pub mod spec_meta;
 pub mod status;
 pub mod upgrade;
