@@ -88,3 +88,9 @@ edits, per the constitution.
   T-001 through T-004.
   Evidence: independent-reviewer reported no Stage 1 spec conformance findings
   and no Stage 2 code quality findings.
+- Reviewer mode: delegated
+  Verdict: pass
+  Scope: fresh full branch diff after the post-build artifact-role and
+  frontmatter-anchor follow-up.
+  Evidence: independent-reviewer reported no Stage 1 spec conformance findings
+  and no Stage 2 code quality findings.
