@@ -27,14 +27,14 @@ Critical Stop Conditions:
     - `engine/adapters/claude-code/CLAUDE.md.tpl`
     - `engine/adapters/copilot/copilot-instructions.md.tpl`
     - `engine/adapters/kiro/steering/mochiflow.md.tpl`
-  - Done: all adapter templates consistently distinguish standing inputs from load-on-demand engine procedure files; Kiro file references remain limited to router, constitution, and context; generated adapter semantics and target files remain unchanged. AGENTS/Kiro generated output is covered by this repo's adapter config, while Claude/Copilot are covered by source-template conformance unless the local config changes.
+  - Done: all adapter templates consistently distinguish standing inputs from load-on-demand engine procedure files; artifact-role descriptions sit outside the load-on-demand file list; Kiro file references remain limited to router, constitution, and context; generated adapter semantics and target files remain unchanged. AGENTS/Kiro generated output is covered by this repo's adapter config, while Claude/Copilot are covered by source-template conformance unless the local config changes.
   - Stop: template wording needs adapter-specific behavior beyond prose changes or changes to adapter manifests.
 - [x] T-003 [AC-01, AC-02, AC-03, AC-04] Add focused conformance coverage
   - Depends on: T-001, T-002
   - Files:
     - `cli/crates/mochiflow-cli/tests/conformance.rs`
     - `cli/crates/mochiflow-cli/tests/cli.rs`
-  - Done: tests guard the router lazy-load contract, no-go decisions, adapter standing/load-on-demand wording, Kiro always-on references, and the existing routing parity cases without brittle long-prose matching. Routing parity evidence names explicit command routing, natural-language hints, backlog discuss promotion, backlog plan rejection, patch eligibility, review trigger, PR feedback/update routing, and merged-event close routing.
+  - Done: tests guard the router lazy-load contract, no-go decisions, file-level frontmatter references, adapter standing/load-on-demand wording, Kiro always-on references, and the existing routing parity cases without brittle long-prose matching. Routing parity evidence names explicit command routing, natural-language hints, backlog discuss promotion, backlog plan rejection, patch eligibility, review trigger, PR feedback/update routing, and merged-event close routing.
   - Stop: adequate coverage requires a new test harness or parser for command frontmatter.
 - [x] T-004 [AC-05] Regenerate engine artifacts and verify
   - Depends on: T-003

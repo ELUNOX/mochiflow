@@ -32,7 +32,10 @@ always-on steering file:
   active records whose `area` intersects the spec's `surfaces`
   (`mochiflow adr list | show | search`).
 - Project config (surfaces / verify commands / git): run `mochiflow config show`
-- Artifact roles: `spec.md` is the product contract, `design.md` is the
+
+### Artifact roles
+
+- `spec.md` is the product contract, `design.md` is the
   technical contract when required, `tasks.md` is the executable checklist when
   required, and the AC Matrix in `spec.md` tracks AC → implementation →
   verification → evidence → result.

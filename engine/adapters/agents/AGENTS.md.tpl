@@ -29,7 +29,10 @@ workflow.
   a generated, gitignored `INDEX.md`). Load the `INDEX.md` first, then open only
   active records whose `area` intersects the spec's `surfaces`
   (`mochiflow adr list | show | search`).
-- Artifact roles: `spec.md` is the product contract, `design.md` is the
+
+### Artifact roles
+
+- `spec.md` is the product contract, `design.md` is the
   technical contract when required, `tasks.md` is the executable checklist when
   required, and the AC Matrix in `spec.md` tracks AC → implementation →
   verification → evidence → result.

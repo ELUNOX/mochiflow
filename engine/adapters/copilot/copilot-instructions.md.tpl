@@ -24,7 +24,10 @@ only the command-specific details needed for the selected workflow.
 - Non-phase commands: `{{engine}}/commands/{patch,review,refresh-context,onboard}.md`
 - Cross-cutting rules: `{{engine}}/reference/{workflow,risk,authoring,git,language,engineering-standards}.md`
 - Decision history / pitfalls — **on-demand** (*why*): per-file records under `{{adr.decisions}}` / `{{adr.pitfalls}}` (generated gitignored `INDEX.md` per store; `mochiflow adr list | show | search`).
-- Artifact roles: `spec.md` is the product contract, `design.md` is the
+
+### Artifact roles
+
+- `spec.md` is the product contract, `design.md` is the
   technical contract when required, `tasks.md` is the executable checklist when
   required, and the AC Matrix in `spec.md` tracks AC → implementation →
   verification → evidence → result.
