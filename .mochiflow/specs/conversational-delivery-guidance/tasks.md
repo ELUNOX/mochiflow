@@ -14,7 +14,7 @@ Critical Stop Conditions:
 
 ## Tasks
 
-- [ ] T-001 [AC-02, AC-03, AC-06, AC-07] Update engine delivery guidance
+- [x] T-001 [AC-02, AC-03, AC-06, AC-07] Update engine delivery guidance
   - Depends on: none
   - Files:
     - `engine/commands/open.md`

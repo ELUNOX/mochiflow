@@ -185,11 +185,24 @@ optional `docs(context)` commit → accept close-out → PR title/body → appro
    trailer spec check), pushes the branch, and resolves the backend per
    `reference/git.md ## PR`. Read its exit code:
    - `0` — PR created; capture the printed URL. The spec is now derived
-     `in_review`.
+     `in_review`. Present the PR URL and the conversational post-merge next
+     action (below).
    - `10` — manual handoff: the branch is pushed; create the PR with the
-     presented content via your provider UI/CLI, then report the URL.
+     presented content via your provider UI/CLI, then report the URL. Present
+     the same conversational post-merge next action (below).
    - `3` — pre-flight failed; fix and re-run.
    - `1`/`2` — backend / config failure; stop and diagnose.
+
+   **PR-created conversational handoff.** On a successful handoff (exit `0` or
+   `10`), the agent's final PR-created response MUST tell the user, in
+   conversation-language plain wording, to merge the PR in the provider UI, then
+   return to chat and report that it merged so post-merge local cleanup can run.
+   Include the PR URL when one is available (exit `0`); on a URL-less manual
+   handoff (exit `10`) or any backend that returned no URL, describe the pushed
+   branch and handoff instead of a URL and still include the same
+   merge-then-report next action. This next action is local workflow guidance and
+   is never written into the PR body (which stays artifact-language,
+   external-reviewer facing).
 
 ## Presentation
 
@@ -201,6 +214,9 @@ optional `docs(context)` commit → accept close-out → PR title/body → appro
   merge, never written.
 - Describe the AC Matrix as the acceptance checks or verification items, and the
   reviewer verdict as the review result.
+- After PR creation, state the next human action conversationally: merge the PR
+  in the provider, then return to chat and report the merge so local cleanup can
+  run. Keep this next action out of the PR body.
 
 ## Stop conditions
 
