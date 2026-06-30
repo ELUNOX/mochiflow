@@ -43,7 +43,7 @@ The `references` frontmatter above is a lazy-load catalog, not an instruction to
 read every file before routing. After the router selects a lifecycle verb or
 non-phase command, read the matching `commands/{verb}.md` and that command's
 frontmatter `references` (reference / templates). Read ADR records only on
-demand by loading the store `INDEX.md` first, then the relevant active records.
+demand: load the store `INDEX.md` first, then the relevant active records.
 
 ## Routing Principles
 

@@ -489,6 +489,80 @@ fn router_plan_requires_existing_draft_spec() {
 }
 
 #[test]
+fn router_defines_lazy_load_contract_without_second_card() {
+    let router = read_repo_file("engine/router.md");
+
+    assert!(
+        router.contains("`router.md` is the only standing router artifact")
+            && router.contains("lazy-load catalog")
+            && router.contains("matching `commands/{verb}.md`")
+            && router.contains("frontmatter `references`"),
+        "router must define the standing-vs-lazy loading contract"
+    );
+    assert!(
+        !repo_root().join("engine/router.card.md").exists(),
+        "v1 must not introduce a second router card artifact"
+    );
+    assert!(
+        router.contains("load the store `INDEX.md` first")
+            && router.contains("relevant active records"),
+        "router must keep ADR loading bounded by index and relevant active records"
+    );
+}
+
+#[test]
+fn adapters_separate_standing_inputs_from_load_on_demand() {
+    for path in [
+        "engine/adapters/agents/AGENTS.md.tpl",
+        "engine/adapters/claude-code/CLAUDE.md.tpl",
+        "engine/adapters/copilot/copilot-instructions.md.tpl",
+    ] {
+        let body = read_repo_file(path);
+        assert!(body.contains("### Standing inputs"), "{path}");
+        assert!(body.contains("### Load on demand"), "{path}");
+        assert!(
+            body.find("### Standing inputs") < body.find("### Load on demand"),
+            "{path} must present standing inputs before lazy-loaded files"
+        );
+        assert!(
+            body.contains("commands/{discuss,plan,build,open,update,close}.md")
+                && body.contains("reference/{workflow,risk,authoring,git,language,engineering-standards}.md"),
+            "{path} must keep command/reference files in the load-on-demand section"
+        );
+    }
+
+    let kiro = read_repo_file("engine/adapters/kiro/steering/mochiflow.md.tpl");
+    assert!(kiro.contains("## Always loaded"), "{kiro}");
+    assert!(kiro.contains("### Load on demand"), "{kiro}");
+    assert!(
+        !kiro.contains("#[[file:{{engine}}/commands")
+            && !kiro.contains("#[[file:{{engine}}/reference"),
+        "Kiro file references must stay limited to standing inputs:\n{kiro}"
+    );
+}
+
+#[test]
+fn router_preserves_named_routing_branches() {
+    let router = read_repo_file("engine/router.md");
+
+    for required in [
+        "On an explicit command (`mochiflow-<verb>`) match",
+        "A natural-language trigger",
+        "Exception: `{slug} discuss` resolves against a seed",
+        "`{slug} plan` requires an existing active spec directory",
+        "through the `commands/patch.md ## Eligibility` check",
+        "ad-hoc review (user-triggered via `レビューして` / `mochiflow-review`",
+        "Feedback patterns `{slug} feedback`",
+        "Event patterns `{slug} merged`",
+    ] {
+        assert!(
+            router.contains(required),
+            "router must preserve routing branch: {required}"
+        );
+    }
+}
+
+#[test]
 fn branch_placeholders_use_prefix_slug() {
     let git = read_repo_file("engine/reference/git.md");
 

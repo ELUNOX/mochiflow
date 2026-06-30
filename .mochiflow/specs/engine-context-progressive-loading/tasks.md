@@ -29,7 +29,7 @@ Critical Stop Conditions:
     - `engine/adapters/kiro/steering/mochiflow.md.tpl`
   - Done: all adapter templates consistently distinguish standing inputs from load-on-demand engine procedure files; Kiro file references remain limited to router, constitution, and context; generated adapter semantics and target files remain unchanged. AGENTS/Kiro generated output is covered by this repo's adapter config, while Claude/Copilot are covered by source-template conformance unless the local config changes.
   - Stop: template wording needs adapter-specific behavior beyond prose changes or changes to adapter manifests.
-- [ ] T-003 [AC-01, AC-02, AC-03, AC-04] Add focused conformance coverage
+- [x] T-003 [AC-01, AC-02, AC-03, AC-04] Add focused conformance coverage
   - Depends on: T-001, T-002
   - Files:
     - `cli/crates/mochiflow-cli/tests/conformance.rs`
