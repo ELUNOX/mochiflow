@@ -24,7 +24,7 @@ Critical Stop Conditions:
     - `cli/crates/mochiflow-cli/tests/conformance.rs`
   - Done: Engine guidance requires conversation-language PR-created handoff for URL and URL-less handoff paths, contextual merge-report routing with disambiguation, conversational close presentation, and language ownership. Conformance tests cover the stable contract phrases without overfitting long prose.
   - Stop: The routing change needs a new command-frontmatter schema or the full activation redesign.
-- [ ] T-002 [AC-01, AC-07] Add PR-created next-action output
+- [x] T-002 [AC-01, AC-07] Add PR-created next-action output
   - Depends on: T-001
   - Files:
     - `cli/crates/mochiflow-core/src/pr.rs`
