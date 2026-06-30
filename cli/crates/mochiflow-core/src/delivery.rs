@@ -107,6 +107,100 @@ pub fn branch_name(spec_type: &str, slug: &str) -> String {
     format!("{prefix}/{slug}")
 }
 
+/// A derived delivery next action surfaced in status / board output. Like the
+/// delivery column, it is observed, never stored. It is conversational guidance
+/// for the user, not a lifecycle state.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NextActionKind {
+    /// In review: merge the PR, then report the merge in conversation.
+    ReportMerge,
+    /// Done-derived, but the local feature branch and/or delivery scratch still
+    /// exist, so post-merge local cleanup has not run yet.
+    LocalCleanupPending,
+}
+
+impl NextActionKind {
+    /// Stable machine identifier used in the JSON board contract.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            NextActionKind::ReportMerge => "report_merge",
+            NextActionKind::LocalCleanupPending => "local_cleanup_pending",
+        }
+    }
+
+    /// Conversation-language message for this next action. `language` is already
+    /// resolved for CLI-only output (so `auto` has become a concrete tag).
+    pub fn message(self, language: &str) -> String {
+        let ja = language == "ja";
+        match (self, ja) {
+            (NextActionKind::ReportMerge, false) => {
+                "Merge the PR in your provider, then report the merge here so local cleanup can run."
+                    .to_string()
+            }
+            (NextActionKind::ReportMerge, true) => {
+                "プロバイダ上で PR をマージし、ここで「マージした」と報告してください。ローカルの後片付けを行います。"
+                    .to_string()
+            }
+            (NextActionKind::LocalCleanupPending, false) => {
+                "Local cleanup pending: the PR merged but the local branch / delivery files remain. Report the merge to run post-merge cleanup."
+                    .to_string()
+            }
+            (NextActionKind::LocalCleanupPending, true) => {
+                "ローカルの後片付けが未完了です: PR はマージ済みですが、ローカルブランチや一時ファイルが残っています。「マージした」と報告すると後片付けを実行します。"
+                    .to_string()
+            }
+        }
+    }
+}
+
+/// True when post-merge local cleanup is still pending for a done-derived spec:
+/// the local feature branch `{prefix}/{slug}` still exists, and/or the spec's
+/// gitignored delivery scratch `state/{slug}/` still exists. Derived from local
+/// facts only; degrades to `false` when neither can be observed. Legacy archived
+/// `_done/` specs (status `done`) are out of scope — they have no live feature
+/// branch and resolve to no cleanup hint.
+pub fn local_cleanup_pending(cfg: &Config, slug: &str, status: &str, spec_type: &str) -> bool {
+    if status == "done" {
+        return false;
+    }
+    let branch = branch_name(spec_type, slug);
+    local_branch_exists(&cfg.repo_root, &branch) || cfg.state_dir().join(slug).is_dir()
+}
+
+/// Derive the conversational next action for a spec from its delivery column and
+/// local cleanup state. Returns `None` when no action applies (Active / Ready,
+/// or a fully cleaned-up Done spec).
+pub fn derive_next_action(
+    cfg: &Config,
+    slug: &str,
+    status: &str,
+    spec_type: &str,
+    column: DeliveryColumn,
+) -> Option<NextActionKind> {
+    match column {
+        DeliveryColumn::InReview => Some(NextActionKind::ReportMerge),
+        DeliveryColumn::Done if local_cleanup_pending(cfg, slug, status, spec_type) => {
+            Some(NextActionKind::LocalCleanupPending)
+        }
+        _ => None,
+    }
+}
+
+/// True when local branch `refs/heads/{branch}` exists. Best-effort: any failure
+/// (non-repo dir, missing ref) returns `false`.
+fn local_branch_exists(root: &Path, branch: &str) -> bool {
+    git_capture(
+        root,
+        &[
+            "rev-parse",
+            "--verify",
+            "--quiet",
+            &format!("refs/heads/{branch}"),
+        ],
+    )
+    .is_some()
+}
+
 /// Gather observed signals for a spec branch. All probes are best-effort and
 /// return `false` on any failure (missing ref, no remote, missing provider CLI).
 fn gather_signals(cfg: &Config, slug: &str, branch: &str) -> DeliverySignals {
@@ -404,5 +498,103 @@ mod tests {
         assert!(!trailer_reachable_from_base(root, "x", "main"));
         assert!(!remote_branch_exists(root, "feat/x"));
         assert!(!remote_branch_merged(root, "feat/x", "main"));
+        assert!(!local_branch_exists(root, "feat/x"));
+    }
+
+    #[test]
+    fn next_action_kind_is_language_aware() {
+        assert_eq!(NextActionKind::ReportMerge.as_str(), "report_merge");
+        assert_eq!(
+            NextActionKind::LocalCleanupPending.as_str(),
+            "local_cleanup_pending"
+        );
+        assert!(
+            NextActionKind::ReportMerge
+                .message("en")
+                .contains("Merge the PR")
+        );
+        assert!(NextActionKind::ReportMerge.message("ja").contains("マージ"));
+        assert!(
+            NextActionKind::LocalCleanupPending
+                .message("en")
+                .contains("Local cleanup pending")
+        );
+        assert!(
+            NextActionKind::LocalCleanupPending
+                .message("ja")
+                .contains("後片付け")
+        );
+    }
+
+    #[test]
+    fn in_review_next_action_is_report_merge() {
+        let tmp = materialize_repo_with_unmerged_remote_branch();
+        let config = write_config(tmp.path(), "none");
+        let cfg = load_config(&config).unwrap();
+        let column = derive_column(&cfg, "sample", "accepted", "feature");
+        assert_eq!(column, DeliveryColumn::InReview);
+        assert_eq!(
+            derive_next_action(&cfg, "sample", "accepted", "feature", column),
+            Some(NextActionKind::ReportMerge)
+        );
+    }
+
+    #[test]
+    fn done_with_local_branch_is_cleanup_pending() {
+        let tmp = materialize_repo_with_unmerged_remote_branch();
+        let config = write_config(tmp.path(), "none");
+        let cfg = load_config(&config).unwrap();
+        // The local feature branch feat/sample exists → cleanup pending for a
+        // done-derived spec.
+        assert!(local_cleanup_pending(&cfg, "sample", "accepted", "feature"));
+        assert_eq!(
+            derive_next_action(&cfg, "sample", "accepted", "feature", DeliveryColumn::Done),
+            Some(NextActionKind::LocalCleanupPending)
+        );
+    }
+
+    #[test]
+    fn done_after_branch_and_scratch_removed_has_no_next_action() {
+        let tmp = materialize_repo_with_unmerged_remote_branch();
+        let config = write_config(tmp.path(), "none");
+        let cfg = load_config(&config).unwrap();
+        git_ok(tmp.path(), &["checkout", "-q", "main"]);
+        git_ok(tmp.path(), &["branch", "-D", "feat/sample"]);
+        assert!(!local_cleanup_pending(
+            &cfg, "sample", "accepted", "feature"
+        ));
+        assert_eq!(
+            derive_next_action(&cfg, "sample", "accepted", "feature", DeliveryColumn::Done),
+            None
+        );
+    }
+
+    #[test]
+    fn delivery_scratch_alone_triggers_cleanup_pending() {
+        let tmp = materialize_repo_with_unmerged_remote_branch();
+        let config = write_config(tmp.path(), "none");
+        let cfg = load_config(&config).unwrap();
+        // A slug with no local branch but a leftover delivery-scratch dir.
+        std::fs::create_dir_all(cfg.state_dir().join("scratch-only")).unwrap();
+        assert!(local_cleanup_pending(
+            &cfg,
+            "scratch-only",
+            "accepted",
+            "feature"
+        ));
+    }
+
+    #[test]
+    fn legacy_done_status_has_no_cleanup_pending() {
+        let tmp = materialize_repo_with_unmerged_remote_branch();
+        let config = write_config(tmp.path(), "none");
+        let cfg = load_config(&config).unwrap();
+        // feat/sample exists locally, but a legacy archived spec (status done)
+        // never shows a cleanup hint.
+        assert!(!local_cleanup_pending(&cfg, "sample", "done", "feature"));
+        assert_eq!(
+            derive_next_action(&cfg, "sample", "done", "feature", DeliveryColumn::Done),
+            None
+        );
     }
 }

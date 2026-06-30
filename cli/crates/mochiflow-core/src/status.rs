@@ -10,7 +10,7 @@ use std::path::Path;
 use std::process::Command;
 
 use crate::config::Config;
-use crate::delivery::{self, DeliveryColumn};
+use crate::delivery::{self, DeliveryColumn, NextActionKind};
 use crate::index::read_seed_public;
 use crate::spec_meta::read_spec_metadata;
 
@@ -19,6 +19,9 @@ use crate::spec_meta::read_spec_metadata;
 pub struct BoardEntry {
     pub slug: String,
     pub title: String,
+    /// Derived conversational next action (in review / local cleanup pending),
+    /// or `None` for columns with no action.
+    pub next_action: Option<NextActionKind>,
 }
 
 /// The computed board, one bucket per column.
@@ -42,7 +45,10 @@ pub fn run_status(cfg: &Config, fetch: bool) -> i32 {
             .status();
     }
     let board = compute_board(cfg);
-    print!("{}", render_board(&board));
+    print!(
+        "{}",
+        render_board(&board, cfg.conversation_output_language())
+    );
     0
 }
 
@@ -63,7 +69,14 @@ pub fn compute_board(cfg: &Config) -> Board {
     for dir in &active_dirs {
         if let Ok(meta) = read_spec_metadata(dir) {
             let column = delivery::derive_column(cfg, meta.slug(), meta.status(), meta.spec_type());
-            push_entry(&mut board, column, meta.slug(), meta.title());
+            let next_action = delivery::derive_next_action(
+                cfg,
+                meta.slug(),
+                meta.status(),
+                meta.spec_type(),
+                column,
+            );
+            push_entry(&mut board, column, meta.slug(), meta.title(), next_action);
         }
     }
 
@@ -75,7 +88,14 @@ pub fn compute_board(cfg: &Config) -> Board {
     for dir in &done_dirs {
         if let Ok(meta) = read_spec_metadata(dir) {
             let column = delivery::derive_column(cfg, meta.slug(), meta.status(), meta.spec_type());
-            push_entry(&mut board, column, meta.slug(), meta.title());
+            let next_action = delivery::derive_next_action(
+                cfg,
+                meta.slug(),
+                meta.status(),
+                meta.spec_type(),
+                column,
+            );
+            push_entry(&mut board, column, meta.slug(), meta.title(), next_action);
         }
     }
 
@@ -98,6 +118,7 @@ pub fn compute_board(cfg: &Config) -> Board {
                 board.backlog.push(BoardEntry {
                     slug: seed.slug,
                     title: seed.title,
+                    next_action: None,
                 });
             }
         }
@@ -106,10 +127,17 @@ pub fn compute_board(cfg: &Config) -> Board {
     board
 }
 
-fn push_entry(board: &mut Board, column: DeliveryColumn, slug: &str, title: &str) {
+fn push_entry(
+    board: &mut Board,
+    column: DeliveryColumn,
+    slug: &str,
+    title: &str,
+    next_action: Option<NextActionKind>,
+) {
     let entry = BoardEntry {
         slug: slug.to_string(),
         title: title.to_string(),
+        next_action,
     };
     match column {
         DeliveryColumn::Done => board.done.push(entry),
@@ -134,7 +162,7 @@ fn child_dirs(dir: &Path, keep: impl Fn(&str) -> bool) -> Vec<std::path::PathBuf
         .collect()
 }
 
-fn render_board(board: &Board) -> String {
+fn render_board(board: &Board, language: &str) -> String {
     let mut out = String::from("# 📋 Spec Board\n");
     for (heading, entries) in [
         ("Backlog", &board.backlog),
@@ -149,6 +177,9 @@ fn render_board(board: &Board) -> String {
         } else {
             for entry in entries {
                 out.push_str(&format!("- {} — {}\n", entry.slug, entry.title));
+                if let Some(action) = entry.next_action {
+                    out.push_str(&format!("    ↳ {}\n", action.message(language)));
+                }
             }
         }
     }
@@ -248,5 +279,36 @@ mod tests {
         let code = run_status(&cfg, true);
         assert_eq!(code, 0, "status --fetch must not fail without a remote");
         assert!(!repo.join(".mochiflow/INDEX.md").exists());
+    }
+
+    #[test]
+    fn render_board_shows_next_action_lines() {
+        let mut board = Board::default();
+        board.in_review.push(BoardEntry {
+            slug: "rev".into(),
+            title: "Reviewing".into(),
+            next_action: Some(NextActionKind::ReportMerge),
+        });
+        board.done.push(BoardEntry {
+            slug: "cln".into(),
+            title: "Cleanup".into(),
+            next_action: Some(NextActionKind::LocalCleanupPending),
+        });
+        board.active.push(BoardEntry {
+            slug: "act".into(),
+            title: "Active".into(),
+            next_action: None,
+        });
+
+        let en = render_board(&board, "en");
+        assert!(en.contains("- rev — Reviewing"), "{en}");
+        assert!(en.contains("↳ Merge the PR in your provider"), "{en}");
+        assert!(en.contains("↳ Local cleanup pending"), "{en}");
+        // An entry without a next action gets no hint line.
+        assert!(!en.contains("- act — Active\n    ↳"), "{en}");
+
+        let ja = render_board(&board, "ja");
+        assert!(ja.contains("マージ"), "{ja}");
+        assert!(ja.contains("後片付け"), "{ja}");
     }
 }

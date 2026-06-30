@@ -31,7 +31,7 @@ Critical Stop Conditions:
     - `cli/crates/mochiflow-cli/tests/pr.rs`
   - Done: Successful automated PR creation, custom-driver creation, legacy command success, and manual handoff all print a conversation-language next action. Tests cover English and Japanese behavior where supported.
   - Stop: PR output changes require altering the PR request schema or PR body generation.
-- [ ] T-003 [AC-04, AC-05, AC-07] Render delivery next actions in status and board
+- [x] T-003 [AC-04, AC-05, AC-07] Render delivery next actions in status and board
   - Depends on: T-002
   - Files:
     - `cli/crates/mochiflow-core/src/delivery.rs`

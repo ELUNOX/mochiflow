@@ -3,7 +3,7 @@
 use std::path::Path;
 
 use crate::config::Config;
-use crate::delivery::{self, DeliveryColumn};
+use crate::delivery::{self, DeliveryColumn, NextActionKind};
 use crate::spec_meta::{SpecMeta, parse_yaml_subset, read_spec_metadata};
 
 /// Backlog seed metadata (from markdown frontmatter).
@@ -24,6 +24,8 @@ struct ActiveEntry {
     module: String,
     docs: String,
     path: String,
+    /// Derived conversational next action (e.g. report-merge while in review).
+    next_action: Option<NextActionKind>,
 }
 
 /// Done spec entry.
@@ -41,6 +43,9 @@ struct DoneEntry {
     /// Sorting by this descending yields chronological completion order, with
     /// intra-day order preserved when `completed` carries a time component.
     sort_key: String,
+    /// Derived conversational next action (e.g. local-cleanup-pending for a
+    /// done-derived flat spec whose local branch / scratch remain).
+    next_action: Option<NextActionKind>,
 }
 
 fn status_emoji(status: &str) -> &str {
@@ -125,8 +130,10 @@ fn collect(cfg: &Config) -> (Vec<ActiveEntry>, Vec<DoneEntry>, Vec<SeedInfo>) {
             // (asserted ∪ derived), not from directory location: a flat spec
             // whose PR has merged renders in Done even though it is not in _done.
             let column = delivery::derive_column(cfg, &slug, m.status(), m.spec_type());
+            let next_action =
+                delivery::derive_next_action(cfg, &slug, m.status(), m.spec_type(), column);
             if column == DeliveryColumn::Done {
-                done.push(make_done_entry(&d, &slug, &slug, &m));
+                done.push(make_done_entry(&d, &slug, &slug, &m, next_action));
                 continue;
             }
             let mut docs_parts = vec!["spec".to_string()];
@@ -145,6 +152,7 @@ fn collect(cfg: &Config) -> (Vec<ActiveEntry>, Vec<DoneEntry>, Vec<SeedInfo>) {
                 module: m.module().unwrap_or("—").to_string(),
                 docs: docs_parts.join("+"),
                 path: slug,
+                next_action,
             });
         }
     }
@@ -164,7 +172,16 @@ fn collect(cfg: &Config) -> (Vec<ActiveEntry>, Vec<DoneEntry>, Vec<SeedInfo>) {
             let d = entry.path();
             if let Ok(m) = read_spec_metadata(&d) {
                 let slug = entry.file_name().to_string_lossy().to_string();
-                done.push(make_done_entry(&d, &slug, &format!("_done/{slug}"), &m));
+                let column = delivery::derive_column(cfg, &slug, m.status(), m.spec_type());
+                let next_action =
+                    delivery::derive_next_action(cfg, &slug, m.status(), m.spec_type(), column);
+                done.push(make_done_entry(
+                    &d,
+                    &slug,
+                    &format!("_done/{slug}"),
+                    &m,
+                    next_action,
+                ));
             }
         }
         // Sort: slug asc first (stable tiebreak), then completion key desc so the
@@ -204,7 +221,13 @@ fn collect(cfg: &Config) -> (Vec<ActiveEntry>, Vec<DoneEntry>, Vec<SeedInfo>) {
 
 /// Build a `DoneEntry` for a spec directory, resolving its display/grouping date
 /// and ordering key from `completed` → `updated` → file mtime.
-fn make_done_entry(dir: &Path, slug: &str, path: &str, m: &SpecMeta) -> DoneEntry {
+fn make_done_entry(
+    dir: &Path,
+    slug: &str,
+    path: &str,
+    m: &SpecMeta,
+    next_action: Option<NextActionKind>,
+) -> DoneEntry {
     let completed = m.completed().map(str::to_string).filter(|s| !s.is_empty());
     let updated_field = m.updated().unwrap_or("").to_string();
     let pick_source = || {
@@ -231,6 +254,7 @@ fn make_done_entry(dir: &Path, slug: &str, path: &str, m: &SpecMeta) -> DoneEntr
         updated,
         completed,
         sort_key,
+        next_action,
     }
 }
 
@@ -486,7 +510,13 @@ fn generate_index_inner(cfg: &Config, print_summary: bool) -> std::io::Result<()
     // Write state/index.json
     let state_dir = cfg.state_dir();
     std::fs::create_dir_all(&state_dir)?;
-    let json_data = build_json(&now, &active, &done, &seeds);
+    let json_data = build_json(
+        &now,
+        &active,
+        &done,
+        &seeds,
+        cfg.conversation_output_language(),
+    );
     std::fs::write(state_dir.join("index.json"), json_data)?;
 
     if print_summary {
@@ -499,12 +529,32 @@ fn generate_index_inner(cfg: &Config, print_summary: bool) -> std::io::Result<()
     Ok(())
 }
 
-fn build_json(now: &str, active: &[ActiveEntry], done: &[DoneEntry], seeds: &[SeedInfo]) -> String {
+fn build_json(
+    now: &str,
+    active: &[ActiveEntry],
+    done: &[DoneEntry],
+    seeds: &[SeedInfo],
+    language: &str,
+) -> String {
     use serde_json::{Value, json};
+
+    // Stable JSON board contract for delivery next actions: `next_action` is
+    // `null` or `{kind, message}` (kind ∈ {report_merge, local_cleanup_pending});
+    // `local_cleanup_pending` is the boolean shortcut for the cleanup kind.
+    let next_action_fields = |action: Option<NextActionKind>| -> (Value, bool) {
+        match action {
+            Some(kind) => (
+                json!({ "kind": kind.as_str(), "message": kind.message(language) }),
+                kind == NextActionKind::LocalCleanupPending,
+            ),
+            None => (Value::Null, false),
+        }
+    };
 
     let active_json: Vec<Value> = active
         .iter()
         .map(|a| {
+            let (next_action, local_cleanup_pending) = next_action_fields(a.next_action);
             json!({
                 "slug": a.slug,
                 "title": a.title,
@@ -514,6 +564,8 @@ fn build_json(now: &str, active: &[ActiveEntry], done: &[DoneEntry], seeds: &[Se
                 "module": a.module,
                 "docs": a.docs,
                 "path": a.path,
+                "next_action": next_action,
+                "local_cleanup_pending": local_cleanup_pending,
             })
         })
         .collect();
@@ -521,6 +573,7 @@ fn build_json(now: &str, active: &[ActiveEntry], done: &[DoneEntry], seeds: &[Se
     let done_json: Vec<Value> = done
         .iter()
         .map(|d| {
+            let (next_action, local_cleanup_pending) = next_action_fields(d.next_action);
             let mut obj = json!({
                 "slug": d.slug,
                 "title": d.title,
@@ -528,6 +581,8 @@ fn build_json(now: &str, active: &[ActiveEntry], done: &[DoneEntry], seeds: &[Se
                 "type": d.spec_type,
                 "module": d.module,
                 "updated": d.updated,
+                "next_action": next_action,
+                "local_cleanup_pending": local_cleanup_pending,
             });
             if let Some(completed) = &d.completed {
                 obj["completed"] = json!(completed);
@@ -610,6 +665,188 @@ mod tests {
     use super::*;
     use crate::config::load_config;
     use std::process::Command;
+
+    #[test]
+    fn build_json_exposes_next_action_contract() {
+        let active = vec![
+            ActiveEntry {
+                slug: "rev".into(),
+                title: "Reviewing".into(),
+                status: "accepted".into(),
+                column: DeliveryColumn::InReview,
+                risk: "standard".into(),
+                module: "—".into(),
+                docs: "spec".into(),
+                path: "rev".into(),
+                next_action: Some(NextActionKind::ReportMerge),
+            },
+            ActiveEntry {
+                slug: "act".into(),
+                title: "Active".into(),
+                status: "approved".into(),
+                column: DeliveryColumn::Active,
+                risk: "standard".into(),
+                module: "—".into(),
+                docs: "spec".into(),
+                path: "act".into(),
+                next_action: None,
+            },
+        ];
+        let done = vec![
+            DoneEntry {
+                slug: "cln".into(),
+                title: "Cleanup".into(),
+                path: "cln".into(),
+                spec_type: "feature".into(),
+                module: "—".into(),
+                updated: "2026-06-30".into(),
+                completed: None,
+                sort_key: "2026-06-30".into(),
+                next_action: Some(NextActionKind::LocalCleanupPending),
+            },
+            DoneEntry {
+                slug: "arch".into(),
+                title: "Archived".into(),
+                path: "_done/arch".into(),
+                spec_type: "feature".into(),
+                module: "—".into(),
+                updated: "2026-05-01".into(),
+                completed: None,
+                sort_key: "2026-05-01".into(),
+                next_action: None,
+            },
+        ];
+
+        let json = build_json("now", &active, &done, &[], "en");
+        let v: serde_json::Value = serde_json::from_str(&json).unwrap();
+
+        let rev = &v["active"][0];
+        assert_eq!(rev["next_action"]["kind"], "report_merge");
+        assert!(
+            rev["next_action"]["message"]
+                .as_str()
+                .unwrap()
+                .contains("Merge the PR")
+        );
+        assert_eq!(rev["local_cleanup_pending"], false);
+
+        let act = &v["active"][1];
+        assert!(act["next_action"].is_null());
+        assert_eq!(act["local_cleanup_pending"], false);
+
+        let cln = &v["done"][0];
+        assert_eq!(cln["next_action"]["kind"], "local_cleanup_pending");
+        assert_eq!(cln["local_cleanup_pending"], true);
+
+        let arch = &v["done"][1];
+        assert!(arch["next_action"].is_null());
+        assert_eq!(arch["local_cleanup_pending"], false);
+    }
+
+    #[test]
+    fn build_json_next_action_message_is_language_aware() {
+        let active = vec![ActiveEntry {
+            slug: "rev".into(),
+            title: "Reviewing".into(),
+            status: "accepted".into(),
+            column: DeliveryColumn::InReview,
+            risk: "standard".into(),
+            module: "—".into(),
+            docs: "spec".into(),
+            path: "rev".into(),
+            next_action: Some(NextActionKind::ReportMerge),
+        }];
+        let json = build_json("now", &active, &[], &[], "ja");
+        let v: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(v["active"][0]["next_action"]["kind"], "report_merge");
+        assert!(
+            v["active"][0]["next_action"]["message"]
+                .as_str()
+                .unwrap()
+                .contains("マージ")
+        );
+    }
+
+    #[test]
+    fn generate_index_json_carries_delivery_next_actions() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = tmp.path();
+        git_ok(repo, &["init", "-q", "-b", "main"]);
+        git_ok(repo, &["config", "user.email", "t@example.com"]);
+        git_ok(repo, &["config", "user.name", "Test"]);
+        std::fs::write(repo.join("README.md"), "base\n").unwrap();
+        git_ok(repo, &["add", "README.md"]);
+        git_ok(
+            repo,
+            &[
+                "commit",
+                "-q",
+                "-m",
+                "feat: merged work",
+                "-m",
+                "Spec: cleanup-done",
+            ],
+        );
+        git_ok(repo, &["update-ref", "refs/remotes/origin/main", "HEAD"]);
+        // A local feature branch for the merged spec → cleanup pending.
+        git_ok(repo, &["branch", "feat/cleanup-done"]);
+        // A pushed-and-unmerged branch → in review.
+        git_ok(repo, &["checkout", "-q", "-b", "feat/in-review"]);
+        std::fs::write(repo.join("README.md"), "branch\n").unwrap();
+        git_ok(repo, &["commit", "-q", "-am", "branch"]);
+        git_ok(
+            repo,
+            &["update-ref", "refs/remotes/origin/feat/in-review", "HEAD"],
+        );
+
+        let config = write_config(repo);
+        write_spec(repo, "cleanup-done", "cleanup-done", "accepted");
+        write_spec(repo, "in-review", "in-review", "accepted");
+
+        let cfg = load_config(&config).unwrap();
+        generate_index_quiet(&cfg).unwrap();
+        let json: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(repo.join(".mochiflow/state/index.json")).unwrap(),
+        )
+        .unwrap();
+
+        let in_review = json["active"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|e| e["slug"] == "in-review")
+            .unwrap();
+        assert_eq!(in_review["column"], "in_review");
+        assert_eq!(in_review["next_action"]["kind"], "report_merge");
+        assert_eq!(in_review["local_cleanup_pending"], false);
+
+        let cleanup = json["done"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|e| e["slug"] == "cleanup-done")
+            .unwrap();
+        assert_eq!(cleanup["next_action"]["kind"], "local_cleanup_pending");
+        assert_eq!(cleanup["local_cleanup_pending"], true);
+
+        // After the local branch and scratch are gone, the same done-derived spec
+        // no longer carries a cleanup next action.
+        git_ok(repo, &["checkout", "-q", "main"]);
+        git_ok(repo, &["branch", "-D", "feat/cleanup-done"]);
+        generate_index_quiet(&cfg).unwrap();
+        let json: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(repo.join(".mochiflow/state/index.json")).unwrap(),
+        )
+        .unwrap();
+        let cleanup = json["done"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|e| e["slug"] == "cleanup-done")
+            .unwrap();
+        assert!(cleanup["next_action"].is_null());
+        assert_eq!(cleanup["local_cleanup_pending"], false);
+    }
 
     #[test]
     fn md_table_cell_escapes_pipes_and_newlines() {
