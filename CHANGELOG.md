@@ -6,12 +6,40 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-06-30
+
+### Added
+
+- Conversational delivery guidance. After a successful PR handoff (driver,
+  github, legacy command, or manual), MochiFlow prints a conversation-language
+  next action telling the user to merge the PR and then report the merge so
+  local cleanup can run. The wording follows `conversation_output_language`
+  (`auto` falls back to the artifact language) and is never written into the PR
+  body.
+- `mochiflow status` surfaces delivery next actions on the board: `report-merge`
+  while a spec is in review, and `local-cleanup-pending` when a done-derived
+  flat spec still has its local feature branch or delivery scratch. The
+  generated `state/index.json` now exposes a stable `next_action`
+  (`{kind, message}`) plus a `local_cleanup_pending` boolean. The hint clears
+  once the branch and scratch are removed; legacy archived specs never show it,
+  and `status` stays read-only.
+
+### Changed
+
+- Engine context loading is now progressive. The router load contract is
+  compacted and adapter load tiers are separated into an always-on standing
+  layer versus load-on-demand details, with clarified adapter artifact roles.
+  Regenerated adapter files (`AGENTS.md`, `CLAUDE.md`, Copilot instructions, and
+  Kiro steering) reflect the tiered loading.
+
 ### Fixed
 
 - ADR title derivation no longer panics on non-ASCII-leading record titles
   (e.g. Japanese titles in `artifact_language = "ja"` projects). `doctor`,
   `adr lint` / `list` / `show`, and ADR store `INDEX.md` generation now handle
   multibyte titles safely.
+- `mochiflow accept` close-out staging is hardened so the flat spec and ADR fold
+  are staged reliably during the deterministic PR close-out commit.
 
 ## [1.2.0] - 2026-06-29
 
