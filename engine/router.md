@@ -4,8 +4,8 @@ not_a_phase: true
 description: |
   Natural-language routing and lifecycle conductor for mochiflow. Aggregates
   triggers and trigger_patterns from commands/*.md to decide which verb to
-  enter. Loaded directly by adapter entrypoints such as Kiro's spec-builder
-  agent.
+  enter. Loaded directly by adapter entrypoints such as Kiro steering or
+  generated agent instructions.
 references:
   - commands/discuss.md
   - commands/plan.md
@@ -24,8 +24,9 @@ references:
 
 # spec
 
-Router for the mochiflow verbs. A tool adapter (e.g. Kiro's `spec-builder` agent)
-loads this as a standing instruction. Do not load it from planning / reviewer roles.
+Router for the mochiflow verbs. A tool adapter entrypoint (e.g. Kiro steering or
+generated agent instructions) loads this as a standing instruction. Do not load
+it from planning / reviewer roles.
 
 ## Routing Principles
 

@@ -89,10 +89,12 @@ optional `docs(context)` commit → accept close-out → PR title/body → appro
    `reference/git.md ## Living-spec fold`: append the *why* that code cannot
    reproduce (decision rationale, rejected options) as a **new per-file record**
    under `[adr].decisions` (`{YYYY-MM-DD}-{slug}.md` with front-matter `id` /
-   `date` / `area` / `spec` / `status: active`), and operational pitfalls as a
-   new record under `[adr].pitfalls` using the active guardrail format. `area`
-   defaults to the spec's `surfaces`. When a new decision overrides an earlier
-   one, add the new record with `supersedes: <id>` and flip the superseded
+   `date` / `area` / `spec: {slug}` / `status: active`), and operational
+   pitfalls as a new record under `[adr].pitfalls` using the active guardrail
+   format. `area` defaults to the spec's `surfaces`; every close-out record must
+   include `spec: {slug}` so `mochiflow accept` can stage only this spec's fold.
+   When a new decision overrides an earlier one, add the new record with
+   `supersedes: <id>` and flip the superseded
    record to `status: superseded` with the reciprocal `superseded_by: <id>`
    (never rewrite the old record's body). Regenerate each affected store's
    gitignored `INDEX.md` (never stage it). Pitfalls captured during build are
@@ -136,17 +138,19 @@ optional `docs(context)` commit → accept close-out → PR title/body → appro
    `reference/workflow.md ## AC Verification Matrix` all hold (matrix complete,
    every result done-eligible, and the reviewer verdict recorded when
    `risk ≥ elevated`), run `mochiflow accept {slug}`. The command re-runs final
-   verification, updates eligible automated AC Matrix rows, sets `spec.yaml`
-   `status: accepted` and `updated`, runs `lint`, stages the spec
-   (`{specs_dir}/{slug}/**`) and the already-written ADR fold, and creates the
-   single feature-branch close-out commit. The spec stays flat: there is **no
+   verification, appends final verification evidence to already-`PASS`
+   automated AC Matrix rows, sets `spec.yaml` `status: accepted` and `updated`,
+   runs `lint`, stages the target spec (`{specs_dir}/{slug}/**`) and
+   already-written ADR record files linked to this slug, and creates the single
+   feature-branch close-out commit. `mochiflow accept` does not convert
+   `UNVERIFIED` to `PASS`; resolve provisional rows before this step. The spec stays flat: there is **no
    `_done/` move, no `done` write, and no committed `INDEX.md`** (the board is
    gitignored and refreshed by the shared post-command step). Use
    `mochiflow accept --dry-run` first to inspect blockers and planned paths.
    - Manual fallback only when the CLI command is unavailable: after setting
      `status: accepted` (no `completed`, no `_done` move, no `INDEX` write),
-     stage with `git add {specs_dir}/{slug} {adr_paths...}` and validate with
-     `git diff --cached --name-status -z` before committing. Never stage
+     stage with `git add {specs_dir}/{slug} {adr_record_paths...}` and validate
+     with `git diff --cached --name-status -z` before committing. Never stage
      `INDEX.md`.
    - The result is the **single close-out commit** per
      `reference/git.md ## Auto-commit and staging ### Accept close-out commit`,
@@ -203,8 +207,8 @@ optional `docs(context)` commit → accept close-out → PR title/body → appro
 - Do not proceed to open while implementation and verification are incomplete.
 - Do not run `mochiflow pr` before human approval of the PR content (gate 2).
 - Do not proceed if AC Matrix evidence is incomplete, any required task/review is
-  missing, any result is `PENDING_HUMAN` or `FAIL`, or any not-applicable result
-  lacks a reason.
+  missing, any result is `UNVERIFIED`, `PENDING_HUMAN`, or `FAIL`, or any
+  not-applicable result lacks a reason.
 - Never write `status: done`, never move the spec into `_done/`, and never stage
   or commit `INDEX.md`.
 - On a pre-flight FAIL (`mochiflow pr` exit 3), fix the reported issue and re-run.

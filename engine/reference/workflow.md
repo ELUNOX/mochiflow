@@ -47,9 +47,10 @@ gate 1 and never creates a PR before delivery approval gate 2. Setup, context
 refresh, and QA evidence may require human confirmations, but those confirmations
 are not delivery approval gates and do not change spec lifecycle state except
 where explicitly defined. `accepted` is not a gate: it is an acceptance state that
-`open`'s accept close-out sets directly (editing `spec.yaml` `status: accepted`,
-then re-running `lint` to confirm; there is no CLI transition command) when the
-acceptance conditions below hold.
+`open` sets through the deterministic `mochiflow accept {slug}` mechanical close-out
+when the acceptance conditions below hold. The command updates `spec.yaml`
+`status: accepted`, re-runs verification and lint, stages only close-out paths,
+and creates the close-out commit.
 
 Independent review (`agents/independent-reviewer.md`, whether the mandatory
 risk-cadence run, `plan.md`'s pre-approval review for `risk >= elevated`, or
@@ -138,7 +139,7 @@ Canonical result values are exact tokens:
   not been performed yet; not done-eligible.
 - `UNVERIFIED` — provisional build-time result for an automated/AI-observed AC
   row not yet verified; not done-eligible. Resolve to `PASS` / `FAIL` /
-  `N/A: <reason>` before `done`.
+  `N/A: <reason>` before `accepted`.
 
 The done-eligible tokens are exactly `PASS`, `CONFIRMED`, and `N/A: <reason>`.
 `PENDING_HUMAN` and `UNVERIFIED` are provisional build-time placeholders only.
@@ -146,10 +147,9 @@ Deprecated aliases `人間確認済み` (equivalent to `CONFIRMED`) and
 `対象外（<reason>）` (equivalent to `N/A: <reason>`) are permanently accepted
 by lint for backward compatibility with archived specs.
 
-`accepted` is an acceptance state, not a human approval. There is no CLI
-transition command: `open`'s accept close-out edits `spec.yaml`
-`status: accepted` (and `updated`) directly once all of these conditions hold,
-then re-runs `lint` to confirm — no approval word is involved:
+`accepted` is an acceptance state, not a human approval. `open` reaches it by
+running `mochiflow accept {slug}` once all of these conditions hold; no approval
+word is involved:
 
 1. the AC Verification Matrix is present and complete — every spec AC appears as a row;
 2. every row has a done-eligible result token (`PASS`, `CONFIRMED`, or `N/A: <reason>`);
@@ -162,6 +162,10 @@ unknown/free-text results fail. It also warns on `[NEEDS-CLARIFICATION]` and AC
 lines missing an EARS keyword (resolve before `approved`). The legacy `done`
 status remains lint-valid only for archived specs already under `_done/`; the
 engine never writes `done` for an active spec.
+
+`mochiflow accept` does not convert provisional `UNVERIFIED` rows to `PASS`.
+Build/open must settle automated rows to `PASS`, `FAIL`, or `N/A: <reason>`
+before running accept.
 
 `build` never sets `accepted`.
 

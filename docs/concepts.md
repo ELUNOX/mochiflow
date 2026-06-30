@@ -12,8 +12,8 @@ The development stages are:
   existing codebase.
 - `plan` — write the design document and wait for your approval before coding.
 - `build` — implement the approved plan, update tests, and run verification.
-- `open` — run acceptance, record durable decisions and pitfalls, set the spec to
-  `accepted`, and open the PR after you approve its content.
+- `open` — run acceptance, record durable decisions and pitfalls, settle the
+  mechanical `accept` close-out, and open the PR after you approve its content.
 - `update` — apply PR feedback through the build loop, re-verify, and refresh the
   PR.
 - `close` — after the PR merges, do local cleanup (no writes to the base branch).

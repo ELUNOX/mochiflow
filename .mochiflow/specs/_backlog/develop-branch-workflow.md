@@ -36,7 +36,7 @@ zero runtime risk.
 | `.mochiflow/config.toml:26` | `base_branch = "main"` | Change to `"develop"` |
 | `.github/workflows/ci.yml:5` | `push: branches: [main]` | Add `develop` |
 | `.github/workflows/release.yml` | Tags only, no branch ref | No change |
-| `.kiro/steering/release.md:166` | `git push origin main` | Update to release flow |
+| Release maintainer guidance | local-only constitution guidance | No tracked release steering file |
 | `CONTRIBUTING.md:84` | "direct push to main is discouraged" | Update wording |
 | `CONTRIBUTING.ja.md:81` | Same in Japanese | Update wording |
 | `engine/reference/git.md:23` | `origin/{[git].base_branch}` | No change (dynamic) |
@@ -73,7 +73,7 @@ needed — just config.
 Current: feature → main (via PR) → tag → release
 Proposed: feature → develop (via PR) → develop → main (release PR) → tag → release
 
-Release steering must add a "develop → main" PR step before tagging.
+Local release guidance must keep the "develop → main" PR step before tagging.
 
 ## Proposed Solution
 
