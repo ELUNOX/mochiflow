@@ -57,6 +57,22 @@ conversation language. Compatibility keywords such as `build`, `open`, `review`,
 `later`, and `approved` remain stable inputs, but they should be secondary to the
 plain action label displayed to the user.
 
+## Delivery Next Actions
+
+Delivery guidance is conversational and follows
+`[i18n].conversation_language`. This covers the PR-created next action (merge the
+PR, then report the merge in chat), the in-review and `local cleanup pending`
+next-action hints in status / board output, and the `close` start and completion
+wording. When `conversation_language = auto`, resolve per the Conversation
+Language rule; CLI-only output (no live conversation context) falls back to
+`[i18n].artifact_language` deterministically.
+
+PR titles, PR descriptions, and other durable artifacts stay in
+`[i18n].artifact_language`. The post-merge next action is therefore never written
+into the PR body — it is local workflow guidance for the author, not review
+material. Merge-report phrasings such as `merged` / `マージした` are illustrative
+intent examples, not fixed trigger strings.
+
 Use these examples as meaning guides, not as a fixed dictionary:
 
 | internal term | English user-facing phrasing | Japanese user-facing phrasing |

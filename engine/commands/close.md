@@ -58,6 +58,14 @@ Run `reference/git.md ## Post-merge local cleanup`:
 
 - Describe close as wrapping up the merged work locally in the conversation
   language. Use `close` only for the command or when the user uses it.
+- At close start, tell the user in conversation-language plain wording that this
+  is post-merge local cleanup — switching to the base branch and tidying up the
+  local feature branch and temporary delivery files — and that nothing is
+  written to the base branch (the work already merged via the PR).
+- At close completion, report in conversation language that the base branch was
+  updated, the local feature branch and temporary delivery files were cleaned
+  up, and the work is locally wrapped up. Its merged state is observed, not
+  written.
 
 ## Stop conditions
 

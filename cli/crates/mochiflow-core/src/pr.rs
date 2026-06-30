@@ -254,11 +254,12 @@ pub fn run_pr(
     }
 
     // Dispatch.
+    let language = cfg.conversation_output_language();
     match backend {
-        Backend::Driver(driver) => dispatch_driver(root, &driver, &request_dir),
-        Backend::Github => dispatch_github(root, &req, body_file_path.as_deref()),
-        Backend::Command(cmd) => dispatch_command(root, &cmd, &request_dir),
-        Backend::Manual => dispatch_manual(&req, pushed),
+        Backend::Driver(driver) => dispatch_driver(root, &driver, &request_dir, language),
+        Backend::Github => dispatch_github(root, &req, body_file_path.as_deref(), language),
+        Backend::Command(cmd) => dispatch_command(root, &cmd, &request_dir, language),
+        Backend::Manual => dispatch_manual(&req, pushed, language),
     }
 }
 
@@ -268,6 +269,20 @@ fn backend_label(b: &Backend) -> String {
         Backend::Github => "github built-in".into(),
         Backend::Command(_) => "legacy pr_command".into(),
         Backend::Manual => "manual handoff".into(),
+    }
+}
+
+/// Conversation-language next action printed after a successful PR handoff:
+/// merge the PR in the provider, then report the merge back so post-merge local
+/// cleanup can run. `language` is already resolved for CLI-only output via
+/// `Config::conversation_output_language()` (so `auto` has become a concrete
+/// tag). The next action is local workflow guidance and is never written into
+/// the PR body, which stays artifact-language.
+fn pr_next_action(language: &str) -> String {
+    if language == "ja" {
+        "次の一手: プロバイダ上で PR をマージし、完了したらチャットで「マージした」と教えてください。ローカルの後片付け（ブランチと一時ファイルの整理）を行います。".to_string()
+    } else {
+        "Next: merge the PR in your provider, then come back and tell me it merged so I can run local cleanup.".to_string()
     }
 }
 
@@ -311,7 +326,7 @@ fn preflight(
     None
 }
 
-fn dispatch_driver(root: &Path, driver: &str, request_dir: &Path) -> i32 {
+fn dispatch_driver(root: &Path, driver: &str, request_dir: &Path, language: &str) -> i32 {
     let output = Command::new(driver)
         .arg(request_dir)
         .current_dir(root)
@@ -322,6 +337,7 @@ fn dispatch_driver(root: &Path, driver: &str, request_dir: &Path) -> i32 {
             match parse_url(&stdout) {
                 Some(url) => {
                     println!("PR created: {url}");
+                    println!("{}", pr_next_action(language));
                     EXIT_OK
                 }
                 None => {
@@ -345,7 +361,7 @@ fn dispatch_driver(root: &Path, driver: &str, request_dir: &Path) -> i32 {
     }
 }
 
-fn dispatch_github(root: &Path, req: &PrRequest, body_file: Option<&Path>) -> i32 {
+fn dispatch_github(root: &Path, req: &PrRequest, body_file: Option<&Path>, language: &str) -> i32 {
     let mut args: Vec<String> = vec![
         "pr".into(),
         "create".into(),
@@ -376,6 +392,7 @@ fn dispatch_github(root: &Path, req: &PrRequest, body_file: Option<&Path>) -> i3
         Ok(o) if o.status.success() => {
             let url = String::from_utf8_lossy(&o.stdout).trim().to_string();
             println!("PR created: {url}");
+            println!("{}", pr_next_action(language));
             EXIT_OK
         }
         Ok(o) => {
@@ -392,7 +409,7 @@ fn dispatch_github(root: &Path, req: &PrRequest, body_file: Option<&Path>) -> i3
     }
 }
 
-fn dispatch_command(root: &Path, pr_command: &str, request_dir: &Path) -> i32 {
+fn dispatch_command(root: &Path, pr_command: &str, request_dir: &Path, language: &str) -> i32 {
     // Legacy: substitute {spec_dir} and run via the shell.
     let spec_dir = shell_single_quote(&request_dir.to_string_lossy());
     let cmd = pr_command.replace("{spec_dir}", &spec_dir);
@@ -405,7 +422,10 @@ fn dispatch_command(root: &Path, pr_command: &str, request_dir: &Path) -> i32 {
         .current_dir(root)
         .status();
     match status {
-        Ok(s) if s.success() => EXIT_OK,
+        Ok(s) if s.success() => {
+            println!("{}", pr_next_action(language));
+            EXIT_OK
+        }
         Ok(s) => {
             eprintln!("FAIL: pr_command exited {}.", s.code().unwrap_or(-1));
             EXIT_BACKEND_FAIL
@@ -422,7 +442,7 @@ fn shell_single_quote(value: &str) -> String {
     format!("'{escaped}'")
 }
 
-fn dispatch_manual(req: &PrRequest, pushed: bool) -> i32 {
+fn dispatch_manual(req: &PrRequest, pushed: bool, language: &str) -> i32 {
     println!("\n--- manual PR handoff ---");
     println!("No PR backend configured (set [git].provider / [git].pr_driver to automate).");
     if pushed {
@@ -435,7 +455,7 @@ fn dispatch_manual(req: &PrRequest, pushed: bool) -> i32 {
     println!("  base : {}", req.base);
     println!("  head : {}", req.head);
     println!("  title: {}", req.title);
-    println!("Then report the PR URL / merge.");
+    println!("{}", pr_next_action(language));
     EXIT_MANUAL
 }
 
@@ -461,5 +481,18 @@ mod tests {
             shell_single_quote("/tmp/a b/it's;bad"),
             "'/tmp/a b/it'\"'\"'s;bad'"
         );
+    }
+
+    #[test]
+    fn pr_next_action_is_language_aware() {
+        let en = pr_next_action("en");
+        assert!(en.starts_with("Next:"), "{en}");
+        assert!(
+            en.contains("merge the PR") && en.contains("local cleanup"),
+            "{en}"
+        );
+        let ja = pr_next_action("ja");
+        assert!(ja.contains("マージ") && ja.contains("後片付け"), "{ja}");
+        assert_ne!(en, ja);
     }
 }

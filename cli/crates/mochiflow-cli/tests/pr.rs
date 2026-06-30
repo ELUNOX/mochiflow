@@ -546,3 +546,63 @@ fn pr_missing_body_file_exits_1_before_dispatch() {
         "missing --body-file should fail before writing pr-request.json"
     );
 }
+
+/// AC-01 / AC-07: manual handoff prints the conversation-language merge-then-report
+/// next action (default conversation language resolves to English here).
+#[test]
+fn pr_manual_handoff_prints_next_action() {
+    let dir = tempfile::tempdir().unwrap();
+    let cfg = setup(dir.path(), "provider = \"none\"", false);
+    run_pr(&cfg, &["--title", "Add feature"])
+        .failure()
+        .code(10)
+        .stdout(predicates::str::contains(
+            "Next: merge the PR in your provider",
+        ))
+        .stdout(predicates::str::contains("tell me it merged"));
+}
+
+/// AC-01: automated (driver) PR creation prints the next action after the URL.
+#[test]
+fn pr_driver_success_prints_next_action() {
+    let dir = tempfile::tempdir().unwrap();
+    let driver = dir.path().join("driver.sh");
+    fs::write(
+        &driver,
+        "#!/bin/sh\necho '{\"url\": \"https://example/pr/7\"}'\n",
+    )
+    .unwrap();
+    Proc::new("chmod")
+        .args(["+x", driver.to_str().unwrap()])
+        .status()
+        .unwrap();
+    let block = format!(
+        "provider = \"none\"\npr_driver = \"{}\"",
+        driver.to_str().unwrap()
+    );
+    let cfg = setup(dir.path(), &block, false);
+    run_pr(&cfg, &["--title", "Add"])
+        .success()
+        .stdout(predicates::str::contains("https://example/pr/7"))
+        .stdout(predicates::str::contains(
+            "Next: merge the PR in your provider",
+        ));
+}
+
+/// AC-07: when `conversation_language = ja`, the next action is rendered in
+/// Japanese (durable artifacts / PR body remain artifact-language).
+#[test]
+fn pr_next_action_uses_japanese_conversation_language() {
+    let dir = tempfile::tempdir().unwrap();
+    let cfg = setup(dir.path(), "provider = \"none\"", false);
+    // Append an [i18n] table selecting Japanese for conversational output.
+    let mut config = fs::read_to_string(&cfg).unwrap();
+    config.push_str("\n[i18n]\nartifact_language = \"en\"\nconversation_language = \"ja\"\n");
+    fs::write(&cfg, config).unwrap();
+
+    run_pr(&cfg, &["--title", "Add feature"])
+        .failure()
+        .code(10)
+        .stdout(predicates::str::contains("PR をマージ"))
+        .stdout(predicates::str::contains("後片付け"));
+}

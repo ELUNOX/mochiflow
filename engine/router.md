@@ -97,6 +97,27 @@ spec. The spec stays flat at `{specs_dir}/{slug}/` (no restore needed); `update`
 applies bounded inline fixes, re-verifies, pushes, and updates the PR body when
 needed.
 
+## Merge Report Routing
+
+A bare merge report in the conversation language — e.g. "merged", "I merged it",
+"マージした", "マージ完了" — is a merge-report hint (these are illustrative
+intent examples, not fixed trigger strings). It means the user finished the
+external merge and is ready for post-merge local cleanup. Resolve the active
+spec per `## Active Spec Resolution`, scoped to specs that are derived in-review
+or local-cleanup-pending, then:
+
+- exactly one such candidate → route to `commands/close.md` (post-merge local
+  cleanup only; close writes nothing to the base branch);
+- more than one candidate → ask exactly one disambiguation question; never guess
+  which spec was merged;
+- no in-review or cleanup-pending candidate → do not route to cleanup; fall
+  through to normal routing (treat it as ordinary conversation, or ask for the
+  slug when the intent is otherwise clear).
+
+Exact `{slug} merged` / `{slug} マージ済み` / `{slug} 完了` remains the
+unambiguous explicit path (Decision Flow step 3) and is unaffected by this
+contextual handling.
+
 ## Verb Delegation
 
 | verb | how | ref |

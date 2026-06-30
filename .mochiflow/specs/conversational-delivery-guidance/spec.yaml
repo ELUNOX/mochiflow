@@ -1,0 +1,11 @@
+version: 1
+slug: "conversational-delivery-guidance"
+title: "Guide delivery through conversational next actions"
+type: "feature"
+surfaces:
+  - "cli"
+integration: "none"
+risk: "elevated"
+status: "accepted"
+created: "2026-06-30"
+updated: "2026-06-30"

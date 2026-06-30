@@ -722,6 +722,80 @@ fn close_is_local_hygiene_only() {
 }
 
 #[test]
+fn delivery_guidance_is_conversational_and_language_aware() {
+    let open = read_repo_file("engine/commands/open.md");
+    let router = read_repo_file("engine/router.md");
+    let close = read_repo_file("engine/commands/close.md");
+    let language = read_repo_file("engine/reference/language.md");
+
+    // open.md: PR-created conversational handoff with URL-when-available and a
+    // URL-less manual-handoff path, kept out of the PR body. (Single-line
+    // substrings only, to stay robust against prose re-wrapping.)
+    assert!(
+        open.contains("PR-created conversational handoff")
+            && open.contains("merge the PR in the provider UI")
+            && open.contains("report that it merged so post-merge local cleanup can run"),
+        "open.md must require a conversational merge-then-report next action after PR creation"
+    );
+    assert!(
+        open.contains("Include the PR URL when one is available")
+            && open.contains("on a URL-less manual"),
+        "open.md must require the PR URL when available and handle the URL-less handoff path"
+    );
+    assert!(
+        open.contains("never written into the PR body"),
+        "open.md must keep the post-merge next action out of the PR body"
+    );
+
+    // router.md: contextual bare merge-report routing with disambiguation and a
+    // no-candidate fall-through.
+    assert!(
+        router.contains("## Merge Report Routing"),
+        "router must define contextual merge-report routing"
+    );
+    assert!(
+        router.contains("intent examples, not fixed trigger strings"),
+        "router merge-report examples must be intents, not fixed trigger strings"
+    );
+    assert!(
+        router.contains("route to `commands/close.md`")
+            && router.contains("ask exactly one disambiguation question"),
+        "router must route a single candidate to close and disambiguate multiple candidates"
+    );
+    assert!(
+        router.contains("no in-review or cleanup-pending candidate → do not route to cleanup")
+            && router.contains("through to normal routing"),
+        "router must fall through to normal routing when no candidate exists"
+    );
+
+    // close.md: conversational start + completion as post-merge local cleanup.
+    assert!(
+        close.contains("At close start") && close.contains("At close completion"),
+        "close must describe conversational start and completion"
+    );
+    assert!(
+        close.contains("the local feature branch and temporary delivery files were cleaned"),
+        "close completion must report local branch and delivery-file cleanup"
+    );
+
+    // language.md: delivery next-action ownership (conversation vs artifact).
+    assert!(
+        language.contains("## Delivery Next Actions"),
+        "language reference must own delivery next-action language policy"
+    );
+    assert!(
+        language.contains("local cleanup pending")
+            && language.contains("`[i18n].artifact_language` deterministically"),
+        "language reference must cover the cleanup hint and the auto CLI fallback"
+    );
+    assert!(
+        language.contains("into the PR body")
+            && language.contains("intent examples, not fixed trigger strings"),
+        "language reference must keep next actions out of the PR body and examples non-canonical"
+    );
+}
+
+#[test]
 fn discuss_branches_from_origin_with_stale_base_guard() {
     let discuss = read_repo_file("engine/commands/discuss.md");
     let git = read_repo_file("engine/reference/git.md");
