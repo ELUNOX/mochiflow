@@ -6,6 +6,13 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- ADR title derivation no longer panics on non-ASCII-leading record titles
+  (e.g. Japanese titles in `artifact_language = "ja"` projects). `doctor`,
+  `adr lint` / `list` / `show`, and ADR store `INDEX.md` generation now handle
+  multibyte titles safely.
+
 ## [1.2.0] - 2026-06-29
 
 ### Added

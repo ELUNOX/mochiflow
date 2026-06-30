@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use crate::adr::{self, AdrKind};
 use crate::config::Config;
 use crate::lint;
 use crate::spec_meta::{SpecMeta, read_spec_metadata};
@@ -38,6 +39,13 @@ struct StatusEntry {
     index: char,
     worktree: char,
     paths: Vec<String>,
+}
+
+#[derive(Debug)]
+struct AcceptPaths {
+    dir_prefixes: BTreeSet<String>,
+    exact_files: BTreeSet<String>,
+    rejected_files: BTreeSet<String>,
 }
 
 /// Entry point for `mochiflow accept`. Returns the process exit code.
@@ -78,8 +86,6 @@ pub fn run_accept(cfg: &Config, slug_arg: Option<&str>, dry_run: bool) -> i32 {
         }
     };
 
-    let lifecycle_paths = lifecycle_paths(cfg);
-    let allowed = allowed_ship_paths(cfg, &target);
     let status_entries = match git_status_z(&cfg.repo_root) {
         Ok(entries) => entries,
         Err(message) => {
@@ -87,21 +93,30 @@ pub fn run_accept(cfg: &Config, slug_arg: Option<&str>, dry_run: bool) -> i32 {
             return EXIT_FAIL;
         }
     };
-    let blockers = unexpected_status_paths(&status_entries, &allowed);
+    let (accept_paths, mut blockers) = match accept_paths(cfg, &target, &status_entries) {
+        Ok(paths) => paths,
+        Err(message) => {
+            eprintln!("FAIL: {message}");
+            return EXIT_FAIL;
+        }
+    };
+    blockers.extend(unexpected_status_paths(&status_entries, &accept_paths));
     let readiness = readiness_blockers(cfg, &target, &meta);
 
     if dry_run {
         println!("accept target : {}", target.slug);
         println!("state       : active");
-        println!("lifecycle paths:");
-        for path in &lifecycle_paths {
-            println!("  - {}", path.display());
+        println!("planned stage paths:");
+        for path in accept_paths.stage_path_strings() {
+            println!("  - {path}");
         }
         println!("planned actions:");
         println!("  - run final verification for declared surfaces");
         println!("  - update automated AC Matrix rows when eligible");
         println!("  - set accepted metadata (no _done move, no INDEX write)");
-        println!("  - stage the spec and ADR fold, then create the close-out commit");
+        println!(
+            "  - stage the target spec and linked ADR fold records, then create the close-out commit"
+        );
         if blockers.is_empty() && readiness.is_empty() {
             println!("readiness blockers: none");
         } else {
@@ -159,7 +174,7 @@ pub fn run_accept(cfg: &Config, slug_arg: Option<&str>, dry_run: bool) -> i32 {
         );
         return EXIT_FAIL;
     }
-    stage_validate_commit(cfg, &target, &allowed, &meta)
+    stage_validate_commit(cfg, &target, &accept_paths, &meta)
 }
 
 pub fn is_path_like_spec_arg(value: &str) -> bool {
@@ -210,10 +225,10 @@ pub fn validate_pr_spec_closeout_committed(cfg: &Config, slug: &str) -> Result<(
 fn stage_validate_commit(
     cfg: &Config,
     target: &Target,
-    allowed: &BTreeSet<String>,
+    accept_paths: &AcceptPaths,
     meta: &SpecMeta,
 ) -> i32 {
-    if let Err(message) = git_add_lifecycle(cfg) {
+    if let Err(message) = git_add_accept_paths(cfg, accept_paths) {
         eprintln!("FAIL: {message}");
         return EXIT_FAIL;
     }
@@ -227,7 +242,7 @@ fn stage_validate_commit(
     let unexpected: Vec<_> = staged
         .iter()
         .flat_map(|entry| entry.paths.iter())
-        .filter(|path| !is_allowed_ship_path(path, allowed))
+        .filter(|path| !accept_paths.allows(path))
         .cloned()
         .collect();
     if !unexpected.is_empty() {
@@ -322,10 +337,7 @@ fn readiness_blockers(cfg: &Config, target: &Target, meta: &SpecMeta) -> Vec<Str
     if lint::run_lint(cfg, Some(&target.slug), true) != 0 {
         blockers.push("lint failed before mutation".to_string());
     }
-    blockers.extend(matrix_readiness_blockers(
-        &spec_dir.join("spec.md"),
-        &meta.surfaces().into_iter().collect::<BTreeSet<_>>(),
-    ));
+    blockers.extend(matrix_readiness_blockers(&spec_dir.join("spec.md")));
     if risk_order(meta.risk()) >= 1 && !has_passing_review(&spec_dir.join("design.md")) {
         blockers.push(
             "reviewer verdict (pass/pass-with-comments) is not recorded in design.md ## Review Results"
@@ -335,35 +347,19 @@ fn readiness_blockers(cfg: &Config, target: &Target, meta: &SpecMeta) -> Vec<Str
     blockers
 }
 
-fn matrix_readiness_blockers(spec_md: &Path, surfaces: &BTreeSet<&str>) -> Vec<String> {
+fn matrix_readiness_blockers(spec_md: &Path) -> Vec<String> {
     let text = fs::read_to_string(spec_md).unwrap_or_default();
     parse_matrix(&text)
         .into_iter()
         .filter_map(|row| match row.result.as_str() {
             "PASS" | "CONFIRMED" => None,
             result if result.starts_with("N/A: ") => None,
-            "UNVERIFIED"
-                if row.method == "automated"
-                    && surfaces.contains(row.scope.as_str())
-                    && has_ac_specific_evidence(&row.evidence) =>
-            {
-                None
-            }
-            "UNVERIFIED" if row.method == "automated" && surfaces.contains(row.scope.as_str()) => Some(format!(
-                "AC Matrix row {} needs AC-specific evidence before final verification can mark it PASS",
-                row.ac
-            )),
             other => Some(format!(
                 "AC Matrix row {} has result `{}` and cannot be completed by final verification",
                 row.ac, other
             )),
         })
         .collect()
-}
-
-fn has_ac_specific_evidence(evidence: &str) -> bool {
-    let trimmed = evidence.trim();
-    !trimmed.is_empty() && !trimmed.starts_with("final verification:")
 }
 
 fn run_final_verification(cfg: &Config, meta: &SpecMeta) -> Result<Vec<(String, String)>, String> {
@@ -401,7 +397,7 @@ fn update_spec_md(spec_md: &Path, verify_evidence: &[(String, String)]) -> Resul
     }
     let mut lines: Vec<String> = text.lines().map(ToString::to_string).collect();
     for row in rows {
-        if row.result != "UNVERIFIED" || row.method != "automated" {
+        if row.result != "PASS" || row.method != "automated" {
             continue;
         }
         let Some((_, cmd)) = verify_evidence
@@ -526,58 +522,165 @@ fn parse_matrix(text: &str) -> Vec<MatrixRow> {
 }
 
 fn split_table_row(line: &str) -> Vec<String> {
-    line.trim()
-        .trim_matches('|')
-        .split('|')
-        .map(|cell| cell.trim().to_string())
-        .collect()
+    let inner = line
+        .trim()
+        .strip_prefix('|')
+        .unwrap_or(line.trim())
+        .strip_suffix('|')
+        .unwrap_or_else(|| line.trim().strip_prefix('|').unwrap_or(line.trim()));
+    let mut cells = Vec::new();
+    let mut cell = String::new();
+    let mut escaped = false;
+    for ch in inner.chars() {
+        if ch == '|' && !escaped {
+            cells.push(cell.trim().to_string());
+            cell.clear();
+            escaped = false;
+            continue;
+        }
+        cell.push(ch);
+        escaped = ch == '\\' && !escaped;
+        if ch != '\\' {
+            escaped = false;
+        }
+    }
+    cells.push(cell.trim().to_string());
+    cells
 }
 
 fn escape_table_cell(value: &str) -> String {
     value.replace('|', "\\|")
 }
 
-fn lifecycle_paths(cfg: &Config) -> Vec<PathBuf> {
-    vec![
-        rel_path(&cfg.repo_root, &cfg.specs_dir_path()),
-        rel_path(&cfg.repo_root, &cfg.decisions_dir()),
-        rel_path(&cfg.repo_root, &cfg.pitfalls_dir()),
-    ]
-}
-
-fn allowed_ship_paths(cfg: &Config, target: &Target) -> BTreeSet<String> {
-    let mut allowed = BTreeSet::new();
-    for path in [
-        &target.active_dir,
-        &cfg.decisions_dir(),
-        &cfg.pitfalls_dir(),
-    ] {
-        allowed.insert(path_to_string(&rel_path(&cfg.repo_root, path)));
-    }
-    allowed
-}
-
-fn is_allowed_ship_path(path: &str, allowed: &BTreeSet<String>) -> bool {
-    allowed
+fn accept_paths(
+    cfg: &Config,
+    target: &Target,
+    entries: &[StatusEntry],
+) -> Result<(AcceptPaths, Vec<String>), String> {
+    let mut paths = AcceptPaths {
+        dir_prefixes: BTreeSet::from([path_to_string(&rel_path(
+            &cfg.repo_root,
+            &target.active_dir,
+        ))]),
+        exact_files: BTreeSet::new(),
+        rejected_files: BTreeSet::new(),
+    };
+    let dirty_paths: BTreeSet<String> = entries
         .iter()
-        .any(|allowed| path == allowed || path.starts_with(&format!("{allowed}/")))
+        .flat_map(|entry| entry.paths.iter().cloned())
+        .collect();
+    let mut blockers = Vec::new();
+    let mut records = Vec::new();
+    for kind in [AdrKind::Decisions, AdrKind::Pitfalls] {
+        let store = adr::load_store(cfg, kind)
+            .map_err(|e| format!("could not load ADR {} store: {e}", kind.as_str()))?;
+        for problem in &store.problems {
+            if let Some(problem_path) = adr_problem_path(cfg, kind, problem.id.as_deref())
+                && dirty_paths.contains(&problem_path)
+            {
+                paths.rejected_files.insert(problem_path.clone());
+                blockers.push(format!(
+                    "ADR record cannot be parsed for accept: {problem_path}: {}",
+                    problem.message
+                ));
+            }
+        }
+        records.extend(store.records);
+    }
+
+    let mut selected_ids = BTreeSet::new();
+    for record in records
+        .iter()
+        .filter(|record| record.spec.as_deref() == Some(target.slug.as_str()))
+    {
+        selected_ids.insert(record.id.clone());
+        if let Some(id) = &record.supersedes {
+            selected_ids.insert(id.clone());
+        }
+        if let Some(id) = &record.superseded_by {
+            selected_ids.insert(id.clone());
+        }
+    }
+
+    let mut changed = true;
+    while changed {
+        changed = false;
+        let linked_ids: Vec<String> = records
+            .iter()
+            .filter(|record| selected_ids.contains(record.id.as_str()))
+            .flat_map(|record| [&record.supersedes, &record.superseded_by])
+            .flatten()
+            .cloned()
+            .collect();
+        for id in linked_ids {
+            if selected_ids.insert(id) {
+                changed = true;
+            }
+        }
+    }
+
+    for record in records
+        .iter()
+        .filter(|record| selected_ids.contains(record.id.as_str()))
+    {
+        paths
+            .exact_files
+            .insert(path_to_string(&rel_path(&cfg.repo_root, &record.path)));
+    }
+
+    Ok((paths, blockers))
 }
 
-fn unexpected_status_paths(entries: &[StatusEntry], allowed: &BTreeSet<String>) -> Vec<String> {
+fn adr_problem_path(cfg: &Config, kind: AdrKind, id: Option<&str>) -> Option<String> {
+    let id = id?;
+    Some(path_to_string(&rel_path(
+        &cfg.repo_root,
+        &kind.dir(cfg).join(format!("{id}.md")),
+    )))
+}
+
+impl AcceptPaths {
+    fn allows(&self, path: &str) -> bool {
+        self.exact_files.contains(path)
+            || self
+                .dir_prefixes
+                .iter()
+                .any(|allowed| path == allowed || path.starts_with(&format!("{allowed}/")))
+    }
+
+    fn stage_path_strings(&self) -> Vec<String> {
+        self.dir_prefixes
+            .iter()
+            .chain(self.exact_files.iter())
+            .cloned()
+            .collect()
+    }
+
+    fn stage_paths(&self) -> Vec<PathBuf> {
+        self.stage_path_strings()
+            .into_iter()
+            .map(PathBuf::from)
+            .collect()
+    }
+}
+
+fn unexpected_status_paths(entries: &[StatusEntry], accept_paths: &AcceptPaths) -> Vec<String> {
     entries
         .iter()
         .flat_map(|entry| {
             entry
                 .paths
                 .iter()
-                .filter(|path| !is_allowed_ship_path(path, allowed))
+                .filter(|path| !accept_paths.rejected_files.contains(*path))
+                .filter(|path| !accept_paths.allows(path))
                 .map(move |path| format!("{}{} {path}", entry.index, entry.worktree))
         })
         .collect()
 }
 
-fn git_add_lifecycle(cfg: &Config) -> Result<(), String> {
-    let paths: Vec<_> = lifecycle_paths(cfg)
+fn git_add_accept_paths(cfg: &Config, accept_paths: &AcceptPaths) -> Result<(), String> {
+    let paths: Vec<_> = accept_paths
+        .stage_paths()
         .into_iter()
         .filter(|path| {
             cfg.repo_root.join(path).exists() || git_path_exists_in_index(&cfg.repo_root, path)
@@ -593,7 +696,7 @@ fn git_add_lifecycle(cfg: &Config) -> Result<(), String> {
     if status.success() {
         Ok(())
     } else {
-        Err("git add -A for lifecycle paths failed".to_string())
+        Err("git add -A for accept paths failed".to_string())
     }
 }
 
@@ -809,8 +912,8 @@ mod tests {
     #![allow(clippy::unwrap_used)]
 
     use super::{
-        allowed_ship_paths, git_add_lifecycle, has_passing_review, is_allowed_ship_path,
-        parse_name_status_z, target_for_slug,
+        accept_paths, git_add_accept_paths, has_passing_review, parse_name_status_z,
+        target_for_slug, update_spec_md,
     };
     use crate::config::load_config;
 
@@ -848,23 +951,76 @@ mod tests {
         std::fs::create_dir_all(repo.join(".mochiflow/specs")).unwrap();
         std::fs::write(
             repo.join(".mochiflow/config.toml"),
-            "schema_version = 1\ninstall_dir = \".mochiflow\"\nspecs_dir = \".mochiflow/specs\"\nindex = \".mochiflow/INDEX.md\"\n\n[constitution]\nproject = \".mochiflow/constitution.md\"\nlocal = \".mochiflow/constitution.local.md\"\n\n[context]\nproduct = \".mochiflow/context/product.md\"\nstructure = \".mochiflow/context/structure.md\"\ntech = \".mochiflow/context/tech.md\"\n\n[adr]\ndecisions = \".mochiflow/adr/decisions.md\"\npitfalls = \".mochiflow/adr/pitfalls.md\"\n\n[git]\nbase_branch = \"main\"\n\n[adapter]\ntool = \"agents\"\n\n[surfaces.app]\ndescription = \"app\"\n\n[surfaces.app.verify]\ndefault = \"echo ok\"\n",
+            "schema_version = 1\ninstall_dir = \".mochiflow\"\nspecs_dir = \".mochiflow/specs\"\nindex = \".mochiflow/INDEX.md\"\n\n[constitution]\nproject = \".mochiflow/constitution.md\"\nlocal = \".mochiflow/constitution.local.md\"\n\n[context]\nproduct = \".mochiflow/context/product.md\"\nstructure = \".mochiflow/context/structure.md\"\ntech = \".mochiflow/context/tech.md\"\n\n[adr]\ndecisions = \".mochiflow/adr/decisions\"\npitfalls = \".mochiflow/adr/pitfalls\"\n\n[git]\nbase_branch = \"main\"\n\n[adapter]\ntool = \"agents\"\n\n[surfaces.app]\ndescription = \"app\"\n\n[surfaces.app.verify]\ndefault = \"echo ok\"\n",
         )
         .unwrap();
         let cfg = load_config(&repo.join(".mochiflow/config.toml")).unwrap();
         let target = target_for_slug(&cfg, "sample");
-        let allowed = allowed_ship_paths(&cfg, &target);
+        let (paths, blockers) = accept_paths(&cfg, &target, &[]).unwrap();
         let parsed =
             parse_name_status_z(b"A\0.mochiflow/specs/sample/spec.yaml\0A\0src/with space.rs\0");
 
+        assert!(blockers.is_empty(), "{blockers:?}");
         assert_eq!(parsed.len(), 2);
         assert_eq!(parsed[1].paths, vec!["src/with space.rs"]);
-        assert!(is_allowed_ship_path(&parsed[0].paths[0], &allowed));
-        assert!(!is_allowed_ship_path(&parsed[1].paths[0], &allowed));
+        assert!(paths.allows(&parsed[0].paths[0]));
+        assert!(!paths.allows(&parsed[1].paths[0]));
     }
 
     #[test]
-    fn accept_staging_includes_adr_record_dirs_but_never_index() {
+    fn update_spec_md_appends_final_evidence_only_to_matching_automated_pass_rows() {
+        let tmp = tempfile::tempdir().unwrap();
+        let spec_md = tmp.path().join("spec.md");
+        std::fs::write(
+            &spec_md,
+            "# S\n\n## Verification Plan / AC Matrix\n\n| AC | Scope | Verification method | Planned test/QA | Implementation | Result | Evidence | Notes |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n| AC-01 | app | automated | final verify | fixture | PASS | existing evidence |  |\n| AC-02 | app | automated | final verify | fixture | PASS | final verification: `cargo test \\| tee out` |  |\n| AC-03 | app | automated | final verify | fixture | UNVERIFIED | build evidence |  |\n| AC-04 | app | human | QA | fixture | PASS | human evidence |  |\n| AC-05 | app | automated | QA | fixture | CONFIRMED | confirmed evidence |  |\n| AC-06 | app | automated | n/a | fixture | N/A: not relevant | n/a evidence |  |\n| AC-07 | api | automated | final verify | fixture | PASS | api evidence |  |\n",
+        )
+        .unwrap();
+
+        let evidence = vec![("app".to_string(), "cargo test | tee out".to_string())];
+        update_spec_md(&spec_md, &evidence).unwrap();
+        update_spec_md(&spec_md, &evidence).unwrap();
+
+        let updated = std::fs::read_to_string(&spec_md).unwrap();
+        assert!(
+            updated.contains(
+                "| AC-01 | app | automated | final verify | fixture | PASS | existing evidence<br>final verification: `cargo test \\| tee out` |  |"
+            ),
+            "{updated}"
+        );
+        assert_eq!(
+            updated
+                .matches("final verification: `cargo test \\| tee out`")
+                .count(),
+            2
+        );
+        assert!(updated.contains("| AC-03 | app | automated | final verify | fixture | UNVERIFIED | build evidence |  |"), "{updated}");
+        assert!(
+            updated.contains("| AC-04 | app | human | QA | fixture | PASS | human evidence |  |"),
+            "{updated}"
+        );
+        assert!(
+            updated.contains(
+                "| AC-05 | app | automated | QA | fixture | CONFIRMED | confirmed evidence |  |"
+            ),
+            "{updated}"
+        );
+        assert!(
+            updated.contains(
+                "| AC-06 | app | automated | n/a | fixture | N/A: not relevant | n/a evidence |  |"
+            ),
+            "{updated}"
+        );
+        assert!(
+            updated.contains(
+                "| AC-07 | api | automated | final verify | fixture | PASS | api evidence |  |"
+            ),
+            "{updated}"
+        );
+    }
+
+    #[test]
+    fn accept_staging_includes_linked_adr_records_but_never_index() {
         use std::process::Command;
         let tmp = tempfile::tempdir().unwrap();
         let repo = tmp.path();
@@ -885,7 +1041,7 @@ mod tests {
 
         std::fs::create_dir_all(repo.join(".mochiflow/adr/decisions")).unwrap();
         std::fs::create_dir_all(repo.join(".mochiflow/adr/pitfalls")).unwrap();
-        std::fs::create_dir_all(repo.join(".mochiflow/specs")).unwrap();
+        std::fs::create_dir_all(repo.join(".mochiflow/specs/sample")).unwrap();
         // The bare `INDEX.md` ignore pattern already covers adr/**/INDEX.md.
         std::fs::write(repo.join(".mochiflow/.gitignore"), "INDEX.md\nstate/\n").unwrap();
         std::fs::write(
@@ -895,7 +1051,12 @@ mod tests {
         .unwrap();
         std::fs::write(
             repo.join(".mochiflow/adr/decisions/2026-06-22-x.md"),
-            "---\nid: 2026-06-22-x\ndate: 2026-06-22\nstatus: active\n---\n## body\n",
+            "---\nid: 2026-06-22-x\ndate: 2026-06-22\narea: [app]\nspec: sample\nstatus: active\n---\n## body\n",
+        )
+        .unwrap();
+        std::fs::write(
+            repo.join(".mochiflow/adr/decisions/2026-06-22-unrelated.md"),
+            "---\nid: 2026-06-22-unrelated\ndate: 2026-06-22\narea: [app]\nspec: other\nstatus: active\n---\n## body\n",
         )
         .unwrap();
         std::fs::write(
@@ -905,7 +1066,10 @@ mod tests {
         .unwrap();
 
         let cfg = load_config(&repo.join(".mochiflow/config.toml")).unwrap();
-        git_add_lifecycle(&cfg).unwrap();
+        let target = target_for_slug(&cfg, "sample");
+        let (paths, blockers) = accept_paths(&cfg, &target, &[]).unwrap();
+        assert!(blockers.is_empty(), "{blockers:?}");
+        git_add_accept_paths(&cfg, &paths).unwrap();
 
         let staged = Command::new("git")
             .args(["diff", "--cached", "--name-only"])
@@ -916,6 +1080,10 @@ mod tests {
         assert!(
             names.contains(".mochiflow/adr/decisions/2026-06-22-x.md"),
             "record must be staged:\n{names}"
+        );
+        assert!(
+            !names.contains(".mochiflow/adr/decisions/2026-06-22-unrelated.md"),
+            "unrelated ADR record must not be staged:\n{names}"
         );
         assert!(
             !names.contains("INDEX.md"),

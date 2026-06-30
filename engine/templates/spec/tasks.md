@@ -38,12 +38,6 @@ Done / Stop. `Depends on:` lists prior `T-###` IDs or `none`. Use normal `Files:
 paths for planned creates/edits and ``deleted: `path` `` for planned deletions.
 The marker applies to every path parsed from that line; prefer one deleted path
 per line for readability.
-Create the ## AC Verification Matrix here during plan (one row per AC) so it is present at approval; record verification results during build.
-
-## Verification Plan / AC Matrix
-
-| AC | Scope | Verification method | Planned test/QA | Implementation | Result | Evidence | Notes |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| AC-01 | {surface} | automated | `command ...` | `path/File.ext` | UNVERIFIED | | |
+Task rows reference AC IDs; the AC Matrix belongs in `spec.md`.
 
 -->

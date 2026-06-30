@@ -783,16 +783,17 @@ fn plan_offers_pre_approval_review_before_confirm_for_elevated() {
 fn accept_guidance_uses_cli_and_stages_spec_and_adr() {
     let open = read_repo_file("engine/commands/open.md");
     let git = read_repo_file("engine/reference/git.md");
+    let workflow = read_repo_file("engine/reference/workflow.md");
 
     assert!(
         open.contains("mochiflow accept {slug}")
-            && open.contains("git add {specs_dir}/{slug} {adr_paths...}")
+            && open.contains("git add {specs_dir}/{slug} {adr_record_paths...}")
             && open.contains("Never stage"),
         "open guidance must use the accept CLI close-out and never stage INDEX"
     );
     assert!(
         git.contains("Use `mochiflow accept {slug}`")
-            && git.contains("git add {specs_dir}/{slug} {adr_paths...}")
+            && git.contains("git add {specs_dir}/{slug} {adr_record_paths...}")
             && git.contains("git diff --cached --name-status -z")
             && git.contains("never stage `INDEX.md`"),
         "git reference must document the flat accept staging and INDEX exclusion"
@@ -800,6 +801,14 @@ fn accept_guidance_uses_cli_and_stages_spec_and_adr() {
     assert!(
         !git.contains("git mv {specs_dir}/{slug}/ {specs_dir}/_done/{slug}/` so both"),
         "git reference must not require staging a _done move"
+    );
+    assert!(
+        workflow.contains("`mochiflow accept {slug}`") && workflow.contains("mechanical close-out"),
+        "workflow must name the accept CLI as the accepted close-out mechanism"
+    );
+    assert!(
+        !workflow.contains("there is no CLI transition command"),
+        "workflow must not claim accepted has no CLI transition command"
     );
 }
 
@@ -842,7 +851,9 @@ fn build_commit_cadence_is_task_based_not_risk_based() {
     assert!(
         build.contains("the unit is one currently open task")
             && build.contains("taskless / micro specs")
-            && build.contains("Normal build commits do not combine multiple task completions"),
+            && build.contains("Normal build commits do not combine multiple task completions")
+            && build.contains("docs(spec): record build verification")
+            && build.contains("no `Task:` trailer"),
         "build command must define task-based commit units"
     );
     assert!(
@@ -878,7 +889,36 @@ fn spec_templates_require_done_eligible_matrix_results() {
             !template.contains("with no `FAIL` result"),
             "{path} must not imply FAIL is the only non-final Matrix state"
         );
+        assert!(
+            template.contains("## Verification Plan / AC Matrix"),
+            "{path} must keep the canonical Matrix heading in spec.md"
+        );
+        assert!(
+            !template.contains("at the end of tasks.md"),
+            "{path} must not offer tasks.md as a Matrix location"
+        );
     }
+    let tasks = read_repo_file("engine/templates/spec/tasks.md");
+    assert!(
+        tasks.contains("Task rows reference AC IDs; the AC Matrix belongs in `spec.md`."),
+        "tasks.md template must point Matrix authors back to spec.md"
+    );
+    assert!(
+        !tasks.contains("## Verification Plan / AC Matrix"),
+        "tasks.md template must not include the canonical Matrix heading"
+    );
+    assert!(
+        !tasks.contains("| AC | Scope | Verification method |"),
+        "tasks.md template must not include a Matrix table"
+    );
+    assert!(
+        !tasks.contains("AC Verification Matrix here"),
+        "tasks.md template must not ask plan to create the Matrix there"
+    );
+    assert!(
+        !tasks.contains("| AC-01 | {surface} | automated |"),
+        "tasks.md template must not include a Matrix example row"
+    );
     let git = read_repo_file("engine/reference/git.md");
     assert!(
         !git.contains("right after verification"),
@@ -1163,6 +1203,29 @@ fn worker_role_and_template_are_retired() {
 }
 
 #[test]
+fn kiro_docs_and_router_do_not_reference_retired_workers() {
+    for path in ["README.md", "docs/configuration.md", "engine/router.md"] {
+        let body = read_repo_file(path);
+        assert!(
+            !body.contains("build-worker") && !body.contains("write-capable"),
+            "{path} must not describe retired Kiro worker agents"
+        );
+        assert!(
+            !body.contains("`spec-builder` agent"),
+            "{path} must not reference the retired Kiro spec-builder agent"
+        );
+    }
+
+    for path in ["README.md", "docs/configuration.md"] {
+        let body = read_repo_file(path);
+        assert!(
+            body.contains("read-only reviewer"),
+            "{path} must describe Kiro's remaining generated reviewer"
+        );
+    }
+}
+
+#[test]
 fn ad_hoc_review_is_report_only() {
     let review = read_repo_file("engine/commands/review.md");
     let risk = read_repo_file("engine/reference/risk.md");
@@ -1247,7 +1310,9 @@ fn readme_lists_public_cli_commands() {
         "doctor",
         "adapter",
         "index",
+        "status",
         "ready",
+        "accept",
         "backlog",
         "upgrade",
         "freeze",
@@ -1262,6 +1327,11 @@ fn readme_lists_public_cli_commands() {
             "README.md must list public CLI command {needle}"
         );
     }
+    assert!(
+        readme.contains("verify a done-eligible Matrix")
+            && readme.contains("linked ADR fold records"),
+        "README.md must describe accept as a strict mechanical close-out"
+    );
 }
 
 #[test]
@@ -2520,6 +2590,24 @@ fn lint_accepts_elevated_accepted_with_reviewer_verdict() {
 }
 
 #[test]
+fn lint_accepted_fails_with_non_final_matrix_results() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: accepted");
+    for result in ["UNVERIFIED", "PENDING_HUMAN", "FAIL", ""] {
+        let md = format!(
+            "# S\n\n## Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL x.\n\n\
+             ## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | {result} |\n"
+        );
+        let (code, out) = run_lint_case(&yaml, &md, None, None);
+        assert_eq!(code, 1, "{result}: {out}");
+        if result.is_empty() {
+            assert!(out.contains("invalid result `<empty>`"), "{out}");
+        } else {
+            assert!(out.contains(result), "{out}");
+        }
+    }
+}
+
+#[test]
 fn lint_fails_on_spec_yaml_missing_required_keys() {
     // Negative fixture (AC-06): spec.yaml missing required keys is rejected.
     let yaml = "version: 1\nslug: s\ntitle: S\n";
@@ -2680,10 +2768,11 @@ fn materialize_ship_repo(root: &Path, slug: &str, specs_dir: &str) -> (PathBuf, 
     let specs = repo.join(specs_dir);
     std::fs::create_dir_all(specs.join(slug)).unwrap();
     std::fs::create_dir_all(install.join("context")).unwrap();
-    std::fs::create_dir_all(install.join("adr")).unwrap();
+    std::fs::create_dir_all(install.join("adr/decisions")).unwrap();
+    std::fs::create_dir_all(install.join("adr/pitfalls")).unwrap();
     std::fs::write(
         repo.join(".gitignore"),
-        ".mochiflow/state/\n.mochiflow/INDEX.md\n",
+        ".mochiflow/state/\n.mochiflow/INDEX.md\n.mochiflow/adr/**/INDEX.md\n",
     )
     .unwrap();
     for name in ["constitution.md", "constitution.local.md"] {
@@ -2692,9 +2781,6 @@ fn materialize_ship_repo(root: &Path, slug: &str, specs_dir: &str) -> (PathBuf, 
     for name in ["product.md", "structure.md", "tech.md"] {
         std::fs::write(install.join("context").join(name), "# c\n").unwrap();
     }
-    std::fs::write(install.join("adr").join("decisions.md"), "# Decisions\n").unwrap();
-    std::fs::write(install.join("adr").join("pitfalls.md"), "# Pitfalls\n").unwrap();
-
     std::fs::write(
         install.join("config.toml"),
         format!(
@@ -2705,7 +2791,7 @@ fn materialize_ship_repo(root: &Path, slug: &str, specs_dir: &str) -> (PathBuf, 
              [i18n]\nartifact_language = \"en\"\nconversation_language = \"auto\"\n\n\
              [constitution]\nproject = \".mochiflow/constitution.md\"\nlocal = \".mochiflow/constitution.local.md\"\n\n\
              [context]\nproduct = \".mochiflow/context/product.md\"\nstructure = \".mochiflow/context/structure.md\"\ntech = \".mochiflow/context/tech.md\"\n\n\
-             [adr]\ndecisions = \".mochiflow/adr/decisions.md\"\npitfalls = \".mochiflow/adr/pitfalls.md\"\n\n\
+             [adr]\ndecisions = \".mochiflow/adr/decisions\"\npitfalls = \".mochiflow/adr/pitfalls\"\n\n\
              [git]\nprovider = \"none\"\nbase_branch = \"main\"\n\n\
              [adapter]\ntool = \"agents\"\n\n\
              [surfaces.app]\ndescription = \"app\"\n\n[surfaces.app.verify]\ndefault = \"echo test-pass\"\n"
@@ -2733,7 +2819,54 @@ fn write_active_ship_spec(spec_dir: &Path, slug: &str) {
     std::fs::write(spec_dir.join("pitch.md"), "# Pitch\n").unwrap();
     std::fs::write(
         spec_dir.join("spec.md"),
-        "# Ship Fixture\n\n## Acceptance Criteria (EARS)\n\n- AC-01: WHEN shipping, THE SYSTEM SHALL finish safely.\n\n## Verification Plan / AC Matrix\n\n| AC | Scope | Verification method | Planned test/QA | Implementation | Result | Evidence | Notes |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n| AC-01 | app | automated | final verify | fixture | UNVERIFIED | behavioral fixture assertion |  |\n",
+        "# Ship Fixture\n\n## Acceptance Criteria (EARS)\n\n- AC-01: WHEN shipping, THE SYSTEM SHALL finish safely.\n\n## Verification Plan / AC Matrix\n\n| AC | Scope | Verification method | Planned test/QA | Implementation | Result | Evidence | Notes |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n| AC-01 | app | automated | final verify | fixture | PASS | behavioral fixture assertion |  |\n",
+    )
+    .unwrap();
+}
+
+fn write_ship_matrix_row(
+    repo: &Path,
+    slug: &str,
+    scope: &str,
+    method: &str,
+    result: &str,
+    evidence: &str,
+) {
+    let spec_md = repo.join(format!(".mochiflow/specs/{slug}/spec.md"));
+    let text = std::fs::read_to_string(&spec_md).unwrap();
+    let replacement = format!(
+        "| AC-01 | {scope} | {method} | final verify | fixture | {result} | {evidence} |  |"
+    );
+    let lines: Vec<_> = text
+        .lines()
+        .map(|line| {
+            if line.starts_with("| AC-01 |") {
+                replacement.clone()
+            } else {
+                line.to_string()
+            }
+        })
+        .collect();
+    std::fs::write(&spec_md, lines.join("\n") + "\n").unwrap();
+}
+
+fn write_decision_record(repo: &Path, id: &str, status: &str, spec: Option<&str>, links: &str) {
+    let spec_line = spec
+        .map(|slug| format!("spec: {slug}\n"))
+        .unwrap_or_default();
+    std::fs::write(
+        repo.join(format!(".mochiflow/adr/decisions/{id}.md")),
+        format!(
+            "---\n\
+             id: {id}\n\
+             date: 2026-06-27\n\
+             area: [app]\n\
+             {spec_line}\
+             status: {status}\n\
+             {links}\
+             ---\n\
+             ## {id}\n"
+        ),
     )
     .unwrap();
 }
@@ -2794,6 +2927,201 @@ fn behavioral_accept_commits_flat_spec_with_safe_paths() {
 }
 
 #[test]
+fn behavioral_accept_does_not_duplicate_final_verification_evidence() {
+    let tmp = tempfile::tempdir().unwrap();
+    let slug = "duplicate-final-evidence-fixture";
+    let (cfg, repo) = materialize_ship_repo(tmp.path(), slug, ".mochiflow/specs");
+    write_ship_matrix_row(
+        &repo,
+        slug,
+        "app",
+        "automated",
+        "PASS",
+        "behavioral fixture assertion<br>final verification: `echo test-pass`",
+    );
+
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["accept", slug]);
+    assert_eq!(code, 0, "stdout:\n{out}\nstderr:\n{err}");
+    let spec =
+        std::fs::read_to_string(repo.join(format!(".mochiflow/specs/{slug}/spec.md"))).unwrap();
+    assert_eq!(
+        spec.matches("final verification: `echo test-pass`").count(),
+        1,
+        "{spec}"
+    );
+}
+
+#[test]
+fn behavioral_accept_does_not_update_confirmed_or_not_applicable_rows() {
+    for (slug, result, evidence) in [
+        (
+            "confirmed-row-fixture",
+            "CONFIRMED",
+            "human confirmed on simulator",
+        ),
+        ("na-row-fixture", "N/A: CLI only", "not applicable evidence"),
+    ] {
+        let tmp = tempfile::tempdir().unwrap();
+        let (cfg, repo) = materialize_ship_repo(tmp.path(), slug, ".mochiflow/specs");
+        write_ship_matrix_row(&repo, slug, "app", "automated", result, evidence);
+
+        let (code, out, err) = run_cli_capture(&cfg, &repo, &["accept", slug]);
+        assert_eq!(code, 0, "{slug} stdout:\n{out}\nstderr:\n{err}");
+        let spec =
+            std::fs::read_to_string(repo.join(format!(".mochiflow/specs/{slug}/spec.md"))).unwrap();
+        assert!(
+            spec.contains(&format!("| {result} | {evidence} |")),
+            "{spec}"
+        );
+        assert!(!spec.contains("final verification:"), "{spec}");
+    }
+}
+
+#[test]
+fn behavioral_accept_commits_only_target_adr_records_and_reciprocals() {
+    let tmp = tempfile::tempdir().unwrap();
+    let slug = "adr-fold-fixture";
+    let (cfg, repo) = materialize_ship_repo(tmp.path(), slug, ".mochiflow/specs");
+
+    write_decision_record(&repo, "2026-06-27-unrelated", "active", Some("other"), "");
+    git_ok(
+        &repo,
+        &["add", ".mochiflow/adr/decisions/2026-06-27-unrelated.md"],
+    );
+    git_ok(&repo, &["commit", "-q", "-m", "test: unrelated adr"]);
+
+    write_decision_record(
+        &repo,
+        "2026-06-27-target",
+        "active",
+        Some(slug),
+        "supersedes: 2026-06-27-old\n",
+    );
+    write_decision_record(
+        &repo,
+        "2026-06-27-old",
+        "superseded",
+        None,
+        "superseded_by: 2026-06-27-target\n",
+    );
+    std::fs::write(
+        repo.join(".mochiflow/adr/decisions/INDEX.md"),
+        "# generated\n",
+    )
+    .unwrap();
+
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["accept", slug]);
+    assert_eq!(code, 0, "stdout:\n{out}\nstderr:\n{err}");
+    let name_status = git_out(
+        &repo,
+        &["diff-tree", "--no-commit-id", "--name-status", "-r", "HEAD"],
+    );
+    assert!(
+        name_status.contains(".mochiflow/adr/decisions/2026-06-27-target.md"),
+        "{name_status}"
+    );
+    assert!(
+        name_status.contains(".mochiflow/adr/decisions/2026-06-27-old.md"),
+        "{name_status}"
+    );
+    assert!(
+        !name_status.contains(".mochiflow/adr/decisions/2026-06-27-unrelated.md"),
+        "{name_status}"
+    );
+    assert!(!name_status.contains("INDEX.md"), "{name_status}");
+}
+
+#[test]
+fn behavioral_accept_rejects_dirty_unlinked_adr_before_mutation() {
+    let tmp = tempfile::tempdir().unwrap();
+    let slug = "dirty-adr-fixture";
+    let (cfg, repo) = materialize_ship_repo(tmp.path(), slug, ".mochiflow/specs");
+    write_decision_record(&repo, "2026-06-27-other", "active", Some("other"), "");
+    let before_yaml =
+        std::fs::read_to_string(repo.join(format!(".mochiflow/specs/{slug}/spec.yaml"))).unwrap();
+
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["accept", slug]);
+    assert_eq!(code, 1, "stdout:\n{out}\nstderr:\n{err}");
+    assert!(
+        err.contains(".mochiflow/adr/decisions/2026-06-27-other.md"),
+        "{err}"
+    );
+    let after_yaml =
+        std::fs::read_to_string(repo.join(format!(".mochiflow/specs/{slug}/spec.yaml"))).unwrap();
+    assert_eq!(after_yaml, before_yaml);
+}
+
+#[test]
+fn behavioral_accept_rejects_dirty_adr_without_spec_before_mutation() {
+    let tmp = tempfile::tempdir().unwrap();
+    let slug = "adr-no-spec-fixture";
+    let (cfg, repo) = materialize_ship_repo(tmp.path(), slug, ".mochiflow/specs");
+    write_decision_record(&repo, "2026-06-27-no-spec", "active", None, "");
+    let before_yaml =
+        std::fs::read_to_string(repo.join(format!(".mochiflow/specs/{slug}/spec.yaml"))).unwrap();
+
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["accept", slug]);
+    assert_eq!(code, 1, "stdout:\n{out}\nstderr:\n{err}");
+    assert!(
+        err.contains(".mochiflow/adr/decisions/2026-06-27-no-spec.md"),
+        "{err}"
+    );
+    let after_yaml =
+        std::fs::read_to_string(repo.join(format!(".mochiflow/specs/{slug}/spec.yaml"))).unwrap();
+    assert_eq!(after_yaml, before_yaml);
+}
+
+#[test]
+fn behavioral_accept_rejects_dirty_unparseable_adr_before_mutation() {
+    let tmp = tempfile::tempdir().unwrap();
+    let slug = "bad-adr-fixture";
+    let (cfg, repo) = materialize_ship_repo(tmp.path(), slug, ".mochiflow/specs");
+    std::fs::write(
+        repo.join(".mochiflow/adr/decisions/2026-06-27-bad.md"),
+        "missing front matter\n",
+    )
+    .unwrap();
+    let before_yaml =
+        std::fs::read_to_string(repo.join(format!(".mochiflow/specs/{slug}/spec.yaml"))).unwrap();
+
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["accept", slug]);
+    assert_eq!(code, 1, "stdout:\n{out}\nstderr:\n{err}");
+    assert!(
+        err.contains("ADR record cannot be parsed")
+            && err.contains(".mochiflow/adr/decisions/2026-06-27-bad.md"),
+        "{err}"
+    );
+    let after_yaml =
+        std::fs::read_to_string(repo.join(format!(".mochiflow/specs/{slug}/spec.yaml"))).unwrap();
+    assert_eq!(after_yaml, before_yaml);
+}
+
+#[test]
+fn behavioral_accept_rejects_legacy_adr_file_config_before_mutation() {
+    let tmp = tempfile::tempdir().unwrap();
+    let slug = "legacy-adr-config-fixture";
+    let (cfg, repo) = materialize_ship_repo(tmp.path(), slug, ".mochiflow/specs");
+    std::fs::write(repo.join(".mochiflow/adr/decisions.md"), "# legacy\n").unwrap();
+    std::fs::write(repo.join(".mochiflow/adr/pitfalls.md"), "# legacy\n").unwrap();
+    let config = std::fs::read_to_string(&cfg).unwrap().replace(
+        "decisions = \".mochiflow/adr/decisions\"\npitfalls = \".mochiflow/adr/pitfalls\"",
+        "decisions = \".mochiflow/adr/decisions.md\"\npitfalls = \".mochiflow/adr/pitfalls.md\"",
+    );
+    std::fs::write(&cfg, config).unwrap();
+    git_ok(&repo, &["add", ".mochiflow/config.toml", ".mochiflow/adr"]);
+    git_ok(&repo, &["commit", "-q", "-m", "test: legacy adr config"]);
+    let before_yaml =
+        std::fs::read_to_string(repo.join(format!(".mochiflow/specs/{slug}/spec.yaml"))).unwrap();
+
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["accept", slug]);
+    assert_eq!(code, 1, "stdout:\n{out}\nstderr:\n{err}");
+    assert!(err.contains("must resolve to a record directory"), "{err}");
+    let after_yaml =
+        std::fs::read_to_string(repo.join(format!(".mochiflow/specs/{slug}/spec.yaml"))).unwrap();
+    assert_eq!(after_yaml, before_yaml);
+}
+
+#[test]
 fn behavioral_accept_does_not_modify_legacy_done_specs() {
     let tmp = tempfile::tempdir().unwrap();
     let slug = "legacy-active-fixture";
@@ -2850,6 +3178,33 @@ fn behavioral_accept_dry_run_does_not_mutate_or_stage() {
 }
 
 #[test]
+fn behavioral_accept_dry_run_reports_unverified_without_mutation() {
+    let tmp = tempfile::tempdir().unwrap();
+    let slug = "dry-run-unverified-fixture";
+    let (cfg, repo) = materialize_ship_repo(tmp.path(), slug, ".mochiflow/specs");
+    write_ship_matrix_row(
+        &repo,
+        slug,
+        "app",
+        "automated",
+        "UNVERIFIED",
+        "behavioral fixture assertion",
+    );
+    let spec_md = repo.join(format!(".mochiflow/specs/{slug}/spec.md"));
+    let spec_yaml = repo.join(format!(".mochiflow/specs/{slug}/spec.yaml"));
+    let before_spec = std::fs::read_to_string(&spec_md).unwrap();
+    let before_yaml = std::fs::read_to_string(&spec_yaml).unwrap();
+
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["accept", slug, "--dry-run"]);
+    assert_eq!(code, 1, "stdout:\n{out}\nstderr:\n{err}");
+    assert!(out.contains("UNVERIFIED"), "{out}");
+    assert_eq!(std::fs::read_to_string(&spec_md).unwrap(), before_spec);
+    assert_eq!(std::fs::read_to_string(&spec_yaml).unwrap(), before_yaml);
+    let staged = git_out(&repo, &["diff", "--cached", "--name-only"]);
+    assert_eq!(staged, "", "{staged}");
+}
+
+#[test]
 fn behavioral_accept_rejects_unrelated_staged_path_with_spaces() {
     let tmp = tempfile::tempdir().unwrap();
     let slug = "dirty-fixture";
@@ -2862,6 +3217,41 @@ fn behavioral_accept_rejects_unrelated_staged_path_with_spaces() {
     assert!(err.contains("unrelated file.txt"), "{err}");
     assert!(repo.join(format!(".mochiflow/specs/{slug}")).exists());
     assert!(!repo.join(format!(".mochiflow/specs/_done/{slug}")).exists());
+}
+
+#[test]
+fn behavioral_accept_rejects_unverified_with_evidence_before_mutation() {
+    let tmp = tempfile::tempdir().unwrap();
+    let slug = "unverified-evidence-fixture";
+    let (cfg, repo) = materialize_ship_repo(tmp.path(), slug, ".mochiflow/specs");
+    let config = std::fs::read_to_string(&cfg).unwrap().replace(
+        "default = \"echo test-pass\"",
+        "default = \"touch verification-ran\"",
+    );
+    std::fs::write(&cfg, config).unwrap();
+    git_ok(&repo, &["add", ".mochiflow/config.toml"]);
+    git_ok(&repo, &["commit", "-q", "-m", "test: observable verify"]);
+    write_ship_matrix_row(
+        &repo,
+        slug,
+        "app",
+        "automated",
+        "UNVERIFIED",
+        "behavioral fixture assertion",
+    );
+    let spec_md = repo.join(format!(".mochiflow/specs/{slug}/spec.md"));
+    let spec_yaml = repo.join(format!(".mochiflow/specs/{slug}/spec.yaml"));
+    let before_spec = std::fs::read_to_string(&spec_md).unwrap();
+    let before_yaml = std::fs::read_to_string(&spec_yaml).unwrap();
+    let before_head = git_out(&repo, &["rev-parse", "HEAD"]);
+
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["accept", slug]);
+    assert_eq!(code, 1, "stdout:\n{out}\nstderr:\n{err}");
+    assert!(err.contains("UNVERIFIED"), "{err}");
+    assert_eq!(std::fs::read_to_string(&spec_md).unwrap(), before_spec);
+    assert_eq!(std::fs::read_to_string(&spec_yaml).unwrap(), before_yaml);
+    assert_eq!(git_out(&repo, &["rev-parse", "HEAD"]), before_head);
+    assert!(!repo.join("verification-ran").exists());
 }
 
 #[test]
@@ -2917,12 +3307,7 @@ fn behavioral_ship_stops_before_mutation_for_pending_human_matrix_row() {
     let tmp = tempfile::tempdir().unwrap();
     let slug = "pending-human-fixture";
     let (cfg, repo) = materialize_ship_repo(tmp.path(), slug, ".mochiflow/specs");
-    let spec_md = repo.join(format!(".mochiflow/specs/{slug}/spec.md"));
-    let text = std::fs::read_to_string(&spec_md).unwrap().replace(
-        "UNVERIFIED | behavioral fixture assertion |",
-        "PENDING_HUMAN | needs QA |",
-    );
-    std::fs::write(&spec_md, text).unwrap();
+    write_ship_matrix_row(&repo, slug, "app", "automated", "PENDING_HUMAN", "needs QA");
 
     let (code, out, err) = run_cli_capture(&cfg, &repo, &["accept", slug]);
     assert_eq!(code, 1, "stdout:\n{out}\nstderr:\n{err}");
@@ -2936,15 +3321,11 @@ fn behavioral_ship_stops_before_mutation_for_generic_only_matrix_evidence() {
     let tmp = tempfile::tempdir().unwrap();
     let slug = "generic-evidence-fixture";
     let (cfg, repo) = materialize_ship_repo(tmp.path(), slug, ".mochiflow/specs");
-    let spec_md = repo.join(format!(".mochiflow/specs/{slug}/spec.md"));
-    let text = std::fs::read_to_string(&spec_md)
-        .unwrap()
-        .replace("behavioral fixture assertion", "");
-    std::fs::write(&spec_md, text).unwrap();
+    write_ship_matrix_row(&repo, slug, "app", "automated", "UNVERIFIED", "");
 
     let (code, out, err) = run_cli_capture(&cfg, &repo, &["accept", slug]);
     assert_eq!(code, 1, "stdout:\n{out}\nstderr:\n{err}");
-    assert!(err.contains("needs AC-specific evidence"), "{err}");
+    assert!(err.contains("UNVERIFIED"), "{err}");
     assert!(repo.join(format!(".mochiflow/specs/{slug}")).exists());
     assert!(!repo.join(format!(".mochiflow/specs/_done/{slug}")).exists());
 }
@@ -2954,11 +3335,7 @@ fn behavioral_ship_stops_before_mutation_for_non_automated_unverified_row() {
     let tmp = tempfile::tempdir().unwrap();
     let slug = "manual-unverified-fixture";
     let (cfg, repo) = materialize_ship_repo(tmp.path(), slug, ".mochiflow/specs");
-    let spec_md = repo.join(format!(".mochiflow/specs/{slug}/spec.md"));
-    let text = std::fs::read_to_string(&spec_md)
-        .unwrap()
-        .replace("| AC-01 | app | automated |", "| AC-01 | app | human |");
-    std::fs::write(&spec_md, text).unwrap();
+    write_ship_matrix_row(&repo, slug, "app", "human", "UNVERIFIED", "manual evidence");
 
     let (code, out, err) = run_cli_capture(&cfg, &repo, &["accept", slug]);
     assert_eq!(code, 1, "stdout:\n{out}\nstderr:\n{err}");

@@ -120,7 +120,7 @@ MochiFlow's public CLI commands are:
 | `mochiflow index` | Regenerate or check `INDEX.md` and state index output. |
 | `mochiflow status` | Render the live delivery board (Backlog / Active / Ready / In Review / Done); read-only. |
 | `mochiflow ready` | Check whether a spec can enter implementation. |
-| `mochiflow accept` | Settle the accept close-out: set `accepted`, stage the spec and ADR fold, and commit. |
+| `mochiflow accept` | Settle the mechanical close-out: verify a done-eligible Matrix, set `accepted`, stage the spec and linked ADR fold records, and commit. |
 | `mochiflow backlog` | List, show, or validate backlog seeds. |
 | `mochiflow upgrade` | Replace the installed engine while preserving project data. |
 | `mochiflow freeze` | Regenerate derived version/integrity files from the workspace version. |
@@ -218,9 +218,9 @@ When you are ready to open the PR:
 mochiflow-open
 ```
 
-MochiFlow runs acceptance, records the important decisions and pitfalls, sets the
-spec to `accepted`, and — after you approve the PR content — opens the PR through
-the project's PR path.
+MochiFlow runs acceptance, records the important decisions and pitfalls, settles
+the mechanical `accept` close-out, and — after you approve the PR content —
+opens the PR through the project's PR path.
 
 When PR review asks for changes:
 
@@ -249,7 +249,7 @@ terminal commands.
 
 | Tool | How it integrates |
 | --- | --- |
-| Kiro | Always-on steering (`.kiro/steering/mochiflow.md`) + read-only reviewer and write-capable per-task build-worker agents |
+| Kiro | Always-on steering (`.kiro/steering/mochiflow.md`) + read-only reviewer |
 | Claude Code | Generates `CLAUDE.md` |
 | GitHub Copilot | Generates `.github/` integration |
 | Generic agents | Generates `AGENTS.md` |

@@ -122,8 +122,9 @@ follow-up before build completes.
   `.gitignore` is the single source of truth for whether specs are tracked: when
   the project tracks specs, git includes these files; when the project gitignores
   `{specs_dir}/{slug}/`, git skips them and the worktree was already clean.
-  The ADR record directories under `[adr]` (`decisions/` / `pitfalls/`) are
-  committed regardless of this choice; each store's generated `INDEX.md` is not.
+  Close-out ADR record files under `[adr]` (`decisions/` / `pitfalls/`) are
+  committed only when they are linked to this spec's slug; each store's
+  generated `INDEX.md` is not.
 - `state/` is gitignored, and the generated board `{index}` (`INDEX.md`) plus
   each ADR store's `INDEX.md` are gitignored and **never staged or committed** by
   any command (the bare `INDEX.md` ignore pattern matches `adr/**/INDEX.md`). The
@@ -187,17 +188,22 @@ remains the single final state commit and `mochiflow pr` pre-flight still sees a
 clean tree. The close-out commit bundles, in a single commit:
 
 - `spec.yaml` `status: accepted` (+ `updated`); never `done`, never `completed`;
-- the AC Matrix rows added at open (build already recorded the rest);
-- the ADR fold (`[adr].decisions` / `[adr].pitfalls`).
+- the human QA Matrix rows added at open and final verification evidence appended
+  by `mochiflow accept` to already-`PASS` automated rows (build already recorded
+  final automated results);
+- the selected ADR fold records (`[adr].decisions` / `[adr].pitfalls`) linked
+  to this spec's slug.
 
 The spec stays flat: there is no `_done/` move and no `INDEX` regeneration in the
 commit.
 
 Use `mochiflow accept {slug}` for the deterministic mechanics: it stages the
-spec and ADR paths with `git add {specs_dir}/{slug} {adr_paths...}`, validates
-the staged name-status output, and creates the close-out commit. It never stages
-`{index}` (`INDEX.md`) and never moves the spec. If manual fallback is required,
-use the same stable pathspecs and validate with
+target spec directory and linked ADR record files with
+`git add {specs_dir}/{slug} {adr_record_paths...}`, validates the staged
+name-status output, and creates the close-out commit. It appends final
+verification evidence to already-`PASS` automated Matrix rows, but it does not
+convert `UNVERIFIED` rows to `PASS`. It never stages `{index}` (`INDEX.md`) and
+never moves the spec. If manual fallback is required, use the same stable pathspecs and validate with
 `git diff --cached --name-status -z`; never stage `INDEX.md`. When specs are
 gitignored there may be nothing to stage under `{specs_dir}`.
 
@@ -278,7 +284,7 @@ reproduce**, as dated historical records — never as a "current state" descript
   ownership, registry rule, or persistence model was chosen, and which
   alternatives were rejected) → add a new per-file record under `[adr].decisions`
   named `{YYYY-MM-DD}-{slug}.md` with front-matter (`id`, `date`, `area`
-  defaulting to the spec's `surfaces`, `spec`, `status: active`). Write it as a
+  defaulting to the spec's `surfaces`, `spec: {slug}`, `status: active`). Write it as a
   fact *as of that date*; never rewrite an existing record. When a decision
   overrides an earlier one, add the new record with `supersedes: <id>` and flip
   the old record to `status: superseded` with the reciprocal `superseded_by:
@@ -290,8 +296,9 @@ reproduce**, as dated historical records — never as a "current state" descript
 
 Each store keeps a generated, gitignored `INDEX.md` content catalog; regenerate
 it after adding a record and **never stage it** (consistent with the board
-`INDEX.md`). The record directories under `[adr]` are staged by `mochiflow
-accept`; the per-store `INDEX.md` files are not.
+`INDEX.md`). `mochiflow accept {slug}` stages only ADR record files linked to
+that slug, plus reciprocal supersession records; the per-store `INDEX.md` files
+are not staged.
 
 Do not fold prose that describes current state ("how the system is put together
 now", "where things live"). The context layer (`[context].product` /

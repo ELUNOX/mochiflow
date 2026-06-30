@@ -42,7 +42,9 @@ As {user}, I want {capability}, so that {reason}.
 - Every AC appears in the AC Verification Matrix with a done-eligible result token (`PASS`, `CONFIRMED`, or `N/A: <reason>`).
 - Verification commands and results are recorded.
 
-<!-- Create the ## AC Verification Matrix during plan (one row per AC) so it is present at approval; record verification results during build. Put it here, or at the end of tasks.md when tasks.md exists.
+<!-- Create the ## Verification Plan / AC Matrix section during plan in this
+spec.md (one row per AC) so it is present at approval; record verification
+results during build.
 
 ## Verification Plan / AC Matrix
 
