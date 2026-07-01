@@ -26,17 +26,17 @@ As {user}, I want {capability}, so that {reason}.
 
 ## QA Scenarios
 
-> Cover the adversarial personas P1-P7 (P1 new user, P2 power user, P3 malicious
-> user, P4 data integrity, P5 migration, P6 regression, P7 spec skeptic). Required
-> coverage and evidence strength per `risk` are owned by
-> `reference/risk.md ## QA attack coverage`; a persona that does not apply is a
-> row with a reasoned `N/A: <reason>`. Reference an attack from the AC Matrix via
-> its `QA-XX` id; do not promote attacks to ACs or mint a separate attack id.
+> Cover the QA attack dimensions from `reference/risk.md ## QA attack coverage`
+> (`QA-FUNC`, `QA-UX`, `QA-ABUSE`, `QA-DATA`, `QA-COMPAT`, `QA-RESIL`,
+> `QA-REG`). Required coverage and evidence strength per `risk` are owned by
+> that mapping; a dimension that does not apply is a row with a reasoned
+> `N/A: <reason>`. Reference an attack from the AC Matrix via its `QA-XX` id; do
+> not promote attacks to ACs or mint a separate attack id.
 
-| QA | Persona | Scope | Type | Steps | Expected result |
+| QA | Dimension | Scope | Type | Steps | Expected result |
 | --- | --- | --- | --- | --- | --- |
-| QA-01 | P1, P7 | ios | Automated / Human-operated / Visual | ... | ... |
-| QA-02 | P4 | ios | Automated | N/A check: no persisted data/state is touched. | N/A: docs-only change, no data integrity surface. |
+| QA-01 | QA-FUNC, QA-REG | ios | Automated / Human-operated / Visual | ... | ... |
+| QA-02 | QA-DATA | ios | Automated | N/A check: no persisted data/state is touched. | N/A: docs-only change, no data integrity surface. |
 
 ## Completion Conditions
 

@@ -14,7 +14,7 @@ Critical Stop Conditions:
 
 ## Tasks
 
-- [ ] T-001 [AC-01, AC-02, AC-03] Replace persona QA guidance with dimensions
+- [x] T-001 [AC-01, AC-02, AC-03] Replace persona QA guidance with dimensions
   - Depends on: none
   - Files:
     - `engine/reference/risk.md`

@@ -67,11 +67,12 @@ they are inter-process handoffs / working sheets, not knowledge, so keeping them
 in the tracked tree pollutes history and the archive.
 
 QA role split: `spec.md` QA Scenarios are the source of truth for *what* to test
-and *how* (steps + expected result). The **AC Verification Matrix** is the results
-ledger (result + evidence pointers). During open, the agent presents QA items
-directly in conversation via the round-trip protocol (`commands/open.md`
-Acceptance step 3); PR reviewers read the `## Testing` section in the PR
-description (derived from QA Scenarios). There is no intermediate QA file.
+and *how* (dimension + steps + expected result). The **AC Verification Matrix**
+is the results ledger (result + evidence pointers). During open, the agent
+presents QA items directly in conversation via the round-trip protocol
+(`commands/open.md` Acceptance step 3); PR reviewers read the `## Testing`
+section in the PR description (derived from QA Scenarios). There is no
+intermediate QA file.
 
 ## pitch.md
 
@@ -101,7 +102,8 @@ Single document carrying the **why** and the acceptance contract:
 - Scope boundary (in / out)
 - Edge cases
 - Acceptance criteria in **EARS** (`THE SYSTEM SHALL` / `WHEN` / `WHILE` / `IF...THEN` / `WHERE`), each third-party Yes/No decidable, IDs `AC-01`...
-- QA scenarios (operation steps, with a `Scope` column: `ios`/`api`/`web`/`cross-surface`/`human`)
+- QA scenarios (operation steps, with `Dimension` and `Scope` columns; `Scope`
+  values include `ios`/`api`/`web`/`cross-surface`/`human`)
 - Open items as `[NEEDS-CLARIFICATION: ...]` (lint warns; resolve before `approved`)
 
 For a micro spec, `spec.md` may be a few lines plus the AC Matrix: problem /
