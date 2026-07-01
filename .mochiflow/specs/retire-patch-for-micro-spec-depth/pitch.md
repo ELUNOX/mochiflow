@@ -1,4 +1,4 @@
-# Retire patch and introduce micro as the fastest spec depth
+# Retire patch and redefine micro as the fastest spec depth
 
 ## Problem
 
@@ -18,9 +18,12 @@ data migration.
 
 ## Solution
 
-Retire `patch` as a non-spec lane and make `micro` the smallest depth inside the
-single spec lane. The depth ladder becomes `micro < standard < design <
-critical`.
+Retire `patch` as a non-spec lane and redefine the existing `micro` depth as the
+smallest depth inside the single spec lane. Today the engine already mentions
+micro in `workflow.md`, `plan.md`, `risk.md`, `git.md`, `build.md`, and the
+`spec.micro.md` template, but that partial definition still assumes
+`pitch.md + spec.md` and coexists with patch/no-PR forks. The depth ladder
+becomes `micro < standard < design < critical`.
 
 - Micro artifact set: `spec.yaml` + `spec.md` only (no `pitch.md`, `tasks.md`,
   or `design.md`). `plan` may create a micro spec directly from a concrete
