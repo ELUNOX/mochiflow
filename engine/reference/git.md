@@ -22,8 +22,10 @@ their whole life — there is no `_done/` move and no committed board.
 - Discuss creates `{branch}` from `origin/{[git].base_branch}` when agreement is
   reached, and warns when the local base branch is behind
   `origin/{[git].base_branch}` (`commands/discuss.md`); never branch from a
-  stale local base. Plan/build/open/update use the existing branch; build must
-  error-stop if it cannot find or switch to `{branch}`.
+  stale local base. Direct micro plan creates or switches `{branch}` from
+  `origin/{[git].base_branch}` after metadata confirmation and before the draft
+  micro commit. Other plan/build/open/update flows use the existing branch;
+  build must error-stop if it cannot find or switch to `{branch}`.
 - Trivial `risk: standard` changes MAY use the current branch with no new branch
   and no PR only when the user explicitly opts in (no-PR fast path). Default is
   a feature branch + PR. no-PR skips PR creation and the approve-PR gate, but it
@@ -135,7 +137,7 @@ follow-up before build completes.
 | phase | branch action | commit content |
 | --- | --- | --- |
 | discuss | create/switch `{prefix}/{slug}` from `origin/{base_branch}` | `spec.yaml (draft)`, `pitch.md`, optional `_backlog/{slug}.md` deletion |
-| plan | use existing `{prefix}/{slug}` | `spec.yaml (approved)`, `spec.md`, optional `design.md` / `tasks.md`, optional corrected `pitch.md` |
+| plan | use existing `{prefix}/{slug}`; direct micro may create/switch `{prefix}/{slug}` from `origin/{base_branch}` before the draft commit | `spec.yaml (approved)`, `spec.md`, optional `design.md` / `tasks.md`, optional corrected `pitch.md`; direct micro first commits `spec.yaml (draft)` + `spec.md` |
 | build | verify/switch existing `{prefix}/{slug}`; never create it | implementation, tests, task checkbox updates, AC Matrix updates |
 | open | use existing `{prefix}/{slug}` | optional `docs(context)` commit (regenerated `[context]` files) when a structural shift was detected, then the close-out commit: `status: accepted`, final AC Matrix, ADR fold (flat spec, no `_done/` move, no `INDEX` write) |
 | update | use existing `{prefix}/{slug}` | PR-feedback fixes as bounded inline code changes; the fold revised when a decision changes |

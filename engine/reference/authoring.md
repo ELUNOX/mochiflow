@@ -58,7 +58,7 @@ post-merge per `reference/git.md ## Post-merge local cleanup`).
 
 | class | artifacts | home | archived |
 | --- | --- | --- | --- |
-| durable | `spec.yaml` · `pitch.md` · `spec.md` (incl. AC Verification Matrix) · `design.md` · `tasks.md` | `{specs_dir}/{slug}/` (flat for life) | no |
+| durable | `spec.yaml` · optional `pitch.md` · `spec.md` (incl. AC Verification Matrix) · conditional `design.md` · conditional `tasks.md` | `{specs_dir}/{slug}/` (flat for life) | no |
 | ephemeral | PR body file (`pr-body.md`) · `pr-request.json` (pr_driver only) | `{install_dir}/state/{slug}/` | no |
 
 Ephemeral artifacts are regenerable from the durable spec; their durable record
@@ -75,8 +75,10 @@ description (derived from QA Scenarios). There is no intermediate QA file.
 
 ## pitch.md
 
-Discuss writes `pitch.md` as the first durable artifact, before plan expands the
-work into `spec.md`. It carries the agreed problem and solution shape:
+Discuss writes `pitch.md` as the first durable artifact for standard-or-larger
+work, before plan expands the work into `spec.md`. Direct micro planning may skip
+`pitch.md` when the user request is already explicit and concrete. Pitch carries
+the agreed problem and solution shape:
 
 - Problem
 - Appetite
@@ -86,8 +88,9 @@ work into `spec.md`. It carries the agreed problem and solution shape:
 - Alternatives Considered
 - Open Questions
 
-No frontmatter; metadata lives in `spec.yaml`. Plan reads `pitch.md` and absorbs
-the relevant rationale into `spec.md ## Background and Design Rationale`.
+No frontmatter; metadata lives in `spec.yaml`. For standard-or-larger specs,
+plan reads `pitch.md` and absorbs the relevant rationale into
+`spec.md ## Background and Design Rationale`.
 
 ## spec.md
 
@@ -101,7 +104,8 @@ Single document carrying the **why** and the acceptance contract:
 - QA scenarios (operation steps, with a `Scope` column: `ios`/`api`/`web`/`cross-surface`/`human`)
 - Open items as `[NEEDS-CLARIFICATION: ...]` (lint warns; resolve before `approved`)
 
-For a trivial change `spec.md` may be a few lines (problem / cause / change / verification).
+For a micro spec, `spec.md` may be a few lines plus the AC Matrix: problem /
+cause / change / verification.
 
 ## design.md
 

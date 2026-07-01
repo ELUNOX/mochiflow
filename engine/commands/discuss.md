@@ -7,6 +7,7 @@ description: |
   command `mochiflow-discuss`, or natural phrasing like "ブレストして" / "壁打ちして"
   / "相談したい". Writes the agreed pitch as the first durable spec artifact,
   creates the spec branch, and commits `spec.yaml (draft)` + `pitch.md`.
+  Discuss is optional for explicit concrete micro requests handled by plan.
 triggers:
   - mochiflow-discuss
   - ブレストして
@@ -35,6 +36,8 @@ references:
 Reach agreement on the why / what / key design decisions through investigation
 and discussion. Create the feature branch and persist the durable discuss output
 as `spec.yaml (draft)` + `pitch.md`. Do not write implementation code.
+For explicit concrete micro work, `plan` may skip discuss and create the
+pitchless draft directly.
 
 ## Procedure
 

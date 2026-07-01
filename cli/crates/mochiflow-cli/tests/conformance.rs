@@ -1066,6 +1066,7 @@ fn build_commit_cadence_is_task_based_not_risk_based() {
 fn spec_templates_require_done_eligible_matrix_results() {
     for path in [
         "engine/templates/spec/spec.md",
+        "engine/templates/spec/spec.micro.md",
         "engine/templates/spec/spec.standard.md",
     ] {
         let template = read_repo_file(path);
@@ -1130,11 +1131,14 @@ fn discuss_persists_pitch_draft_spec() {
         "discuss must persist pitch + draft spec and commit them"
     );
     assert!(
-        plan.contains("{specs_dir}/{slug}/pitch.md exists")
-            && plan.contains("Read `{specs_dir}/{slug}/spec.yaml`")
+        plan.contains("standard-or-larger existing spec path: {specs_dir}/{slug}/pitch.md exists")
+            && plan.contains("Existing draft: read")
+            && plan.contains("`{specs_dir}/{slug}/spec.yaml`")
             && plan.contains("`{specs_dir}/{slug}/pitch.md`")
-            && plan.contains("raw `{specs_dir}/_backlog/{slug}.md`"),
-        "plan must use pitch.md instead of ready-for-plan handoffs"
+            && plan.contains("Direct micro is the only pitchless plan path")
+            && plan.contains("raw")
+            && plan.contains("`{specs_dir}/_backlog/{slug}.md`"),
+        "plan must require pitch.md for standard-or-larger work while allowing only direct micro to be pitchless"
     );
     assert!(
         workflow.contains("Raw seed: `maturity: seed`")
@@ -1154,6 +1158,48 @@ fn discuss_persists_pitch_draft_spec() {
     ] {
         assert!(pitch.contains(heading), "pitch template missing {heading}");
     }
+}
+
+#[test]
+fn direct_micro_plan_is_pitchless_and_branch_durable() {
+    let plan = read_repo_file("engine/commands/plan.md");
+    let workflow = read_repo_file("engine/reference/workflow.md");
+    let git = read_repo_file("engine/reference/git.md");
+    let risk = read_repo_file("engine/reference/risk.md");
+
+    for required in [
+        "direct micro path: explicit concrete request with no existing draft",
+        "Direct micro: use only when",
+        "Derive a proposed `slug`",
+        "present that metadata",
+        "reject duplicate active/_done/backlog slugs",
+        "write `spec.yaml` from `templates/spec/spec.yaml`",
+        "create or switch",
+        "`{prefix}/{slug}` from `origin/{[git].base_branch}`",
+        "commit the draft",
+        "micro artifacts (`spec.yaml` and `spec.md`)",
+    ] {
+        assert!(
+            plan.contains(required),
+            "plan must pin direct micro contract: {required}"
+        );
+    }
+    assert!(
+        workflow.contains("| Micro spec | Concrete small fix | `spec.yaml` + `spec.md` |")
+            && workflow.contains("Micro is inferred from file presence")
+            && workflow.contains("A micro candidate that discovers durable rationale"),
+        "workflow must define micro as the pitchless smallest spec depth"
+    );
+    assert!(
+        git.contains("Direct micro plan creates or switches `{branch}`")
+            && git.contains("direct micro first commits `spec.yaml (draft)` + `spec.md`"),
+        "git reference must assign branch and draft-commit ownership to direct micro plan"
+    );
+    assert!(
+        risk.contains("## Micro escalation")
+            && risk.contains("public contract impact, human QA, or an ADR fold need"),
+        "risk reference must make micro escalation explicit"
+    );
 }
 
 #[test]
@@ -1523,16 +1569,18 @@ fn readme_lists_public_cli_commands() {
 }
 
 #[test]
-fn micro_template_has_no_ac_verification_matrix() {
+fn micro_template_has_ac_verification_matrix() {
     let template = read_repo_file("engine/templates/spec/spec.micro.md");
 
     assert!(
-        !template.contains("AC Verification Matrix"),
-        "micro spec template must not include the build/ship-owned AC Verification Matrix"
+        template.contains("## Verification Plan / AC Matrix")
+            && template.contains("| AC | Scope | Verification method | Planned test/QA | Implementation | Result | Evidence | Notes |")
+            && template.contains("UNVERIFIED"),
+        "micro spec template must include the build/open-owned AC Matrix placeholder"
     );
     assert!(
-        !template.contains("UNVERIFIED"),
-        "UNVERIFIED is not part of the AC result enum and must not appear in the micro template"
+        template.contains("THE SYSTEM SHALL"),
+        "micro spec template must keep EARS AC guidance"
     );
 }
 

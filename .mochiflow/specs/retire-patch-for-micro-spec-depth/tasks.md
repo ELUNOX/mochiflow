@@ -34,7 +34,7 @@ Critical Stop Conditions:
     - `engine/MANIFEST.json`
   - Done: Router no longer presents patch as a non-phase lane, load-on-demand command, or eligibility branch; concrete small-fix/no-spec wording without an active spec proposes `plan` and waits; `mochiflow-patch` is documented only as a deprecated token that emits a one-line notice and routes toward plan. Adapter templates and engine README no longer list `commands/patch.md`; `doctor.rs` no longer treats `patch` as an active workflow command; `adapter.rs` still cleans old generated Kiro `spec-patch.md` residue without generating or documenting active patch behavior. Update `router_preserves_named_routing_branches` by removing/replacing the old `commands/patch.md ## Eligibility` asserted substring, and add the new deprecated-token/plan-route assertions. Shared files remain consistent for later tasks: router wording should not define micro details owned by T-002/T-003, and conformance changes should leave room for T-005's final residual checks.
   - Stop: if preserving `engine/commands/patch.md` is required for routing mechanics, stop and redesign it as a non-active deprecation artifact without patch procedure semantics before continuing.
-- [ ] T-002 [AC-03, AC-04, AC-05, AC-06, AC-08] Redefine existing micro depth in workflow, plan, authoring, risk, git, and templates
+- [x] T-002 [AC-03, AC-04, AC-05, AC-06, AC-08] Redefine existing micro depth in workflow, plan, authoring, risk, git, and templates
   - Depends on: T-001
   - Files:
     - `engine/reference/workflow.md`

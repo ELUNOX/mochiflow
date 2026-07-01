@@ -2,10 +2,11 @@
 name: spec-plan
 phase: plan
 description: |
-  mochiflow's plan phase. Turn an agreed pitch into spec.md, and grow design.md /
-  tasks.md only as the change needs. Drive to a single human implementation
-  approval gate. Activate on the explicit command `mochiflow-plan`, or
-  natural phrasing like "仕様作って" / "プランして" / "計画作って". Does not implement.
+  mochiflow's plan phase. Turn an agreed pitch or explicit concrete micro
+  request into spec.md, and grow design.md / tasks.md only as the change needs.
+  Drive to a single human implementation approval gate. Activate on the explicit
+  command `mochiflow-plan`, or natural phrasing like "仕様作って" / "プランして" /
+  "計画作って". Does not implement.
 triggers:
   - mochiflow-plan
   - 仕様作って
@@ -15,13 +16,14 @@ trigger_patterns:
   - "{slug} plan"
 artifacts:
   - "{specs_dir}/{slug}/spec.yaml"
-  - "{specs_dir}/{slug}/pitch.md"
+  - "{specs_dir}/{slug}/pitch.md (standard-or-larger)"
   - "{specs_dir}/{slug}/spec.md"
   - "{specs_dir}/{slug}/design.md (conditional)"
   - "{specs_dir}/{slug}/tasks.md (conditional)"
 prerequisites:
-  - "{specs_dir}/{slug}/spec.yaml exists with status draft"
-  - "{specs_dir}/{slug}/pitch.md exists"
+  - "existing spec path: {specs_dir}/{slug}/spec.yaml exists with status draft"
+  - "standard-or-larger existing spec path: {specs_dir}/{slug}/pitch.md exists"
+  - "direct micro path: explicit concrete request with no existing draft"
 execution: inline
 references:
   - reference/workflow.md
@@ -42,27 +44,41 @@ references:
 ## Purpose
 
 From the agreement, create `spec.yaml` and the spec documents the change needs,
-and drive to human approval for implementation. Do not start implementation.
+and drive to human approval for implementation. Direct micro can start from an
+explicit concrete request without `pitch.md`. Do not start implementation.
 
 ## Procedure
 
-1. Resolve the pitch. Read `{specs_dir}/{slug}/spec.yaml` and
-   `{specs_dir}/{slug}/pitch.md`; proceed only when metadata status is `draft`.
-   If only a raw `{specs_dir}/_backlog/{slug}.md` item exists, stop and route
-   back to `{slug} discuss` rather than inventing decisions. Re-check any
+1. Resolve the input as either an existing draft spec or direct micro intake.
+   Existing draft: read `{specs_dir}/{slug}/spec.yaml` and, for
+   standard-or-larger work, `{specs_dir}/{slug}/pitch.md`; proceed only when
+   metadata status is `draft`. If only a raw
+   `{specs_dir}/_backlog/{slug}.md` item exists, stop and route back to
+   `{slug} discuss` rather than inventing decisions. Direct micro: use only when
+   the user gave an explicit concrete request and no draft spec already exists.
+   Derive a proposed `slug`, `title`, `type`, `surfaces`, `integration`, and
+   `risk` from the request, config, and code context; present that metadata for
+   user confirmation or correction; reject duplicate active/_done/backlog slugs;
+   write `spec.yaml` from `templates/spec/spec.yaml`; create or switch
+   `{prefix}/{slug}` from `origin/{[git].base_branch}`; then commit the draft
+   micro artifacts (`spec.yaml` and `spec.md`) with `docs(spec): ...` and a
+   `Spec: {slug}` trailer before presenting approve-to-build. Re-check any
    current-state claims against code before using them. When consulting ADR for
    *why*, load each store's generated `INDEX.md` first, then open only the
    records whose `area` intersects the spec's `surfaces` and whose `status` is
    active (`mochiflow adr list` / `search`); open superseded / deprecated
    records only when explicitly tracing supersession lineage. ADR is never the
    source of truth for current state.
-2. Check for slug duplicates under `_done/`, then create `spec.md` per
-   `reference/authoring.md`, absorbing the pitch into
-   `## Background and Design Rationale`. Use `templates/spec/spec.micro.md` for
-   trivial / narrow changes and `templates/spec/spec.standard.md` for changes
-   needing the fuller contract. `templates/spec/spec.md` is the compatibility
-   standard template. Re-judge risk per `reference/risk.md` and update
-   `spec.yaml` when the plan discovers a different risk / surface / integration.
+2. Create or refine `spec.md` per `reference/authoring.md`, absorbing the pitch
+   into `## Background and Design Rationale` when `pitch.md` exists. Use
+   `templates/spec/spec.micro.md` for direct micro or other trivial / narrow
+   changes and `templates/spec/spec.standard.md` for changes needing the fuller
+   contract. `templates/spec/spec.md` is the compatibility standard template.
+   Re-judge risk per `reference/risk.md` and update `spec.yaml` when the plan
+   discovers a different risk / surface / integration. A pitchless micro shape
+   is valid only for standard-risk, single-surface, `integration: none` work with
+   no design-required impact, human QA, or ADR fold need; otherwise escalate in
+   place before approval.
    Populate `spec.md ## QA Scenarios` with risk-appropriate persona attack
    coverage (P1-P7) following the mapping owned by
    `reference/risk.md ## QA attack coverage` — do not restate per-risk thresholds
@@ -111,7 +127,7 @@ and drive to human approval for implementation. Do not start implementation.
    - When `risk = standard`: present **Confirm the plan** as today; review is not
      offered pre-approval and remains available post-approval at step 10.
 8. Re-run `mochiflow lint --spec {slug}` after setting `status: approved`; fix any FAIL before ending plan.
-9. Commit the plan artifacts on the existing `{prefix}/{slug}` branch with a
+9. Commit the plan approval artifacts on the existing `{prefix}/{slug}` branch with a
    `docs(spec): ...` Conventional Commit and `Spec: {slug}` trailer. Stage only
    `spec.yaml`, `pitch.md` if it was corrected, `spec.md`, and conditional
    `design.md` / `tasks.md`. When fixing reviewer findings after a phase commit,
@@ -144,8 +160,12 @@ and drive to human approval for implementation. Do not start implementation.
 
 ## Stop conditions
 
-- Do not proceed to spec authoring without `{specs_dir}/{slug}/pitch.md`. Do not
-  use a raw `maturity: seed` backlog item as agreement.
+- Do not proceed to standard-or-larger spec authoring without
+  `{specs_dir}/{slug}/pitch.md`. Direct micro is the only pitchless plan path and
+  requires explicit concrete input plus confirmed metadata before files are
+  written. Do not use a raw `maturity: seed` backlog item as agreement.
+- Do not create a direct micro draft when metadata cannot be derived safely or a
+  duplicate active/_done/backlog slug exists.
 - Do not ask for implementation approval while Open Questions remain unresolved
   unless they are explicitly carried as `[NEEDS-CLARIFICATION]`; resolve them
   before `approved`.
