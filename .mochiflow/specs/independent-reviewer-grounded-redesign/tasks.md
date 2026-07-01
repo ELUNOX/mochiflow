@@ -44,7 +44,7 @@ Critical Stop Conditions:
     - `cli/crates/mochiflow-cli/tests/conformance.rs`
   - Done: New tests assert the single-line stage headings/labels (S0-S4 + Falsification), both mode labels, S2 target-derivation labels for non-rename specs, ADR index-unavailable behavior, the stage-named completion output including `S3 Code Quality` as `N/A (no implementation yet)`, the `Confidence: confirmed | predicted` field and severity-cap wording, the preserved verdict rule, the preserved QA attack-coverage duty label (a sibling assertion to the existing `session-recoverability` pin), the reviewer doc frontmatter `references` composition (includes `authoring.md` and `git.md`), the cross-doc vocabulary in risk/plan/review, and — by parsing the template JSON — that `tools == ["read"]`, that `resources` contains the six engine entries, and that no ADR path appears; all assertions are single-line `contains` or JSON-array composition (no multi-line substrings); `cargo test` passes and existing reviewer/adapter tests stay green.
   - Stop: If pinning a claim would require a multi-line substring, restructure the target into a single-line heading/label instead.
-- [ ] T-005 [AC-13] Re-freeze and run full verification
+- [x] T-005 [AC-13] Re-freeze and run full verification
   - Depends on: T-001, T-002, T-003, T-004
   - Files:
     - `engine/MANIFEST.json`
