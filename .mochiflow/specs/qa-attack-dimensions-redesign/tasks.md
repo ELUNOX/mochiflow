@@ -44,7 +44,7 @@ Critical Stop Conditions:
     - `docs/configuration.md`
   - Done: `plan-auditor` is the canonical code-less spec/design/task/QA/ADR audit; `change-reviewer` is the canonical post-implementation code review with refactor safety; both contracts use QA dimensions instead of personas, preserve repository grounding and whole-tree impact/regression search, and document claim evidence requirements; `independent-reviewer` is no longer public/canonical and exists only as a documented legacy alias/wrapper when needed; `plan-quality mode` and `post-implementation mode` are retired as public terms or explicitly mapped as legacy aliases; `plan.md` pre-approval review wording uses the new naming; review remains read-only and `Reviewer mode` / `Verdict` remain accepted record fields.
   - Stop: the split changes lifecycle gates, reviewer write permissions, or accept/lint verdict parsing.
-- [ ] T-003 [AC-08] Update Kiro adapter resources and reviewer artifact names
+- [x] T-003 [AC-08] Update Kiro adapter resources and reviewer artifact names
   - Depends on: T-002
   - Files:
     - `engine/adapters/kiro/agents/spec-independent-reviewer.json.tpl`

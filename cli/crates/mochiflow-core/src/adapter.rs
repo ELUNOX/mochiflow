@@ -120,6 +120,7 @@ fn is_kiro_full_file_md(out_rel: &str) -> bool {
 const DEPRECATED_KIRO_PATHS: &[&str] = &[
     ".kiro/agents/spec-builder.json",
     ".kiro/agents/spec-worker.json",
+    ".kiro/agents/spec-independent-reviewer.json",
     ".kiro/steering/spec.md",
     ".kiro/steering/spec-discuss.md",
     ".kiro/steering/spec-plan.md",
