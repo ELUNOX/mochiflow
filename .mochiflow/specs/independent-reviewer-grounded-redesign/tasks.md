@@ -32,7 +32,7 @@ Critical Stop Conditions:
     - `engine/commands/review.md`
   - Done: The `## Review transport` mode description in `risk.md`, the pre-approval review parenthetical in `plan.md`, and the mode description in `review.md` all match the stage model (plan-quality = core with S3 `N/A`; post-implementation = core + S3) and do not contradict the reviewer doc; every by-name `Stage 1` / `Stage 2` reference in `risk.md` is updated to the new stage names — both the `same Stage 1 / Stage 2 / verdict format` phrasing in `## Review transport` and the `(Stage 1)` enforcement reference in `## QA attack coverage`; `plan.md` still contains the conformance-pinned phrase `reviewer's plan-quality mode`.
   - Stop: If aligning the vocabulary would require editing `commands/build.md` (which carries only transport/cadence, not mode labels), stop — that is out of scope.
-- [ ] T-003 [P] [AC-08, AC-09, AC-10] Expand the Kiro reviewer template resources
+- [x] T-003 [P] [AC-08, AC-09, AC-10] Expand the Kiro reviewer template resources
   - Depends on: T-001
   - Files:
     - `engine/adapters/kiro/agents/spec-independent-reviewer.json.tpl`
