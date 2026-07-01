@@ -1377,6 +1377,142 @@ fn session_recoverability_is_authoring_rule_not_lint() {
 }
 
 #[test]
+fn independent_reviewer_grounded_adversary_contract_is_pinned() {
+    let reviewer = read_repo_file("engine/agents/independent-reviewer.md");
+    let risk = read_repo_file("engine/reference/risk.md");
+    let plan = read_repo_file("engine/commands/plan.md");
+    let review = read_repo_file("engine/commands/review.md");
+
+    for label in [
+        "## S0 Grounding",
+        "## S1 Internal Coherence",
+        "## S2 Impact & Regression",
+        "## S3 Code Quality",
+        "## S4 Knowledge Confrontation",
+        "## Falsification",
+    ] {
+        assert!(
+            reviewer.contains(label),
+            "missing reviewer stage label: {label}"
+        );
+    }
+    assert!(
+        reviewer.contains("**Plan-quality mode**")
+            && reviewer.contains("**Post-implementation mode**"),
+        "reviewer must retain both public mode labels"
+    );
+    assert!(
+        reviewer.contains("new or relocated responsibilities")
+            && reviewer.contains("lifecycle vocabulary")
+            && reviewer.contains("distinctive nouns / identifiers"),
+        "reviewer S2 must define non-rename target derivation"
+    );
+    assert!(
+        reviewer.contains("generated `INDEX.md` is absent")
+            && reviewer.contains("unverified knowledge-unavailable note"),
+        "reviewer S4 must define absent-index behavior"
+    );
+    assert!(
+        reviewer.contains("Confidence: confirmed | predicted")
+            && reviewer.contains("A `predicted` finding is capped at Medium"),
+        "reviewer must pin Confidence field and predicted severity cap"
+    );
+    assert!(
+        reviewer.contains("S3 Code Quality") && reviewer.contains("N/A (no implementation yet)"),
+        "plan-quality output must report S3 as N/A"
+    );
+    assert!(
+        reviewer.contains("Verdict is `fail` for any Critical or High confirmed finding")
+            && reviewer.contains("Verdict is `pass-with-comments` for Medium or Low findings only")
+            && reviewer.contains("Verdict is `pass` when clean"),
+        "reviewer verdict rule must be preserved"
+    );
+    assert!(
+        reviewer.contains("QA attack coverage against `reference/risk.md ## QA attack coverage`")
+            && reviewer.contains("session-recoverability"),
+        "S1 must preserve QA attack coverage and session-recoverability duties"
+    );
+
+    let fm = frontmatter(&reviewer).expect("reviewer frontmatter");
+    for reference in [
+        "reference/language.md",
+        "reference/workflow.md",
+        "reference/risk.md",
+        "reference/authoring.md",
+        "reference/git.md",
+    ] {
+        assert!(
+            fm.contains(reference),
+            "reviewer frontmatter must include {reference}"
+        );
+    }
+
+    assert!(
+        risk.contains("S1 Internal Coherence") && risk.contains("S0-S4 / Falsification"),
+        "risk.md must use the redesigned stage vocabulary"
+    );
+    assert!(
+        plan.contains("reviewer's plan-quality mode") && plan.contains("S0 Grounding"),
+        "plan.md must retain the pinned plan-quality phrase and use stage vocabulary"
+    );
+    assert!(
+        review.contains("**plan-quality mode**") && review.contains("S0 Grounding"),
+        "review.md must describe plan-quality mode with stage vocabulary"
+    );
+    for body in [risk.as_str(), plan.as_str(), review.as_str()] {
+        assert!(
+            !body.contains("Stage 1") && !body.contains("Stage 2"),
+            "old Stage 1 / Stage 2 vocabulary must be removed"
+        );
+    }
+}
+
+#[test]
+fn kiro_reviewer_template_resources_are_grounded_and_read_only() {
+    let template = read_repo_file("engine/adapters/kiro/agents/spec-independent-reviewer.json.tpl");
+    let parsed: serde_json::Value =
+        serde_json::from_str(&template).expect("Kiro reviewer template must be JSON");
+
+    let tools = parsed["tools"].as_array().expect("tools array");
+    assert_eq!(tools.len(), 1, "reviewer must expose one read-only tool");
+    assert_eq!(
+        tools[0].as_str(),
+        Some("read"),
+        "reviewer tool must be read"
+    );
+
+    let resources = parsed["resources"].as_array().expect("resources array");
+    let resource_strings: Vec<&str> = resources
+        .iter()
+        .map(|resource| resource.as_str().expect("resource string"))
+        .collect();
+    for resource in [
+        "file://{{engine}}/agents/independent-reviewer.md",
+        "file://{{engine}}/reference/workflow.md",
+        "file://{{engine}}/reference/language.md",
+        "file://{{engine}}/reference/risk.md",
+        "file://{{engine}}/reference/authoring.md",
+        "file://{{engine}}/reference/git.md",
+    ] {
+        assert!(
+            resource_strings.contains(&resource),
+            "reviewer template must include {resource}"
+        );
+    }
+    assert_eq!(
+        resource_strings.len(),
+        6,
+        "reviewer template must list exactly the six engine resources"
+    );
+    assert!(
+        resource_strings
+            .iter()
+            .all(|resource| !resource.contains("/adr/") && !resource.ends_with("/INDEX.md")),
+        "reviewer template must not statically resource ADR indexes"
+    );
+}
+
+#[test]
 fn build_is_inline_and_review_transport_is_reviewer_only() {
     let build = read_repo_file("engine/commands/build.md");
     let router = read_repo_file("engine/router.md");

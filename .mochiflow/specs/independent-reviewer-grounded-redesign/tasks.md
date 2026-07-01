@@ -38,7 +38,7 @@ Critical Stop Conditions:
     - `engine/adapters/kiro/agents/spec-independent-reviewer.json.tpl`
   - Done: `tools` stays exactly `["read"]` (AC-08); `resources` includes `reference/risk.md`, `reference/authoring.md`, and `reference/git.md` alongside the existing `agents/independent-reviewer.md`, `reference/workflow.md`, `reference/language.md` (AC-09); no ADR `INDEX.md` path appears in `resources` (AC-10); the `description` is refreshed to the grounded-adversary framing; the JSON stays valid and renders through `adapter.rs` without new placeholders.
   - Stop: If a resource must point at a derived/gitignored or project-specific path (e.g. ADR `INDEX.md`), stop — ADR is loaded via the `read` capability, not a static resource.
-- [ ] T-004 [AC-11] Pin the redesign with self-conformance tests
+- [x] T-004 [AC-11] Pin the redesign with self-conformance tests
   - Depends on: T-001, T-002, T-003
   - Files:
     - `cli/crates/mochiflow-cli/tests/conformance.rs`
