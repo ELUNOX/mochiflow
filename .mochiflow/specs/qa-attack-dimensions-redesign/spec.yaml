@@ -1,0 +1,11 @@
+version: 1
+slug: "qa-attack-dimensions-redesign"
+title: "Redesign QA attack coverage and independent review contracts"
+type: "feature"
+surfaces:
+  - "cli"
+integration: "none"
+risk: "elevated"
+status: "draft"
+created: "2026-07-01"
+updated: "2026-07-01"
