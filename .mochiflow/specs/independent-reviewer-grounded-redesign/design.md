@@ -192,6 +192,10 @@ shared-file consistency handoff is required.
 
 ## Review Results
 
-Pending. Build runs the mandatory elevated-risk independent-reviewer once after
-all tasks (per `reference/risk.md ## Consequences`) and records the reviewer mode
-and verdict here before acceptance.
+- Reviewer mode: inline
+- Verdict: pass
+- Reviewed: full `origin/main...HEAD` diff after T-001..T-005 and follow-up
+  reviewer-finding fixes.
+- Note: delegated dispatch was attempted first, but the runtime failed with
+  workspace credit exhaustion; inline fallback was used per
+  `reference/risk.md ## Review transport`.
