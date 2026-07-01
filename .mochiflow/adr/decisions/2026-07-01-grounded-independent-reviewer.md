@@ -3,7 +3,8 @@ id: 2026-07-01-grounded-independent-reviewer
 date: 2026-07-01
 area: [cli]
 spec: independent-reviewer-grounded-redesign
-status: active
+status: superseded
+superseded_by: 2026-07-01-reviewer-profile-split
 ---
 ## 2026-07-01 - Independent review is grounded against repository reality
 
