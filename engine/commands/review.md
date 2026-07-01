@@ -42,7 +42,8 @@ single source of truth for this behavior):
    permission. Target the active spec's latest artifacts (`spec.md`, plus
    `design.md` / `tasks.md` when present). When no implementation exists yet
    (a code-less spec, e.g. ad-hoc review during plan), run the reviewer's
-   **plan-quality mode** (Stage 1 conformance + spec-artifact quality, no
+   **plan-quality mode** (S0 Grounding, S1 Internal Coherence, S2 Impact &
+   Regression, S4 Knowledge Confrontation, and Falsification with S3 `N/A`, no
    diff/changed-files input) per `reference/risk.md ## Review transport`; when
    code exists, run the post-implementation mode. Pass only the slug, the command
    path, a summary of the latest artifact, and a pointer to the spec — never the

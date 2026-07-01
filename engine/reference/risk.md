@@ -64,8 +64,8 @@ gates live in `workflow.md`.
 
 This section is the single owner of how much adversarial QA a spec must carry and
 how strong the evidence must be. `plan.md` (authoring) and
-`agents/independent-reviewer.md` (Stage 1) reference this mapping instead of
-restating thresholds, per `reference/authoring.md` SSOT discipline.
+`agents/independent-reviewer.md` (S1 Internal Coherence) reference this mapping
+instead of restating thresholds, per `reference/authoring.md` SSOT discipline.
 
 Seven adversarial personas frame the "do not trust that it works" pass:
 
@@ -127,16 +127,17 @@ Select the first available mode:
    reviewer role and executes the same procedure inline.
 
 For review, run `agents/independent-reviewer.md` read-only. Inline review must
-read `agents/independent-reviewer.md`, use the same Stage 1 / Stage 2 / verdict
-format, and record `Reviewer mode: inline`. While in reviewer role, the agent is
+read `agents/independent-reviewer.md`, use the same S0-S4 / Falsification /
+verdict format, and record `Reviewer mode: inline`. While in reviewer role, the agent is
 read-only: do not edit files, update status, stage, commit, or create PR
 metadata. Review inputs are spec artifacts, full diff / changed files,
 integration log, and verification results — **never conversation history**. A
 **code-less spec** (no implementation yet — `plan.md`'s pre-approval review for
 `risk >= elevated`, or ad-hoc review on a spec with no code) uses the reviewer's
-**plan-quality mode**: Stage 1 conformance + spec-artifact quality only, with
-**no diff / changed-files / integration-log input** required (Stage 2 is `N/A`
-until code exists). The mandatory risk-cadence review reconstructs the full diff
+**plan-quality mode**: S0 Grounding, S1 Internal Coherence, S2 Impact &
+Regression, S4 Knowledge Confrontation, and Falsification with
+`S3 Code Quality` reported `N/A (no implementation yet)`; **no diff /
+changed-files / integration-log input** is required. The mandatory risk-cadence review reconstructs the full diff
 from git (`git diff origin/{base}...HEAD` for the completion-gate review, or a
 task's own commit for a per-task `critical` review) and reads the changed code
 from scratch.
@@ -165,7 +166,7 @@ risk level. Ad-hoc review is report-only and read-only.
 
 - Target: the active spec's latest artifacts (spec.md, design.md, tasks.md as applicable).
 - A code-less spec (no implementation yet) uses the reviewer's plan-quality mode
-  (Stage 1 conformance + spec-artifact quality, no diff/changed-files input) per
+  (S0/S1/S2/S4 + Falsification, with S3 `N/A`, no diff/changed-files input) per
   `## Review transport`; once code exists, ad-hoc review uses the
   post-implementation mode.
 - On High or Critical findings: report findings only, then ask whether to enter
