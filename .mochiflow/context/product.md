@@ -19,8 +19,10 @@ who want a disciplined, auditable spec-to-PR flow.
 - **verb**: a lifecycle phase (`discuss`, `plan`, `build`, `open`, `update`,
   `close`).
 - **non-phase command**: workflow utilities outside the lifecycle, including
-  `patch`, `review`, and `refresh-context`.
-- **patch**: a no-spec lane for concrete, local, reversible fixes.
+  `review`, `refresh-context`, and `onboard`.
+- **micro**: the smallest spec depth (`spec.yaml` + `spec.md` only) for concrete
+  small work, inferred from file presence and kept inside the normal
+  spec-to-PR lifecycle.
 - **surface**: a build target with its own verify command (`[surfaces.*]`).
 - **risk**: ordered enum `standard < elevated < critical` deciding reviewer
   cadence / integration log / commit granularity.
