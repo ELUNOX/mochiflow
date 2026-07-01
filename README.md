@@ -3,13 +3,13 @@
 </p>
 
 <p align="center">
-  A spec-driven workflow for AI coding agents: discuss the idea, plan the design,
-  build the change, and open the PR without losing context.
+  A development workflow tool that helps AI coding agents move from discussion
+  and design to implementation, review, and PR.
 </p>
 
 <p align="center">
   <a href="#license"><img src="https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg" alt="License: MIT OR Apache-2.0"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-1.2.0-informational.svg" alt="Version 1.2.0"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-1.2.2-informational.svg" alt="Version 1.2.2"></a>
   <a href="cli/Cargo.toml"><img src="https://img.shields.io/badge/rust-2024%20edition-orange.svg" alt="Rust 2024 edition"></a>
 </p>
 
@@ -19,26 +19,44 @@
 
 ---
 
-MochiFlow helps AI coding agents work like a disciplined teammate instead of
-jumping straight into code.
+# MochiFlow
 
-- **Shape ideas before coding** — turn rough feature requests into scoped specs.
-- **Keep the agent on the rails** — design approval before implementation, PR approval before opening.
-- **Carry knowledge forward** — decisions and pitfalls are recorded for the next change.
+MochiFlow is a development workflow tool for working with AI coding agents.
 
-No external runtime. MochiFlow ships as a single Rust binary.
+It helps you take a change from discussion to PR without relying only on chat
+history. Your agent can clarify the scope, plan the design, implement the
+change, review it, and keep useful project knowledge in the repository.
 
-## Quick start
+MochiFlow is not an AI model or AI runtime. It is a single Rust CLI that adds a
+`.mochiflow/` workspace and AI-tool entry files to your project.
+
+## What MochiFlow Helps With
+
+- **Plan before coding**
+  Turn rough requests into scoped work before implementation starts.
+
+- **Keep project memory**
+  Save important decisions and pitfalls in the repository, so future work does
+  not repeat the same reasoning or mistakes.
+
+- **Review with context**
+  Ask your AI agent to check specs, design, implementation, tests, and PR
+  readiness against the MochiFlow workflow.
+
+- **Deliver through PRs**
+  Keep implementation, verification, review feedback, and PR handoff connected.
+
+## Quick Start
 
 Install MochiFlow:
 
 ```bash
-# Homebrew, recommended on macOS / Linux
+# Homebrew, recommended on macOS and Linux
 brew install ELUNOX/tap/mochiflow
 
 # Shell installer
 curl --proto '=https' --tlsv1.2 -LsSf \
-  https://github.com/ELUNOX/mochiflow/releases/download/v1.2.0/mochiflow-cli-installer.sh | sh
+  https://github.com/ELUNOX/mochiflow/releases/download/v1.2.2/mochiflow-cli-installer.sh | sh
 
 # From source
 git clone https://github.com/ELUNOX/mochiflow.git
@@ -46,227 +64,167 @@ cd mochiflow
 cargo install --path cli/crates/mochiflow-cli
 ```
 
-Set it up in a project:
+Set it up in a new project:
 
 ```bash
 cd /path/to/project
 mochiflow init
-```
-
-If setup needs project-specific judgment, `init` prints a prompt for your AI
-agent. Paste it into the agent to finish onboarding, then run:
-
-```bash
 mochiflow doctor
 ```
 
-When `doctor` passes, your AI tool has the project context and workflow
-instructions it needs.
-
-Useful terminal commands:
+Join a repository where MochiFlow is already set up:
 
 ```bash
-mochiflow guide                         # print the AI-tool usage card
-mochiflow config show                   # inspect resolved paths, language, surfaces, and git
-mochiflow lint [--spec SLUG]            # check spec consistency
-mochiflow doctor [config|specs|adapter|engine]
-mochiflow adapter generate [--check]
-mochiflow pr --spec SLUG --title "..." --body-file PATH
-```
-
-## Artifact model
-
-MochiFlow keeps state in files, not in chat history. A spec lives under
-`.mochiflow/specs/{slug}/` and grows only as much structure as the change needs:
-
-| Artifact | Role |
-| --- | --- |
-| `spec.md` | Product contract: problem, goal, scope, acceptance criteria, QA scenarios, non-functional requirements, and verification plan. |
-| `design.md` | Technical contract: decisions, alternatives, interface contracts, failure modes, rollout / rollback, observability, and test strategy. |
-| `tasks.md` | Executable checklist: dependency-ordered tasks an AI agent can run and verify. |
-| AC Matrix | Traceability ledger inside `spec.md`: AC → implementation → verification → evidence → result. |
-
-Small concrete fixes use micro specs, the lightest tracked shape. Work uses
-`discuss → plan → build → open`, then `update` (PR feedback) and `close` (after
-merge); only two delivery approvals exist: approval to build, and approval of the
-PR content before the PR is opened.
-
-Read-only review is split by job: `plan-auditor` checks spec/design/task quality
-before implementation, and `change-reviewer` reviews implemented code, tests,
-and refactor safety before delivery.
-
-For a repository where MochiFlow is already tracked by the team, do not run a
-fresh setup. Cloning or pulling brings down the vendored engine and AI-tool
-entrypoints. If local runtime state, adapters, or `INDEX.md` need repair, run:
-
-```bash
+git clone <repository-url>
+cd <repository>
 mochiflow join
+mochiflow doctor
 ```
 
-`join` repairs local generated state such as `.mochiflow/state/`, can restore a
-missing `.mochiflow/engine/` for older or broken worktrees, and refreshes the
-AI-tool entrypoints and `INDEX.md` when needed.
+## Terminal Commands
 
-## CLI commands
+These are the main commands you run in your terminal:
 
-MochiFlow's public CLI commands are:
+```bash
+mochiflow init      # Set up MochiFlow in a new project
+mochiflow join      # Repair local state for an existing MochiFlow project
+mochiflow doctor    # Check project health
+mochiflow status    # Show the current delivery board
+```
 
-| Command | Purpose |
+Most day-to-day development happens in your AI coding tool, not in the terminal.
+
+## Working With Your AI Agent
+
+You can start naturally:
+
+```text
+I want to add saved filters to the search page.
+Before coding, help me clarify the scope, edge cases, and design.
+```
+
+Then continue in plain language:
+
+```text
+Turn this into a plan.
+```
+
+```text
+Build this plan.
+```
+
+```text
+Open a PR.
+```
+
+When you want to be explicit, send one of these messages to your AI tool:
+
+| Message | Meaning |
 | --- | --- |
-| `mochiflow init` | Bootstrap MochiFlow into a project. |
-| `mochiflow join` | Restore local generated state for an existing MochiFlow project. |
-| `mochiflow detach` | Remove generated integration while preserving project knowledge by default. |
-| `mochiflow guide` | Print the usage-vocabulary card for the AI workflow. |
-| `mochiflow config` | Inspect or validate project configuration. |
-| `mochiflow lint` | Check specs for consistency. |
-| `mochiflow doctor` | Run quality gates for config, specs, adapters, and engine integrity. |
-| `mochiflow adapter` | Generate AI-tool adapter entrypoints. |
-| `mochiflow index` | Regenerate or check `INDEX.md` and state index output. |
-| `mochiflow status` | Render the live delivery board (Backlog / Active / Ready / In Review / Done); read-only. |
-| `mochiflow ready` | Check whether a spec can enter implementation. |
-| `mochiflow accept` | Settle the mechanical close-out: verify a done-eligible Matrix, set `accepted`, stage the spec and linked ADR fold records, and commit. |
-| `mochiflow backlog` | List, show, or validate backlog seeds. |
-| `mochiflow upgrade` | Replace the installed engine while preserving project data. |
-| `mochiflow freeze` | Regenerate derived version/integrity files from the workspace version. |
-| `mochiflow pr` | Run PR pre-flight, push, and provider/manual PR handoff. |
-| `mochiflow completions` | Generate shell completion scripts. |
+| `mochiflow-discuss` | Clarify the idea, scope, and acceptance criteria |
+| `mochiflow-plan` | Write the spec, design, and task plan |
+| `mochiflow-build` | Implement, test, and verify the change |
+| `mochiflow-review` | Review the spec, design, implementation, or PR readiness |
+| `mochiflow-open` | Prepare and open the PR |
+| `mochiflow-update` | Apply PR feedback and re-verify |
+| `mochiflow-close` | Clean up locally after the PR is merged |
 
-For initialized projects, `mochiflow doctor` is the project health check. In the
-MochiFlow source repo, run `mochiflow freeze --check` as the separate
-derived-file coherence check; scripts can use
-`mochiflow freeze --root <source-repo> --check` when they cannot rely on the
-current working directory.
+These are not terminal commands. They are messages for your AI coding tool.
 
-## What `init` creates
+## Decisions, Pitfalls, And Review
 
-`mochiflow init` adds a `.mochiflow/` workspace and generates the entrypoint
-files your AI tool reads.
+MochiFlow keeps useful project knowledge in files, not only in chat.
+
+| Knowledge | What it means |
+| --- | --- |
+| Decisions / ADRs | Why a design or implementation choice was made |
+| Pitfalls | Gotchas, failure patterns, or things future agents should avoid |
+
+An ADR is a decision note. A pitfall is a note about something easy to get
+wrong.
+
+This is one of MochiFlow's core values: each change can leave behind context
+that helps the next change go better.
+
+You can also ask for a MochiFlow review:
+
+```text
+mochiflow-review
+```
+
+The review checks whether the spec is clear, the design and implementation
+match, the acceptance criteria are verified, and the PR is ready to hand off.
+
+## What MochiFlow Adds
+
+`mochiflow init` adds a `.mochiflow/` workspace and generates entry files for
+your AI coding tools.
 
 ```text
 .mochiflow/
-  config.toml        # project settings, adapters, verification commands
-  engine/            # vendored workflow engine tracked with the project
-  constitution.md    # always-loaded project rules written by you
-  context/           # current project map, filled from code during onboarding
-  specs/             # feature specs created by the workflow
-  adr/               # decisions and pitfalls carried into future work
+  config.toml        # Project settings
+  engine/            # Vendored workflow engine
+  constitution.md    # Always-loaded project rules
+  context/           # Current project map
+  specs/             # Specs created during the workflow
+  adr/               # Decisions and pitfalls
 
 AGENTS.md / CLAUDE.md / .kiro/ / .github/
-  # generated entrypoints for your AI coding tool
+  # Entry files for AI coding tools
 ```
 
-During onboarding, your AI agent resolves TODOs, fills project context from the
-codebase, regenerates adapters, and finishes by checking `mochiflow doctor`.
+## What A Spec Contains
 
-To temporarily remove the project integration, run `mochiflow detach`. It
-removes generated adapter content plus `.mochiflow/state/`, while preserving the
-tracked engine, config, specs, ADR, context, and constitution files so
-`mochiflow join` can repair the integration later. Use
-`mochiflow detach --purge --confirm "delete mochiflow data"` only when you want
-to delete all MochiFlow project data.
+A spec is the project file that records what the change is, what is out of
+scope, and how the result will be checked.
 
-## What working with MochiFlow feels like
-
-Imagine you want to add saved filters to a search page.
-
-You can start naturally in your AI tool:
-
-```text
-I want to add saved filters to the search page. Before coding, help me think
-through the scope, edge cases, and design options.
-```
-
-Or you can use an explicit MochiFlow trigger when you want a precise handoff:
-
-```text
-mochiflow-discuss
-
-I want users to save search filters and reuse them later.
-```
-
-Both styles enter the same flow:
-
-```mermaid
-flowchart LR
-    A["Brainstorm the feature"] --> B["Discuss scope"]
-    B --> C["Plan the design"]
-    C -->|"you approve"| D["Build + verify"]
-    D -->|"you approve"| E["Open the PR"]
-    E --> G["Update on PR feedback"]
-    G --> H["Close after merge"]
-    H -.-> F["Carry lessons into the next change"]
-```
-
-Next, ask the agent to turn the discussion into a design:
-
-```text
-mochiflow-plan
-```
-
-The agent writes a design document under `.mochiflow/specs/...` and waits for
-your approval. Depending on depth, this includes `spec.md`, `tasks.md`, and
-`design.md`; nothing is implemented yet.
-
-When the plan looks right:
-
-```text
-mochiflow-build
-```
-
-The agent implements the plan, updates tests, runs the configured verification
-command, updates the AC Matrix, and reports what changed.
-
-When you are ready to open the PR:
-
-```text
-mochiflow-open
-```
-
-MochiFlow runs acceptance, records the important decisions and pitfalls, settles
-the mechanical `accept` close-out, and — after you approve the PR content —
-opens the PR through the project's PR path.
-
-When PR review asks for changes:
-
-```text
-mochiflow-update
-```
-
-The agent applies the feedback through the build loop, re-verifies, pushes, and
-refreshes the PR. The spec stays in place; nothing is reverted or archived.
-
-After the PR merges:
-
-```text
-mochiflow-close
-```
-
-MochiFlow does local cleanup only — switch back to the base branch, fast-forward,
-delete the local branch, and refresh the board. It writes nothing to the base
-branch.
-
-`mochiflow-discuss`, `mochiflow-plan`, `mochiflow-build`, `mochiflow-open`,
-`mochiflow-update`, and `mochiflow-close` are messages for your AI tool, not
-terminal commands.
-
-## Supported tools
-
-| Tool | How it integrates |
+| File | Role |
 | --- | --- |
-| Kiro | Always-on steering (`.kiro/steering/mochiflow.md`) + read-only reviewer |
-| Claude Code | Generates `CLAUDE.md` |
-| GitHub Copilot | Generates `.github/` integration |
-| Generic agents | Generates `AGENTS.md` |
+| `spec.md` | What to build, what not to build, and how to verify it |
+| `design.md` | Technical approach, alternatives, interfaces, and failure handling |
+| `tasks.md` | Ordered implementation checklist for the AI agent |
+| AC Matrix | Traceability from acceptance criteria to implementation, verification, evidence, and result |
 
-Pick tools with `--adapter` during init. Regenerate anytime with
-`mochiflow adapter generate`; existing Markdown instruction files keep their
-custom content and receive a MochiFlow-managed block.
+Small fixes can use a lightweight spec. Larger changes can add more design and
+task detail as needed.
 
-Remove generated adapter content and runtime state with `mochiflow detach`.
-This preserves the tracked engine and project knowledge by default; `--purge`
-requires the exact confirmation phrase `delete mochiflow data`.
+## More Terminal Commands
 
-## Learn more
+These are useful once you are familiar with the basic flow:
+
+```bash
+mochiflow guide                        # Print the AI-tool usage card
+mochiflow lint [--spec SLUG]           # Check spec consistency
+mochiflow config show                  # Inspect resolved project settings
+mochiflow adapter generate [--check]   # Generate or check AI-tool entry files
+mochiflow index                        # Refresh generated indexes
+```
+
+## Temporarily Remove The Integration
+
+To remove generated adapter content and local state while keeping project
+knowledge:
+
+```bash
+mochiflow detach
+```
+
+To delete all MochiFlow project data, use the explicit purge command:
+
+```bash
+mochiflow detach --purge --confirm "delete mochiflow data"
+```
+
+## Supported AI Tools
+
+| Tool | Integration |
+| --- | --- |
+| Kiro | Steering files and reviewer agents |
+| Claude Code | `CLAUDE.md` |
+| GitHub Copilot | `.github/` instructions |
+| Generic agents | `AGENTS.md` |
+
+## Learn More
 
 - [Getting started](docs/getting-started.md)
 - [Concepts](docs/concepts.md)
@@ -277,15 +235,15 @@ requires the exact confirmation phrase `delete mochiflow data`.
 
 ## Contributing
 
-Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the dev
-setup, tests, and PR conventions, and the
-[Code of Conduct](CODE_OF_CONDUCT.md) for community standards.
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for local
+development, tests, and PR expectations, and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+for the community code of conduct.
 
 ## Security
 
-Report vulnerabilities using the process in [SECURITY.md](SECURITY.md).
+See [SECURITY.md](SECURITY.md) for vulnerability reporting instructions.
 
 ## License
 
-Licensed under either [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at
-your option.
+Dual-licensed under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE). You may
+choose either license.
