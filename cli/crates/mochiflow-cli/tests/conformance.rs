@@ -1382,6 +1382,7 @@ fn independent_reviewer_grounded_adversary_contract_is_pinned() {
     let risk = read_repo_file("engine/reference/risk.md");
     let plan = read_repo_file("engine/commands/plan.md");
     let review = read_repo_file("engine/commands/review.md");
+    let authoring = read_repo_file("engine/reference/authoring.md");
 
     for label in [
         "## S0 Grounding",
@@ -1422,6 +1423,11 @@ fn independent_reviewer_grounded_adversary_contract_is_pinned() {
         "plan-quality output must report S3 as N/A"
     );
     assert!(
+        reviewer.contains("In plan-quality mode, report only:")
+            && reviewer.contains("## S4 Knowledge Confrontation"),
+        "S3 completion output must keep a normal finding slot before the plan-only N/A note"
+    );
+    assert!(
         reviewer.contains("Verdict is `fail` for any Critical or High confirmed finding")
             && reviewer.contains("Verdict is `pass-with-comments` for Medium or Low findings only")
             && reviewer.contains("Verdict is `pass` when clean"),
@@ -1459,7 +1465,16 @@ fn independent_reviewer_grounded_adversary_contract_is_pinned() {
         review.contains("**plan-quality mode**") && review.contains("S0 Grounding"),
         "review.md must describe plan-quality mode with stage vocabulary"
     );
-    for body in [risk.as_str(), plan.as_str(), review.as_str()] {
+    assert!(
+        authoring.contains("reviewer S1 Internal Coherence"),
+        "authoring.md must use the redesigned reviewer stage vocabulary"
+    );
+    for body in [
+        risk.as_str(),
+        plan.as_str(),
+        review.as_str(),
+        authoring.as_str(),
+    ] {
         assert!(
             !body.contains("Stage 1") && !body.contains("Stage 2"),
             "old Stage 1 / Stage 2 vocabulary must be removed"
