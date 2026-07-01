@@ -4,13 +4,30 @@ All notable changes to MochiFlow are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.2.2] - 2026-07-01
+
+### Added
+
+- Micro spec depth for concrete small changes. Backlog-free small fixes can now
+  enter the normal spec lifecycle as direct micro drafts (`spec.yaml` +
+  `spec.md`) after lint passes, using the new micro spec template.
+- Separate reviewer contracts for plan auditing and post-implementation change
+  review, with generated Kiro reviewer agents for both roles.
 
 ### Changed
 
 - Retired the active patch lane and PR-bypass fast path. Small concrete fixes
   now use micro specs inside the normal spec-to-PR lifecycle, with PR approval
   still required before delivery.
+- Independent review is now grounded in explicit artifacts, diffs, and
+  verification evidence, and reviewers must provide actionable remediation
+  guidance for failing findings.
+- QA attack coverage moved from persona-based prompts to structured dimensions,
+  making reviewer checks more deterministic and easier to scale by risk.
+
+### Removed
+
+- Removed the retired `patch` command contract from the vendored engine surface.
 
 ## [1.2.1] - 2026-06-30
 
