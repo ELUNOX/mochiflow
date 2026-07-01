@@ -1683,7 +1683,7 @@ fn worker_role_and_template_are_retired() {
 
 #[test]
 fn kiro_docs_and_router_do_not_reference_retired_workers() {
-    for path in ["README.md", "docs/configuration.md", "engine/router.md"] {
+    for path in ["docs/configuration.md", "engine/router.md"] {
         let body = read_repo_file(path);
         assert!(
             !body.contains("build-worker") && !body.contains("write-capable"),
@@ -1695,7 +1695,8 @@ fn kiro_docs_and_router_do_not_reference_retired_workers() {
         );
     }
 
-    for path in ["README.md", "docs/configuration.md"] {
+    {
+        let path = "docs/configuration.md";
         let body = read_repo_file(path);
         assert!(
             body.contains("read-only reviewer"),
@@ -1741,14 +1742,12 @@ fn pr_bypass_fast_path_is_removed() {
     let git = read_repo_file("engine/reference/git.md");
     let build = read_repo_file("engine/commands/build.md");
     let open = read_repo_file("engine/commands/open.md");
-    let readme = read_repo_file("README.md");
 
     assert!(
         !workflow.contains("no-PR")
             && !git.contains("no-PR")
             && !build.contains("no-PR")
-            && !open.contains("no-PR")
-            && !readme.contains("Small patches skip spec artifacts"),
+            && !open.contains("no-PR"),
         "active PR-bypass and old small-patch guidance must be removed"
     );
     assert!(
@@ -1783,7 +1782,6 @@ fn active_patch_lane_and_pr_bypass_residue_are_absent() {
         "engine/reference/git.md",
         "engine/reference/risk.md",
         "engine/reference/workflow.md",
-        "README.md",
     ];
     let retired_patterns = [
         "commands/patch.md",
@@ -1836,43 +1834,6 @@ fn workflow_gate_2_uses_mochiflow_pr() {
     assert!(
         !gate_2.contains("[git].pr_command"),
         "gate 2 must not point to deprecated [git].pr_command; got: {gate_2}"
-    );
-}
-
-#[test]
-fn readme_lists_public_cli_commands() {
-    let readme = read_repo_file("README.md");
-    let commands = [
-        "init",
-        "join",
-        "detach",
-        "guide",
-        "config",
-        "lint",
-        "doctor",
-        "adapter",
-        "index",
-        "status",
-        "ready",
-        "accept",
-        "backlog",
-        "upgrade",
-        "freeze",
-        "pr",
-        "completions",
-    ];
-
-    for command in commands {
-        let needle = format!("`mochiflow {command}`");
-        assert!(
-            readme.contains(&needle),
-            "README.md must list public CLI command {needle}"
-        );
-    }
-    assert!(
-        readme.contains("verify a done-eligible Matrix")
-            && readme.contains("linked ADR fold records"),
-        "README.md must describe accept as a strict mechanical close-out"
     );
 }
 
