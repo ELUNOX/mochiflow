@@ -84,7 +84,7 @@ explicit concrete request without `pitch.md`. Do not start implementation.
    with a reasoned `N/A: <reason>`), and reference an attack that backs an AC from
    the AC Matrix `Planned test/QA` / `Evidence` column by its `QA-XX` id. Do not
    promote attacks to ACs or mint a separate attack-id scheme.
-3. Create `design.md` only when `reference/risk.md ## design.md required condition` applies. When creating it, delete optional sections at creation time unless their condition applies (`## Workstreams` only for multiple workstreams / cross-surface, `## Integration Contract` only for `integration ≠ none`, `## Review Results` only for `risk ≥ elevated`, `## Integration Log` only when the risk table calls for it during build). Create `tasks.md` when multi-step. Let depth follow `reference/workflow.md ## Depth scaling` (a trivial change is spec.md only). Author tasks to be **session-recoverable** per `reference/authoring.md ## Session-recoverability`: because build may resume in a new session that has only the durable artifacts, committed code, and git trailers, write cross-task reasoning into `design.md` at plan time, and make each task shared by a file document that file's shared-state handling in its `Done`. This is plan authoring discipline enforced by reviewer Stage 1 judgment, not a new lint.
+3. Create `design.md` only when `reference/risk.md ## design.md required condition` applies. When creating it, delete optional sections at creation time unless their condition applies (`## Workstreams` only for multiple workstreams / cross-surface, `## Integration Contract` only for `integration ≠ none`, `## Review Results` only for `risk ≥ elevated`, `## Integration Log` only when the risk table calls for it during build). Create `tasks.md` when multi-step. Let depth follow `reference/workflow.md ## Depth scaling` (a trivial change is spec.md only). Author tasks to be **session-recoverable** per `reference/authoring.md ## Session-recoverability`: because build may resume in a new session that has only the durable artifacts, committed code, and git trailers, write cross-task reasoning into `design.md` at plan time, and make each task shared by a file document that file's shared-state handling in its `Done`. This is plan authoring discipline enforced by reviewer S1 Internal Coherence judgment, not a new lint.
 4. Run `reference/authoring.md ## Consistency check` **exactly once**.
 5. Remove all template residue before asking for approval. `lint` enforces these
    checks for expanded spec documents; placeholder-like text inside fenced code
@@ -117,9 +117,10 @@ explicit concrete request without `pitch.md`. Do not start implementation.
      quality check can inform the approve-to-build decision instead of running
      only after the spec has locked to `approved`. **Review** runs
      `mochiflow-review` on the draft spec in the reviewer's plan-quality mode
-     (`agents/independent-reviewer.md`; Stage 1 spec/design/tasks conformance +
-     spec-artifact quality, no diff/changed-files input, per
-     `reference/risk.md ## Review transport`). On `pass` /
+     (`agents/independent-reviewer.md`; S0 Grounding, S1 Internal Coherence, S2
+     Impact & Regression, S4 Knowledge Confrontation, and Falsification with S3
+     `N/A`, no diff/changed-files input, per `reference/risk.md ## Review
+     transport`). On `pass` /
      `pass-with-comments`, re-present **Confirm the plan**. On `fail`, report the
      findings and stop: leave `spec.yaml` `status: draft`, make no plan commit,
      and let the user revise and re-review or confirm directly. Review stays

@@ -164,10 +164,11 @@ committed state, not from hidden conversation memory. Author tasks to be
   states how it leaves the shared structure consistent, so a later session can
   pick up the file from its committed state alone.
 
-This is **plan authoring discipline enforced by reviewer Stage 1 judgment, not a
-new deterministic lint** — recoverability cannot be decided mechanically, so no
-lint check is added for it. If implementation finds a required fact missing from
-the durable source set, stop and route back to `plan` rather than improvising.
+This is **plan authoring discipline enforced by reviewer S1 Internal Coherence
+judgment, not a new deterministic lint** — recoverability cannot be decided
+mechanically, so no lint check is added for it. If implementation finds a
+required fact missing from the durable source set, stop and route back to `plan`
+rather than improvising.
 
 ## Consistency check (plan, once)
 
