@@ -18,7 +18,7 @@ Critical Stop Conditions:
 
 ## Tasks
 
-- [ ] T-001 [AC-01, AC-02, AC-03, AC-04, AC-05, AC-06, AC-07, AC-14, AC-15] Recast the reviewer agent doc into the grounded-adversary stage model
+- [x] T-001 [AC-01, AC-02, AC-03, AC-04, AC-05, AC-06, AC-07, AC-14, AC-15] Recast the reviewer agent doc into the grounded-adversary stage model
   - Depends on: none
   - Files:
     - `engine/agents/independent-reviewer.md`
