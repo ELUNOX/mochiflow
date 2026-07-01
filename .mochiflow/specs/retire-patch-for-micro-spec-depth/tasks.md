@@ -18,7 +18,7 @@ Critical Stop Conditions:
 
 ## Tasks
 
-- [ ] T-001 [AC-01, AC-02, AC-10] Retire active patch routing and command catalog
+- [x] T-001 [AC-01, AC-02, AC-10] Retire active patch routing and command catalog
   - Depends on: none
   - Files:
     - `engine/router.md`

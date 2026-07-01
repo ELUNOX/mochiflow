@@ -7,7 +7,7 @@ and resolves every project path/command from `config.toml` (one level up, at
 
 - Natural-language entry → `router.md`
 - Lifecycle verbs → `commands/{discuss,plan,build,open,update,close}.md`
-- Non-phase commands → `commands/{patch,review,refresh-context,onboard}.md`
+- Non-phase commands → `commands/{review,refresh-context,onboard}.md`
 - Cross-cutting rules → `reference/{workflow,risk,authoring,git,language}.md`
 - Templates → `templates/`
 - CLI → `mochiflow` (Rust binary; conformance suite at `cli/` `cargo test`)

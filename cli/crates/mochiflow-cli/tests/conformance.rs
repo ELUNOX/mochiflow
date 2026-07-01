@@ -584,11 +584,13 @@ fn router_preserves_named_routing_branches() {
     let router = read_repo_file("engine/router.md");
 
     for required in [
-        "On an explicit command (`mochiflow-<verb>`) match",
+        "On the retired explicit command `mochiflow-patch`",
+        "On any other explicit command (`mochiflow-<verb>`) match",
         "A natural-language trigger",
         "Exception: `{slug} discuss` resolves against a seed",
         "`{slug} plan` requires an existing active spec directory",
-        "through the `commands/patch.md ## Eligibility` check",
+        "concrete small-edit requests",
+        "as plan intent hints",
         "ad-hoc review (user-triggered via `レビューして` / `mochiflow-review`",
         "Feedback patterns `{slug} feedback`",
         "Event patterns `{slug} merged`",
