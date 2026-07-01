@@ -53,10 +53,11 @@ Split the current `independent-reviewer` concept into two named review contracts
   diff, changed files, tests, verification evidence, integration/contract drift,
   regression risk, security/abuse exposure, and refactor safety.
 
-`independent-reviewer` can remain as an internal transport umbrella if that
-preserves adapter compatibility, but the user-facing and contract-level names
-should move toward the industry terms above: plan/spec audit before code exists,
-and change/code review after code exists.
+Retire `independent-reviewer` as the public and canonical contract name. If a
+legacy path must remain for adapter compatibility, treat it as a compatibility
+alias only; user-facing docs, canonical prompts, and generated reviewer names
+should move to industry terms: plan/spec audit before code exists, and
+change/code review after code exists.
 
 Post-implementation review should be grounded in standard code-review practice:
 design fit, behavioral correctness, test quality, code health, naming,
@@ -94,7 +95,8 @@ NIST SP 800-53 where critical security/privacy controls are relevant.
 - No retroactive migration requirement for archived specs.
 - No new parallel attack-ID scheme if `QA-XX` scenario IDs can remain the stable
   trace path with a `Dimension` column.
-- No adapter-breaking rename unless a compatibility path is planned.
+- No unplanned adapter break while renaming reviewer artifacts; provide a
+  compatibility path or explicit migration.
 
 ## Alternatives Considered
 
@@ -103,9 +105,10 @@ NIST SP 800-53 where critical security/privacy controls are relevant.
   vocabulary.
 - Put QA attack coverage entirely in the reviewer. Rejected because that makes
   the reviewer a planner and surfaces gaps too late.
-- Keep one `independent-reviewer` file with two modes only. Rejected as the
-  ideal end state because plan audit and code review have different inputs and
-  evaluation standards, though a compatibility wrapper may still be useful.
+- Keep one `independent-reviewer` file with two modes only. Rejected because plan
+  audit and code review have different inputs and evaluation standards, and the
+  old name should not remain canonical. A legacy alias may exist only as a
+  compatibility bridge.
 - Require all dimensions for every spec. Rejected because it over-formalizes
   small reversible work.
 - Treat refactors as ordinary low-risk cleanup. Rejected because refactors can
