@@ -59,10 +59,8 @@ explicit concrete request without `pitch.md`. Do not start implementation.
    Derive a proposed `slug`, `title`, `type`, `surfaces`, `integration`, and
    `risk` from the request, config, and code context; present that metadata for
    user confirmation or correction; reject duplicate active/_done/backlog slugs;
-   write `spec.yaml` from `templates/spec/spec.yaml`; create or switch
-   `{prefix}/{slug}` from `origin/{[git].base_branch}`; then commit the draft
-   micro artifacts (`spec.yaml` and `spec.md`) with `docs(spec): ...` and a
-   `Spec: {slug}` trailer before presenting approve-to-build. Re-check any
+   write `spec.yaml` from `templates/spec/spec.yaml`; then create or switch
+   `{prefix}/{slug}` from `origin/{[git].base_branch}`. Re-check any
    current-state claims against code before using them. When consulting ADR for
    *why*, load each store's generated `INDEX.md` first, then open only the
    records whose `area` intersects the spec's `surfaces` and whose `status` is
@@ -98,7 +96,9 @@ explicit concrete request without `pitch.md`. Do not start implementation.
    - no "None" is used for a required section without a concrete reason.
 6. Run `mochiflow lint --spec {slug}` and fix any FAIL before asking for approval.
    When talking to the user, call this a consistency check unless the exact
-   command matters.
+   command matters. For direct micro, after this first draft lint passes, commit
+   the draft micro artifacts (`spec.yaml` and `spec.md`) with `docs(spec): ...`
+   and a `Spec: {slug}` trailer before presenting approve-to-build.
 7. Present readiness in conversation-language plain wording: what will change and
    what was checked. Then present a numbered choice card. The approval action is
    **Confirm the plan** (`approve plan` / `approved`); it means: edit

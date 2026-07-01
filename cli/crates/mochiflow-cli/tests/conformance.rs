@@ -1176,7 +1176,6 @@ fn direct_micro_plan_is_pitchless_and_branch_durable() {
         "write `spec.yaml` from `templates/spec/spec.yaml`",
         "create or switch",
         "`{prefix}/{slug}` from `origin/{[git].base_branch}`",
-        "commit the draft",
         "micro artifacts (`spec.yaml` and `spec.md`)",
     ] {
         assert!(
@@ -1184,6 +1183,20 @@ fn direct_micro_plan_is_pitchless_and_branch_durable() {
             "plan must pin direct micro contract: {required}"
         );
     }
+    let draft_lint = plan
+        .find("after this first draft lint passes")
+        .expect("plan must commit direct micro only after draft lint passes");
+    let draft_commit = plan[draft_lint..]
+        .find("commit\n   the draft micro artifacts")
+        .map(|offset| draft_lint + offset)
+        .expect("plan must commit the direct micro draft artifacts after draft lint");
+    let approval_card = plan
+        .find("Present readiness in conversation-language plain wording")
+        .expect("plan must present the approve-to-build readiness card");
+    assert!(
+        draft_lint < draft_commit && draft_commit < approval_card,
+        "direct micro draft commit must happen after draft lint and before approval"
+    );
     assert!(
         workflow.contains("| Micro spec | Concrete small fix | `spec.yaml` + `spec.md` |")
             && workflow.contains("Micro is inferred from file presence")
@@ -1515,6 +1528,64 @@ fn pr_bypass_fast_path_is_removed() {
         build.contains("A micro spec may run with spec.yaml + spec.md only")
             && build.contains("Create the PR** (`open`"),
         "build must keep micro lightweight but hand off to PR creation"
+    );
+}
+
+#[test]
+fn active_patch_lane_and_pr_bypass_residue_are_absent() {
+    assert!(
+        !repo_root().join("engine/commands/patch.md").exists(),
+        "patch command procedure must not exist as an active command"
+    );
+
+    let active_contract_files = [
+        "engine/README.md",
+        "engine/adapters/agents/AGENTS.md.tpl",
+        "engine/adapters/claude-code/CLAUDE.md.tpl",
+        "engine/adapters/copilot/copilot-instructions.md.tpl",
+        "engine/adapters/kiro/steering/mochiflow.md.tpl",
+        "engine/commands/build.md",
+        "engine/commands/open.md",
+        "engine/commands/update.md",
+        "engine/reference/authoring.md",
+        "engine/reference/git.md",
+        "engine/reference/risk.md",
+        "engine/reference/workflow.md",
+        "README.md",
+    ];
+    let retired_patterns = [
+        "commands/patch.md",
+        "no-PR",
+        "Patch verification",
+        "patch verification",
+        "Patch commit",
+        "patch commit",
+        "Patch lane",
+        "patch lane",
+        "Small patches skip spec artifacts",
+    ];
+
+    for file in active_contract_files {
+        let body = read_repo_file(file);
+        for pattern in retired_patterns {
+            assert!(
+                !body.contains(pattern),
+                "{file} must not contain retired active patch/PR-bypass wording: {pattern}"
+            );
+        }
+    }
+
+    let router = read_repo_file("engine/router.md");
+    assert!(
+        router.contains("On the retired explicit command `mochiflow-patch`")
+            && !router.contains("commands/patch.md"),
+        "router may keep only the deprecated mochiflow-patch token, not an active patch command"
+    );
+
+    let adapter = read_repo_file("cli/crates/mochiflow-core/src/adapter.rs");
+    assert!(
+        adapter.contains("spec-patch.md"),
+        "Kiro self-heal may continue cleaning legacy spec-patch.md residue"
     );
 }
 

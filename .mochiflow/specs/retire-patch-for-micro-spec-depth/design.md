@@ -245,3 +245,32 @@ adapter templates may change, and final verification omitted `mochiflow doctor`.
 Fixed by adding write-mode `mochiflow adapter generate` before the check and
 adding `mochiflow doctor` to AC-13, Test Strategy, and T-005. This draft should
 be re-reviewed before approval.
+
+### Build review 1
+
+- Reviewer mode: delegated
+- Verdict: pass-with-comments
+
+Finding: direct micro draft commit guidance in `engine/commands/plan.md` appeared
+before `spec.md` creation/refinement. Fixed by moving the direct micro draft
+commit instruction after draft lint and before the approve-to-build readiness
+card, then updating the conformance guard to pin that order.
+
+### Build review 2
+
+- Reviewer mode: delegated
+- Verdict: pass-with-comments
+
+Findings: AC Matrix evidence had not yet been recorded for AI-observed QA rows,
+and `main...HEAD` still showed an unrelated backlog seed deletion. Fixed by
+recording concrete AC/QA evidence in `spec.md` and restoring
+`.mochiflow/specs/_backlog/ship-handoff-recovery-and-cleanup.md` from `main`.
+
+### Build review 3
+
+- Reviewer mode: delegated
+- Verdict: pass-with-comments
+
+Finding: T-005 was still unchecked and nested under T-004 in `tasks.md`. Fixed by
+unindenting T-005 to the top-level task list and marking it complete after
+confirming final verification remained current.

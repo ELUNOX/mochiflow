@@ -17,7 +17,7 @@
     "commands/discuss.md": "sha256:e1e4ac82741ae8fdb687e7262d90b7ddcc4eafa2c3de2f917381d9605ee53b92",
     "commands/onboard.md": "sha256:6551c58431730a520c4d74c722aaa162537db6b3b3299494e417f738db178555",
     "commands/open.md": "sha256:d1422c04c023e8a01fc619fb1fbe630eca90e3b3b9752371b69fb42d594c337d",
-    "commands/plan.md": "sha256:3c5fbf12a3a0c16b6c6cdf1ff503e399ab194b76fc0be83ea56ba5fe5d1613f5",
+    "commands/plan.md": "sha256:46b6246f93a22831cf02b6fef846d857fc25b7bd9f08588225d468d6b0c71db2",
     "commands/refresh-context.md": "sha256:c1283f850b9602995f01d2216f8155aef8b32d16548e3e7213113f1b281f6a21",
     "commands/review.md": "sha256:17270967fb7eff3cb3930c9c492d46698d0aef46359c3d46904a2a0e928c23f4",
     "commands/update.md": "sha256:79836d2387edb61de29637519feb7ab495b4dbb15f2fb9fcf4edfb4e74726dd5",

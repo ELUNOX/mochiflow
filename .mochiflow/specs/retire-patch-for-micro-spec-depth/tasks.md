@@ -71,12 +71,19 @@ Critical Stop Conditions:
     - `engine/MANIFEST.json`
   - Done: Workflow/git/build/open/update no longer describe a no-PR fast path, patch verification, patch commits, or routing unrelated PR feedback to patch. Every spec depth, including micro, ends build at `approved`, runs acceptance/open, presents approve-PR, and uses `mochiflow pr`. `git.md` retains taskless/micro build commit rules and normal feature-branch PR mechanics. README.md and README.ja.md describe micro/small specs instead of small patches, and CHANGELOG.md has an Unreleased note for the user-visible workflow change. Conformance tests that previously pinned no-PR are replaced with negative and positive assertions for the normal PR path. Shared files remain consistent with T-001's router removal and T-005's residual grep checks.
   - Stop: if a user-requested no-PR exception appears necessary for micro, stop because that contradicts the accepted pitch and AC-09.
-- [ ] T-005 [AC-10, AC-11, AC-12, AC-13] Final conformance, dogfood sync, and verification
+- [x] T-005 [AC-10, AC-11, AC-12, AC-13] Final conformance, dogfood sync, and verification
   - Depends on: T-001, T-002, T-003, T-004
   - Files:
     - `cli/crates/mochiflow-cli/tests/conformance.rs`
     - `engine/MANIFEST.json`
+    - `engine/commands/plan.md`
     - `.mochiflow/engine/`
+    - `AGENTS.md`
+    - `.kiro/steering/mochiflow.md`
     - generated adapter outputs
-  - Done: Conformance includes residual guards that no active patch lane, active `commands/patch.md` reference, patch command catalog entry, or no-PR fast path remains, while allowing deprecation wording and Kiro cleanup references where intentional. Run the full conformance test suite specifically to catch unrelated literal-substring failures from engine Markdown rewraps. Confirm `contracts/`, `contracts/contracts.lock`, and `engine/VERSION` are unchanged by this spec. Run `mochiflow freeze`, `mochiflow upgrade --source engine`, write-mode `mochiflow adapter generate`, `mochiflow adapter generate --check`, the surface `default` verification, `mochiflow doctor`, and `mochiflow lint --spec retire-patch-for-micro-spec-depth`; record AC Matrix evidence after build. If adapter generation updates tracked entrypoints, include those generated outputs in the appropriate verification commit and keep `.mochiflow/engine/` changes generated only.
+    - `.mochiflow/specs/retire-patch-for-micro-spec-depth/spec.md`
+    - `.mochiflow/specs/retire-patch-for-micro-spec-depth/design.md`
+    - `.mochiflow/specs/retire-patch-for-micro-spec-depth/tasks.md`
+    - `.mochiflow/specs/_backlog/ship-handoff-recovery-and-cleanup.md`
+  - Done: Conformance includes residual guards that no active patch lane, active `commands/patch.md` reference, patch command catalog entry, or no-PR fast path remains, while allowing deprecation wording and Kiro cleanup references where intentional. Run the full conformance test suite specifically to catch unrelated literal-substring failures from engine Markdown rewraps. Confirm `contracts/`, `contracts/contracts.lock`, and `engine/VERSION` are unchanged by this spec. Run `mochiflow freeze`, `mochiflow upgrade --source engine`, write-mode `mochiflow adapter generate`, `mochiflow adapter generate --check`, the surface `default` verification, `mochiflow doctor`, and `mochiflow lint --spec retire-patch-for-micro-spec-depth`; record AC Matrix evidence after build. If adapter generation updates tracked entrypoints, include those generated outputs in the appropriate verification commit and keep `.mochiflow/engine/` changes generated only. Delegated review found and the implementation fixed the direct-micro commit ordering in `plan.md`; a second delegated review found missing final evidence and an unrelated backlog seed deletion in the branch diff, so AC Matrix evidence was recorded and the backlog seed was restored from `main`. A third delegated review found the T-005 ledger still unchecked and nested; this task entry was unindented and checked after confirming verification remained current.
   - Stop: if residual search finds active patch/no-PR wording that is not a deliberate deprecation or cleanup reference, fix the contract before final verification.
