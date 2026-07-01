@@ -1,0 +1,11 @@
+version: 1
+slug: "retire-patch-for-micro-spec-depth"
+title: "Retire patch and introduce micro as the fastest spec depth"
+type: "feature"
+surfaces:
+  - "cli"
+integration: "none"
+risk: "elevated"
+status: "draft"
+created: "2026-06-30"
+updated: "2026-06-30"
