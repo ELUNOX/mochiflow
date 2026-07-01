@@ -921,7 +921,7 @@ fn open_ships_context_refresh_in_pr_before_accept() {
 #[test]
 fn plan_offers_pre_approval_review_before_confirm_for_elevated() {
     // Change A: for risk >= elevated, the plan readiness card offers a
-    // pre-approval Review (in the reviewer's plan-quality mode) before the
+    // pre-approval Review with plan-auditor before the
     // confirm-plan (approve-to-build) action; the standard-risk order is
     // unchanged (confirm as today, review only post-approval at step 10).
     let plan = read_repo_file("engine/commands/plan.md");
@@ -935,8 +935,8 @@ fn plan_offers_pre_approval_review_before_confirm_for_elevated() {
         "plan.md must order pre-approval Review before the confirm-plan action for risk >= elevated"
     );
     assert!(
-        plan.contains("reviewer's plan-quality mode"),
-        "plan.md pre-approval review must use the reviewer's plan-quality mode"
+        plan.contains("agents/plan-auditor.md"),
+        "plan.md pre-approval review must use plan-auditor"
     );
     assert!(
         plan.contains("leave `spec.yaml` `status: draft`, make no plan commit"),
@@ -1246,9 +1246,8 @@ fn behavioral_kiro_retires_spec_worker_agent_and_self_heals() {
     let tmp = tempfile::tempdir().unwrap();
     let cfg = materialize_full(tmp.path());
     let worker = tmp.path().join(".kiro/agents/spec-worker.json");
-    let reviewer = tmp
-        .path()
-        .join(".kiro/agents/spec-independent-reviewer.json");
+    let plan_auditor = tmp.path().join(".kiro/agents/spec-plan-auditor.json");
+    let change_reviewer = tmp.path().join(".kiro/agents/spec-change-reviewer.json");
 
     std::fs::create_dir_all(worker.parent().unwrap()).unwrap();
     std::fs::write(
@@ -1260,8 +1259,12 @@ fn behavioral_kiro_retires_spec_worker_agent_and_self_heals() {
     let (code, out) = run_cli(&cfg, &["adapter", "generate"]);
     assert_eq!(code, 0, "{out}");
     assert!(
-        reviewer.exists(),
-        "the reviewer agent must still be generated"
+        plan_auditor.exists(),
+        "the plan auditor agent must be generated"
+    );
+    assert!(
+        change_reviewer.exists(),
+        "the change reviewer agent must be generated"
     );
     assert!(
         !worker.exists(),
@@ -1339,7 +1342,7 @@ fn inline_rework_lifecycle_and_adapter_lifecycle_are_specified() {
 fn session_recoverability_is_authoring_rule_not_lint() {
     let plan = read_repo_file("engine/commands/plan.md");
     let authoring = read_repo_file("engine/reference/authoring.md");
-    let reviewer = read_repo_file("engine/agents/independent-reviewer.md");
+    let reviewer = read_repo_file("engine/agents/plan-auditor.md");
 
     assert!(
         authoring.contains("## Session-recoverability"),
@@ -1377,69 +1380,94 @@ fn session_recoverability_is_authoring_rule_not_lint() {
 }
 
 #[test]
-fn independent_reviewer_grounded_adversary_contract_is_pinned() {
-    let reviewer = read_repo_file("engine/agents/independent-reviewer.md");
+fn canonical_reviewers_grounded_adversary_contract_is_pinned() {
+    let plan_auditor = read_repo_file("engine/agents/plan-auditor.md");
+    let change_reviewer = read_repo_file("engine/agents/change-reviewer.md");
+    let legacy = read_repo_file("engine/agents/independent-reviewer.md");
     let risk = read_repo_file("engine/reference/risk.md");
     let plan = read_repo_file("engine/commands/plan.md");
     let review = read_repo_file("engine/commands/review.md");
     let authoring = read_repo_file("engine/reference/authoring.md");
 
-    for label in [
-        "## S0 Grounding",
-        "## S1 Internal Coherence",
-        "## S2 Impact & Regression",
-        "## S3 Code Quality",
-        "## S4 Knowledge Confrontation",
-        "## Falsification",
-    ] {
-        assert!(
-            reviewer.contains(label),
-            "missing reviewer stage label: {label}"
-        );
-    }
     assert!(
-        reviewer.contains("**Plan-quality mode**")
-            && reviewer.contains("**Post-implementation mode**"),
-        "reviewer must retain both public mode labels"
+        plan_auditor.contains("## S0 Grounding")
+            && plan_auditor.contains("## S1 Internal Coherence")
+            && plan_auditor.contains("## S2 Impact & Regression")
+            && plan_auditor.contains("## S3 Code Quality")
+            && plan_auditor.contains("## S4 Knowledge Confrontation")
+            && plan_auditor.contains("## Falsification"),
+        "plan-auditor must keep the grounded stage vocabulary"
     );
     assert!(
-        reviewer.contains("new or relocated responsibilities")
-            && reviewer.contains("lifecycle vocabulary")
-            && reviewer.contains("distinctive nouns / identifiers"),
-        "reviewer S2 must define non-rename target derivation"
+        change_reviewer.contains("## S0 Grounding")
+            && change_reviewer.contains("## S1 Spec And Evidence Coherence")
+            && change_reviewer.contains("## S2 Impact & Regression")
+            && change_reviewer.contains("## S3 Code Quality")
+            && change_reviewer.contains("## S4 Knowledge Confrontation")
+            && change_reviewer.contains("## Falsification"),
+        "change-reviewer must keep the grounded stage vocabulary"
     );
     assert!(
-        reviewer.contains("generated `INDEX.md` is absent")
-            && reviewer.contains("unverified knowledge-unavailable note"),
-        "reviewer S4 must define absent-index behavior"
+        legacy.contains("`plan-quality mode` -> `plan-auditor`")
+            && legacy.contains("`post-implementation mode` -> `change-reviewer`"),
+        "legacy independent-reviewer wrapper must map old modes to canonical profiles"
     );
     assert!(
-        reviewer.contains("Confidence: confirmed | predicted")
-            && reviewer.contains("A `predicted` finding is capped at Medium"),
-        "reviewer must pin Confidence field and predicted severity cap"
+        plan_auditor.contains("new or relocated responsibilities")
+            && plan_auditor.contains("lifecycle vocabulary")
+            && plan_auditor.contains("distinctive nouns / identifiers")
+            && change_reviewer.contains("new or relocated responsibilities")
+            && change_reviewer.contains("lifecycle vocabulary"),
+        "reviewers S2 must define non-rename target derivation"
     );
     assert!(
-        reviewer.contains("S3 Code Quality") && reviewer.contains("N/A (no implementation yet)"),
-        "plan-quality output must report S3 as N/A"
+        plan_auditor.contains("generated `INDEX.md` is absent")
+            && plan_auditor.contains("unverified knowledge-unavailable note")
+            && change_reviewer.contains("generated `INDEX.md` is absent")
+            && change_reviewer.contains("unverified knowledge-unavailable note"),
+        "reviewers S4 must define absent-index behavior"
     );
     assert!(
-        reviewer.contains("In plan-quality mode, report only:")
-            && reviewer.contains("## S4 Knowledge Confrontation"),
-        "S3 completion output must keep a normal finding slot before the plan-only N/A note"
+        plan_auditor.contains("Confidence: confirmed | predicted")
+            && plan_auditor.contains("A `predicted` finding is capped at Medium")
+            && change_reviewer.contains("Confidence: confirmed | predicted")
+            && change_reviewer.contains("A `predicted` finding is capped at Medium"),
+        "reviewers must pin Confidence field and predicted severity cap"
     );
     assert!(
-        reviewer.contains("Verdict is `fail` for any Critical or High confirmed finding")
-            && reviewer.contains("Verdict is `pass-with-comments` for Medium or Low findings only")
-            && reviewer.contains("Verdict is `pass` when clean"),
+        plan_auditor.contains("S3 Code Quality")
+            && plan_auditor.contains("N/A (no implementation yet)"),
+        "plan-auditor output must report S3 as N/A"
+    );
+    assert!(
+        change_reviewer.contains("behavior-preservation evidence")
+            && change_reviewer.contains("mechanical rename / move")
+            && change_reviewer.contains("semantic")
+            && change_reviewer.contains("refactor"),
+        "change-reviewer must cover refactor safety"
+    );
+    assert!(
+        plan_auditor.contains("Verdict is `fail` for any Critical or High confirmed finding")
+            && plan_auditor
+                .contains("Verdict is `pass-with-comments` for Medium or Low findings only")
+            && plan_auditor.contains("Verdict is `pass` when clean")
+            && change_reviewer
+                .contains("Verdict is `fail` for any Critical or High confirmed finding")
+            && change_reviewer
+                .contains("Verdict is `pass-with-comments` for Medium or Low findings only")
+            && change_reviewer.contains("Verdict is `pass` when clean"),
         "reviewer verdict rule must be preserved"
     );
     assert!(
-        reviewer.contains("QA attack coverage against `reference/risk.md ## QA attack coverage`")
-            && reviewer.contains("session-recoverability"),
+        plan_auditor
+            .contains("QA attack coverage against `reference/risk.md ## QA attack coverage`")
+            && plan_auditor.contains("session-recoverability")
+            && change_reviewer
+                .contains("QA attack coverage against `reference/risk.md ## QA attack coverage`"),
         "S1 must preserve QA attack coverage and session-recoverability duties"
     );
 
-    let fm = frontmatter(&reviewer).expect("reviewer frontmatter");
+    let fm = frontmatter(&plan_auditor).expect("plan-auditor frontmatter");
     for reference in [
         "reference/language.md",
         "reference/workflow.md",
@@ -1449,25 +1477,47 @@ fn independent_reviewer_grounded_adversary_contract_is_pinned() {
     ] {
         assert!(
             fm.contains(reference),
-            "reviewer frontmatter must include {reference}"
+            "plan-auditor frontmatter must include {reference}"
+        );
+    }
+    let fm = frontmatter(&change_reviewer).expect("change-reviewer frontmatter");
+    for reference in [
+        "reference/language.md",
+        "reference/workflow.md",
+        "reference/risk.md",
+        "reference/authoring.md",
+        "reference/git.md",
+    ] {
+        assert!(
+            fm.contains(reference),
+            "change-reviewer frontmatter must include {reference}"
         );
     }
 
     assert!(
         risk.contains("S1 Internal Coherence") && risk.contains("S0-S4 / Falsification"),
-        "risk.md must use the redesigned stage vocabulary"
+        "risk.md must use the plan-auditor stage vocabulary"
     );
     assert!(
-        plan.contains("reviewer's plan-quality mode") && plan.contains("S0 Grounding"),
-        "plan.md must retain the pinned plan-quality phrase and use stage vocabulary"
+        risk.contains("plan-auditor")
+            && risk.contains("change-reviewer")
+            && risk.contains("whole-tree")
+            && risk.contains("impact / regression search"),
+        "risk.md must name canonical profiles and preserve impact scope"
     );
     assert!(
-        review.contains("**plan-quality mode**") && review.contains("S0 Grounding"),
-        "review.md must describe plan-quality mode with stage vocabulary"
+        plan.contains("agents/plan-auditor.md") && plan.contains("S0"),
+        "plan.md must use plan-auditor vocabulary"
     );
     assert!(
-        authoring.contains("reviewer S1 Internal Coherence"),
-        "authoring.md must use the redesigned reviewer stage vocabulary"
+        review.contains("agents/plan-auditor.md")
+            && review.contains("agents/change-reviewer.md")
+            && review.contains("Review profile"),
+        "review.md must describe canonical profiles"
+    );
+    assert!(
+        authoring.contains("`plan-auditor` S1 Internal Coherence"),
+        "authoring.md must use the plan-auditor stage vocabulary"
     );
     for body in [
         risk.as_str(),
@@ -1484,47 +1534,58 @@ fn independent_reviewer_grounded_adversary_contract_is_pinned() {
 
 #[test]
 fn kiro_reviewer_template_resources_are_grounded_and_read_only() {
-    let template = read_repo_file("engine/adapters/kiro/agents/spec-independent-reviewer.json.tpl");
-    let parsed: serde_json::Value =
-        serde_json::from_str(&template).expect("Kiro reviewer template must be JSON");
-
-    let tools = parsed["tools"].as_array().expect("tools array");
-    assert_eq!(tools.len(), 1, "reviewer must expose one read-only tool");
-    assert_eq!(
-        tools[0].as_str(),
-        Some("read"),
-        "reviewer tool must be read"
-    );
-
-    let resources = parsed["resources"].as_array().expect("resources array");
-    let resource_strings: Vec<&str> = resources
-        .iter()
-        .map(|resource| resource.as_str().expect("resource string"))
-        .collect();
-    for resource in [
-        "file://{{engine}}/agents/independent-reviewer.md",
-        "file://{{engine}}/reference/workflow.md",
-        "file://{{engine}}/reference/language.md",
-        "file://{{engine}}/reference/risk.md",
-        "file://{{engine}}/reference/authoring.md",
-        "file://{{engine}}/reference/git.md",
+    for (path, agent) in [
+        (
+            "engine/adapters/kiro/agents/spec-plan-auditor.json.tpl",
+            "plan-auditor",
+        ),
+        (
+            "engine/adapters/kiro/agents/spec-change-reviewer.json.tpl",
+            "change-reviewer",
+        ),
     ] {
+        let template = read_repo_file(path);
+        let parsed: serde_json::Value =
+            serde_json::from_str(&template).expect("Kiro reviewer template must be JSON");
+
+        let tools = parsed["tools"].as_array().expect("tools array");
+        assert_eq!(tools.len(), 1, "{path} must expose one read-only tool");
+        assert_eq!(tools[0].as_str(), Some("read"), "{path} tool must be read");
+
+        let resources = parsed["resources"].as_array().expect("resources array");
+        let resource_strings: Vec<&str> = resources
+            .iter()
+            .map(|resource| resource.as_str().expect("resource string"))
+            .collect();
+        let agent_resource = format!("file://{{{{engine}}}}/agents/{agent}.md");
         assert!(
-            resource_strings.contains(&resource),
-            "reviewer template must include {resource}"
+            resource_strings.contains(&agent_resource.as_str()),
+            "{path} must include {agent_resource}"
+        );
+        for resource in [
+            "file://{{engine}}/reference/workflow.md",
+            "file://{{engine}}/reference/language.md",
+            "file://{{engine}}/reference/risk.md",
+            "file://{{engine}}/reference/authoring.md",
+            "file://{{engine}}/reference/git.md",
+        ] {
+            assert!(
+                resource_strings.contains(&resource),
+                "{path} must include {resource}"
+            );
+        }
+        assert_eq!(
+            resource_strings.len(),
+            6,
+            "{path} must list exactly the six engine resources"
+        );
+        assert!(
+            resource_strings
+                .iter()
+                .all(|resource| !resource.contains("/adr/") && !resource.ends_with("/INDEX.md")),
+            "{path} must not statically resource ADR indexes"
         );
     }
-    assert_eq!(
-        resource_strings.len(),
-        6,
-        "reviewer template must list exactly the six engine resources"
-    );
-    assert!(
-        resource_strings
-            .iter()
-            .all(|resource| !resource.contains("/adr/") && !resource.ends_with("/INDEX.md")),
-        "reviewer template must not statically resource ADR indexes"
-    );
 }
 
 #[test]
@@ -1539,7 +1600,7 @@ fn build_is_inline_and_review_transport_is_reviewer_only() {
         "build.md must describe inline implementation"
     );
     assert!(
-        build.contains("execution: inline") && build.contains("agents/independent-reviewer.md"),
+        build.contains("execution: inline") && build.contains("agents/change-reviewer.md"),
         "build frontmatter must be inline and delegate only review"
     );
     assert!(
@@ -1561,9 +1622,10 @@ fn build_is_inline_and_review_transport_is_reviewer_only() {
         "build row must be inline and worker-free: {build_row}"
     );
     assert!(
-        risk.contains("independent-reviewer transport")
-            && risk.contains("applies only to the read-only\n`agents/independent-reviewer.md`")
-            && risk.contains("Build implementation itself is inline"),
+        risk.contains("reviewer transport")
+            && risk.contains("`agents/plan-auditor.md` and `agents/change-reviewer.md`")
+            && risk.contains("Build implementation")
+            && risk.contains("itself is inline"),
         "risk.md transport must be reviewer-only"
     );
     assert!(
@@ -1573,8 +1635,10 @@ fn build_is_inline_and_review_transport_is_reviewer_only() {
         "risk transport must not mention worker/shared build delegation"
     );
     assert!(
-        risk.contains("| `elevated` | independent-reviewer once, after all tasks | optional |")
-            && risk.contains("| `critical` | independent-reviewer after **each** task | required, appended per task |"),
+        risk.contains("| `elevated` | change-reviewer once, after all tasks | optional |")
+            && risk.contains(
+                "| `critical` | change-reviewer after **each** task | required, appended per task |"
+            ),
         "the risk-cadence table must stay unchanged"
     );
 }
@@ -4259,7 +4323,12 @@ fn behavioral_upgrade_from_bundled_engine_regenerates_adapters() {
     assert!(tmp.path().join(".kiro/steering/mochiflow.md").exists());
     assert!(
         tmp.path()
-            .join(".kiro/agents/spec-independent-reviewer.json")
+            .join(".kiro/agents/spec-plan-auditor.json")
+            .exists()
+    );
+    assert!(
+        tmp.path()
+            .join(".kiro/agents/spec-change-reviewer.json")
             .exists()
     );
     assert!(!tmp.path().join(".kiro/agents/spec-builder.json").exists());
@@ -4288,9 +4357,7 @@ fn behavioral_upgrade_from_bundled_engine_respects_drift_force() {
 fn behavioral_upgrade_reports_adapter_merge_required_after_engine_update() {
     let tmp = tempfile::tempdir().unwrap();
     let cfg = materialize_full(tmp.path());
-    let target = tmp
-        .path()
-        .join(".kiro/agents/spec-independent-reviewer.json");
+    let target = tmp.path().join(".kiro/agents/spec-change-reviewer.json");
     std::fs::create_dir_all(target.parent().unwrap()).unwrap();
     std::fs::write(&target, "{\"custom\": true}\n").unwrap();
 
@@ -4298,7 +4365,7 @@ fn behavioral_upgrade_reports_adapter_merge_required_after_engine_update() {
     assert_eq!(code, 1, "blocked adapter merge should be non-zero");
     assert!(out.contains("upgraded engine <- bundled engine"), "{out}");
     assert!(
-        out.contains("BLOCKED: .kiro/agents/spec-independent-reviewer.json"),
+        out.contains("BLOCKED: .kiro/agents/spec-change-reviewer.json"),
         "{out}"
     );
     assert!(
@@ -4307,7 +4374,7 @@ fn behavioral_upgrade_reports_adapter_merge_required_after_engine_update() {
     );
     assert!(
         tmp.path()
-            .join(".mochiflow/state/adapters/.kiro/agents/spec-independent-reviewer.json")
+            .join(".mochiflow/state/adapters/.kiro/agents/spec-change-reviewer.json")
             .exists()
     );
 }
@@ -4356,10 +4423,8 @@ fn behavioral_kiro_self_heal_and_full_file_steering() {
     assert!(!out.contains("release.md"), "{out}");
     // the two managed outputs generated
     assert!(steering_dir.join("mochiflow.md").exists());
-    assert!(
-        root.join(".kiro/agents/spec-independent-reviewer.json")
-            .exists()
-    );
+    assert!(root.join(".kiro/agents/spec-plan-auditor.json").exists());
+    assert!(root.join(".kiro/agents/spec-change-reviewer.json").exists());
     // markerless mochiflow.md overwritten whole: frontmatter at the very top
     let steering = std::fs::read_to_string(steering_dir.join("mochiflow.md")).unwrap();
     assert!(

@@ -57,7 +57,7 @@ Critical Stop Conditions:
     - `cli/crates/mochiflow-cli/tests/conformance.rs`
   - Done: Generated Kiro reviewer targets use the new canonical review names, remain read-only (`tools: ["read"]`), and either alias or deliberately migrate the old `spec-independent-reviewer` target with conformance coverage; CLI behavior tests and presentation output that hardcode `.kiro/agents/spec-independent-reviewer.json` are updated for the chosen alias/migration behavior; resources/tools remain pinned without static ADR index resources.
   - Stop: Kiro tools require anything beyond coarse `read`, or adapter output rename lacks a tested compatibility/migration path.
-- [ ] T-004 [AC-01, AC-04, AC-05, AC-06, AC-07, AC-08] Update conformance guards for new review vocabulary
+- [x] T-004 [AC-01, AC-04, AC-05, AC-06, AC-07, AC-08] Update conformance guards for new review vocabulary
   - Depends on: T-001, T-002, T-003
   - Files:
     - `cli/crates/mochiflow-cli/tests/conformance.rs`
