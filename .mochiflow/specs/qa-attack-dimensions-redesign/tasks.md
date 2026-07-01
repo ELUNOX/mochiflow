@@ -65,7 +65,7 @@ Critical Stop Conditions:
     - `cli/crates/mochiflow-core/src/present.rs`
   - Done: Conformance no longer requires the old single `S0-S4 + S3 N/A` contract as the public model; tests assert dimension coverage, `plan-auditor`, `change-reviewer`, preserved grounding/whole-tree impact duties, retirement of public `independent-reviewer` naming, retirement or legacy-alias mapping for `plan-quality mode` / `post-implementation mode`, compatibility wrapper/alias behavior, and unchanged `Reviewer mode` / `Verdict` parsing; no runtime lint/accept behavior is changed unless tests reveal a pure wording fixture update.
   - Stop: implementation needs to change accepted status or verdict parsing semantics.
-- [ ] T-005 [AC-09] Regenerate engine artifacts and verify
+- [x] T-005 [AC-09] Regenerate engine artifacts and verify
   - Depends on: T-001, T-002, T-003, T-004
   - Files:
     - `engine/MANIFEST.json`

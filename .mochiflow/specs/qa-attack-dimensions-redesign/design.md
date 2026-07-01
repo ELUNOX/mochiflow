@@ -139,3 +139,18 @@ reciprocal `superseded_by`, and regenerate the gitignored ADR indexes without
 staging them.
 
 ## Review Results
+
+- Review profile: change-reviewer
+- Reviewer mode: delegated
+- Verdict: fail
+- Notes: Initial build review found adapter drift for the generated Kiro reviewer
+  targets, missing `QA-FUNC` coverage, and a stale
+  `.kiro/agents/spec-independent-reviewer.json` presentation fixture. These were
+  fixed before build completion.
+
+- Review profile: change-reviewer
+- Reviewer mode: delegated
+- Verdict: pass
+- Notes: Re-review reported no required fixes. It rechecked adapter drift,
+  `QA-FUNC` coverage, and the stale presentation fixture, and noted verification
+  passed.
