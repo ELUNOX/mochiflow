@@ -31,24 +31,25 @@ For a multi-surface spec, evaluate each surface and adopt the highest risk.
 | risk | reviewer cadence | integration log |
 | --- | --- | --- |
 | `standard` | none (AC Matrix only) | not written |
-| `elevated` | independent-reviewer once, after all tasks | optional |
-| `critical` | independent-reviewer after **each** task | required, appended per task |
+| `elevated` | change-reviewer once, after all tasks | optional |
+| `critical` | change-reviewer after **each** task | required, appended per task |
 
 Build commit cadence is task-based and owned by `commands/build.md` plus
 `reference/git.md`, not by this risk table. When `tasks.md` exists, normal build
 commits complete one task at a time regardless of risk; taskless / micro specs
 produce one logical-unit build commit.
 
-Reviewer = `agents/independent-reviewer.md`, read-only. A recorded reviewer
-verdict (`pass` / `pass-with-comments`) is required when `risk ≥ elevated`; this
-is a build-completion gate and one of the acceptance conditions open's accept
-close-out checks before setting `accepted` (`workflow.md ## AC Matrix`). Verified commit
-units may be committed before the mandatory reviewer run; reviewer findings are
-fixed, verified, and committed as follow-up work before build completes. Record
-mandatory reviewer runs in `design.md ## Review Results`, using `Reviewer mode:
-delegated | inline` and `Verdict: pass | pass-with-comments | fail`. For
-`critical`, append one entry per required review run; for `elevated`, append the
-single post-task review entry.
+Mandatory implementation reviewer = `agents/change-reviewer.md`, read-only. A
+recorded reviewer verdict (`pass` / `pass-with-comments`) is required when
+`risk ≥ elevated`; this is a build-completion gate and one of the acceptance
+conditions open's accept close-out checks before setting `accepted`
+(`workflow.md ## AC Matrix`). Verified commit units may be committed before the
+mandatory reviewer run; reviewer findings are fixed, verified, and committed as
+follow-up work before build completes. Record mandatory reviewer runs in
+`design.md ## Review Results`, using `Review profile: change-reviewer`,
+`Reviewer mode: delegated | inline`, and `Verdict: pass | pass-with-comments |
+fail`. For `critical`, append one entry per required review run; for
+`elevated`, append the single post-task review entry.
 
 **Verdict freshness.** A recorded reviewer verdict is valid only for the code
 diff it actually reviewed. Any later code change at `risk ≥ elevated` — including
@@ -107,11 +108,17 @@ the same spec in place before approval or delivery.
 
 ## Review transport
 
-This section defines the independent-reviewer transport — the selection
-discipline "prefer a delegated subagent when the adapter/runtime exposes one,
-else run inline reviewer role". It applies only to the read-only
-`agents/independent-reviewer.md`. Build implementation itself is inline and does
-not use this transport.
+This section defines reviewer transport — the selection discipline "prefer a
+delegated subagent when the adapter/runtime exposes one, else run inline
+reviewer role". It applies only to the read-only reviewer contracts:
+`agents/plan-auditor.md` and `agents/change-reviewer.md`. Build implementation
+itself is inline and does not use this transport. The legacy
+`agents/independent-reviewer.md` file is only a compatibility wrapper that maps
+old invocations to one of these canonical contracts.
+
+Both canonical reviewers preserve S0 repository grounding and S2 whole-tree
+impact / regression search. The profile split changes the review target, not the
+grounding standard.
 
 Delegated reviewer transport is preferred whenever the adapter/runtime exposes a
 subagent mechanism. A user request that triggers ad-hoc review, or a
@@ -126,21 +133,29 @@ Select the first available mode:
    runtime/tooling reason, the main agent temporarily switches to the read-only
    reviewer role and executes the same procedure inline.
 
-For review, run `agents/independent-reviewer.md` read-only. Inline review must
-read `agents/independent-reviewer.md`, use the same S0-S4 / Falsification /
-verdict format, and record `Reviewer mode: inline`. While in reviewer role, the agent is
-read-only: do not edit files, update status, stage, commit, or create PR
-metadata. Review inputs are spec artifacts, full diff / changed files,
-integration log, and verification results — **never conversation history**. A
-**code-less spec** (no implementation yet — `plan.md`'s pre-approval review for
-`risk >= elevated`, or ad-hoc review on a spec with no code) uses the reviewer's
-**plan-quality mode**: S0 Grounding, S1 Internal Coherence, S2 Impact &
-Regression, S4 Knowledge Confrontation, and Falsification with
-`S3 Code Quality` reported `N/A (no implementation yet)`; **no diff /
-changed-files / integration-log input** is required. The mandatory risk-cadence review reconstructs the full diff
-from git (`git diff origin/{base}...HEAD` for the completion-gate review, or a
-task's own commit for a per-task `critical` review) and reads the changed code
-from scratch.
+For review, select the reviewer profile by target:
+
+- `plan-auditor`: code-less spec review before implementation, including
+  `plan.md`'s pre-approval review for `risk >= elevated` and ad-hoc review on a
+  spec with no implementation. It runs S0 Grounding, S1 Internal Coherence, S2
+  Impact & Regression, S4 Knowledge Confrontation, and Falsification with
+  `S3 Code Quality` reported `N/A (no implementation yet)`; **no diff /
+  changed-files / integration-log input** is required.
+- `change-reviewer`: post-implementation review, including mandatory
+  risk-cadence review during `build`, stale-verdict re-review during `open` /
+  `update`, and ad-hoc review once code exists. It runs S0 Grounding, S1 Spec
+  And Evidence Coherence, S2 Impact & Regression, S3 Code Quality, S4 Knowledge
+  Confrontation, and Falsification.
+
+Inline review must read the selected canonical agent file, use that file's
+S0-S4 / Falsification / verdict format, and record `Reviewer mode: inline`.
+While in reviewer role, the agent is read-only: do not edit files, update
+status, stage, commit, or create PR metadata. Review inputs are spec artifacts,
+full diff / changed files when code exists, integration log, and verification
+results — **never conversation history**. The mandatory risk-cadence review
+reconstructs the full diff from git (`git diff origin/{base}...HEAD` for the
+completion-gate review, or a task's own commit for a per-task `critical` review)
+and reads the changed code from scratch.
 For mandatory risk-cadence review during `build`, after the verdict is produced, return to builder role before fixing findings or resuming the flow.
 For ad-hoc review, do not fix findings inline; report them and ask whether to enter the appropriate build/fix flow.
 
@@ -161,14 +176,13 @@ Otherwise `design.md` is optional and the spec may be `spec.md` only.
 ## Ad-hoc review
 
 When the user explicitly requests review (`レビューして` / `mochiflow-review`),
-run `agents/independent-reviewer.md` via `## Review transport` regardless of
+run the appropriate canonical reviewer via `## Review transport` regardless of
 risk level. Ad-hoc review is report-only and read-only.
 
 - Target: the active spec's latest artifacts (spec.md, design.md, tasks.md as applicable).
-- A code-less spec (no implementation yet) uses the reviewer's plan-quality mode
-  (S0/S1/S2/S4 + Falsification, with S3 `N/A`, no diff/changed-files input) per
-  `## Review transport`; once code exists, ad-hoc review uses the
-  post-implementation mode.
+- A code-less spec (no implementation yet) uses `plan-auditor` per
+  `## Review transport`; once code exists, ad-hoc review uses
+  `change-reviewer`.
 - On High or Critical findings: report findings only, then ask whether to enter
   the appropriate build/fix flow. Do not edit files as part of ad-hoc review.
 - On PASS / pass-with-comments: report the result and resume the interrupted flow.

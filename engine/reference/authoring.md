@@ -166,7 +166,7 @@ committed state, not from hidden conversation memory. Author tasks to be
   states how it leaves the shared structure consistent, so a later session can
   pick up the file from its committed state alone.
 
-This is **plan authoring discipline enforced by reviewer S1 Internal Coherence
+This is **plan authoring discipline enforced by `plan-auditor` S1 Internal Coherence
 judgment, not a new deterministic lint** — recoverability cannot be decided
 mechanically, so no lint check is added for it. If implementation finds a
 required fact missing from the durable source set, stop and route back to `plan`
@@ -179,7 +179,7 @@ Open Questions closed (or kept as `[NEEDS-CLARIFICATION]`), design decisions not
 contradicting the rationale in `spec.md`, task line `[AC-01]` / compound
 `[AC-01, AC-02]` references covering `spec.md` AC, no dependency cycle in
 Workstreams. No per-document self-review loop (deep defects are caught by
-`independent-reviewer` during build).
+`plan-auditor` before approval when selected and `change-reviewer` during build).
 
 Before asking for approval, remove all template residue. `lint` enforces these
 checks for expanded spec documents; placeholder-like text inside fenced code

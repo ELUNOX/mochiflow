@@ -91,6 +91,10 @@ Small concrete fixes use micro specs, the lightest tracked shape. Work uses
 merge); only two delivery approvals exist: approval to build, and approval of the
 PR content before the PR is opened.
 
+Read-only review is split by job: `plan-auditor` checks spec/design/task quality
+before implementation, and `change-reviewer` reviews implemented code, tests,
+and refactor safety before delivery.
+
 For a repository where MochiFlow is already tracked by the team, do not run a
 fresh setup. Cloning or pulling brings down the vendored engine and AI-tool
 entrypoints. If local runtime state, adapters, or `INDEX.md` need repair, run:

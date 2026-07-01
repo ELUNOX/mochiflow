@@ -61,7 +61,7 @@ for its whole life, so there is nothing to restore.
    (`[adr].decisions` / `[adr].pitfalls`) so the durable record keeps matching
    the final design.
 4. If the spec is `risk ≥ elevated` and step 2 changed code, the prior reviewer
-   verdict is now **stale**: re-run `agents/independent-reviewer.md` on the new
+   verdict is now **stale**: re-run `agents/change-reviewer.md` on the new
    diff and record the fresh verdict in `design.md ## Review Results` before
    pushing, per `reference/risk.md ## Consequences` (verdict freshness). A
    PR-body-only correction (no code change) does not require a new review.

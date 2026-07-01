@@ -117,9 +117,9 @@ explicit concrete request without `pitch.md`. Do not start implementation.
      `mochiflow-review`) **before** **Confirm the plan**, so the recommended
      quality check can inform the approve-to-build decision instead of running
      only after the spec has locked to `approved`. **Review** runs
-     `mochiflow-review` on the draft spec in the reviewer's plan-quality mode
-     (`agents/independent-reviewer.md`; S0 Grounding, S1 Internal Coherence, S2
-     Impact & Regression, S4 Knowledge Confrontation, and Falsification with S3
+     `mochiflow-review` on the draft spec with `agents/plan-auditor.md` (S0
+     Grounding, S1 Internal Coherence, S2 Impact & Regression, S4 Knowledge
+     Confrontation, and Falsification with S3
      `N/A`, no diff/changed-files input, per `reference/risk.md ## Review
      transport`). On `pass` /
      `pass-with-comments`, re-present **Confirm the plan**. On `fail`, report the

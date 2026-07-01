@@ -75,7 +75,7 @@ optional `docs(context)` commit → accept close-out → PR title/body → appro
      fold, PR-body synthesis, and the approve-PR gate stay inline on the main
      agent. If the spec is `risk ≥ elevated`, a QA-`FAIL` rework that changes
      code makes any prior reviewer verdict **stale**: re-run
-     `agents/independent-reviewer.md` on the new diff and record the fresh
+     `agents/change-reviewer.md` on the new diff and record the fresh
      verdict before accept, per `reference/risk.md ## Consequences` (verdict
      freshness). After the fix, re-present: (1) the failed items, plus
      (2) any previously-passed items whose implementation files were modified by

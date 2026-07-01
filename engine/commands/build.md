@@ -4,7 +4,7 @@ phase: build
 description: |
   mochiflow's build phase. Implement an approved spec inline: execute task units
   on the main agent, verify, commit, maintain the integration log per risk, run
-  read-only review through the independent-reviewer transport, and produce the
+  read-only review through the change-reviewer transport, and produce the
   AC Verification Matrix. A micro spec may run with spec.yaml + spec.md only.
   Activate on the explicit command `mochiflow-build`, or natural phrasing
   like "実装して" / "進めて" / "ビルドして". Does not create PRs, set a terminal
@@ -24,7 +24,7 @@ prerequisites:
   - "{specs_dir}/{slug}/spec.yaml exists with status approved (verify with `mochiflow ready {slug}`)"
 execution: inline
 delegate_to:
-  - agents/independent-reviewer.md
+  - agents/change-reviewer.md
 references:
   - reference/workflow.md
   - reference/risk.md
@@ -48,9 +48,9 @@ Implement the approved spec and produce verification and the AC Verification Mat
    - 3c. Run the canonical `default` command from `reference/workflow.md ## Verification profiles` for build-completion evidence. Optional profiles such as `quick` / `targeted` may be used for intermediate feedback, but they do not replace `default`. Fix any FAIL and re-run to PASS.
    - 3d. Treat approved `tasks.md` structure as a plan contract. During build, `tasks.md` may be changed only to mark completed task checkboxes (`- [ ]` → `- [x]`) and to record AC Matrix result / evidence fields only in the legacy case where the matrix still lives in `tasks.md` (the canonical location is `spec.md ## Verification Plan / AC Matrix` per `reference/workflow.md ## AC Matrix`). If implementation needs task additions, deletions, splits, renumbering, AC / NFR / chore reference changes, dependency changes, `Files:` changes, or meaningful `Done:` / `Stop:` changes, stop and route back to `plan` for re-approval instead of editing the task structure in build.
    - 3e. When the task's implementation and verification PASS, first mark that task as checked in `tasks.md` (`- [ ]` → `- [x]`) when `tasks.md` exists. Do not stage or commit while the completed task remains unchecked. Then commit per `reference/git.md ## Auto-commit`, using one `Task:` trailer for that task. Normal build commits do not combine multiple task completions; taskless / micro specs create one logical-unit build commit with no `Task:` trailer. Stage files explicitly.
-   - 3f. Follow the reviewer cadence in `reference/risk.md`; when required, run `agents/independent-reviewer.md` read-only via `reference/risk.md ## Review transport` (prefer delegated subagent when available; use inline reviewer role only when subagents are unavailable or dispatch fails for a runtime/tooling reason) and append the reviewer mode + verdict to `design.md ## Review Results`. For `critical`, this happens after each task and reviews that task's own diff from git before the next task starts.
+   - 3f. Follow the reviewer cadence in `reference/risk.md`; when required, run `agents/change-reviewer.md` read-only via `reference/risk.md ## Review transport` (prefer delegated subagent when available; use inline reviewer role only when subagents are unavailable or dispatch fails for a runtime/tooling reason) and append the review profile, reviewer mode, and verdict to `design.md ## Review Results`. For `critical`, this happens after each task and reviews that task's own diff from git before the next task starts.
 4. After all tasks complete, run final verification once more. Fix any FAIL and re-run to PASS.
-5. For `elevated`, run the required independent-reviewer once after all tasks using the same review transport. Record `Reviewer mode: delegated | inline` with the verdict in `design.md ## Review Results`.
+5. For `elevated`, run the required `change-reviewer` once after all tasks using the same review transport. Record `Review profile: change-reviewer`, `Reviewer mode: delegated | inline`, and the verdict in `design.md ## Review Results`.
 6. Record the AC Verification Matrix in `spec.md ## Verification Plan / AC Matrix` (its canonical location per `reference/workflow.md ## AC Matrix`; a legacy matrix living at the end of `tasks.md` is updated in place). After final verification, settle automated AC as `PASS` / `FAIL` / `N/A: <reason>` before build completes. `UNVERIFIED` is allowed only as an in-progress placeholder before the final build record; do not leave automated rows `UNVERIFIED` at build completion. Record AC needing human/visual checking as `PENDING_HUMAN` without requesting that QA here (the request is made once, in open). Provisional tokens (`UNVERIFIED`, `PENDING_HUMAN`) are build-time placeholders only and are not done-eligible (`reference/workflow.md ## AC Matrix`).
 7. Include the final AC Verification Matrix update in the final build record commit for this phase, then stop. When implementation has already been committed by task commits, create a record-only commit with subject `docs(spec): record build verification`, the required `Spec: {slug}` trailer, and no `Task:` trailer. For taskless / micro specs, the single logical-unit build commit may include the implementation and final Matrix together when no earlier implementation commit exists. `open` only commits human QA results, final verification evidence appended by `mochiflow accept`, and fold/context changes as part of the close-out path.
 

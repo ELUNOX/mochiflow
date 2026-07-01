@@ -25,7 +25,7 @@ Critical Stop Conditions:
     - `engine/templates/spec/design.md`
   - Done: Risk owns the `QA-FUNC` / `QA-UX` / `QA-ABUSE` / `QA-DATA` / `QA-COMPAT` / `QA-RESIL` / `QA-REG` mapping; authoring and templates use `Dimension` instead of `Persona`; `QA-XX` remains the scenario ID; conformance-asserted phrases stay on single lines where needed.
   - Stop: any need for semantic CLI lint or AC Matrix schema changes.
-- [ ] T-002 [AC-01, AC-04, AC-05, AC-06, AC-07] Split and rename review contracts
+- [x] T-002 [AC-01, AC-04, AC-05, AC-06, AC-07] Split and rename review contracts
   - Depends on: T-001
   - Files:
     - `engine/agents/plan-auditor.md`
