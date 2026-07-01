@@ -31,24 +31,25 @@ For a multi-surface spec, evaluate each surface and adopt the highest risk.
 | risk | reviewer cadence | integration log |
 | --- | --- | --- |
 | `standard` | none (AC Matrix only) | not written |
-| `elevated` | independent-reviewer once, after all tasks | optional |
-| `critical` | independent-reviewer after **each** task | required, appended per task |
+| `elevated` | change-reviewer once, after all tasks | optional |
+| `critical` | change-reviewer after **each** task | required, appended per task |
 
 Build commit cadence is task-based and owned by `commands/build.md` plus
 `reference/git.md`, not by this risk table. When `tasks.md` exists, normal build
 commits complete one task at a time regardless of risk; taskless / micro specs
 produce one logical-unit build commit.
 
-Reviewer = `agents/independent-reviewer.md`, read-only. A recorded reviewer
-verdict (`pass` / `pass-with-comments`) is required when `risk ≥ elevated`; this
-is a build-completion gate and one of the acceptance conditions open's accept
-close-out checks before setting `accepted` (`workflow.md ## AC Matrix`). Verified commit
-units may be committed before the mandatory reviewer run; reviewer findings are
-fixed, verified, and committed as follow-up work before build completes. Record
-mandatory reviewer runs in `design.md ## Review Results`, using `Reviewer mode:
-delegated | inline` and `Verdict: pass | pass-with-comments | fail`. For
-`critical`, append one entry per required review run; for `elevated`, append the
-single post-task review entry.
+Mandatory implementation reviewer = `agents/change-reviewer.md`, read-only. A
+recorded reviewer verdict (`pass` / `pass-with-comments`) is required when
+`risk ≥ elevated`; this is a build-completion gate and one of the acceptance
+conditions open's accept close-out checks before setting `accepted`
+(`workflow.md ## AC Matrix`). Verified commit units may be committed before the
+mandatory reviewer run; reviewer findings are fixed, verified, and committed as
+follow-up work before build completes. Record mandatory reviewer runs in
+`design.md ## Review Results`, using `Review profile: change-reviewer`,
+`Reviewer mode: delegated | inline`, and `Verdict: pass | pass-with-comments |
+fail`. For `critical`, append one entry per required review run; for
+`elevated`, append the single post-task review entry.
 
 **Verdict freshness.** A recorded reviewer verdict is valid only for the code
 diff it actually reviewed. Any later code change at `risk ≥ elevated` — including
@@ -63,37 +64,37 @@ gates live in `workflow.md`.
 ## QA attack coverage
 
 This section is the single owner of how much adversarial QA a spec must carry and
-how strong the evidence must be. `plan.md` (authoring) and
-`agents/independent-reviewer.md` (S1 Internal Coherence) reference this mapping
-instead of restating thresholds, per `reference/authoring.md` SSOT discipline.
+how strong the evidence must be. `plan.md` (authoring) and reviewer audit
+contracts reference this mapping instead of restating thresholds, per
+`reference/authoring.md` SSOT discipline.
 
-Seven adversarial personas frame the "do not trust that it works" pass:
+Seven QA attack dimensions frame the "do not trust that it works" pass:
 
-- P1 new user: intuitive operation, misclicks, empty submit, repeated clicks.
-- P2 power user: fast keyboard operation, large input, Tab order, IME Enter.
-- P3 malicious user: boundaries, invalid values, unauthorized actions, duplicate submit.
-- P4 data integrity: inspect backing tables / state, not only the screen.
-- P5 migration: old data, missing fields, format / encoding differences, volume.
-- P6 regression: nearby existing behavior still works.
-- P7 spec skeptic: compare the primary specification to observed behavior.
+- `QA-FUNC`: functional correctness and requirements fit.
+- `QA-UX`: interaction, usability, error handling, and accessibility.
+- `QA-ABUSE`: abuse cases, invalid input, authorization, and security.
+- `QA-DATA`: data integrity, state, persistence, and migration.
+- `QA-COMPAT`: integration, compatibility, generated artifacts, and contracts.
+- `QA-RESIL`: reliability, performance, capacity, and recovery.
+- `QA-REG`: regression, maintainability, and testability.
 
-Personas are recorded as `QA-XX` rows in `spec.md ## QA Scenarios` (with a
-`Persona` column). A persona that does not apply is a row with a reasoned
-`N/A: <reason>`, never an omission. `## QA Scenarios` is the "what to test"
-source and carries no result columns; an attack whose outcome must be recorded is
-referenced from the relevant AC's AC Matrix `Planned test/QA` / `Evidence` column
-(the results ledger). Attacks are never promoted to formal ACs and never get a
-separate attack-id scheme.
+Attack scenarios are recorded as `QA-XX` rows in `spec.md ## QA Scenarios` (with
+a `Dimension` column). A dimension that does not apply is represented by a row
+with a reasoned `N/A: <reason>`, never by silent omission. `## QA Scenarios` is
+the "what to test" source and carries no result columns; an attack whose outcome
+must be recorded is referenced from the relevant AC's AC Matrix
+`Planned test/QA` / `Evidence` column (the results ledger). Attacks are never
+promoted to formal ACs and never get a separate attack-id scheme.
 
 Required coverage and evidence strength scale with `risk`:
 
-| risk | required personas | evidence strength |
+| risk | required dimensions | evidence strength |
 | --- | --- | --- |
-| `standard` | at least P1, P3, P6, P7 exercised; others reasoned `N/A: <reason>` | automated / AI-observed evidence or a reasoned `N/A` |
-| `elevated` | all relevant personas exercised (especially P3, P4, P5 where applicable) | concrete evidence for each exercised persona; `N/A` needs a specific reason |
-| `critical` | all applicable personas exercised | strong evidence (test output, logs, human confirmation); casual `N/A` is not accepted |
+| `standard` | at least `QA-FUNC`, `QA-ABUSE`, and `QA-REG` exercised; others reasoned `N/A: <reason>` | automated / AI-observed evidence or a reasoned `N/A` |
+| `elevated` | all relevant dimensions exercised (especially `QA-ABUSE`, `QA-DATA`, `QA-COMPAT`, and `QA-REG` where applicable) | concrete evidence for each exercised dimension; `N/A` needs a specific reason |
+| `critical` | all applicable dimensions exercised | strong evidence (test output, logs, human confirmation); casual `N/A` is not accepted |
 
-Micro specs (no `## QA Scenarios` table) keep persona coverage optional. Specs
+Micro specs (no `## QA Scenarios` table) keep dimension coverage optional. Specs
 authored before this convention are not retrofitted.
 
 ## Micro escalation
@@ -107,11 +108,17 @@ the same spec in place before approval or delivery.
 
 ## Review transport
 
-This section defines the independent-reviewer transport — the selection
-discipline "prefer a delegated subagent when the adapter/runtime exposes one,
-else run inline reviewer role". It applies only to the read-only
-`agents/independent-reviewer.md`. Build implementation itself is inline and does
-not use this transport.
+This section defines reviewer transport — the selection discipline "prefer a
+delegated subagent when the adapter/runtime exposes one, else run inline
+reviewer role". It applies only to the read-only reviewer contracts:
+`agents/plan-auditor.md` and `agents/change-reviewer.md`. Build implementation
+itself is inline and does not use this transport. The legacy
+`agents/independent-reviewer.md` file is only a compatibility wrapper that maps
+old invocations to one of these canonical contracts.
+
+Both canonical reviewers preserve S0 repository grounding and S2 whole-tree
+impact / regression search. The profile split changes the review target, not the
+grounding standard.
 
 Delegated reviewer transport is preferred whenever the adapter/runtime exposes a
 subagent mechanism. A user request that triggers ad-hoc review, or a
@@ -126,21 +133,29 @@ Select the first available mode:
    runtime/tooling reason, the main agent temporarily switches to the read-only
    reviewer role and executes the same procedure inline.
 
-For review, run `agents/independent-reviewer.md` read-only. Inline review must
-read `agents/independent-reviewer.md`, use the same S0-S4 / Falsification /
-verdict format, and record `Reviewer mode: inline`. While in reviewer role, the agent is
-read-only: do not edit files, update status, stage, commit, or create PR
-metadata. Review inputs are spec artifacts, full diff / changed files,
-integration log, and verification results — **never conversation history**. A
-**code-less spec** (no implementation yet — `plan.md`'s pre-approval review for
-`risk >= elevated`, or ad-hoc review on a spec with no code) uses the reviewer's
-**plan-quality mode**: S0 Grounding, S1 Internal Coherence, S2 Impact &
-Regression, S4 Knowledge Confrontation, and Falsification with
-`S3 Code Quality` reported `N/A (no implementation yet)`; **no diff /
-changed-files / integration-log input** is required. The mandatory risk-cadence review reconstructs the full diff
-from git (`git diff origin/{base}...HEAD` for the completion-gate review, or a
-task's own commit for a per-task `critical` review) and reads the changed code
-from scratch.
+For review, select the reviewer profile by target:
+
+- `plan-auditor`: code-less spec review before implementation, including
+  `plan.md`'s pre-approval review for `risk >= elevated` and ad-hoc review on a
+  spec with no implementation. It runs S0 Grounding, S1 Internal Coherence, S2
+  Impact & Regression, S4 Knowledge Confrontation, and Falsification with
+  `S3 Code Quality` reported `N/A (no implementation yet)`; **no diff /
+  changed-files / integration-log input** is required.
+- `change-reviewer`: post-implementation review, including mandatory
+  risk-cadence review during `build`, stale-verdict re-review during `open` /
+  `update`, and ad-hoc review once code exists. It runs S0 Grounding, S1 Spec
+  And Evidence Coherence, S2 Impact & Regression, S3 Code Quality, S4 Knowledge
+  Confrontation, and Falsification.
+
+Inline review must read the selected canonical agent file, use that file's
+S0-S4 / Falsification / verdict format, and record `Reviewer mode: inline`.
+While in reviewer role, the agent is read-only: do not edit files, update
+status, stage, commit, or create PR metadata. Review inputs are spec artifacts,
+full diff / changed files when code exists, integration log, and verification
+results — **never conversation history**. The mandatory risk-cadence review
+reconstructs the full diff from git (`git diff origin/{base}...HEAD` for the
+completion-gate review, or a task's own commit for a per-task `critical` review)
+and reads the changed code from scratch.
 For mandatory risk-cadence review during `build`, after the verdict is produced, return to builder role before fixing findings or resuming the flow.
 For ad-hoc review, do not fix findings inline; report them and ask whether to enter the appropriate build/fix flow.
 
@@ -161,14 +176,13 @@ Otherwise `design.md` is optional and the spec may be `spec.md` only.
 ## Ad-hoc review
 
 When the user explicitly requests review (`レビューして` / `mochiflow-review`),
-run `agents/independent-reviewer.md` via `## Review transport` regardless of
+run the appropriate canonical reviewer via `## Review transport` regardless of
 risk level. Ad-hoc review is report-only and read-only.
 
 - Target: the active spec's latest artifacts (spec.md, design.md, tasks.md as applicable).
-- A code-less spec (no implementation yet) uses the reviewer's plan-quality mode
-  (S0/S1/S2/S4 + Falsification, with S3 `N/A`, no diff/changed-files input) per
-  `## Review transport`; once code exists, ad-hoc review uses the
-  post-implementation mode.
+- A code-less spec (no implementation yet) uses `plan-auditor` per
+  `## Review transport`; once code exists, ad-hoc review uses
+  `change-reviewer`.
 - On High or Critical findings: report findings only, then ask whether to enter
   the appropriate build/fix flow. Do not edit files as part of ad-hoc review.
 - On PASS / pass-with-comments: report the result and resume the interrupted flow.

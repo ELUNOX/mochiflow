@@ -48,7 +48,8 @@ when the acceptance conditions below hold. The command updates `spec.yaml`
 `status: accepted`, re-runs verification and lint, stages only close-out paths,
 and creates the close-out commit.
 
-Independent review (`agents/independent-reviewer.md`, whether the mandatory
+Independent review (`agents/plan-auditor.md` before implementation and
+`agents/change-reviewer.md` after implementation, whether the mandatory
 risk-cadence run, `plan.md`'s pre-approval review for `risk >= elevated`, or
 ad-hoc `mochiflow-review`) is a **quality assist, not a delivery approval gate**.
 It informs the human's gate decision and a recorded `pass` / `pass-with-comments`

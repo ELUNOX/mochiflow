@@ -22,8 +22,7 @@ source of truth; this is a forward-placed map to avoid first-move mistakes.
   (`tests/cli.rs`, `tests/conformance.rs`, `tests/first_run.rs`, `tests/pr.rs`).
 - `cli/crates/mochiflow-core` — library modules: `adapter`, `adr`, `backlog`,
   `config`, `delivery`, `detach`, `detect`, `doctor`, `freeze`, `index`, `init`,
-  `join`, `lint`, `manifest`, `pr`, `present`, `ship`, `spec_meta`, `status`,
-  `upgrade`.
+  `join`, `lint`, `manifest`, `pr`, `present`, `spec_meta`, `status`, `upgrade`.
 - `docs/` — user-facing concepts, setup, configuration, versioning, and release
   verification.
 - `assets/` — logo / mark images used by README and distribution material.
@@ -49,7 +48,8 @@ source of truth; this is a forward-placed map to avoid first-move mistakes.
 | `claude-code` | `CLAUDE.md` | Embeddable managed block |
 | `copilot` | `.github/copilot-instructions.md` | Embeddable managed block |
 | `kiro` | `.kiro/steering/mochiflow.md` | Full-file managed (always-on steering with `#[[file:]]` pointers) |
-| `kiro` | `.kiro/agents/spec-independent-reviewer.json` | Full-file managed (read-only reviewer agent) |
+| `kiro` | `.kiro/agents/spec-plan-auditor.json` | Full-file managed (read-only plan-quality reviewer agent) |
+| `kiro` | `.kiro/agents/spec-change-reviewer.json` | Full-file managed (read-only post-implementation reviewer agent) |
 
 Kiro uses no dedicated build agent, no `toolsSettings`, and no per-verb steering.
 

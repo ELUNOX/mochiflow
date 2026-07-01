@@ -5,9 +5,9 @@ Regenerated from code/intent via `refresh-context`. Minimal, slow-changing slice
 ## Purpose
 
 MochiFlow is a spec-driven workflow engine for AI coding agents. It drives work
-through `discuss → plan → build → ship`, keeps state in repository files, and
-keeps durable knowledge, verification, and PR handoff mechanics consistent
-across supported tools.
+through `discuss → plan → build → open → update → close`, keeps state in
+repository files, and keeps durable knowledge, verification, and PR handoff
+mechanics consistent across supported tools.
 
 ## Users
 

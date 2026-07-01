@@ -2,8 +2,8 @@
 name: spec-review
 description: |
   mochiflow's ad-hoc review. On an explicit user request, run the read-only
-  independent-reviewer against the active spec's latest artifacts via the review
-  transport rule, regardless of risk level. This is a non-phase command: it
+  plan-auditor or change-reviewer against the active spec's latest artifacts via
+  the review transport rule, regardless of risk level. This is a non-phase command: it
   exposes the existing ad-hoc review as a discoverable entry point; the behavior
   itself is governed by reference/risk.md ## Ad-hoc review. Activate on the
   explicit command `mochiflow-review`, or natural phrasing like "レビューして".
@@ -15,7 +15,8 @@ triggers:
 trigger_patterns:
   - "{slug} review"
 delegate_to:
-  - agents/independent-reviewer.md
+  - agents/plan-auditor.md
+  - agents/change-reviewer.md
 references:
   - reference/risk.md
   - reference/workflow.md
@@ -25,8 +26,8 @@ references:
 
 ## Purpose
 
-Run an on-demand independent review of the active spec when the user asks for
-it, independent of the automatic risk-cadence review. This command is the
+Run an on-demand review of the active spec when the user asks for it,
+independent of the automatic risk-cadence review. This command is the
 discoverable entry point only; it adds no review rules of its own.
 
 ## Procedure
@@ -34,21 +35,20 @@ discoverable entry point only; it adds no review rules of its own.
 Follow `reference/risk.md ## Ad-hoc review` and `## Review transport` (the
 single source of truth for this behavior):
 
-1. Run `agents/independent-reviewer.md` read-only using the review transport:
+1. Run the selected canonical reviewer read-only using the review transport:
    prefer delegated subagent dispatch when available, and use inline reviewer
    role only when subagents are unavailable or dispatch fails for a
    runtime/tooling reason. The explicit review trigger is also the user's
    request to use delegated reviewer transport when the runtime requires that
    permission. Target the active spec's latest artifacts (`spec.md`, plus
    `design.md` / `tasks.md` when present). When no implementation exists yet
-   (a code-less spec, e.g. ad-hoc review during plan), run the reviewer's
-   **plan-quality mode** (S0 Grounding, S1 Internal Coherence, S2 Impact &
-   Regression, S4 Knowledge Confrontation, and Falsification with S3 `N/A`, no
-   diff/changed-files input) per `reference/risk.md ## Review transport`; when
-   code exists, run the post-implementation mode. Pass only the slug, the command
-   path, a summary of the latest artifact, and a pointer to the spec — never the
-   conversation history (`router.md` routing principle 5).
-2. Report `Reviewer mode: delegated | inline` with the verdict and findings.
+   (a code-less spec, e.g. ad-hoc review during plan), run
+   `agents/plan-auditor.md`; when code exists, run
+   `agents/change-reviewer.md`. Pass only the slug, the command path, a summary
+   of the latest artifact, and a pointer to the spec — never the conversation
+   history (`router.md` routing principle 5).
+2. Report `Review profile: plan-auditor | change-reviewer`,
+   `Reviewer mode: delegated | inline`, and the verdict / findings.
 3. On High or Critical findings, stop after reporting and ask whether to enter
    the appropriate build/fix flow. Do not fix inline as part of ad-hoc review.
 4. On `pass` / `pass-with-comments`, resume the interrupted flow.

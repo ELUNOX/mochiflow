@@ -11,7 +11,7 @@ Adapters tell each AI tool how to load the MochiFlow workflow:
 | --- | --- |
 | `agents` | `AGENTS.md` |
 | `claude-code` | `CLAUDE.md` |
-| `kiro` | `.kiro/steering/mochiflow.md` (always-on) + read-only reviewer |
+| `kiro` | `.kiro/steering/mochiflow.md` (always-on) + read-only reviewer agents |
 | `copilot` | `.github/` integration |
 
 Choose adapters during setup:
@@ -31,6 +31,11 @@ managed block inside them. Structured adapter files that cannot be safely
 embedded may require a candidate merge or explicit `--force` replacement.
 
 The `codex` alias resolves to the neutral `agents` adapter.
+
+Read-only review has two canonical profiles: `plan-auditor` for code-less
+spec/design/task audit before implementation, and `change-reviewer` for
+post-implementation code review. Older `independent-reviewer` adapter targets
+are treated as legacy aliases during migration.
 
 MochiFlow does not generate or manage tool permission settings. File, shell, and
 network permissions remain the responsibility of the AI tool, user environment,

@@ -12,7 +12,7 @@ and resolves every project path/command from `config.toml` (one level up, at
 - Templates → `templates/`
 - CLI → `mochiflow` (Rust binary; conformance suite at `cli/` `cargo test`)
 - Adapter templates → `adapters/{tool}/`
-- Read-only reviewer → `agents/independent-reviewer.md`
+- Read-only reviewers → `agents/plan-auditor.md`, `agents/change-reviewer.md`
 
 ## Artifact model
 

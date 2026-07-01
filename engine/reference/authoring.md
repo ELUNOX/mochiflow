@@ -67,11 +67,12 @@ they are inter-process handoffs / working sheets, not knowledge, so keeping them
 in the tracked tree pollutes history and the archive.
 
 QA role split: `spec.md` QA Scenarios are the source of truth for *what* to test
-and *how* (steps + expected result). The **AC Verification Matrix** is the results
-ledger (result + evidence pointers). During open, the agent presents QA items
-directly in conversation via the round-trip protocol (`commands/open.md`
-Acceptance step 3); PR reviewers read the `## Testing` section in the PR
-description (derived from QA Scenarios). There is no intermediate QA file.
+and *how* (dimension + steps + expected result). The **AC Verification Matrix**
+is the results ledger (result + evidence pointers). During open, the agent
+presents QA items directly in conversation via the round-trip protocol
+(`commands/open.md` Acceptance step 3); PR reviewers read the `## Testing`
+section in the PR description (derived from QA Scenarios). There is no
+intermediate QA file.
 
 ## pitch.md
 
@@ -101,7 +102,8 @@ Single document carrying the **why** and the acceptance contract:
 - Scope boundary (in / out)
 - Edge cases
 - Acceptance criteria in **EARS** (`THE SYSTEM SHALL` / `WHEN` / `WHILE` / `IF...THEN` / `WHERE`), each third-party Yes/No decidable, IDs `AC-01`...
-- QA scenarios (operation steps, with a `Scope` column: `ios`/`api`/`web`/`cross-surface`/`human`)
+- QA scenarios (operation steps, with `Dimension` and `Scope` columns; `Scope`
+  values include `ios`/`api`/`web`/`cross-surface`/`human`)
 - Open items as `[NEEDS-CLARIFICATION: ...]` (lint warns; resolve before `approved`)
 
 For a micro spec, `spec.md` may be a few lines plus the AC Matrix: problem /
@@ -164,7 +166,7 @@ committed state, not from hidden conversation memory. Author tasks to be
   states how it leaves the shared structure consistent, so a later session can
   pick up the file from its committed state alone.
 
-This is **plan authoring discipline enforced by reviewer S1 Internal Coherence
+This is **plan authoring discipline enforced by `plan-auditor` S1 Internal Coherence
 judgment, not a new deterministic lint** — recoverability cannot be decided
 mechanically, so no lint check is added for it. If implementation finds a
 required fact missing from the durable source set, stop and route back to `plan`
@@ -177,7 +179,7 @@ Open Questions closed (or kept as `[NEEDS-CLARIFICATION]`), design decisions not
 contradicting the rationale in `spec.md`, task line `[AC-01]` / compound
 `[AC-01, AC-02]` references covering `spec.md` AC, no dependency cycle in
 Workstreams. No per-document self-review loop (deep defects are caught by
-`independent-reviewer` during build).
+`plan-auditor` before approval when selected and `change-reviewer` during build).
 
 Before asking for approval, remove all template residue. `lint` enforces these
 checks for expanded spec documents; placeholder-like text inside fenced code

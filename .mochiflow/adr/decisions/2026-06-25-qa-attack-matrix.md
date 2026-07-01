@@ -3,7 +3,8 @@ id: 2026-06-25-qa-attack-matrix
 date: 2026-06-25
 area: [cli]
 spec: qa-attack-matrix
-status: active
+status: superseded
+superseded_by: 2026-07-01-qa-attack-dimensions-redesign
 ---
 ## 2026-06-25 — qa-attack-matrix: persona QA attack coverage via QA Scenarios + risk.md owner
 
