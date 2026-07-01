@@ -1695,7 +1695,8 @@ fn kiro_docs_and_router_do_not_reference_retired_workers() {
         );
     }
 
-    for path in ["docs/configuration.md"] {
+    {
+        let path = "docs/configuration.md";
         let body = read_repo_file(path);
         assert!(
             body.contains("read-only reviewer"),
