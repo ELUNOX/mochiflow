@@ -34,6 +34,11 @@
 - Keep all reviewer contracts read-only. Delegation remains allowed only for
   review; implementation, judgment, gates, integration, and fold stay on the
   main agent.
+- Require reviewer findings at every severity to include remediation guidance
+  that is specific enough for the main workflow agent to act on without
+  rediscovering context. This guidance must not change gate semantics: Critical
+  / High confirmed findings still fail, while Medium / Low findings remain
+  non-blocking `pass-with-comments`.
 - Do not add semantic CLI lint for dimension adequacy in this change.
   Conformance pins the prompt/template contract; the reviewer performs the
   judgment-heavy audit.
@@ -65,6 +70,9 @@ engine artifacts through the dogfood sync path:
   the two canonical contracts. `engine/agents/independent-reviewer.md` is
   deleted or reduced to a legacy compatibility wrapper that points to the new
   contracts.
+- Both canonical reviewer contracts include a remediation guidance block for
+  every finding with minimal change, files to edit, suggested shape,
+  verification, and explicit do-not-change scope.
 - Kiro adapter generation should prefer new generated reviewer names such as
   `spec-plan-auditor` and `spec-change-reviewer`. If the old
   `spec-independent-reviewer` generated file must remain for one release, mark
@@ -154,3 +162,15 @@ staging them.
 - Notes: Re-review reported no required fixes. It rechecked adapter drift,
   `QA-FUNC` coverage, and the stale presentation fixture, and noted verification
   passed.
+
+- Review profile: change-reviewer
+- Reviewer mode: delegated
+- Verdict: pass-with-comments
+- Notes: AC-10/T-006 review found one non-blocking Medium test-gap: conformance
+  checked only part of the remediation guidance shape. The recommendation was
+  applied by pinning all five remediation subfields.
+
+- Review profile: change-reviewer
+- Reviewer mode: delegated
+- Verdict: pass
+- Notes: Re-review of AC-10/T-006 reported no findings.

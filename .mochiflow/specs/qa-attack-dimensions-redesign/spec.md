@@ -134,6 +134,11 @@ ambiguity.
   adapters, and verification evidence so `mochiflow freeze --check`,
   `mochiflow adapter generate --check`, `mochiflow lint --spec
   qa-attack-dimensions-redesign`, and the `cli` surface verification pass.
+- AC-10: THE SYSTEM SHALL require both canonical reviewer contracts to include
+  actionable remediation guidance for every finding severity, while preserving
+  the existing gate semantics where only Critical / High confirmed findings
+  cause `fail` and Medium / Low findings remain non-blocking
+  `pass-with-comments`.
 
 ## QA Scenarios
 
@@ -146,6 +151,7 @@ ambiguity.
 | QA-05 | QA-COMPAT, QA-RESIL, QA-REG | cli | Automated | Run conformance and surface verification after engine/template/adapter updates. | Existing workflow contracts still pass, including reviewer transport and adapter generation checks. |
 | QA-06 | QA-REG | cli | Human-operated | Check the post-implementation review contract against a large-refactor scenario and a mechanical-rename scenario. | The contract distinguishes pure/mechanical refactor from semantic refactor and requires behavior-preservation evidence where needed. |
 | QA-07 | QA-FUNC | cli | Automated | Check the workflow-contract behavior through conformance and CLI tests: dimension coverage, review profile selection, Kiro target migration, and legacy wrapper behavior. | Functional workflow behavior matches the redesigned contracts without changing lint/accept semantics. |
+| QA-08 | QA-UX, QA-REG | cli | Automated | Check reviewer completion output for a concrete remediation block on all findings, including Medium and Low findings. | Review output remains read-only and gate-compatible, but gives the main workflow agent enough fix guidance to avoid rediscovering context. |
 
 ## Completion Conditions
 
@@ -166,3 +172,4 @@ ambiguity.
 | AC-07 | cli | automated + human | `cargo test --manifest-path cli/Cargo.toml --test conformance`; QA-02 | T-002 retired `independent-reviewer` as public/canonical and left it as a legacy wrapper; T-004 pins that behavior. | PENDING_HUMAN | Automated: conformance PASS inside surface default verification. Human QA-02 remains for open. |  |
 | AC-08 | cli | automated + human | `mochiflow adapter generate --check`; conformance adapter tests; QA-02 | T-003 generated `.kiro/agents/spec-plan-auditor.json` and `.kiro/agents/spec-change-reviewer.json`, removed old generated reviewer target, and updated adapter tests. | PENDING_HUMAN | Automated: `cargo run --manifest-path cli/Cargo.toml -- adapter generate --check` PASS; surface default verification PASS. Human QA-02 remains for open. |  |
 | AC-09 | cli | automated | `mochiflow freeze --check`; `mochiflow adapter generate --check`; `mochiflow lint --spec qa-attack-dimensions-redesign`; surface `default` verification | T-005 regenerated adapter outputs, confirmed no `contracts/contracts.lock` diff, and ran the configured verification. | PASS | `mochiflow freeze` no-op; `mochiflow upgrade --source engine` PASS; `mochiflow adapter generate --check` PASS; `cargo run --manifest-path cli/Cargo.toml -- adapter generate --check` PASS; `mochiflow lint --spec qa-attack-dimensions-redesign` PASS after T-005 check; surface default verification PASS. |  |
+| AC-10 | cli | automated | `cargo test --manifest-path cli/Cargo.toml --test conformance`; QA-08 | T-006 added remediation guidance requirements and output fields to `plan-auditor` and `change-reviewer` without changing verdict rules. | PASS | `cargo test --manifest-path cli/Cargo.toml --test conformance` PASS; surface default verification PASS. |  |

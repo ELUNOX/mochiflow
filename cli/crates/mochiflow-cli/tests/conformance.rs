@@ -1435,6 +1435,23 @@ fn canonical_reviewers_grounded_adversary_contract_is_pinned() {
         "reviewers must pin Confidence field and predicted severity cap"
     );
     assert!(
+        plan_auditor.contains("Every finding, including Medium and Low")
+            && plan_auditor.contains("Remediation guidance")
+            && plan_auditor.contains("Minimal change:")
+            && plan_auditor.contains("Files to edit:")
+            && plan_auditor.contains("Suggested shape:")
+            && plan_auditor.contains("Verification:")
+            && plan_auditor.contains("Do not change:")
+            && change_reviewer.contains("Every finding, including Medium and Low")
+            && change_reviewer.contains("Remediation guidance")
+            && change_reviewer.contains("Minimal change:")
+            && change_reviewer.contains("Files to edit:")
+            && change_reviewer.contains("Suggested shape:")
+            && change_reviewer.contains("Verification:")
+            && change_reviewer.contains("Do not change:"),
+        "reviewers must require actionable remediation guidance for all severities"
+    );
+    assert!(
         plan_auditor.contains("S3 Code Quality")
             && plan_auditor.contains("N/A (no implementation yet)"),
         "plan-auditor output must report S3 as N/A"

@@ -81,3 +81,14 @@ Critical Stop Conditions:
     - `.mochiflow/specs/qa-attack-dimensions-redesign/tasks.md`
   - Done: Run `mochiflow freeze`, `mochiflow upgrade --source engine`, `mochiflow adapter generate --check`, `mochiflow lint --spec qa-attack-dimensions-redesign`, and the configured `cli` surface verification; confirm `contracts/contracts.lock` is unchanged unless an approved schema/golden contract change was added; record AC Matrix evidence; prepare open-fold notes to supersede ADR decisions `2026-07-01-grounded-independent-reviewer` and `2026-06-25-qa-attack-matrix`; commit only tracked generated outputs and never stage gitignored `INDEX.md`.
   - Stop: generated adapter drift is unrelated to this spec or default verification fails for an unrelated environmental reason.
+- [x] T-006 [AC-10] Add remediation guidance to reviewer findings
+  - Depends on: T-002, T-004
+  - Files:
+    - `engine/agents/plan-auditor.md`
+    - `engine/agents/change-reviewer.md`
+    - `cli/crates/mochiflow-cli/tests/conformance.rs`
+    - `.mochiflow/specs/qa-attack-dimensions-redesign/spec.md`
+    - `.mochiflow/specs/qa-attack-dimensions-redesign/design.md`
+    - `.mochiflow/specs/qa-attack-dimensions-redesign/tasks.md`
+  - Done: Both canonical reviewer contracts require remediation guidance for every finding severity; the guidance includes minimal change, files to edit, suggested shape, verification, and do-not-change scope; Medium / Low findings remain non-blocking `pass-with-comments`; conformance pins the remediation fields.
+  - Stop: remediation guidance changes reviewer write permissions, verdict semantics, or lint/accept parsing.
