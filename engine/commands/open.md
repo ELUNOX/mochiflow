@@ -159,9 +159,8 @@ optional `docs(context)` commit → accept close-out → PR title/body → appro
 
 ### (e) Generate PR title/body
 
-7. On the normal PR path, generate the PR title / description per
-   `templates/delivery/pr-description.md` (the spec lives flat under
-   `{specs_dir}/{slug}/`), write the body to
+7. Generate the PR title / description per `templates/delivery/pr-description.md`
+   (the spec lives flat under `{specs_dir}/{slug}/`), write the body to
    `{install_dir}/state/{slug}/pr-body.md` (ephemeral, gitignored — **never** the
    spec dir).
 
@@ -229,4 +228,4 @@ optional `docs(context)` commit → accept close-out → PR title/body → appro
   or commit `INDEX.md`.
 - On a pre-flight FAIL (`mochiflow pr` exit 3), fix the reported issue and re-run.
 - After the PR is open, route feedback / CI fixes through `commands/update.md`,
-  not a fresh open and not `patch`.
+  not a fresh open.

@@ -38,7 +38,6 @@ const WORKFLOW_COMMAND_REFERENCES: &[&str] = &[
     "discuss",
     "onboard",
     "open",
-    "patch",
     "plan",
     "refresh-context",
     "review",

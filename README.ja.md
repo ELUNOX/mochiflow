@@ -191,6 +191,7 @@ mochiflow-open
 
 MochiFlowは受け入れ確認を行い、今回の判断やハマりどころを記録し、specを `accepted`
 にしたうえで、PR内容の承認後にプロジェクトのPR手順でPRを作成します。
+小さな修正もmicro specとして同じPR経路で届けます。
 
 ### 5. PRフィードバックに対応する
 

@@ -20,9 +20,8 @@ workflow.
 
 ### Load on demand
 
-- Verb procedures: `{{engine}}/commands/{discuss,plan,build,open,update,close}.md`; patch lane:
-  `{{engine}}/commands/patch.md`
-- Non-phase commands: `{{engine}}/commands/{patch,review,refresh-context,onboard}.md`
+- Verb procedures: `{{engine}}/commands/{discuss,plan,build,open,update,close}.md`
+- Non-phase commands: `{{engine}}/commands/{review,refresh-context,onboard}.md`
 - Cross-cutting rules: `{{engine}}/reference/{workflow,risk,authoring,git,language,engineering-standards}.md`
 - Decision history / pitfalls — **on-demand** (*why*, not current state):
   per-file records under `{{adr.decisions}}` / `{{adr.pitfalls}}` (each store has
@@ -40,8 +39,8 @@ workflow.
 ## Rules
 
 - Do not start a spec verb unless the user clearly intends it (`router.md` routing principles).
-- Use patch for concrete small fixes that do not need a spec; escalate to plan
-  when a design decision, contract, migration, or higher risk appears.
+- Concrete small fixes stay in the spec lane; use plan when no active spec
+  already scopes the work.
 - Specs live under `{{specs_dir}}/{slug}/`; metadata is `spec.yaml` (status `draft → approved → accepted`; `done` is derived/legacy).
 - Run verification via the command for the spec's surface from `[surfaces.<surface>.verify]`.
 - Validate specs with `mochiflow lint`; quality gate is `mochiflow doctor`.

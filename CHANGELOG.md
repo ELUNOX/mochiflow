@@ -6,6 +6,12 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Retired the active patch lane and PR-bypass fast path. Small concrete fixes
+  now use micro specs inside the normal spec-to-PR lifecycle, with PR approval
+  still required before delivery.
+
 ## [1.2.1] - 2026-06-30
 
 ### Added

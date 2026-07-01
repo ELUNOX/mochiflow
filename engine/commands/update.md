@@ -88,5 +88,4 @@ for its whole life, so there is nothing to restore.
   fix needed for the PR feedback.
 - Do not write `status: done`, never archive to `_done/`, and never stage or
   commit `INDEX.md`.
-- If the feedback is unrelated to this spec, route it as its own spec or `patch`
-  instead.
+- If the feedback is unrelated to this spec, route it as its own spec instead.

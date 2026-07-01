@@ -201,8 +201,8 @@ pub fn run_pr(
         return code;
     }
     if let Some(slug) = spec
-        && !crate::ship::is_path_like_spec_arg(slug)
-        && let Err(message) = crate::ship::validate_pr_spec_closeout_committed(cfg, slug)
+        && !crate::accept::is_path_like_spec_arg(slug)
+        && let Err(message) = crate::accept::validate_pr_spec_closeout_committed(cfg, slug)
     {
         eprintln!("{message}");
         return EXIT_PREFLIGHT_FAIL;

@@ -584,11 +584,13 @@ fn router_preserves_named_routing_branches() {
     let router = read_repo_file("engine/router.md");
 
     for required in [
-        "On an explicit command (`mochiflow-<verb>`) match",
+        "On the retired explicit command `mochiflow-patch`",
+        "On any other explicit command (`mochiflow-<verb>`) match",
         "A natural-language trigger",
         "Exception: `{slug} discuss` resolves against a seed",
         "`{slug} plan` requires an existing active spec directory",
-        "through the `commands/patch.md ## Eligibility` check",
+        "concrete small-edit requests",
+        "as plan intent hints",
         "ad-hoc review (user-triggered via `レビューして` / `mochiflow-review`",
         "Feedback patterns `{slug} feedback`",
         "Event patterns `{slug} merged`",
@@ -1064,6 +1066,7 @@ fn build_commit_cadence_is_task_based_not_risk_based() {
 fn spec_templates_require_done_eligible_matrix_results() {
     for path in [
         "engine/templates/spec/spec.md",
+        "engine/templates/spec/spec.micro.md",
         "engine/templates/spec/spec.standard.md",
     ] {
         let template = read_repo_file(path);
@@ -1108,7 +1111,7 @@ fn spec_templates_require_done_eligible_matrix_results() {
     let git = read_repo_file("engine/reference/git.md");
     assert!(
         !git.contains("right after verification"),
-        "no-PR close-out must be tied to ship acceptance, not raw verification"
+        "PR-bypass close-out must be tied to ship acceptance, not raw verification"
     );
 }
 
@@ -1128,11 +1131,14 @@ fn discuss_persists_pitch_draft_spec() {
         "discuss must persist pitch + draft spec and commit them"
     );
     assert!(
-        plan.contains("{specs_dir}/{slug}/pitch.md exists")
-            && plan.contains("Read `{specs_dir}/{slug}/spec.yaml`")
+        plan.contains("standard-or-larger existing spec path: {specs_dir}/{slug}/pitch.md exists")
+            && plan.contains("Existing draft: read")
+            && plan.contains("`{specs_dir}/{slug}/spec.yaml`")
             && plan.contains("`{specs_dir}/{slug}/pitch.md`")
-            && plan.contains("raw `{specs_dir}/_backlog/{slug}.md`"),
-        "plan must use pitch.md instead of ready-for-plan handoffs"
+            && plan.contains("Direct micro is the only pitchless plan path")
+            && plan.contains("raw")
+            && plan.contains("`{specs_dir}/_backlog/{slug}.md`"),
+        "plan must require pitch.md for standard-or-larger work while allowing only direct micro to be pitchless"
     );
     assert!(
         workflow.contains("Raw seed: `maturity: seed`")
@@ -1152,6 +1158,61 @@ fn discuss_persists_pitch_draft_spec() {
     ] {
         assert!(pitch.contains(heading), "pitch template missing {heading}");
     }
+}
+
+#[test]
+fn direct_micro_plan_is_pitchless_and_branch_durable() {
+    let plan = read_repo_file("engine/commands/plan.md");
+    let workflow = read_repo_file("engine/reference/workflow.md");
+    let git = read_repo_file("engine/reference/git.md");
+    let risk = read_repo_file("engine/reference/risk.md");
+
+    for required in [
+        "direct micro path: explicit concrete request with no existing draft",
+        "Direct micro: use only when",
+        "Derive a proposed `slug`",
+        "present that metadata",
+        "reject duplicate active/_done/backlog slugs",
+        "write `spec.yaml` from `templates/spec/spec.yaml`",
+        "create or switch",
+        "`{prefix}/{slug}` from `origin/{[git].base_branch}`",
+        "micro artifacts (`spec.yaml` and `spec.md`)",
+    ] {
+        assert!(
+            plan.contains(required),
+            "plan must pin direct micro contract: {required}"
+        );
+    }
+    let draft_lint = plan
+        .find("after this first draft lint passes")
+        .expect("plan must commit direct micro only after draft lint passes");
+    let draft_commit = plan[draft_lint..]
+        .find("commit\n   the draft micro artifacts")
+        .map(|offset| draft_lint + offset)
+        .expect("plan must commit the direct micro draft artifacts after draft lint");
+    let approval_card = plan
+        .find("Present readiness in conversation-language plain wording")
+        .expect("plan must present the approve-to-build readiness card");
+    assert!(
+        draft_lint < draft_commit && draft_commit < approval_card,
+        "direct micro draft commit must happen after draft lint and before approval"
+    );
+    assert!(
+        workflow.contains("| Micro spec | Concrete small fix | `spec.yaml` + `spec.md` |")
+            && workflow.contains("Micro is inferred from file presence")
+            && workflow.contains("A micro candidate that discovers durable rationale"),
+        "workflow must define micro as the pitchless smallest spec depth"
+    );
+    assert!(
+        git.contains("Direct micro plan creates or switches `{branch}`")
+            && git.contains("direct micro first commits `spec.yaml (draft)` + `spec.md`"),
+        "git reference must assign branch and draft-commit ownership to direct micro plan"
+    );
+    assert!(
+        risk.contains("## Micro escalation")
+            && risk.contains("public contract impact, human QA, or an ADR fold need"),
+        "risk reference must make micro escalation explicit"
+    );
 }
 
 #[test]
@@ -1443,25 +1504,88 @@ fn workflow_todo_verify_is_not_runnable() {
 }
 
 #[test]
-fn no_pr_fast_path_skips_pr_gate_but_still_accepts() {
+fn pr_bypass_fast_path_is_removed() {
     let workflow = read_repo_file("engine/reference/workflow.md");
     let git = read_repo_file("engine/reference/git.md");
     let build = read_repo_file("engine/commands/build.md");
+    let open = read_repo_file("engine/commands/open.md");
+    let readme = read_repo_file("README.md");
 
     assert!(
-        workflow.contains("skips")
-            && workflow.contains("**approve-PR**")
-            && workflow.contains("still runs `accept`"),
-        "workflow must describe the no-PR gate exception with accept"
+        !workflow.contains("no-PR")
+            && !git.contains("no-PR")
+            && !build.contains("no-PR")
+            && !open.contains("no-PR")
+            && !readme.contains("Small patches skip spec artifacts"),
+        "active PR-bypass and old small-patch guidance must be removed"
     );
     assert!(
-        git.contains("no-PR skips PR creation and the approve-PR gate")
-            && git.contains("still runs `accept`"),
-        "git reference must keep no-PR tied to accept"
+        git.contains("depth delivers through the feature branch + PR path")
+            && git.contains("Every spec depth uses `mochiflow pr`"),
+        "git reference must make PR delivery universal"
     );
     assert!(
-        build.contains("no-PR fast path branch choice") && !build.contains("no-PR fast commit"),
-        "build must not imply no-PR completes at build commit"
+        build.contains("A micro spec may run with spec.yaml + spec.md only")
+            && build.contains("Create the PR** (`open`"),
+        "build must keep micro lightweight but hand off to PR creation"
+    );
+}
+
+#[test]
+fn active_patch_lane_and_pr_bypass_residue_are_absent() {
+    assert!(
+        !repo_root().join("engine/commands/patch.md").exists(),
+        "patch command procedure must not exist as an active command"
+    );
+
+    let active_contract_files = [
+        "engine/README.md",
+        "engine/adapters/agents/AGENTS.md.tpl",
+        "engine/adapters/claude-code/CLAUDE.md.tpl",
+        "engine/adapters/copilot/copilot-instructions.md.tpl",
+        "engine/adapters/kiro/steering/mochiflow.md.tpl",
+        "engine/commands/build.md",
+        "engine/commands/open.md",
+        "engine/commands/update.md",
+        "engine/reference/authoring.md",
+        "engine/reference/git.md",
+        "engine/reference/risk.md",
+        "engine/reference/workflow.md",
+        "README.md",
+    ];
+    let retired_patterns = [
+        "commands/patch.md",
+        "no-PR",
+        "Patch verification",
+        "patch verification",
+        "Patch commit",
+        "patch commit",
+        "Patch lane",
+        "patch lane",
+        "Small patches skip spec artifacts",
+    ];
+
+    for file in active_contract_files {
+        let body = read_repo_file(file);
+        for pattern in retired_patterns {
+            assert!(
+                !body.contains(pattern),
+                "{file} must not contain retired active patch/PR-bypass wording: {pattern}"
+            );
+        }
+    }
+
+    let router = read_repo_file("engine/router.md");
+    assert!(
+        router.contains("On the retired explicit command `mochiflow-patch`")
+            && !router.contains("commands/patch.md"),
+        "router may keep only the deprecated mochiflow-patch token, not an active patch command"
+    );
+
+    let adapter = read_repo_file("cli/crates/mochiflow-core/src/adapter.rs");
+    assert!(
+        adapter.contains("spec-patch.md"),
+        "Kiro self-heal may continue cleaning legacy spec-patch.md residue"
     );
 }
 
@@ -1521,16 +1645,18 @@ fn readme_lists_public_cli_commands() {
 }
 
 #[test]
-fn micro_template_has_no_ac_verification_matrix() {
+fn micro_template_has_ac_verification_matrix() {
     let template = read_repo_file("engine/templates/spec/spec.micro.md");
 
     assert!(
-        !template.contains("AC Verification Matrix"),
-        "micro spec template must not include the build/ship-owned AC Verification Matrix"
+        template.contains("## Verification Plan / AC Matrix")
+            && template.contains("| AC | Scope | Verification method | Planned test/QA | Implementation | Result | Evidence | Notes |")
+            && template.contains("UNVERIFIED"),
+        "micro spec template must include the build/open-owned AC Matrix placeholder"
     );
     assert!(
-        !template.contains("UNVERIFIED"),
-        "UNVERIFIED is not part of the AC result enum and must not appear in the micro template"
+        template.contains("THE SYSTEM SHALL"),
+        "micro spec template must keep EARS AC guidance"
     );
 }
 
@@ -2081,6 +2207,41 @@ fn lint_draft_requires_pitch() {
     assert_eq!(code, 1, "{out}");
     assert!(
         out.contains("pitch.md is required for draft status"),
+        "{out}"
+    );
+}
+
+#[test]
+fn lint_passes_pitchless_micro_draft() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: draft");
+    let md = "# S\n\n## Requirements / Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL do the thing.\n\n## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | UNVERIFIED |\n";
+    let (code, out) = run_lint_case_with_optional_files(&yaml, Some(md), None, None, None);
+    assert_eq!(code, 0, "pitchless micro draft must lint clean: {out}");
+}
+
+#[test]
+fn lint_rejects_pitchless_draft_that_fails_micro_metadata() {
+    let yaml = GOOD_YAML
+        .replace("status: approved", "status: draft")
+        .replace("risk: standard", "risk: elevated");
+    let md = "# S\n\n## Requirements / Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL do the thing.\n\n## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | UNVERIFIED |\n";
+    let (code, out) = run_lint_case_with_optional_files(&yaml, Some(md), None, None, None);
+    assert_eq!(code, 1, "{out}");
+    assert!(
+        out.contains("pitchless draft with spec.md must be micro eligible"),
+        "{out}"
+    );
+}
+
+#[test]
+fn lint_rejects_pitchless_draft_that_fails_micro_file_shape() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: draft");
+    let md = "# S\n\n## Requirements / Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL do the thing.\n\n## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | UNVERIFIED |\n";
+    let tasks = "# Tasks\n\n- [ ] T-001 [AC-01] Do x\n  - Depends on: none\n  - Files:\n    - `src/x.rs`\n  - Done: x\n  - Stop: x\n";
+    let (code, out) = run_lint_case_with_optional_files(&yaml, Some(md), None, None, Some(tasks));
+    assert_eq!(code, 1, "{out}");
+    assert!(
+        out.contains("pitchless draft with spec.md must be micro eligible"),
         "{out}"
     );
 }

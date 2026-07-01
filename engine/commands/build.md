@@ -5,8 +5,7 @@ description: |
   mochiflow's build phase. Implement an approved spec inline: execute task units
   on the main agent, verify, commit, maintain the integration log per risk, run
   read-only review through the independent-reviewer transport, and produce the
-  AC Verification Matrix. A trivial standard-risk spec may run with spec.md only
-  and a no-PR fast path branch choice.
+  AC Verification Matrix. A micro spec may run with spec.yaml + spec.md only.
   Activate on the explicit command `mochiflow-build`, or natural phrasing
   like "実装して" / "進めて" / "ビルドして". Does not create PRs, set a terminal
   state, or move the spec (that is open).
@@ -18,7 +17,7 @@ triggers:
 trigger_patterns:
   - "{slug} build"
 artifacts:
-  - "{specs_dir}/{slug}/pitch.md"
+  - "{specs_dir}/{slug}/pitch.md (when present)"
   - "{specs_dir}/{slug}/spec.md (AC Verification Matrix)"
   - "{specs_dir}/{slug}/tasks.md (when present)"
 prerequisites:
@@ -41,7 +40,7 @@ Implement the approved spec and produce verification and the AC Verification Mat
 
 ## Procedure
 
-1. Confirm build eligibility with `mochiflow ready {slug}`: it runs `lint`, requires `status: approved`, and checks every surface's `default` verification command is runnable (not a `TODO:` placeholder). `default` is the canonical build-completion profile: it should be the reliable local command whose success is sufficient to say the surface is ready for PR / merge, except for checks explicitly documented as human-operated or CI-only. A non-zero exit is a stop condition — resolve it before implementing. Then read `spec.yaml` (risk / type / surfaces), `pitch.md`, `spec.md` (plus `design.md` / `tasks.md` if present), the constitution (`[constitution].project` / `[constitution].local`), the foundational context (`[context].product` / `[context].structure` / `[context].tech`) for orientation, and `[adr].pitfalls`. If `mochiflow ready` is unavailable, fall back to reading `spec.yaml` and confirming `status: approved` and runnable verification manually. This eligibility gate (`mochiflow ready` / `status: approved`) is the entry condition for **starting build as a phase**.
+1. Confirm build eligibility with `mochiflow ready {slug}`: it runs `lint`, requires `status: approved`, and checks every surface's `default` verification command is runnable (not a `TODO:` placeholder). `default` is the canonical build-completion profile: it should be the reliable local command whose success is sufficient to say the surface is ready for PR / merge, except for checks explicitly documented as human-operated or CI-only. A non-zero exit is a stop condition — resolve it before implementing. Then read `spec.yaml` (risk / type / surfaces), `spec.md`, `pitch.md` when present, `design.md` / `tasks.md` when present, the constitution (`[constitution].project` / `[constitution].local`), the foundational context (`[context].product` / `[context].structure` / `[context].tech`) for orientation, and `[adr].pitfalls`. If `mochiflow ready` is unavailable, fall back to reading `spec.yaml` and confirming `status: approved` and runnable verification manually. This eligibility gate (`mochiflow ready` / `status: approved`) is the entry condition for **starting build as a phase**.
 2. Define this build's **commit unit**: when `tasks.md` exists, the unit is one currently open task; when `tasks.md` is absent (taskless / micro specs), the unit is the whole logical change. Prepare the branch per `reference/git.md ## Branch`: verify the branch `{prefix}/{slug}` exists locally or on `origin`, switch to it, and error-stop if it does not exist. Verify the worktree has no changes other than this spec's own `{specs_dir}/{slug}/**` (else stop).
 3. Run the task loop inline. When `tasks.md` exists, execute open tasks **one at a time** in dependency order on the main agent (no `[P]` parallelism unless the human explicitly approves a separate concurrency plan; one working tree). When `tasks.md` is absent, execute the whole logical change as a single unit. For each unit:
    - 3a. Read surrounding source before editing; for logic changes use TDD (RED→GREEN→REFACTOR), match existing style, and keep changes minimal. Per `reference/engineering-standards.md`, for any dependency / tool / framework-idiom change or any deviation, confirm the upstream-recommended approach from primary sources before implementing and record its source.

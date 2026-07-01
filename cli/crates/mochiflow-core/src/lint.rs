@@ -670,6 +670,14 @@ fn design_required(meta: &SpecMeta) -> bool {
     risk == "elevated" || risk == "critical" || integration != "none" || meta.surfaces().len() > 1
 }
 
+fn pitchless_micro_eligible(meta: &SpecMeta, design_exists: bool, tasks_exists: bool) -> bool {
+    meta.risk() == "standard"
+        && meta.integration() == "none"
+        && meta.surfaces().len() == 1
+        && !design_exists
+        && !tasks_exists
+}
+
 fn lint_spec_dir(
     spec_dir: &Path,
     allowed_surfaces: &HashSet<String>,
@@ -817,14 +825,23 @@ fn lint_spec_dir(
         _ => {}
     }
 
-    // pitch.md is the durable discuss artifact for draft specs. A pitch-only
-    // draft is valid before plan expands it into spec.md / design.md / tasks.md.
+    // Draft has three valid shapes: pitch-only, expanded with pitch, and
+    // pitchless micro. Without a stored depth field, an eligible pitchless
+    // `spec.md` draft is intentionally treated as micro.
     if meta.status() == "draft" && !pitch_md.exists() {
-        issues.push(Issue {
-            severity: "FAIL".into(),
-            path: pitch_md.clone(),
-            message: "pitch.md is required for draft status".into(),
-        });
+        if !spec_md.exists() {
+            issues.push(Issue {
+                severity: "FAIL".into(),
+                path: pitch_md.clone(),
+                message: "pitch.md is required for draft status".into(),
+            });
+        } else if !pitchless_micro_eligible(&meta, design_md.exists(), tasks_md.exists()) {
+            issues.push(Issue {
+                severity: "FAIL".into(),
+                path: pitch_md.clone(),
+                message: "pitchless draft with spec.md must be micro eligible: risk standard, one surface, integration none, no design.md, no tasks.md".into(),
+            });
+        }
     }
 
     // spec.md

@@ -96,6 +96,15 @@ Required coverage and evidence strength scale with `risk`:
 Micro specs (no `## QA Scenarios` table) keep persona coverage optional. Specs
 authored before this convention are not retrofitted.
 
+## Micro escalation
+
+Micro is a depth, not a stored risk value. It is available only when the metadata
+and file set stay standard-risk, single-surface, and `integration: none`, with no
+condition that would require `design.md` below. If direct micro planning or later
+work discovers durable rationale, an active pitfall, integration, elevated or
+critical risk, public contract impact, human QA, or an ADR fold need, escalate
+the same spec in place before approval or delivery.
+
 ## Review transport
 
 This section defines the independent-reviewer transport — the selection
