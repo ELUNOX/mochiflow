@@ -1,0 +1,11 @@
+version: 1
+slug: "independent-reviewer-grounded-redesign"
+title: "Redesign the independent reviewer as a grounded adversary"
+type: "feature"
+surfaces:
+  - "cli"
+integration: "none"
+risk: "elevated"
+status: "draft"
+created: "2026-06-30"
+updated: "2026-06-30"
