@@ -2136,6 +2136,41 @@ fn lint_draft_requires_pitch() {
 }
 
 #[test]
+fn lint_passes_pitchless_micro_draft() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: draft");
+    let md = "# S\n\n## Requirements / Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL do the thing.\n\n## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | UNVERIFIED |\n";
+    let (code, out) = run_lint_case_with_optional_files(&yaml, Some(md), None, None, None);
+    assert_eq!(code, 0, "pitchless micro draft must lint clean: {out}");
+}
+
+#[test]
+fn lint_rejects_pitchless_draft_that_fails_micro_metadata() {
+    let yaml = GOOD_YAML
+        .replace("status: approved", "status: draft")
+        .replace("risk: standard", "risk: elevated");
+    let md = "# S\n\n## Requirements / Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL do the thing.\n\n## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | UNVERIFIED |\n";
+    let (code, out) = run_lint_case_with_optional_files(&yaml, Some(md), None, None, None);
+    assert_eq!(code, 1, "{out}");
+    assert!(
+        out.contains("pitchless draft with spec.md must be micro eligible"),
+        "{out}"
+    );
+}
+
+#[test]
+fn lint_rejects_pitchless_draft_that_fails_micro_file_shape() {
+    let yaml = GOOD_YAML.replace("status: approved", "status: draft");
+    let md = "# S\n\n## Requirements / Acceptance Criteria\n\n- AC-01: THE SYSTEM SHALL do the thing.\n\n## Verification Plan / AC Matrix\n\n| AC | Result |\n| --- | --- |\n| AC-01 | UNVERIFIED |\n";
+    let tasks = "# Tasks\n\n- [ ] T-001 [AC-01] Do x\n  - Depends on: none\n  - Files:\n    - `src/x.rs`\n  - Done: x\n  - Stop: x\n";
+    let (code, out) = run_lint_case_with_optional_files(&yaml, Some(md), None, None, Some(tasks));
+    assert_eq!(code, 1, "{out}");
+    assert!(
+        out.contains("pitchless draft with spec.md must be micro eligible"),
+        "{out}"
+    );
+}
+
+#[test]
 fn lint_expanded_draft_enforces_required_design() {
     let yaml = "version: 1\nslug: s\ntitle: S\ntype: feature\nsurfaces:\n  - app\nintegration: workflow\nrisk: elevated\nstatus: draft\n";
     let pitch = "# S\n\n## Problem\n\nx\n";
