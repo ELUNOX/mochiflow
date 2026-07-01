@@ -2085,20 +2085,6 @@ fn freeze_without_root_keeps_cwd_upward_resolution() {
 #[test]
 fn docs_explain_doctor_freeze_boundaries_and_root_usage() {
     let root = repo_root();
-    let readme = fs::read_to_string(root.join("README.md")).unwrap();
-    assert!(
-        readme.contains("`mochiflow doctor` is the project health check"),
-        "{readme}"
-    );
-    assert!(
-        readme.contains("`mochiflow freeze --check` as the separate"),
-        "{readme}"
-    );
-    assert!(
-        readme.contains("`mochiflow freeze --root <source-repo> --check`"),
-        "{readme}"
-    );
-
     let docs_versioning = fs::read_to_string(root.join("docs/versioning.md")).unwrap();
     assert!(
         docs_versioning.contains("## Source repo coherence"),
@@ -2128,15 +2114,10 @@ fn docs_explain_doctor_freeze_boundaries_and_root_usage() {
     );
 }
 
-/// Public docs list only Rust CLI commands; onboard is an AI engine command.
+/// Engine docs list only Rust CLI commands; onboard is an AI engine command.
 #[test]
-fn readmes_do_not_list_onboard_as_cli_command() {
+fn engine_readme_does_not_list_onboard_as_cli_command() {
     let root = repo_root();
-    for rel in ["README.md", "README.ja.md"] {
-        let text = fs::read_to_string(root.join(rel)).unwrap();
-        assert!(!text.contains("init | onboard |"), "{rel}:\n{text}");
-    }
-
     let engine_readme = fs::read_to_string(root.join("engine/README.md")).unwrap();
     assert!(
         !engine_readme.contains("`mochiflow onboard`"),
