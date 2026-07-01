@@ -1111,7 +1111,7 @@ fn spec_templates_require_done_eligible_matrix_results() {
     let git = read_repo_file("engine/reference/git.md");
     assert!(
         !git.contains("right after verification"),
-        "no-PR close-out must be tied to ship acceptance, not raw verification"
+        "PR-bypass close-out must be tied to ship acceptance, not raw verification"
     );
 }
 
@@ -1491,25 +1491,30 @@ fn workflow_todo_verify_is_not_runnable() {
 }
 
 #[test]
-fn no_pr_fast_path_skips_pr_gate_but_still_accepts() {
+fn pr_bypass_fast_path_is_removed() {
     let workflow = read_repo_file("engine/reference/workflow.md");
     let git = read_repo_file("engine/reference/git.md");
     let build = read_repo_file("engine/commands/build.md");
+    let open = read_repo_file("engine/commands/open.md");
+    let readme = read_repo_file("README.md");
 
     assert!(
-        workflow.contains("skips")
-            && workflow.contains("**approve-PR**")
-            && workflow.contains("still runs `accept`"),
-        "workflow must describe the no-PR gate exception with accept"
+        !workflow.contains("no-PR")
+            && !git.contains("no-PR")
+            && !build.contains("no-PR")
+            && !open.contains("no-PR")
+            && !readme.contains("Small patches skip spec artifacts"),
+        "active PR-bypass and old small-patch guidance must be removed"
     );
     assert!(
-        git.contains("no-PR skips PR creation and the approve-PR gate")
-            && git.contains("still runs `accept`"),
-        "git reference must keep no-PR tied to accept"
+        git.contains("depth delivers through the feature branch + PR path")
+            && git.contains("Every spec depth uses `mochiflow pr`"),
+        "git reference must make PR delivery universal"
     );
     assert!(
-        build.contains("no-PR fast path branch choice") && !build.contains("no-PR fast commit"),
-        "build must not imply no-PR completes at build commit"
+        build.contains("A micro spec may run with spec.yaml + spec.md only")
+            && build.contains("Create the PR** (`open`"),
+        "build must keep micro lightweight but hand off to PR creation"
     );
 }
 

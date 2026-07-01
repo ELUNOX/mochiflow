@@ -86,10 +86,10 @@ MochiFlow keeps state in files, not in chat history. A spec lives under
 | `tasks.md` | Executable checklist: dependency-ordered tasks an AI agent can run and verify. |
 | AC Matrix | Traceability ledger inside `spec.md`: AC → implementation → verification → evidence → result. |
 
-Small patches skip spec artifacts. Normal work uses `discuss → plan → build →
-open`, then `update` (PR feedback) and `close` (after merge); only two delivery
-approvals exist: approval to build, and approval of the PR content before the PR
-is opened.
+Small concrete fixes use micro specs, the lightest tracked shape. Work uses
+`discuss → plan → build → open`, then `update` (PR feedback) and `close` (after
+merge); only two delivery approvals exist: approval to build, and approval of the
+PR content before the PR is opened.
 
 For a repository where MochiFlow is already tracked by the team, do not run a
 fresh setup. Cloning or pulling brings down the vendored engine and AI-tool

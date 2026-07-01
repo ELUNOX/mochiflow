@@ -56,7 +56,7 @@ Critical Stop Conditions:
     - `engine/MANIFEST.json`
   - Done: Lint accepts pitch-only draft (`spec.yaml` + `pitch.md`), expanded draft with `spec.md` and `pitch.md`, and pitchless micro draft with `spec.md` and no `pitch.md` when metadata and file presence satisfy micro eligibility. Lint rejects pitchless drafts that fail micro eligibility, approved specs without `spec.md`, approved specs without Matrix coverage, and accepted specs with non-done-eligible Matrix results. The implementation and tests explicitly document the trade-off that a standard-risk single-surface pitchless draft with `spec.md` is treated as micro because no file/metadata signal can distinguish a forgotten `pitch.md` without adding `depth`.
   - Stop: if lint cannot distinguish micro from a malformed expanded draft using file presence plus existing metadata, stop and revisit the no-`depth` decision before coding around it.
-- [ ] T-004 [AC-06, AC-09] Remove no-PR delivery and align build/open/update/git guidance
+- [x] T-004 [AC-06, AC-09] Remove no-PR delivery and align build/open/update/git guidance
   - Depends on: T-002
   - Files:
     - `engine/reference/workflow.md`

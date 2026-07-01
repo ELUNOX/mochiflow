@@ -25,12 +25,8 @@ their whole life — there is no `_done/` move and no committed board.
   stale local base. Direct micro plan creates or switches `{branch}` from
   `origin/{[git].base_branch}` after metadata confirmation and before the draft
   micro commit. Other plan/build/open/update flows use the existing branch;
-  build must error-stop if it cannot find or switch to `{branch}`.
-- Trivial `risk: standard` changes MAY use the current branch with no new branch
-  and no PR only when the user explicitly opts in (no-PR fast path). Default is
-  a feature branch + PR. no-PR skips PR creation and the approve-PR gate, but it
-  still runs `accept` and the close-out commit (it sets at most `accepted`, never
-  `done`, and never moves the spec).
+  build must error-stop if it cannot find or switch to `{branch}`. Every spec
+  depth delivers through the feature branch + PR path.
 
 ## Commit
 
@@ -81,7 +77,6 @@ Task: T-002
   line. Multiple `Task:` lines are kept for compatibility with existing history
   and exceptional reconciliation commits. **Optional** on the accept close-out
   commit (which bundles multiple concerns).
-- Patch lane commits have **no trailers** (no spec context exists).
 - `Spec:` and `Task:` keys are case-sensitive and use a single space after the
   colon.
 
@@ -163,21 +158,6 @@ Every spec-lane procedure commit step (discuss / plan / build / open / update /
 close) regenerates the board via `mochiflow index` so the gitignored `INDEX.md`
 stays fresh between CLI commands.
 
-### Patch commit
-
-Patch runs on the current branch with no new branch, no PR, and no living-spec
-fold.
-
-At patch start, run `git status --short` and identify the intended target files.
-If any target file is already dirty, patch may edit it only without overwriting
-the existing changes, and auto-commit is disabled for the patch. Unrelated dirty
-files are ignored and never staged.
-
-After verification PASS, stage the patch's changed files explicitly and create
-one Conventional Commit per `## Commit`. If verification could not be run, or
-any target file was dirty before the patch, leave the patch uncommitted and
-report the files and verification result.
-
 ### Accept close-out commit
 
 `open` produces one **close-out commit** on the feature branch, after human QA and
@@ -214,17 +194,15 @@ the Commit convention above — Conventional Commits, artifact language, and **n
 spec slug, no AC IDs, no mochiflow vocabulary** (never "fold" in the summary).
 This keeps the judgment-bearing durable record (the fold) inside the PR, under
 review, so it merges atomically with the code; `close` then does only local
-hygiene (`## Post-merge local cleanup`). The no-PR fast path makes the same
-close-out commit on the current branch, with no push.
+hygiene (`## Post-merge local cleanup`).
 
 ## PR
 
-On the normal PR path, the PR title/body (per
-`templates/delivery/pr-description.md`: artifact language, external-reviewer
-facing, no spec-internal references, no spec slug, no AC IDs, no mochiflow
-vocabulary) are generated after human gate 2 (`workflow.md`). On the explicit
-no-PR fast path, skip PR title/body generation and `mochiflow pr`; `accept` and
-the close-out commit still happen.
+The PR title/body (per `templates/delivery/pr-description.md`: artifact
+language, external-reviewer facing, no spec-internal references, no spec slug, no
+AC IDs, no mochiflow vocabulary) are generated after human gate 2
+(`workflow.md`). Every spec depth uses `mochiflow pr` after acceptance and
+approve-PR.
 
 The open procedure uses **`mochiflow pr`** for PR handoff. The command runs
 pre-flight (working tree clean / current branch is the source / source ≠ target /
@@ -344,6 +322,5 @@ commit):
 
 Nothing is committed or pushed to the base branch here — the fold and the spec
 already merged via the PR's close-out commit, so `close` is local hygiene only.
-The no-PR fast path makes that same close-out commit locally on the current
-branch after `accept`, with no base-branch push. The spec is never moved into
-`_done/`; its merged state is observed (derived), not written.
+The spec is never moved into `_done/`; its merged state is observed (derived),
+not written.

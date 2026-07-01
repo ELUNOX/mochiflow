@@ -61,11 +61,6 @@ For example, a plan card may display "confirm the plan" as the action that sets
 `status: approved`; choosing that action dispatches approve-to-build. The old
 approval words remain compatibility inputs, not the preferred user-facing label.
 
-The no-PR fast path exists only after explicit human opt-in. It skips
-**approve-PR** because no PR is created, but it still runs `accept`; `accept`
-sets at most `accepted` from acceptance conditions and creates the same
-close-out commit (never `done`, never a `_done/` move).
-
 ## Choice cards
 
 Phase-completion choice cards present user-facing actions, each with a stable
@@ -190,19 +185,6 @@ Resolve commands via:
 
 A surface whose only profile is a `TODO:` placeholder is not yet runnable; define
 its command before building that surface.
-
-## Patch verification
-
-For patch, use the narrowest reliable verification that proves the concrete
-change:
-
-1. Run the clearly related test command when the target is obvious from the code
-   or request.
-2. Otherwise run the surface's `quick` profile when it exists.
-3. Otherwise run the surface's `default` profile.
-
-If no runnable verification command exists, report that explicitly and do not
-auto-commit.
 
 ## Acceptance adapters (open)
 
