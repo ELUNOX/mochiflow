@@ -70,6 +70,74 @@ fn setup(dir: &Path, git_block: &str, stay_on_main: bool) -> std::path::PathBuf 
     config_path
 }
 
+fn setup_local_pr_repo(dir: &Path, git_block: &str, commit_ahead: bool) -> std::path::PathBuf {
+    let bare = dir.join("origin.git");
+    fs::create_dir_all(&bare).unwrap();
+    git(&bare, &["init", "--bare", "-q"]);
+
+    let repo = dir.join("repo");
+    fs::create_dir_all(&repo).unwrap();
+    git(&repo, &["init", "-q", "-b", "main"]);
+    git(&repo, &["config", "user.email", "t@example.com"]);
+    git(&repo, &["config", "user.name", "Test"]);
+    fs::write(repo.join("README.md"), "hi\n").unwrap();
+    fs::write(repo.join(".gitignore"), ".mochiflow/\n").unwrap();
+    git(&repo, &["add", ".gitignore", "README.md"]);
+    git(&repo, &["commit", "-q", "-m", "init"]);
+    git(&repo, &["remote", "add", "origin", bare.to_str().unwrap()]);
+    git(&repo, &["push", "-q", "-u", "origin", "main"]);
+    git(&repo, &["checkout", "-q", "-b", "feature/local"]);
+    if commit_ahead {
+        fs::write(repo.join("app.txt"), "change\n").unwrap();
+        git(&repo, &["add", "app.txt"]);
+        git(&repo, &["commit", "-q", "-m", "feat: app change"]);
+    }
+
+    let mf = repo.join(".mochiflow");
+    fs::create_dir_all(mf.join("specs/local-pr")).unwrap();
+    fs::create_dir_all(mf.join("adr/decisions")).unwrap();
+    fs::create_dir_all(mf.join("adr/pitfalls")).unwrap();
+    let config = format!(
+        "schema_version = 1\n\
+         install_dir = \".mochiflow\"\nspecs_dir = \".mochiflow/specs\"\nindex = \".mochiflow/INDEX.md\"\n\n\
+         [i18n]\nartifact_language = \"en\"\nconversation_language = \"auto\"\n\n\
+         [constitution]\nproject = \".mochiflow/constitution.md\"\nlocal = \".mochiflow/constitution.local.md\"\n\n\
+         [context]\nproduct = \".mochiflow/context/product.md\"\nstructure = \".mochiflow/context/structure.md\"\ntech = \".mochiflow/context/tech.md\"\n\n\
+         [adr]\ndecisions = \".mochiflow/adr/decisions\"\npitfalls = \".mochiflow/adr/pitfalls\"\n\n\
+         [git]\nbase_branch = \"main\"\n{git_block}\n\n\
+         [adapter]\ntools = [\"kiro\"]\n\n\
+         [surfaces.app]\ndescription = \"app\"\n\n[surfaces.app.verify]\ndefault = \"echo ok\"\n"
+    );
+    let config_path = mf.join("config.toml");
+    fs::write(&config_path, config).unwrap();
+    for path in [
+        "constitution.md",
+        "constitution.local.md",
+        "context/product.md",
+        "context/structure.md",
+        "context/tech.md",
+    ] {
+        fs::create_dir_all(mf.join(path).parent().unwrap()).unwrap();
+        fs::write(mf.join(path), "# c\n").unwrap();
+    }
+    write_local_accepted_spec(&mf.join("specs/local-pr"));
+    config_path
+}
+
+fn write_local_accepted_spec(spec: &Path) {
+    fs::write(
+        spec.join("spec.yaml"),
+        "version: 1\nslug: local-pr\ntitle: Local PR\ntype: feature\nsurfaces:\n  - app\nintegration: none\nrisk: standard\nstatus: accepted\nupdated: \"2026-06-27\"\n",
+    )
+    .unwrap();
+    fs::write(spec.join("pitch.md"), "# Pitch\n").unwrap();
+    fs::write(
+        spec.join("spec.md"),
+        "# Local PR\n\n## Acceptance Criteria (EARS)\n\n- AC-01: WHEN handing off a local spec, THE SYSTEM SHALL validate local evidence.\n\n## Verification Plan / AC Matrix\n\n| AC | Scope | Verification method | Planned test/QA | Implementation | Result | Evidence | Notes |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n| AC-01 | app | automated | final verify | fixture | PASS | final verification: `echo ok` |  |\n",
+    )
+    .unwrap();
+}
+
 fn mark_shipped(dir: &Path, slug: &str) {
     let repo = dir.join("repo");
     let spec = repo.join(".mochiflow/specs").join(slug);
@@ -318,6 +386,68 @@ fn pr_dry_run_noop() {
     let cfg = setup(dir.path(), "provider = \"none\"", false);
     run_pr(&cfg, &["--title", "X", "--dry-run"]).success();
     assert!(!dir.path().join("repo/pr-request.json").exists());
+}
+
+#[test]
+fn pr_local_mode_dry_run_does_not_require_committed_spec() {
+    let dir = tempfile::tempdir().unwrap();
+    let cfg = setup_local_pr_repo(dir.path(), "provider = \"none\"", false);
+    let result = run_pr(&cfg, &["--spec", "local-pr", "--title", "X", "--dry-run"]).success();
+    let out = String::from_utf8_lossy(&result.get_output().stdout);
+    assert!(out.contains("(dry-run) persistence: local"), "{out}");
+    assert!(
+        out.contains("committed accepted spec trailer is not required"),
+        "{out}"
+    );
+}
+
+#[test]
+fn pr_local_mode_dispatches_without_committed_spec_trailer() {
+    let dir = tempfile::tempdir().unwrap();
+    let driver = dir.path().join("driver.sh");
+    fs::write(
+        &driver,
+        "#!/bin/sh\necho '{\"url\": \"https://e/pr/local\"}'\n",
+    )
+    .unwrap();
+    Proc::new("chmod")
+        .args(["+x", driver.to_str().unwrap()])
+        .status()
+        .unwrap();
+    let block = format!(
+        "provider = \"none\"\npr_driver = \"{}\"",
+        driver.to_str().unwrap()
+    );
+    let cfg = setup_local_pr_repo(dir.path(), &block, true);
+
+    run_pr(&cfg, &["--spec", "local-pr", "--title", "Local"])
+        .success()
+        .stdout(predicates::str::contains("https://e/pr/local"));
+    assert!(
+        dir.path()
+            .join("repo/.mochiflow/state/local-pr/pr-request.json")
+            .exists()
+    );
+    let grep = Proc::new("git")
+        .args(["log", "--format=%H", "--grep", "^Spec: local-pr$"])
+        .current_dir(dir.path().join("repo"))
+        .output()
+        .unwrap();
+    assert!(grep.status.success());
+    assert!(
+        String::from_utf8_lossy(&grep.stdout).trim().is_empty(),
+        "local mode fixture must not need a committed Spec trailer"
+    );
+}
+
+#[test]
+fn pr_local_mode_requires_head_ahead_of_base() {
+    let dir = tempfile::tempdir().unwrap();
+    let cfg = setup_local_pr_repo(dir.path(), "provider = \"none\"", false);
+    run_pr(&cfg, &["--spec", "local-pr", "--title", "Local"])
+        .failure()
+        .code(3)
+        .stderr(predicates::str::contains("no commits ahead"));
 }
 
 /// provider=github but `gh` cannot be found on PATH → exit 1, and no

@@ -31,7 +31,7 @@ Critical Stop Conditions:
     - `cli/crates/mochiflow-cli/tests/conformance.rs`
   - Done: Local mode runs final verification, readiness checks, spec mutation, and lint, then exits successfully without staging or committing ignored spec/ADR artifacts while printing the local-mode skip reason; tracked mode keeps the existing staged close-out commit and trailer behavior. Shared structures touched in `accept.rs` remain mode-explicit so later `pr` changes do not infer behavior from side effects.
   - Stop: Local mode can pass while unrelated tracked files are dirty, or tracked mode no longer creates the close-out commit.
-- [ ] T-003 [AC-04, AC-05, AC-06, AC-07] Split `pr` preflight by persistence mode
+- [x] T-003 [AC-04, AC-05, AC-06, AC-07] Split `pr` preflight by persistence mode
   - Depends on: T-001
   - Files:
     - `cli/crates/mochiflow-core/src/pr.rs`
