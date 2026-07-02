@@ -64,7 +64,7 @@ Critical Stop Conditions:
     - `docs/concepts.md`
   - Done: Open guidance describes tracked and local mode without force-add advice; PR body guidance requires verification evidence, review result, and durable decision summary for local mode; docs explain mode detection, constraints, recommended usage, and local-to-tracked migration; conformance pins short stable phrases for local-mode PR body evidence, review result, durable decision summary, and no force-add guidance. Engine/doc wording stays consistent with the CLI behavior introduced in T-002 and T-003.
   - Stop: Documentation implies local mode is less strict about acceptance quality or tracked mode no longer needs a close-out commit.
-- [ ] T-006 [AC-11] Regenerate engine artifacts and run full verification
+- [x] T-006 [AC-11] Regenerate engine artifacts and run full verification
   - Depends on: T-005
   - Files:
     - `engine/MANIFEST.json`

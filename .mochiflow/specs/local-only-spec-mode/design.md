@@ -137,5 +137,14 @@
 
 ## Review Results
 
-- Mandatory `change-reviewer` result will be recorded after implementation,
-  because this spec is `risk: elevated`.
+- Review profile: change-reviewer
+- Reviewer mode: inline
+- Verdict: pass
+- Reviewed diff scope: persistence-mode detector, accept/pr mode splits,
+  local-mode delivery derivation, engine/docs/template guidance, regression
+  fixtures, generated engine/adapters, and final AC Matrix evidence.
+- Findings: none.
+- Verification reviewed: default CLI verification, `mochiflow freeze`,
+  `mochiflow upgrade --source engine`, `mochiflow adapter generate --check`,
+  `mochiflow doctor`, and `mochiflow lint --spec local-only-spec-mode` all
+  passed.
