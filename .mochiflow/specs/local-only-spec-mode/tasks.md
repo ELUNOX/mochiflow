@@ -40,7 +40,7 @@ Critical Stop Conditions:
     - `cli/crates/mochiflow-cli/tests/conformance.rs`
   - Done: Local mode no longer requires committed accepted spec/trailer and instead validates clean tracked tree, source branch, base/head inequality, head ahead of base, local accepted state, complete evidence, and required review result; `--dry-run` behavior is explicit and tested; tracked mode still requires the committed accepted spec and trailer. Shared validation between `accept.rs` and `pr.rs` is factored or called directly so evidence rules cannot drift.
   - Stop: `pr` would push or dispatch before local-mode evidence validation passes.
-- [ ] T-004 [AC-10] Preserve local-mode delivery derivation after manual merge
+- [x] T-004 [AC-10] Preserve local-mode delivery derivation after manual merge
   - Depends on: T-001, T-003
   - Files:
     - `cli/crates/mochiflow-core/src/delivery.rs`

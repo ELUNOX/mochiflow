@@ -36,7 +36,9 @@ commit. `close` **delegates nothing** — it is deterministic local hygiene with
 no code change, so there is no worker dispatch and no separate delegation path.
 The human merge report only initiates `close` locally; it is never
 persisted as a merged signal (`merged` is derived from the provider or the
-`Spec: {slug}` trailer reachable from `origin/{base_branch}`).
+tracked-mode `Spec: {slug}` trailer reachable from `origin/{base_branch}`; in
+local mode without provider state, it can also be derived while the local source
+branch tip is reachable from `origin/{base_branch}`).
 
 ## Procedure
 
@@ -48,7 +50,9 @@ Run `reference/git.md ## Post-merge local cleanup`:
    (divergent local).
 4. `git branch -d {prefix}/{slug}` (safe delete; fails if unmerged → leave it,
    ask the human). Resolve `prefix` from `type`: `feature` → `feat`; all other
-   types use `type` as-is.
+   types use `type` as-is. For local mode without provider merge state, do this
+   only inside close: deleting the branch before close removes the local-git
+   merge signal.
 5. Clear the spec's ephemeral delivery scratch: `rm -rf {install_dir}/state/{slug}/`
    (gitignored — PR body / `pr-request.json` are not archived).
 6. Regenerate the board (`mochiflow index`) so the gitignored `INDEX.md` reflects

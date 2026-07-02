@@ -473,6 +473,10 @@ fn router_merged_event_is_cleanup_only() {
         "merged-event routing must state merged is derived; got: {merged_line}"
     );
     assert!(
+        merged_line.contains("local-mode source branch tip reachable"),
+        "merged-event routing must include local-mode branch-tip derivation; got: {merged_line}"
+    );
+    assert!(
         !merged_line.contains("fold → archive") && !merged_line.contains("fold -> archive"),
         "merged-event routing must not instruct fold/archive after merge; got: {merged_line}"
     );
@@ -713,6 +717,7 @@ fn open_orders_acceptance_fold_accept_pr_gate() {
 #[test]
 fn close_is_local_hygiene_only() {
     let close = read_repo_file("engine/commands/close.md");
+    let git = read_repo_file("engine/reference/git.md");
     assert!(
         close.contains("local hygiene") && close.contains("writes nothing to the base branch"),
         "close must be local hygiene only with no base write"
@@ -720,6 +725,11 @@ fn close_is_local_hygiene_only() {
     assert!(
         close.contains("`merged` is derived"),
         "close must state merged is derived, not persisted"
+    );
+    assert!(
+        close.contains("local source\nbranch tip is reachable")
+            && git.contains("branch-tip signal is gone"),
+        "close/git guidance must document local-mode branch-tip merge signal and branch-delete limitation"
     );
 }
 

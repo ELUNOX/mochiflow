@@ -247,9 +247,13 @@ Delivery state is observed, never stored. `mochiflow status` and the regenerated
 - `in_review` — a PR is open (provider reports it, or `provider = none` and the
   spec branch is pushed to `origin` and unmerged).
 - `merged` — derived in priority order: the provider API when configured and
-  available, else a `Spec: {slug}` trailer reachable from
-  `origin/{[git].base_branch}` (two signals only). The human merge report only
+  available, else a tracked-mode `Spec: {slug}` trailer reachable from
+  `origin/{[git].base_branch}`, else for local mode only the local source branch
+  tip reachable from `origin/{[git].base_branch}`. The human merge report only
   initiates `close` locally and is never persisted as a merged signal.
+  Provider-none local mode has one limitation: if the source branch is deleted
+  before `close`, the branch-tip signal is gone and Done may no longer be
+  derivable without provider state.
 
 ## Living-spec fold (on the feature branch, before `mochiflow pr`)
 
@@ -315,7 +319,7 @@ commit):
 1. `git status --short` clean — else stop.
 2. `git switch {[git].base_branch}`
 3. `git pull --ff-only origin {[git].base_branch}` — stop if ff-only fails (divergent local).
-4. `git branch -d {prefix}/{slug}` (safe delete; fails if unmerged → leave it, ask human). Resolve `prefix` from `type`: `feature` → `feat`; all other types use `type` as-is.
+4. `git branch -d {prefix}/{slug}` (safe delete; fails if unmerged → leave it, ask human). Resolve `prefix` from `type`: `feature` → `feat`; all other types use `type` as-is. For provider-none local mode, delete the branch only here, after the merge report, because its tip is the local merge signal.
 5. Remote branch cleanup is outside post-merge local cleanup.
 6. Remove the spec's ephemeral delivery scratch: `rm -rf {install_dir}/state/{slug}/` (gitignored — PR body / `pr-request.json` are not archived).
 7. Regenerate the board (`mochiflow index`); `INDEX.md` is gitignored and never staged.

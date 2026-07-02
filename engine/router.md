@@ -61,7 +61,7 @@ demand: load the store `INDEX.md` first, then the relevant active records.
 4. Match `{slug}` in `trigger_patterns` only against a spec slug that exists under `{specs_dir}/{slug}/`; on a match, declare the verb in one line and activate.
    - Exception: `{slug} discuss` resolves against a seed at `{specs_dir}/_backlog/{slug}.md` when the slug exists only there; if `{specs_dir}/{slug}/` already exists, re-open that spec instead.
    - `{slug} plan` requires an existing active spec directory at `{specs_dir}/{slug}/` created by discuss. If only `{specs_dir}/_backlog/{slug}.md` exists, do not activate plan — guide back to `{slug} discuss` because backlog files are raw seeds, not plan-ready handoffs.
-   - Event patterns `{slug} merged` / `{slug} マージ済み` / `{slug} 完了` are the only trigger-pattern exception for delivered specs: resolve `{slug}` against the flat `{specs_dir}/{slug}/` (specs are never moved to `_done/`), then run close's post-merge local cleanup only (`commands/close.md`), not a fresh open. `merged` is derived (provider or the `Spec: {slug}` trailer in `origin/{base_branch}`); the fold already merged via the open PR's close-out commit, so close writes nothing to the base branch.
+   - Event patterns `{slug} merged` / `{slug} マージ済み` / `{slug} 完了` are the only trigger-pattern exception for delivered specs: resolve `{slug}` against the flat `{specs_dir}/{slug}/` (specs are never moved to `_done/`), then run close's post-merge local cleanup only (`commands/close.md`), not a fresh open. `merged` is derived (provider, tracked-mode `Spec: {slug}` trailer in `origin/{base_branch}`, or local-mode source branch tip reachable from `origin/{base_branch}` while the local branch still exists); the fold already merged via the open PR, so close writes nothing to the base branch.
    - Feedback patterns `{slug} feedback` / `{slug} 修正依頼` / `{slug} PR feedback` also resolve `{slug}` against the flat `{specs_dir}/{slug}/` (the spec stays flat the whole time), then route to `commands/update.md` — not a fresh open and no restore.
 5. With no active spec context, treat concrete small-edit requests ("直して" / "fix this" / "仕様書なしで" / "quick fix") as plan intent hints: propose `Start plan?` in one line and wait.
 6. On a natural-language spec hint, activate immediately only when an active spec context already scopes the verb; otherwise propose "Start <verb>?" in one line and wait. A generic "直して" with no active spec context is a plan hint, not a build hint.
@@ -108,6 +108,11 @@ or local-cleanup-pending, then:
 - no in-review or cleanup-pending candidate → do not route to cleanup; fall
   through to normal routing (treat it as ordinary conversation, or ask for the
   slug when the intent is otherwise clear).
+
+For local-only specs without provider merge state, route the merge report before
+deleting the source branch. The source branch tip is the local-git merge signal;
+once that branch is deleted, `mochiflow status` may no longer be able to derive
+Done without provider state.
 
 Exact `{slug} merged` / `{slug} マージ済み` / `{slug} 完了` remains the
 unambiguous explicit path (Decision Flow step 3) and is unaffected by this
