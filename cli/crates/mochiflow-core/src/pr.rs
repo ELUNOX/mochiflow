@@ -15,6 +15,7 @@ use std::process::Command;
 use serde::Serialize;
 
 use crate::config::Config;
+use crate::spec_mode::{SpecPersistence, classify_spec};
 
 pub const EXIT_OK: i32 = 0;
 pub const EXIT_BACKEND_FAIL: i32 = 1;
@@ -180,11 +181,25 @@ pub fn run_pr(
     }
 
     let backend = resolve_backend(cfg);
+    let persistence =
+        match spec.and_then(|slug| (!crate::accept::is_path_like_spec_arg(slug)).then_some(slug)) {
+            Some(slug) => match classify_spec(cfg, slug) {
+                Ok(persistence) => Some(persistence),
+                Err(message) => {
+                    eprintln!("FAIL: {message}");
+                    return EXIT_BACKEND_FAIL;
+                }
+            },
+            None => None,
+        };
 
     if dry_run {
         println!("(dry-run) request-dir : {}", request_dir.display());
         println!("(dry-run) head -> base: {head} -> {base}");
         println!("(dry-run) backend     : {}", backend_label(&backend));
+        if let Some(persistence) = &persistence {
+            print_persistence("(dry-run) persistence", persistence);
+        }
         println!("(dry-run) no pre-flight, push, or dispatch performed.");
         return EXIT_OK;
     }
@@ -261,6 +276,11 @@ pub fn run_pr(
         Backend::Command(cmd) => dispatch_command(root, &cmd, &request_dir, language),
         Backend::Manual => dispatch_manual(&req, pushed, language),
     }
+}
+
+fn print_persistence(prefix: &str, persistence: &SpecPersistence) {
+    println!("{prefix}: {}", persistence.mode.as_str());
+    println!("{prefix} reason: {}", persistence.reason);
 }
 
 fn backend_label(b: &Backend) -> String {

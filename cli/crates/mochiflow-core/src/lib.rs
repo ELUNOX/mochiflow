@@ -16,5 +16,6 @@ pub mod manifest;
 pub mod pr;
 pub mod present;
 pub mod spec_meta;
+pub mod spec_mode;
 pub mod status;
 pub mod upgrade;

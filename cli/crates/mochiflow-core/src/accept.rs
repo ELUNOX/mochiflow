@@ -10,6 +10,7 @@ use crate::adr::{self, AdrKind};
 use crate::config::Config;
 use crate::lint;
 use crate::spec_meta::{SpecMeta, read_spec_metadata};
+use crate::spec_mode::classify_spec_dir;
 
 const EXIT_OK: i32 = 0;
 const EXIT_FAIL: i32 = 1;
@@ -85,6 +86,13 @@ pub fn run_accept(cfg: &Config, slug_arg: Option<&str>, dry_run: bool) -> i32 {
             return EXIT_FAIL;
         }
     };
+    let persistence = match classify_spec_dir(cfg, &target.active_dir) {
+        Ok(persistence) => persistence,
+        Err(message) => {
+            eprintln!("FAIL: {message}");
+            return EXIT_FAIL;
+        }
+    };
 
     let status_entries = match git_status_z(&cfg.repo_root) {
         Ok(entries) => entries,
@@ -106,6 +114,8 @@ pub fn run_accept(cfg: &Config, slug_arg: Option<&str>, dry_run: bool) -> i32 {
     if dry_run {
         println!("accept target : {}", target.slug);
         println!("state       : active");
+        println!("persistence: {}", persistence.mode.as_str());
+        println!("persistence reason: {}", persistence.reason);
         println!("planned stage paths:");
         for path in accept_paths.stage_path_strings() {
             println!("  - {path}");

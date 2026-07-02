@@ -14,7 +14,7 @@ Critical Stop Conditions:
 
 ## Tasks
 
-- [ ] T-001 [AC-01] Add shared spec persistence mode detection
+- [x] T-001 [AC-01] Add shared spec persistence mode detection
   - Depends on: none
   - Files:
     - `cli/crates/mochiflow-core/src/spec_mode.rs`
