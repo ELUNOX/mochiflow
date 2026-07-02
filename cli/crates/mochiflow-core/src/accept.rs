@@ -10,7 +10,7 @@ use crate::adr::{self, AdrKind};
 use crate::config::Config;
 use crate::lint;
 use crate::spec_meta::{SpecMeta, read_spec_metadata};
-use crate::spec_mode::classify_spec_dir;
+use crate::spec_mode::{SpecPersistence, SpecPersistenceMode, classify_spec_dir};
 
 const EXIT_OK: i32 = 0;
 const EXIT_FAIL: i32 = 1;
@@ -116,17 +116,26 @@ pub fn run_accept(cfg: &Config, slug_arg: Option<&str>, dry_run: bool) -> i32 {
         println!("state       : active");
         println!("persistence: {}", persistence.mode.as_str());
         println!("persistence reason: {}", persistence.reason);
-        println!("planned stage paths:");
-        for path in accept_paths.stage_path_strings() {
-            println!("  - {path}");
-        }
         println!("planned actions:");
         println!("  - run final verification for declared surfaces");
         println!("  - update automated AC Matrix rows when eligible");
         println!("  - set accepted metadata (no _done move, no INDEX write)");
-        println!(
-            "  - stage the target spec and linked ADR fold records, then create the close-out commit"
-        );
+        match persistence.mode {
+            SpecPersistenceMode::Tracked => {
+                println!("planned stage paths:");
+                for path in accept_paths.stage_path_strings() {
+                    println!("  - {path}");
+                }
+                println!(
+                    "  - stage the target spec and linked ADR fold records, then create the close-out commit"
+                );
+            }
+            SpecPersistenceMode::Local => {
+                println!(
+                    "  - skip close-out commit, spec staging, and ADR staging because local mode keeps spec artifacts ignored"
+                );
+            }
+        }
         if blockers.is_empty() && readiness.is_empty() {
             println!("readiness blockers: none");
         } else {
@@ -184,7 +193,10 @@ pub fn run_accept(cfg: &Config, slug_arg: Option<&str>, dry_run: bool) -> i32 {
         );
         return EXIT_FAIL;
     }
-    stage_validate_commit(cfg, &target, &accept_paths, &meta)
+    match persistence.mode {
+        SpecPersistenceMode::Tracked => stage_validate_commit(cfg, &target, &accept_paths, &meta),
+        SpecPersistenceMode::Local => finish_local_accept(&target, &persistence),
+    }
 }
 
 pub fn is_path_like_spec_arg(value: &str) -> bool {
@@ -292,6 +304,18 @@ fn stage_validate_commit(
             EXIT_FAIL
         }
     }
+}
+
+fn finish_local_accept(target: &Target, persistence: &SpecPersistence) -> i32 {
+    println!(
+        "accept: local mode for `{}`; final verification passed and local spec metadata is accepted.",
+        target.slug
+    );
+    println!(
+        "accept: skipped close-out commit, spec staging, and ADR staging: {}",
+        persistence.reason
+    );
+    EXIT_OK
 }
 
 fn resolve_target(cfg: &Config, slug_arg: Option<&str>) -> Result<Target, String> {

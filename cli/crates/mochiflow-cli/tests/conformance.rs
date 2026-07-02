@@ -3347,6 +3347,55 @@ fn materialize_ship_repo(root: &Path, slug: &str, specs_dir: &str) -> (PathBuf, 
     (install.join("config.toml"), repo)
 }
 
+fn materialize_local_ship_repo(root: &Path, slug: &str) -> (PathBuf, PathBuf) {
+    let bare = root.join("origin.git");
+    std::fs::create_dir_all(&bare).unwrap();
+    git_ok(&bare, &["init", "--bare", "-q"]);
+
+    let repo = root.join("repo");
+    std::fs::create_dir_all(&repo).unwrap();
+    git_ok(&repo, &["init", "-q", "-b", "main"]);
+    git_ok(&repo, &["config", "user.email", "t@example.com"]);
+    git_ok(&repo, &["config", "user.name", "Test"]);
+
+    let install = repo.join(".mochiflow");
+    let specs = install.join("specs");
+    std::fs::create_dir_all(specs.join(slug)).unwrap();
+    std::fs::create_dir_all(install.join("context")).unwrap();
+    std::fs::create_dir_all(install.join("adr/decisions")).unwrap();
+    std::fs::create_dir_all(install.join("adr/pitfalls")).unwrap();
+    std::fs::write(repo.join(".gitignore"), ".mochiflow/\n").unwrap();
+    std::fs::write(repo.join("README.md"), "# local fixture\n").unwrap();
+    for name in ["constitution.md", "constitution.local.md"] {
+        std::fs::write(install.join(name), "# c\n").unwrap();
+    }
+    for name in ["product.md", "structure.md", "tech.md"] {
+        std::fs::write(install.join("context").join(name), "# c\n").unwrap();
+    }
+    std::fs::write(
+        install.join("config.toml"),
+        "schema_version = 1\n\
+         install_dir = \".mochiflow\"\n\
+         specs_dir = \".mochiflow/specs\"\n\
+         index = \".mochiflow/INDEX.md\"\n\n\
+         [i18n]\nartifact_language = \"en\"\nconversation_language = \"auto\"\n\n\
+         [constitution]\nproject = \".mochiflow/constitution.md\"\nlocal = \".mochiflow/constitution.local.md\"\n\n\
+         [context]\nproduct = \".mochiflow/context/product.md\"\nstructure = \".mochiflow/context/structure.md\"\ntech = \".mochiflow/context/tech.md\"\n\n\
+         [adr]\ndecisions = \".mochiflow/adr/decisions\"\npitfalls = \".mochiflow/adr/pitfalls\"\n\n\
+         [git]\nprovider = \"none\"\nbase_branch = \"main\"\n\n\
+         [adapter]\ntool = \"agents\"\n\n\
+         [surfaces.app]\ndescription = \"app\"\n\n[surfaces.app.verify]\ndefault = \"echo test-pass\"\n",
+    )
+    .unwrap();
+    write_active_ship_spec(&specs.join(slug), slug);
+    git_ok(&repo, &["add", ".gitignore", "README.md"]);
+    git_ok(&repo, &["commit", "-q", "-m", "init"]);
+    git_ok(&repo, &["remote", "add", "origin", bare.to_str().unwrap()]);
+    git_ok(&repo, &["push", "-q", "-u", "origin", "main"]);
+    git_ok(&repo, &["checkout", "-q", "-b", &format!("fix/{slug}")]);
+    (install.join("config.toml"), repo)
+}
+
 fn write_active_ship_spec(spec_dir: &Path, slug: &str) {
     std::fs::create_dir_all(spec_dir).unwrap();
     std::fs::write(
@@ -3464,6 +3513,42 @@ fn behavioral_accept_commits_flat_spec_with_safe_paths() {
     );
     let status = git_out(&repo, &["status", "--short"]);
     assert_eq!(status, "", "{status}");
+}
+
+#[test]
+fn behavioral_accept_local_mode_skips_staging_and_commit() {
+    let tmp = tempfile::tempdir().unwrap();
+    let slug = "local-accept-fixture";
+    let (cfg, repo) = materialize_local_ship_repo(tmp.path(), slug);
+    let before_head = git_out(&repo, &["rev-parse", "HEAD"]);
+
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["accept", slug]);
+    assert_eq!(code, 0, "stdout:\n{out}\nstderr:\n{err}");
+    assert!(out.contains("accept: local mode"), "{out}");
+    assert!(
+        out.contains("skipped close-out commit, spec staging, and ADR staging"),
+        "{out}"
+    );
+    assert!(
+        !out.contains("git add -f") && !err.contains("git add -f"),
+        "local mode must not suggest force-adding ignored artifacts\nstdout:\n{out}\nstderr:\n{err}"
+    );
+
+    let yaml =
+        std::fs::read_to_string(repo.join(format!(".mochiflow/specs/{slug}/spec.yaml"))).unwrap();
+    assert!(yaml.contains("status: \"accepted\""), "{yaml}");
+    let spec =
+        std::fs::read_to_string(repo.join(format!(".mochiflow/specs/{slug}/spec.md"))).unwrap();
+    assert!(
+        spec.contains(
+            "| PASS | behavioral fixture assertion<br>final verification: `echo test-pass` |"
+        ),
+        "{spec}"
+    );
+
+    assert_eq!(git_out(&repo, &["rev-parse", "HEAD"]), before_head);
+    assert_eq!(git_out(&repo, &["diff", "--cached", "--name-only"]), "");
+    assert_eq!(git_out(&repo, &["status", "--short"]), "");
 }
 
 #[test]

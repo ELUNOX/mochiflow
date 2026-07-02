@@ -23,7 +23,7 @@ Critical Stop Conditions:
     - `cli/crates/mochiflow-core/src/pr.rs`
   - Done: A shared helper classifies tracked versus local spec persistence from Git ignore behavior for the concrete spec path, exposes reason text for CLI output, and both `accept` and `pr` call the helper instead of implementing separate checks.
   - Stop: Detector behavior would require a config override or cannot distinguish ignored spec artifacts from ordinary runtime state.
-- [ ] T-002 [AC-02, AC-03, AC-07] Split `accept` close-out behavior by persistence mode
+- [x] T-002 [AC-02, AC-03, AC-07] Split `accept` close-out behavior by persistence mode
   - Depends on: T-001
   - Files:
     - `cli/crates/mochiflow-core/src/accept.rs`
