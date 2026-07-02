@@ -7,9 +7,10 @@
 //!   Done > In Review > Ready > Active
 //!
 //! - **Done**: the provider reports the PR merged, OR a `Spec: {slug}` trailer is
+//!   reachable from `origin/{base_branch}`, OR a local-mode spec branch tip is
 //!   reachable from `origin/{base_branch}`, OR the spec is a legacy archived
-//!   `_done/` spec (status `done`). Only two live signals (provider, trailer);
-//!   the human merge report is never persisted as a merged signal.
+//!   `_done/` spec (status `done`). The human merge report is never persisted as
+//!   a merged signal.
 //! - **In Review**: not Done, and either the provider reports an open PR, or
 //!   (`provider = none`) the spec branch is pushed to `origin` and unmerged.
 //! - **Ready**: `status: accepted`, not Done, not In Review (accepted-unpushed).
@@ -22,6 +23,7 @@ use std::path::Path;
 use std::process::Command;
 
 use crate::config::Config;
+use crate::spec_mode::{SpecPersistenceMode, classify_spec};
 
 /// The single delivery column a spec resolves to. Backlog (a `_backlog/` seed)
 /// is not a spec and is handled by the board layer, not here.
@@ -60,6 +62,9 @@ pub struct DeliverySignals {
     pub provider_open_pr: bool,
     /// A `Spec: {slug}` trailer is reachable from `origin/{base_branch}`.
     pub trailer_in_base: bool,
+    /// Local-mode fallback: the source branch tip is reachable from
+    /// `origin/{base_branch}` even though no `Spec:` trailer is available.
+    pub local_branch_tip_in_base: bool,
     /// The spec branch is pushed to `origin` and not merged into the base.
     pub branch_pushed_unmerged: bool,
 }
@@ -69,7 +74,11 @@ pub struct DeliverySignals {
 /// the unit-tested core; all I/O lives in `gather_signals` / `derive_column`.
 pub fn resolve_column(status: &str, signals: &DeliverySignals) -> DeliveryColumn {
     // Done outranks every other column (merged outranks an open PR).
-    if status == "done" || signals.provider_merged || signals.trailer_in_base {
+    if status == "done"
+        || signals.provider_merged
+        || signals.trailer_in_base
+        || signals.local_branch_tip_in_base
+    {
         return DeliveryColumn::Done;
     }
     // In Review: a live open PR, or the local-git pushed-and-unmerged signal.
@@ -142,11 +151,11 @@ impl NextActionKind {
                     .to_string()
             }
             (NextActionKind::LocalCleanupPending, false) => {
-                "Local cleanup pending: the PR merged but the local branch / delivery files remain. Report the merge to run post-merge cleanup."
+                "Local cleanup pending: the PR merged but the local branch / delivery files remain. Report the merge before deleting the source branch so local-only merge detection can finish cleanup."
                     .to_string()
             }
             (NextActionKind::LocalCleanupPending, true) => {
-                "ローカルの後片付けが未完了です: PR はマージ済みですが、ローカルブランチや一時ファイルが残っています。「マージした」と報告すると後片付けを実行します。"
+                "ローカルの後片付けが未完了です: PR はマージ済みですが、ローカルブランチや一時ファイルが残っています。local-only のマージ検出には source branch が残っている必要があるため、削除前に「マージした」と報告してください。"
                     .to_string()
             }
         }
@@ -208,6 +217,7 @@ fn gather_signals(cfg: &Config, slug: &str, branch: &str) -> DeliverySignals {
     let base = &cfg.git.base_branch;
 
     let trailer_in_base = trailer_reachable_from_base(root, slug, base);
+    let local_branch_tip_in_base = local_spec_branch_tip_reachable_from_base(cfg, slug, branch);
     let (provider_merged, provider_open_pr) = match cfg.git.provider.as_str() {
         "github" => provider_pr_state(root, branch),
         // `provider = none` (and any unrecognized provider) uses local git only.
@@ -224,8 +234,15 @@ fn gather_signals(cfg: &Config, slug: &str, branch: &str) -> DeliverySignals {
         provider_merged,
         provider_open_pr,
         trailer_in_base,
+        local_branch_tip_in_base,
         branch_pushed_unmerged,
     }
+}
+
+fn local_spec_branch_tip_reachable_from_base(cfg: &Config, slug: &str, branch: &str) -> bool {
+    classify_spec(cfg, slug)
+        .is_ok_and(|persistence| matches!(persistence.mode, SpecPersistenceMode::Local))
+        && branch_tip_reachable_from_base(&cfg.repo_root, branch, &cfg.git.base_branch)
 }
 
 /// True when a commit carrying a `Spec: {slug}` trailer is reachable from
@@ -270,8 +287,24 @@ fn remote_branch_merged(root: &Path, branch: &str, base: &str) -> bool {
         .arg(format!("origin/{branch}"))
         .arg(format!("origin/{base}"))
         .current_dir(root)
-        .status()
-        .map(|s| s.success())
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
+
+/// True when the local source branch tip is an ancestor of `origin/{base}`.
+/// This is the provider-none/manual local-mode merge signal. It intentionally
+/// depends on the local source branch still existing; if the branch is deleted
+/// before cleanup and no provider signal is available, derivation cannot recover
+/// the merged state without a tracked `Spec:` trailer.
+fn branch_tip_reachable_from_base(root: &Path, branch: &str, base: &str) -> bool {
+    Command::new("git")
+        .args(["merge-base", "--is-ancestor"])
+        .arg(format!("refs/heads/{branch}"))
+        .arg(format!("origin/{base}"))
+        .current_dir(root)
+        .output()
+        .map(|o| o.status.success())
         .unwrap_or(false)
 }
 
@@ -324,6 +357,7 @@ mod tests {
             provider_merged,
             provider_open_pr,
             trailer_in_base,
+            local_branch_tip_in_base: false,
             branch_pushed_unmerged,
         }
     }
@@ -371,6 +405,36 @@ mod tests {
             repo,
             &["update-ref", "refs/remotes/origin/feat/sample", "HEAD"],
         );
+        tmp
+    }
+
+    fn materialize_repo_with_merged_local_mode_branch() -> tempfile::TempDir {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo = tmp.path();
+        git_ok(repo, &["init", "-q", "-b", "main"]);
+        git_ok(repo, &["config", "user.email", "t@example.com"]);
+        git_ok(repo, &["config", "user.name", "Test"]);
+        std::fs::write(repo.join(".gitignore"), ".mochiflow/\n").unwrap();
+        std::fs::write(repo.join("README.md"), "base\n").unwrap();
+        git_ok(repo, &["add", ".gitignore", "README.md"]);
+        git_ok(repo, &["commit", "-q", "-m", "base"]);
+        git_ok(repo, &["update-ref", "refs/remotes/origin/main", "HEAD"]);
+        let config = write_config(repo, "none");
+        let spec_dir = repo.join(".mochiflow/specs/sample");
+        std::fs::create_dir_all(&spec_dir).unwrap();
+        std::fs::write(
+            spec_dir.join("spec.yaml"),
+            "version: 1\nslug: sample\ntitle: Sample\ntype: feature\nsurfaces:\n  - app\nintegration: none\nrisk: standard\nstatus: accepted\n",
+        )
+        .unwrap();
+        git_ok(repo, &["checkout", "-q", "-b", "feat/sample"]);
+        std::fs::write(repo.join("README.md"), "branch\n").unwrap();
+        git_ok(repo, &["commit", "-q", "-am", "branch"]);
+        git_ok(repo, &["checkout", "-q", "main"]);
+        git_ok(repo, &["merge", "-q", "--ff-only", "feat/sample"]);
+        git_ok(repo, &["update-ref", "refs/remotes/origin/main", "HEAD"]);
+        git_ok(repo, &["checkout", "-q", "feat/sample"]);
+        assert_eq!(config, repo.join(".mochiflow/config.toml"));
         tmp
     }
 
@@ -450,6 +514,36 @@ mod tests {
         assert_eq!(
             resolve_column("accepted", &signals(false, false, false, true)),
             DeliveryColumn::InReview
+        );
+    }
+
+    #[test]
+    fn local_mode_branch_tip_in_base_is_done_without_trailer() {
+        let tmp = materialize_repo_with_merged_local_mode_branch();
+        let config = tmp.path().join(".mochiflow/config.toml");
+        let cfg = load_config(&config).unwrap();
+        assert_eq!(
+            derive_column(&cfg, "sample", "accepted", "feature"),
+            DeliveryColumn::Done
+        );
+        assert_eq!(
+            derive_next_action(&cfg, "sample", "accepted", "feature", DeliveryColumn::Done),
+            Some(NextActionKind::LocalCleanupPending)
+        );
+        let trailer = trailer_reachable_from_base(tmp.path(), "sample", "main");
+        assert!(!trailer, "fixture must prove the no-trailer fallback");
+    }
+
+    #[test]
+    fn local_mode_branch_tip_signal_is_lost_after_branch_delete() {
+        let tmp = materialize_repo_with_merged_local_mode_branch();
+        let config = tmp.path().join(".mochiflow/config.toml");
+        let cfg = load_config(&config).unwrap();
+        git_ok(tmp.path(), &["checkout", "-q", "main"]);
+        git_ok(tmp.path(), &["branch", "-D", "feat/sample"]);
+        assert_eq!(
+            derive_column(&cfg, "sample", "accepted", "feature"),
+            DeliveryColumn::Ready
         );
     }
 

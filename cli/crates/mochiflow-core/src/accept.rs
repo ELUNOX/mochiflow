@@ -10,6 +10,7 @@ use crate::adr::{self, AdrKind};
 use crate::config::Config;
 use crate::lint;
 use crate::spec_meta::{SpecMeta, read_spec_metadata};
+use crate::spec_mode::{SpecPersistence, SpecPersistenceMode, classify_spec_dir};
 
 const EXIT_OK: i32 = 0;
 const EXIT_FAIL: i32 = 1;
@@ -85,6 +86,13 @@ pub fn run_accept(cfg: &Config, slug_arg: Option<&str>, dry_run: bool) -> i32 {
             return EXIT_FAIL;
         }
     };
+    let persistence = match classify_spec_dir(cfg, &target.active_dir) {
+        Ok(persistence) => persistence,
+        Err(message) => {
+            eprintln!("FAIL: {message}");
+            return EXIT_FAIL;
+        }
+    };
 
     let status_entries = match git_status_z(&cfg.repo_root) {
         Ok(entries) => entries,
@@ -106,17 +114,28 @@ pub fn run_accept(cfg: &Config, slug_arg: Option<&str>, dry_run: bool) -> i32 {
     if dry_run {
         println!("accept target : {}", target.slug);
         println!("state       : active");
-        println!("planned stage paths:");
-        for path in accept_paths.stage_path_strings() {
-            println!("  - {path}");
-        }
+        println!("persistence: {}", persistence.mode.as_str());
+        println!("persistence reason: {}", persistence.reason);
         println!("planned actions:");
         println!("  - run final verification for declared surfaces");
         println!("  - update automated AC Matrix rows when eligible");
         println!("  - set accepted metadata (no _done move, no INDEX write)");
-        println!(
-            "  - stage the target spec and linked ADR fold records, then create the close-out commit"
-        );
+        match persistence.mode {
+            SpecPersistenceMode::Tracked => {
+                println!("planned stage paths:");
+                for path in accept_paths.stage_path_strings() {
+                    println!("  - {path}");
+                }
+                println!(
+                    "  - stage the target spec and linked ADR fold records, then create the close-out commit"
+                );
+            }
+            SpecPersistenceMode::Local => {
+                println!(
+                    "  - skip close-out commit, spec staging, and ADR staging because local mode keeps spec artifacts ignored"
+                );
+            }
+        }
         if blockers.is_empty() && readiness.is_empty() {
             println!("readiness blockers: none");
         } else {
@@ -174,7 +193,10 @@ pub fn run_accept(cfg: &Config, slug_arg: Option<&str>, dry_run: bool) -> i32 {
         );
         return EXIT_FAIL;
     }
-    stage_validate_commit(cfg, &target, &accept_paths, &meta)
+    match persistence.mode {
+        SpecPersistenceMode::Tracked => stage_validate_commit(cfg, &target, &accept_paths, &meta),
+        SpecPersistenceMode::Local => finish_local_accept(&target, &persistence),
+    }
 }
 
 pub fn is_path_like_spec_arg(value: &str) -> bool {
@@ -220,6 +242,47 @@ pub fn validate_pr_spec_closeout_committed(cfg: &Config, slug: &str) -> Result<(
         ));
     }
     Ok(())
+}
+
+pub fn validate_pr_local_acceptance(cfg: &Config, slug: &str) -> Result<(), String> {
+    let target = target_for_slug(cfg, slug);
+    if !target.active_dir.exists() {
+        return Err(format!(
+            "pre-flight FAIL: spec `{slug}` was not found at {}.",
+            target.active_dir.display()
+        ));
+    }
+    let meta = read_spec_metadata(&target.active_dir)
+        .map_err(|e| format!("pre-flight FAIL: could not read spec `{slug}`: {e}"))?;
+    let mut blockers = Vec::new();
+    if meta.status() != "accepted" {
+        blockers.push(format!(
+            "local spec status is `{}`; expected `accepted`",
+            meta.status()
+        ));
+    }
+    if lint::run_lint(cfg, Some(slug), true) != 0 {
+        blockers.push("lint failed for local accepted spec".to_string());
+    }
+    blockers.extend(matrix_completion_blockers(
+        &target.active_dir.join("spec.md"),
+    ));
+    if risk_order(meta.risk()) >= 1 && !has_passing_review(&target.active_dir.join("design.md")) {
+        blockers.push(
+            "reviewer verdict (pass/pass-with-comments) is not recorded in design.md ## Review Results"
+                .to_string(),
+        );
+    }
+    if blockers.is_empty() {
+        return Ok(());
+    }
+    let mut message =
+        "pre-flight FAIL: local accepted state or verification evidence is incomplete:".to_string();
+    for blocker in blockers {
+        message.push_str("\n  - ");
+        message.push_str(&blocker);
+    }
+    Err(message)
 }
 
 fn stage_validate_commit(
@@ -284,6 +347,18 @@ fn stage_validate_commit(
     }
 }
 
+fn finish_local_accept(target: &Target, persistence: &SpecPersistence) -> i32 {
+    println!(
+        "accept: local mode for `{}`; final verification passed and local spec metadata is accepted.",
+        target.slug
+    );
+    println!(
+        "accept: skipped close-out commit, spec staging, and ADR staging: {}",
+        persistence.reason
+    );
+    EXIT_OK
+}
+
 fn resolve_target(cfg: &Config, slug_arg: Option<&str>) -> Result<Target, String> {
     if let Some(slug) = slug_arg {
         if slug.trim().is_empty() || is_path_like_spec_arg(slug) {
@@ -337,7 +412,7 @@ fn readiness_blockers(cfg: &Config, target: &Target, meta: &SpecMeta) -> Vec<Str
     if lint::run_lint(cfg, Some(&target.slug), true) != 0 {
         blockers.push("lint failed before mutation".to_string());
     }
-    blockers.extend(matrix_readiness_blockers(&spec_dir.join("spec.md")));
+    blockers.extend(matrix_completion_blockers(&spec_dir.join("spec.md")));
     if risk_order(meta.risk()) >= 1 && !has_passing_review(&spec_dir.join("design.md")) {
         blockers.push(
             "reviewer verdict (pass/pass-with-comments) is not recorded in design.md ## Review Results"
@@ -347,7 +422,7 @@ fn readiness_blockers(cfg: &Config, target: &Target, meta: &SpecMeta) -> Vec<Str
     blockers
 }
 
-fn matrix_readiness_blockers(spec_md: &Path) -> Vec<String> {
+fn matrix_completion_blockers(spec_md: &Path) -> Vec<String> {
     let text = fs::read_to_string(spec_md).unwrap_or_default();
     parse_matrix(&text)
         .into_iter()

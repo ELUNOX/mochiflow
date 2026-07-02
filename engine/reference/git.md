@@ -160,8 +160,9 @@ stays fresh between CLI commands.
 
 ### Accept close-out commit
 
-`open` produces one **close-out commit** on the feature branch, after human QA and
-**before** `mochiflow pr`. When `open`'s step-4 context-refresh check ran (a
+`open` produces one **close-out commit** on the feature branch in tracked mode,
+after human QA and **before** `mochiflow pr`. When `open`'s step-4
+context-refresh check ran (a
 coarse structural shift was detected and the human confirmed the regenerated
 context), a separate `docs(context)` commit — carrying only the `[context]` files
 with the `Spec: {slug}` trailer — is created **first**, after the
@@ -179,15 +180,21 @@ clean tree. The close-out commit bundles, in a single commit:
 The spec stays flat: there is no `_done/` move and no `INDEX` regeneration in the
 commit.
 
-Use `mochiflow accept {slug}` for the deterministic mechanics: it stages the
+Use `mochiflow accept {slug}` for the deterministic mechanics. The command
+detects persistence from Git ignore behavior for the concrete spec artifact:
+tracked mode means the spec artifact is not ignored; local mode means
+`.mochiflow/` or the spec artifact path is ignored. In tracked mode it stages the
 target spec directory and linked ADR record files with
 `git add {specs_dir}/{slug} {adr_record_paths...}`, validates the staged
-name-status output, and creates the close-out commit. It appends final
-verification evidence to already-`PASS` automated Matrix rows, but it does not
-convert `UNVERIFIED` rows to `PASS`. It never stages `{index}` (`INDEX.md`) and
-never moves the spec. If manual fallback is required, use the same stable pathspecs and validate with
-`git diff --cached --name-status -z`; never stage `INDEX.md`. When specs are
-gitignored there may be nothing to stage under `{specs_dir}`.
+name-status output, and creates the close-out commit. In local mode it still runs
+final verification, validates lint / AC Matrix / reviewer verdict, updates local
+`spec.yaml` to `status: accepted`, then skips close-out commit, spec staging, and
+ADR staging with an explicit reason. It appends final verification evidence to
+already-`PASS` automated Matrix rows, but it does not convert `UNVERIFIED` rows
+to `PASS`. It never stages `{index}` (`INDEX.md`) and never moves the spec. If
+manual fallback is required, use the same stable pathspecs only in tracked mode
+and validate with `git diff --cached --name-status -z`; never stage `INDEX.md`
+and never force-add ignored `.mochiflow/` artifacts.
 
 The message follows
 the Commit convention above — Conventional Commits, artifact language, and **no
@@ -200,16 +207,20 @@ hygiene (`## Post-merge local cleanup`).
 
 The PR title/body (per `templates/delivery/pr-description.md`: artifact
 language, external-reviewer facing, no spec-internal references, no spec slug, no
-AC IDs, no mochiflow vocabulary) are generated after human gate 2
+AC IDs, no mochiflow vocabulary; includes verification evidence, review result,
+and durable decision summary) are generated after human gate 2
 (`workflow.md`). Every spec depth uses `mochiflow pr` after acceptance and
 approve-PR.
 
 The open procedure uses **`mochiflow pr`** for PR handoff. The command runs
-pre-flight (working tree clean / current branch is the source / source ≠ target /
-the spec committed at `{specs_dir}/{slug}/` with `status: accepted` and a
-`Spec: {slug}` trailer), pushes the branch, resolves the backend, and reports its
-exit code (`0` created, `10` manual handoff, `3` pre-flight FAIL, `1`/`2`
-failure).
+pre-flight, pushes the branch, resolves the backend, and reports its exit code
+(`0` created, `10` manual handoff, `3` pre-flight FAIL, `1`/`2` failure).
+Tracked mode pre-flight requires a clean tree, current branch as source,
+source ≠ target, and a committed accepted spec at `{specs_dir}/{slug}/` with a
+`Spec: {slug}` trailer. Local mode pre-flight does not require committed spec
+artifacts or a `Spec:` trailer; it requires a clean tracked tree, current branch
+as source, source ≠ target, source ahead of target, local accepted state, and
+complete verification/review evidence.
 
 `mochiflow pr` resolves the creation backend in precedence order:
 
@@ -247,9 +258,13 @@ Delivery state is observed, never stored. `mochiflow status` and the regenerated
 - `in_review` — a PR is open (provider reports it, or `provider = none` and the
   spec branch is pushed to `origin` and unmerged).
 - `merged` — derived in priority order: the provider API when configured and
-  available, else a `Spec: {slug}` trailer reachable from
-  `origin/{[git].base_branch}` (two signals only). The human merge report only
+  available, else a tracked-mode `Spec: {slug}` trailer reachable from
+  `origin/{[git].base_branch}`, else for local mode only the local source branch
+  tip reachable from `origin/{[git].base_branch}`. The human merge report only
   initiates `close` locally and is never persisted as a merged signal.
+  Provider-none local mode has one limitation: if the source branch is deleted
+  before `close`, the branch-tip signal is gone and Done may no longer be
+  derivable without provider state.
 
 ## Living-spec fold (on the feature branch, before `mochiflow pr`)
 
@@ -315,7 +330,7 @@ commit):
 1. `git status --short` clean — else stop.
 2. `git switch {[git].base_branch}`
 3. `git pull --ff-only origin {[git].base_branch}` — stop if ff-only fails (divergent local).
-4. `git branch -d {prefix}/{slug}` (safe delete; fails if unmerged → leave it, ask human). Resolve `prefix` from `type`: `feature` → `feat`; all other types use `type` as-is.
+4. `git branch -d {prefix}/{slug}` (safe delete; fails if unmerged → leave it, ask human). Resolve `prefix` from `type`: `feature` → `feat`; all other types use `type` as-is. For provider-none local mode, delete the branch only here, after the merge report, because its tip is the local merge signal.
 5. Remote branch cleanup is outside post-merge local cleanup.
 6. Remove the spec's ephemeral delivery scratch: `rm -rf {install_dir}/state/{slug}/` (gitignored — PR body / `pr-request.json` are not archived).
 7. Regenerate the board (`mochiflow index`); `INDEX.md` is gitignored and never staged.

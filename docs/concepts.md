@@ -36,6 +36,14 @@ MochiFlow separates current state from durable reasoning:
 Code remains the source of truth for current behavior. Prose helps the agent
 orient itself, but it does not override the codebase.
 
+Specs can be persisted in two modes. In tracked mode, `.mochiflow/specs/` and
+ADR records are committed, so the accepted close-out commit and `Spec:` trailer
+are part of the PR. In local mode, `.mochiflow/` or the spec path is gitignored;
+MochiFlow keeps acceptance evidence local, skips spec/ADR staging, and puts the
+verification evidence, review result, and durable decision summary into the PR
+body instead. Tracked mode is recommended for team auditability; local mode is
+for repositories that intentionally keep workflow artifacts out of git.
+
 ## Approval gates
 
 MochiFlow keeps two human decision points:

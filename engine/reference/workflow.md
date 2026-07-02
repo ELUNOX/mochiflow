@@ -45,8 +45,10 @@ are not delivery approval gates and do not change spec lifecycle state except
 where explicitly defined. `accepted` is not a gate: it is an acceptance state that
 `open` sets through the deterministic `mochiflow accept {slug}` mechanical close-out
 when the acceptance conditions below hold. The command updates `spec.yaml`
-`status: accepted`, re-runs verification and lint, stages only close-out paths,
-and creates the close-out commit.
+`status: accepted`, re-runs verification and lint, then follows the repository's
+spec persistence mode. Tracked mode stages only close-out paths and creates the
+close-out commit. Local mode keeps accepted spec artifacts ignored, skips
+staging/commit, and relies on local accepted state plus PR body evidence.
 
 Independent review (`agents/plan-auditor.md` before implementation and
 `agents/change-reviewer.md` after implementation, whether the mandatory

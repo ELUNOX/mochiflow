@@ -22,7 +22,8 @@ source of truth; this is a forward-placed map to avoid first-move mistakes.
   (`tests/cli.rs`, `tests/conformance.rs`, `tests/first_run.rs`, `tests/pr.rs`).
 - `cli/crates/mochiflow-core` — library modules: `adapter`, `adr`, `backlog`,
   `config`, `delivery`, `detach`, `detect`, `doctor`, `freeze`, `index`, `init`,
-  `join`, `lint`, `manifest`, `pr`, `present`, `spec_meta`, `status`, `upgrade`.
+  `join`, `lint`, `manifest`, `pr`, `present`, `spec_meta`, `spec_mode`,
+  `status`, `upgrade`.
 - `docs/` — user-facing concepts, setup, configuration, versioning, and release
   verification.
 - `assets/` — logo / mark images used by README and distribution material.

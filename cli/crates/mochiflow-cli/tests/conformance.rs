@@ -473,6 +473,10 @@ fn router_merged_event_is_cleanup_only() {
         "merged-event routing must state merged is derived; got: {merged_line}"
     );
     assert!(
+        merged_line.contains("local-mode source branch tip reachable"),
+        "merged-event routing must include local-mode branch-tip derivation; got: {merged_line}"
+    );
+    assert!(
         !merged_line.contains("fold → archive") && !merged_line.contains("fold -> archive"),
         "merged-event routing must not instruct fold/archive after merge; got: {merged_line}"
     );
@@ -697,7 +701,7 @@ fn open_orders_acceptance_fold_accept_pr_gate() {
         "### (a) Acceptance",
         "### (b) Finalize the fold",
         "### (c) Context refresh commit (optional)",
-        "### (d) Accept close-out commit",
+        "### (d) Accept transition",
         "### (e) Generate PR title/body",
         "### (f) Approve-PR gate",
         "### (g) Push and create the PR",
@@ -713,6 +717,7 @@ fn open_orders_acceptance_fold_accept_pr_gate() {
 #[test]
 fn close_is_local_hygiene_only() {
     let close = read_repo_file("engine/commands/close.md");
+    let git = read_repo_file("engine/reference/git.md");
     assert!(
         close.contains("local hygiene") && close.contains("writes nothing to the base branch"),
         "close must be local hygiene only with no base write"
@@ -720,6 +725,11 @@ fn close_is_local_hygiene_only() {
     assert!(
         close.contains("`merged` is derived"),
         "close must state merged is derived, not persisted"
+    );
+    assert!(
+        close.contains("local source\nbranch tip is reachable")
+            && git.contains("branch-tip signal is gone"),
+        "close/git guidance must document local-mode branch-tip merge signal and branch-delete limitation"
     );
 }
 
@@ -819,7 +829,7 @@ fn open_ships_context_refresh_in_pr_before_accept() {
     // Change B: an open-detected coarse structural shift runs refresh-context
     // on the feature branch under human confirmation and ships the regenerated
     // context inside the PR as a separate docs(context) commit placed before the
-    // accept close-out commit. Post-merge refresh is only the at/after-merge
+    // accept transition. Post-merge refresh is only the at/after-merge
     // fallback. No engine doc (body or frontmatter) may present post-merge
     // refresh as the primary path for open-detected staleness.
     let open = read_repo_file("engine/commands/open.md");
@@ -830,9 +840,9 @@ fn open_ships_context_refresh_in_pr_before_accept() {
     // open.md: in-branch refresh, separate docs(context) commit before accept.
     assert!(
         open.contains(
-            "optional `docs(context)` commit → accept close-out → PR title/body → approve-PR →"
+            "optional `docs(context)` commit → accept transition → PR title/body → approve-PR"
         ),
-        "open.md (a)-(g) sequence must place the docs(context) commit before accept close-out"
+        "open.md (a)-(g) sequence must place the docs(context) commit before accept transition"
     );
     assert!(
         open.contains("### (c) Context refresh commit (optional)"),
@@ -846,9 +856,9 @@ fn open_ships_context_refresh_in_pr_before_accept() {
     );
     assert!(
         open.contains(
-            "**after** the fold/context-check and **before** the accept close-out commit"
+            "**after** the fold/context-check and **before** the `mochiflow accept`\n   transition"
         ),
-        "open.md must pin the docs(context) commit position before the accept close-out"
+        "open.md must pin the docs(context) commit position before accept transition"
     );
     // Negative existence: the old post-merge-primary wording is gone.
     assert!(
@@ -968,23 +978,32 @@ fn plan_offers_pre_approval_review_before_confirm_for_elevated() {
 }
 
 #[test]
-fn accept_guidance_uses_cli_and_stages_spec_and_adr() {
+fn accept_guidance_uses_cli_and_persistence_modes() {
     let open = read_repo_file("engine/commands/open.md");
     let git = read_repo_file("engine/reference/git.md");
     let workflow = read_repo_file("engine/reference/workflow.md");
+    let docs = read_repo_file("docs/configuration.md");
 
     assert!(
         open.contains("mochiflow accept {slug}")
             && open.contains("git add {specs_dir}/{slug} {adr_record_paths...}")
+            && open.contains("skips close-out commit")
             && open.contains("Never stage"),
-        "open guidance must use the accept CLI close-out and never stage INDEX"
+        "open guidance must use the accept CLI with tracked staging and local skip behavior"
     );
     assert!(
         git.contains("Use `mochiflow accept {slug}`")
             && git.contains("git add {specs_dir}/{slug} {adr_record_paths...}")
             && git.contains("git diff --cached --name-status -z")
-            && git.contains("never stage `INDEX.md`"),
-        "git reference must document the flat accept staging and INDEX exclusion"
+            && git.contains("never stage `INDEX.md`")
+            && git.contains("never force-add ignored `.mochiflow/` artifacts"),
+        "git reference must document tracked staging, local skip behavior, and INDEX exclusion"
+    );
+    assert!(
+        docs.contains("Tracked mode")
+            && docs.contains("Local mode")
+            && docs.contains("Do not use `git add -f .mochiflow/...`"),
+        "configuration docs must explain tracked/local modes and forbid force-add guidance"
     );
     assert!(
         !git.contains("git mv {specs_dir}/{slug}/ {specs_dir}/_done/{slug}/` so both"),
@@ -997,6 +1016,30 @@ fn accept_guidance_uses_cli_and_stages_spec_and_adr() {
     assert!(
         !workflow.contains("there is no CLI transition command"),
         "workflow must not claim accepted has no CLI transition command"
+    );
+}
+
+#[test]
+fn pr_body_template_requires_local_mode_evidence() {
+    let template = read_repo_file("engine/templates/delivery/pr-description.md");
+    let open = read_repo_file("engine/commands/open.md");
+    let git = read_repo_file("engine/reference/git.md");
+    let docs = read_repo_file("docs/concepts.md");
+
+    for phrase in [
+        "verification evidence",
+        "Review Result",
+        "Durable Decisions",
+        "durable decision summary",
+    ] {
+        assert!(
+            template.contains(phrase) || open.contains(phrase) || git.contains(phrase),
+            "PR body guidance must include phrase `{phrase}`"
+        );
+    }
+    assert!(
+        docs.contains("verification evidence, review result, and durable decision summary"),
+        "concept docs must explain local-mode PR body evidence"
     );
 }
 
@@ -3347,6 +3390,55 @@ fn materialize_ship_repo(root: &Path, slug: &str, specs_dir: &str) -> (PathBuf, 
     (install.join("config.toml"), repo)
 }
 
+fn materialize_local_ship_repo(root: &Path, slug: &str) -> (PathBuf, PathBuf) {
+    let bare = root.join("origin.git");
+    std::fs::create_dir_all(&bare).unwrap();
+    git_ok(&bare, &["init", "--bare", "-q"]);
+
+    let repo = root.join("repo");
+    std::fs::create_dir_all(&repo).unwrap();
+    git_ok(&repo, &["init", "-q", "-b", "main"]);
+    git_ok(&repo, &["config", "user.email", "t@example.com"]);
+    git_ok(&repo, &["config", "user.name", "Test"]);
+
+    let install = repo.join(".mochiflow");
+    let specs = install.join("specs");
+    std::fs::create_dir_all(specs.join(slug)).unwrap();
+    std::fs::create_dir_all(install.join("context")).unwrap();
+    std::fs::create_dir_all(install.join("adr/decisions")).unwrap();
+    std::fs::create_dir_all(install.join("adr/pitfalls")).unwrap();
+    std::fs::write(repo.join(".gitignore"), ".mochiflow/\n").unwrap();
+    std::fs::write(repo.join("README.md"), "# local fixture\n").unwrap();
+    for name in ["constitution.md", "constitution.local.md"] {
+        std::fs::write(install.join(name), "# c\n").unwrap();
+    }
+    for name in ["product.md", "structure.md", "tech.md"] {
+        std::fs::write(install.join("context").join(name), "# c\n").unwrap();
+    }
+    std::fs::write(
+        install.join("config.toml"),
+        "schema_version = 1\n\
+         install_dir = \".mochiflow\"\n\
+         specs_dir = \".mochiflow/specs\"\n\
+         index = \".mochiflow/INDEX.md\"\n\n\
+         [i18n]\nartifact_language = \"en\"\nconversation_language = \"auto\"\n\n\
+         [constitution]\nproject = \".mochiflow/constitution.md\"\nlocal = \".mochiflow/constitution.local.md\"\n\n\
+         [context]\nproduct = \".mochiflow/context/product.md\"\nstructure = \".mochiflow/context/structure.md\"\ntech = \".mochiflow/context/tech.md\"\n\n\
+         [adr]\ndecisions = \".mochiflow/adr/decisions\"\npitfalls = \".mochiflow/adr/pitfalls\"\n\n\
+         [git]\nprovider = \"none\"\nbase_branch = \"main\"\n\n\
+         [adapter]\ntool = \"agents\"\n\n\
+         [surfaces.app]\ndescription = \"app\"\n\n[surfaces.app.verify]\ndefault = \"echo test-pass\"\n",
+    )
+    .unwrap();
+    write_active_ship_spec(&specs.join(slug), slug);
+    git_ok(&repo, &["add", ".gitignore", "README.md"]);
+    git_ok(&repo, &["commit", "-q", "-m", "init"]);
+    git_ok(&repo, &["remote", "add", "origin", bare.to_str().unwrap()]);
+    git_ok(&repo, &["push", "-q", "-u", "origin", "main"]);
+    git_ok(&repo, &["checkout", "-q", "-b", &format!("fix/{slug}")]);
+    (install.join("config.toml"), repo)
+}
+
 fn write_active_ship_spec(spec_dir: &Path, slug: &str) {
     std::fs::create_dir_all(spec_dir).unwrap();
     std::fs::write(
@@ -3464,6 +3556,42 @@ fn behavioral_accept_commits_flat_spec_with_safe_paths() {
     );
     let status = git_out(&repo, &["status", "--short"]);
     assert_eq!(status, "", "{status}");
+}
+
+#[test]
+fn behavioral_accept_local_mode_skips_staging_and_commit() {
+    let tmp = tempfile::tempdir().unwrap();
+    let slug = "local-accept-fixture";
+    let (cfg, repo) = materialize_local_ship_repo(tmp.path(), slug);
+    let before_head = git_out(&repo, &["rev-parse", "HEAD"]);
+
+    let (code, out, err) = run_cli_capture(&cfg, &repo, &["accept", slug]);
+    assert_eq!(code, 0, "stdout:\n{out}\nstderr:\n{err}");
+    assert!(out.contains("accept: local mode"), "{out}");
+    assert!(
+        out.contains("skipped close-out commit, spec staging, and ADR staging"),
+        "{out}"
+    );
+    assert!(
+        !out.contains("git add -f") && !err.contains("git add -f"),
+        "local mode must not suggest force-adding ignored artifacts\nstdout:\n{out}\nstderr:\n{err}"
+    );
+
+    let yaml =
+        std::fs::read_to_string(repo.join(format!(".mochiflow/specs/{slug}/spec.yaml"))).unwrap();
+    assert!(yaml.contains("status: \"accepted\""), "{yaml}");
+    let spec =
+        std::fs::read_to_string(repo.join(format!(".mochiflow/specs/{slug}/spec.md"))).unwrap();
+    assert!(
+        spec.contains(
+            "| PASS | behavioral fixture assertion<br>final verification: `echo test-pass` |"
+        ),
+        "{spec}"
+    );
+
+    assert_eq!(git_out(&repo, &["rev-parse", "HEAD"]), before_head);
+    assert_eq!(git_out(&repo, &["diff", "--cached", "--name-only"]), "");
+    assert_eq!(git_out(&repo, &["status", "--short"]), "");
 }
 
 #[test]

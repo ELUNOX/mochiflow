@@ -15,6 +15,7 @@ use std::process::Command;
 use serde::Serialize;
 
 use crate::config::Config;
+use crate::spec_mode::{SpecPersistence, SpecPersistenceMode, classify_spec};
 
 pub const EXIT_OK: i32 = 0;
 pub const EXIT_BACKEND_FAIL: i32 = 1;
@@ -180,11 +181,30 @@ pub fn run_pr(
     }
 
     let backend = resolve_backend(cfg);
+    let persistence =
+        match spec.and_then(|slug| (!crate::accept::is_path_like_spec_arg(slug)).then_some(slug)) {
+            Some(slug) => match classify_spec(cfg, slug) {
+                Ok(persistence) => Some((slug.to_string(), persistence)),
+                Err(message) => {
+                    eprintln!("FAIL: {message}");
+                    return EXIT_BACKEND_FAIL;
+                }
+            },
+            None => None,
+        };
 
     if dry_run {
         println!("(dry-run) request-dir : {}", request_dir.display());
         println!("(dry-run) head -> base: {head} -> {base}");
         println!("(dry-run) backend     : {}", backend_label(&backend));
+        if let Some((_, persistence)) = &persistence {
+            print_persistence("(dry-run) persistence", persistence);
+            if matches!(persistence.mode, SpecPersistenceMode::Local) {
+                println!(
+                    "(dry-run) local mode: committed accepted spec trailer is not required; local accepted evidence is checked during real pre-flight."
+                );
+            }
+        }
         println!("(dry-run) no pre-flight, push, or dispatch performed.");
         return EXIT_OK;
     }
@@ -200,12 +220,26 @@ pub fn run_pr(
     ) {
         return code;
     }
-    if let Some(slug) = spec
-        && !crate::accept::is_path_like_spec_arg(slug)
-        && let Err(message) = crate::accept::validate_pr_spec_closeout_committed(cfg, slug)
-    {
-        eprintln!("{message}");
-        return EXIT_PREFLIGHT_FAIL;
+    if let Some((slug, persistence)) = &persistence {
+        match persistence.mode {
+            SpecPersistenceMode::Tracked => {
+                if let Err(message) = crate::accept::validate_pr_spec_closeout_committed(cfg, slug)
+                {
+                    eprintln!("{message}");
+                    return EXIT_PREFLIGHT_FAIL;
+                }
+            }
+            SpecPersistenceMode::Local => {
+                if let Err(message) = preflight_local_mode(root, &head, &base) {
+                    eprintln!("{message}");
+                    return EXIT_PREFLIGHT_FAIL;
+                }
+                if let Err(message) = crate::accept::validate_pr_local_acceptance(cfg, slug) {
+                    eprintln!("{message}");
+                    return EXIT_PREFLIGHT_FAIL;
+                }
+            }
+        }
     }
 
     // Write pr-request.json only for the pr_driver backend (its sole consumer).
@@ -261,6 +295,11 @@ pub fn run_pr(
         Backend::Command(cmd) => dispatch_command(root, &cmd, &request_dir, language),
         Backend::Manual => dispatch_manual(&req, pushed, language),
     }
+}
+
+fn print_persistence(prefix: &str, persistence: &SpecPersistence) {
+    println!("{prefix}: {}", persistence.mode.as_str());
+    println!("{prefix} reason: {}", persistence.reason);
 }
 
 fn backend_label(b: &Backend) -> String {
@@ -324,6 +363,28 @@ fn preflight(
         return Some(EXIT_PREFLIGHT_FAIL);
     }
     None
+}
+
+fn preflight_local_mode(root: &Path, head: &str, base: &str) -> Result<(), String> {
+    let range = format!("{base}..{head}");
+    let output = Command::new("git")
+        .args(["rev-list", "--count", &range])
+        .current_dir(root)
+        .output()
+        .map_err(|e| format!("pre-flight FAIL: could not compare {range}: {e}"))?;
+    if !output.status.success() {
+        return Err(format!("pre-flight FAIL: could not compare {range}."));
+    }
+    let ahead = String::from_utf8_lossy(&output.stdout)
+        .trim()
+        .parse::<u64>()
+        .unwrap_or(0);
+    if ahead == 0 {
+        return Err(format!(
+            "pre-flight FAIL: source branch `{head}` has no commits ahead of `{base}`."
+        ));
+    }
+    Ok(())
 }
 
 fn dispatch_driver(root: &Path, driver: &str, request_dir: &Path, language: &str) -> i32 {

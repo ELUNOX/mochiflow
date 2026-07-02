@@ -5,7 +5,7 @@ Regenerated from code/config via `refresh-context`. Minimal, slow-changing slice
 ## Stack
 
 - Rust 2024 CLI workspace under `cli/` with `mochiflow-cli` and
-  `mochiflow-core`; workspace package version is `1.2.1`.
+  `mochiflow-core`; workspace package version is `1.2.2`.
 - CLI dependencies include `clap`, `include_dir`, `serde`, `serde_json`,
   `toml`, `regex`, `sha2`, `thiserror`, and `anyhow`.
 - JSON schemas under `contracts/` define frozen project contracts.
