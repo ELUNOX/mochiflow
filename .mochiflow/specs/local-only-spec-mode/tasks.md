@@ -52,7 +52,7 @@ Critical Stop Conditions:
     - `engine/reference/git.md`
   - Done: Provider-backed local mode can still use provider merge state, and provider-none/manual local mode derives delivered/local-cleanup-pending when the source branch tip is reachable from `origin/{base_branch}` even though no `Spec:` trailer exists; tracked-mode provider/trailer derivation remains unchanged. Router, status, index, and close guidance describe the branch-tip limitation if the branch is deleted before cleanup, and conformance pins the router wording.
   - Stop: Delivery derivation would mark a local-mode spec Done without provider merge state, trailer reachability, or branch-tip reachability.
-- [ ] T-005 [AC-08, AC-09] Update engine guidance, PR body template, and user docs
+- [x] T-005 [AC-08, AC-09] Update engine guidance, PR body template, and user docs
   - Depends on: T-002, T-003
   - Files:
     - `engine/commands/open.md`

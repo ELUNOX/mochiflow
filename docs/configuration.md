@@ -92,7 +92,7 @@ Use `mochiflow config show` to inspect the active project configuration.
 
 ## What to track
 
-Track project files:
+Recommended tracked mode tracks project files:
 
 - `.mochiflow/config.toml`
 - `.mochiflow/engine/`
@@ -114,3 +114,27 @@ than committed. The vendored engine copy is created by `init` and updated by
 `upgrade`; because it is tracked, engine upgrades are reviewed and committed like
 other project changes. Runtime state is derived from commands and should not be
 committed.
+
+## Spec persistence modes
+
+MochiFlow detects spec persistence from Git ignore behavior for the concrete
+spec artifact path.
+
+- **Tracked mode**: `.mochiflow/specs/{slug}/spec.yaml` is not ignored. This is
+  the recommended team workflow because spec artifacts, ADR records, and the
+  accepted close-out commit travel with the PR. `mochiflow pr` requires the
+  committed accepted spec and `Spec:` trailer.
+- **Local mode**: `.mochiflow/` or the spec artifact path is ignored. This keeps
+  spec artifacts local and is useful for repositories that intentionally avoid
+  committing workflow state. `mochiflow accept` still runs final verification,
+  lint, AC Matrix checks, and reviewer verdict checks, then updates local
+  `spec.yaml` to `status: accepted` and skips close-out commit / spec staging /
+  ADR staging. `mochiflow pr` validates clean tracked tree, source branch,
+  base/head, head-ahead, local accepted state, and complete evidence instead of
+  requiring a committed spec.
+
+Do not use `git add -f .mochiflow/...` to work around local mode. That defeats
+the repository's ignore policy. To migrate from local mode to tracked mode,
+remove the broad `.mochiflow/` ignore rule, add narrow ignores for runtime files
+such as `.mochiflow/state/`, `.mochiflow/INDEX.md`, and ADR `INDEX.md` files,
+then commit the intended spec/ADR artifacts normally.

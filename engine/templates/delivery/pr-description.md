@@ -15,8 +15,16 @@ MochiFlow vocabulary (`risk: standard`, etc.).
 
 ## Verification
 
-- {Verification command and result.}
+- {Verification command and result, with concrete verification evidence.}
 - {One-line summary of human confirmation when applicable.}
+
+## Review Result
+
+- {Reviewer verdict or "Not required" with a short reason.}
+
+## Durable Decisions
+
+- {Summary of durable decision / pitfall records folded for this change, or "No durable decision changes."}
 
 ## Risk
 

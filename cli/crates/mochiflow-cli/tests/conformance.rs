@@ -701,7 +701,7 @@ fn open_orders_acceptance_fold_accept_pr_gate() {
         "### (a) Acceptance",
         "### (b) Finalize the fold",
         "### (c) Context refresh commit (optional)",
-        "### (d) Accept close-out commit",
+        "### (d) Accept transition",
         "### (e) Generate PR title/body",
         "### (f) Approve-PR gate",
         "### (g) Push and create the PR",
@@ -829,7 +829,7 @@ fn open_ships_context_refresh_in_pr_before_accept() {
     // Change B: an open-detected coarse structural shift runs refresh-context
     // on the feature branch under human confirmation and ships the regenerated
     // context inside the PR as a separate docs(context) commit placed before the
-    // accept close-out commit. Post-merge refresh is only the at/after-merge
+    // accept transition. Post-merge refresh is only the at/after-merge
     // fallback. No engine doc (body or frontmatter) may present post-merge
     // refresh as the primary path for open-detected staleness.
     let open = read_repo_file("engine/commands/open.md");
@@ -840,9 +840,9 @@ fn open_ships_context_refresh_in_pr_before_accept() {
     // open.md: in-branch refresh, separate docs(context) commit before accept.
     assert!(
         open.contains(
-            "optional `docs(context)` commit → accept close-out → PR title/body → approve-PR →"
+            "optional `docs(context)` commit → accept transition → PR title/body → approve-PR"
         ),
-        "open.md (a)-(g) sequence must place the docs(context) commit before accept close-out"
+        "open.md (a)-(g) sequence must place the docs(context) commit before accept transition"
     );
     assert!(
         open.contains("### (c) Context refresh commit (optional)"),
@@ -856,9 +856,9 @@ fn open_ships_context_refresh_in_pr_before_accept() {
     );
     assert!(
         open.contains(
-            "**after** the fold/context-check and **before** the accept close-out commit"
+            "**after** the fold/context-check and **before** the `mochiflow accept`\n   transition"
         ),
-        "open.md must pin the docs(context) commit position before the accept close-out"
+        "open.md must pin the docs(context) commit position before accept transition"
     );
     // Negative existence: the old post-merge-primary wording is gone.
     assert!(
@@ -978,23 +978,32 @@ fn plan_offers_pre_approval_review_before_confirm_for_elevated() {
 }
 
 #[test]
-fn accept_guidance_uses_cli_and_stages_spec_and_adr() {
+fn accept_guidance_uses_cli_and_persistence_modes() {
     let open = read_repo_file("engine/commands/open.md");
     let git = read_repo_file("engine/reference/git.md");
     let workflow = read_repo_file("engine/reference/workflow.md");
+    let docs = read_repo_file("docs/configuration.md");
 
     assert!(
         open.contains("mochiflow accept {slug}")
             && open.contains("git add {specs_dir}/{slug} {adr_record_paths...}")
+            && open.contains("skips close-out commit")
             && open.contains("Never stage"),
-        "open guidance must use the accept CLI close-out and never stage INDEX"
+        "open guidance must use the accept CLI with tracked staging and local skip behavior"
     );
     assert!(
         git.contains("Use `mochiflow accept {slug}`")
             && git.contains("git add {specs_dir}/{slug} {adr_record_paths...}")
             && git.contains("git diff --cached --name-status -z")
-            && git.contains("never stage `INDEX.md`"),
-        "git reference must document the flat accept staging and INDEX exclusion"
+            && git.contains("never stage `INDEX.md`")
+            && git.contains("never force-add ignored `.mochiflow/` artifacts"),
+        "git reference must document tracked staging, local skip behavior, and INDEX exclusion"
+    );
+    assert!(
+        docs.contains("Tracked mode")
+            && docs.contains("Local mode")
+            && docs.contains("Do not use `git add -f .mochiflow/...`"),
+        "configuration docs must explain tracked/local modes and forbid force-add guidance"
     );
     assert!(
         !git.contains("git mv {specs_dir}/{slug}/ {specs_dir}/_done/{slug}/` so both"),
@@ -1007,6 +1016,30 @@ fn accept_guidance_uses_cli_and_stages_spec_and_adr() {
     assert!(
         !workflow.contains("there is no CLI transition command"),
         "workflow must not claim accepted has no CLI transition command"
+    );
+}
+
+#[test]
+fn pr_body_template_requires_local_mode_evidence() {
+    let template = read_repo_file("engine/templates/delivery/pr-description.md");
+    let open = read_repo_file("engine/commands/open.md");
+    let git = read_repo_file("engine/reference/git.md");
+    let docs = read_repo_file("docs/concepts.md");
+
+    for phrase in [
+        "verification evidence",
+        "Review Result",
+        "Durable Decisions",
+        "durable decision summary",
+    ] {
+        assert!(
+            template.contains(phrase) || open.contains(phrase) || git.contains(phrase),
+            "PR body guidance must include phrase `{phrase}`"
+        );
+    }
+    assert!(
+        docs.contains("verification evidence, review result, and durable decision summary"),
+        "concept docs must explain local-mode PR body evidence"
     );
 }
 

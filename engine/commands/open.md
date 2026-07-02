@@ -3,9 +3,9 @@ name: spec-open
 phase: open
 description: |
   mochiflow's open action. Run final acceptance (the human QA round-trip),
-  finalize the living-spec fold, set `accepted` and create the single
-  feature-branch close-out commit, generate the PR title/body, take the approve-PR
-  gate, then push and create the PR. The spec stays flat at
+  finalize the living-spec fold, set `accepted` with tracked/local persistence
+  behavior, generate the PR title/body, take the approve-PR gate, then push and
+  create the PR. The spec stays flat at
   `{specs_dir}/{slug}/` — there is no `_done/` move and no `done` write. Activate
   on the explicit command `mochiflow-open`, or natural phrasing like "PR出して" /
   "PRを作って".
@@ -34,15 +34,15 @@ references:
 ## Purpose
 
 Take a built spec from `approved` to an open PR: final acceptance, the
-living-spec fold, the `accepted` close-out commit, and PR creation. The spec is
+living-spec fold, the `accepted` transition, and PR creation. The spec is
 never archived and never marked `done` — delivery state (`in_review`, `merged`)
 is derived from VCS/provider, never written.
 
 ## Procedure
 
 `open` performs these steps in order (a–g): acceptance → fold + context-check →
-optional `docs(context)` commit → accept close-out → PR title/body → approve-PR →
-`mochiflow pr`. The PR is **never created before the approve-PR gate (f)**.
+optional `docs(context)` commit → accept transition → PR title/body → approve-PR
+→ `mochiflow pr`. The PR is **never created before the approve-PR gate (f)**.
 
 ### (a) Acceptance
 
@@ -126,13 +126,13 @@ optional `docs(context)` commit → accept close-out → PR title/body → appro
    and creates a separate `docs(context): ...` commit on the feature branch with
    the `Spec: {slug}` trailer, per
    `reference/git.md ## Auto-commit and staging`. This commit is positioned
-   **after** the fold/context-check and **before** the accept close-out commit
-   (step 6), so the accept close-out stays the single final state commit and the
-   working tree is clean for `mochiflow pr`. When no structural shift was
+   **after** the fold/context-check and **before** the `mochiflow accept`
+   transition (step 6), so tracked-mode accept remains the single final state
+   commit and the working tree is clean for `mochiflow pr`. When no structural shift was
    detected, or the human did not confirm, there is no `docs(context)` commit and
    this step is skipped.
 
-### (d) Accept close-out commit
+### (d) Accept transition
 
 6. When the acceptance conditions in
    `reference/workflow.md ## AC Verification Matrix` all hold (matrix complete,
@@ -140,27 +140,37 @@ optional `docs(context)` commit → accept close-out → PR title/body → appro
    `risk ≥ elevated`), run `mochiflow accept {slug}`. The command re-runs final
    verification, appends final verification evidence to already-`PASS`
    automated AC Matrix rows, sets `spec.yaml` `status: accepted` and `updated`,
-   runs `lint`, stages the target spec (`{specs_dir}/{slug}/**`) and
-   already-written ADR record files linked to this slug, and creates the single
-   feature-branch close-out commit. `mochiflow accept` does not convert
+   and runs `lint`. In tracked mode, it stages the target spec
+   (`{specs_dir}/{slug}/**`) and already-written ADR record files linked to this
+   slug, then creates the single feature-branch close-out commit. In local mode
+   (`.mochiflow/` or the concrete spec path is gitignored), it leaves the
+   accepted state and evidence in the local spec files and skips close-out commit,
+   spec staging, and ADR staging with an explicit reason. `mochiflow accept` does not convert
    `UNVERIFIED` to `PASS`; resolve provisional rows before this step. The spec stays flat: there is **no
    `_done/` move, no `done` write, and no committed `INDEX.md`** (the board is
    gitignored and refreshed by the shared post-command step). Use
-   `mochiflow accept --dry-run` first to inspect blockers and planned paths.
-   - Manual fallback only when the CLI command is unavailable: after setting
+   `mochiflow accept --dry-run` first to inspect blockers, persistence mode, and
+   planned paths or local-mode skips. Never suggest `git add -f` for local mode.
+   - Manual fallback only when the CLI command is unavailable and tracked mode is
+     active: after setting
      `status: accepted` (no `completed`, no `_done` move, no `INDEX` write),
      stage with `git add {specs_dir}/{slug} {adr_record_paths...}` and validate
      with `git diff --cached --name-status -z` before committing. Never stage
      `INDEX.md`.
-   - The result is the **single close-out commit** per
+   - In tracked mode, the result is the **single close-out commit** per
      `reference/git.md ## Auto-commit and staging ### Accept close-out commit`,
      with an external-reviewer message (no spec slug, no AC IDs, no mochiflow
-     vocabulary). Nothing is pushed to the base branch here.
+     vocabulary). In local mode there is no close-out commit; quality is carried
+     by local accepted state plus PR body evidence. Nothing is pushed to the base
+     branch here.
 
 ### (e) Generate PR title/body
 
 7. Generate the PR title / description per `templates/delivery/pr-description.md`
-   (the spec lives flat under `{specs_dir}/{slug}/`), write the body to
+   (the spec lives flat under `{specs_dir}/{slug}/`). Include verification
+   evidence, review result, and durable decision summary explicitly; this is
+   mandatory in local mode because the accepted spec artifacts do not travel as a
+   tracked close-out commit. Write the body to
    `{install_dir}/state/{slug}/pr-body.md` (ephemeral, gitignored — **never** the
    spec dir).
 
@@ -178,10 +188,13 @@ optional `docs(context)` commit → accept close-out → PR title/body → appro
    `mochiflow pr --spec {slug} --title "<title>" --body-file {install_dir}/state/{slug}/pr-body.md`
    (add `--draft` if applicable). `open` is the sole producer of the body file;
    `mochiflow pr` only reads it (and writes `pr-request.json` under
-   `state/{slug}/` for the `pr_driver` backend only). The working tree is clean
-   because the close-out commit (step 6) captured every tracked change (and any
-   context refresh was already committed in step 5). The CLI runs pre-flight (clean tree / branch / base≠head and the `accepted`+`Spec:`
-   trailer spec check), pushes the branch, and resolves the backend per
+   `state/{slug}/` for the `pr_driver` backend only). The working tree must be
+   clean: in tracked mode the close-out commit (step 6) captured every tracked
+   lifecycle change; in local mode ignored spec artifacts remain local and no
+   force-add is used. The CLI runs pre-flight. Tracked mode requires the
+   committed accepted spec and `Spec:` trailer; local mode instead checks clean
+   tree, source branch, base≠head, head ahead of base, local accepted state, and
+   complete verification/review evidence. It then pushes the branch and resolves the backend per
    `reference/git.md ## PR`. Read its exit code:
    - `0` — PR created; capture the printed URL. The spec is now derived
      `in_review`. Present the PR URL and the conversational post-merge next
