@@ -66,9 +66,16 @@ after any `engine/` edit.
    new `Reviewed through: <sha>`, then push (`update.md`) or proceed to accept
    (the post-build/pre-`open` window) for however many held commits
    accumulated.
-5. **Align `open.md` step 3e wording**, which already batches per QA round, to
-   the same shared "bounded fix + `Reviewed through`" language, without
-   changing its round-based behavior.
+5. **Move `open.md`'s freshness trigger to the accept gate (step 6), not just
+   3e.** For `risk >= elevated`, add an unconditional precondition immediately
+   before `mochiflow accept` runs: when any commit that changes code exists
+   beyond the recorded `Reviewed through` sha — whether from 3e's QA-`FAIL`
+   rework or from a held post-build bounded fix — re-run `change-reviewer`
+   once and record the fresh verdict before proceeding. This fires whether or
+   not the QA round-trip (step 3) even ran, which matters because step 3 is
+   skipped entirely for a spec with no human-operated/visual QA item. 3e keeps
+   its existing round-based batching but no longer carries a second, separate
+   re-review instruction — it just feeds the same step-6 gate.
 6. **Document the post-build/pre-`open` window in `build.md`**: after all tasks
    (or the single logical-unit commit for taskless/micro specs) complete and
    before `open` runs, further in-scope requests use the same bounded-fix +
@@ -115,7 +122,8 @@ after any `engine/` edit.
   — rejected: decouples push timing from the user's actual intent.
 - Weakening verdict freshness to "review once per PR regardless of later
   pushes" — rejected: reopens exactly the stale-verdict risk
-  `retire-build-worker-orchestrator`'s verdict-freshness sub-decision closed.
+  `2026-06-28-build-orchestrator-disposable-workers`'s verdict-freshness
+  sub-decision closed.
 - Also relaxing `build.md`'s out-of-scope→`plan` rule in this pass — rejected:
   keeps appetite small and avoids touching the `prevent-build-phase-spec-mutation`
   invariant.
