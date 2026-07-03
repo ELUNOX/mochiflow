@@ -651,6 +651,81 @@ fn pr_feedback_routes_to_update_without_restore() {
 }
 
 #[test]
+fn update_holds_fixes_until_explicit_finalize_signal() {
+    let update = read_repo_file("engine/commands/update.md");
+
+    assert!(
+        update.contains("hold-by-default for bare feedback")
+            && update.contains("Hold-only feedback signals")
+            && update.contains("no slug qualifier")
+            && update.contains("`修正依頼`, `PR feedback`, `PRを直して`"),
+        "update frontmatter and procedure must describe bare feedback as hold-only"
+    );
+    assert!(
+        update.contains("apply, commit locally, re-verify, update the touched AC Matrix rows, then stop")
+            && update.contains("No push, no `mochiflow accept`, and no mandatory reviewer run happen on a hold-only message"),
+        "hold-only update must apply and hold without push, accept, or reviewer"
+    );
+    assert!(
+        update.contains("Finalize signals are the explicit `mochiflow-update` command")
+            && update.contains("`{slug} update`, `{slug}")
+            && update.contains("`{slug} 修正依頼`, `{slug} PR feedback`")
+            && update.contains("that's everything / push it / update the")
+            && update.contains("over every held commit since the last recorded"),
+        "update must require a distinct explicit finalize signal before pushing"
+    );
+    assert!(
+        update.contains("when no code-changing commit exists beyond")
+            && update.contains("do not re-run the reviewer")
+            && update.contains("`agents/change-reviewer.md` exactly once")
+            && update.contains("full diff from git")
+            && update.contains("fresh verdict plus updated")
+            && update.contains("Reviewed through"),
+        "finalize must review stale held code commits once and skip PR-body-only corrections"
+    );
+    assert!(
+        update.contains("For hold-only turns, report what changed")
+            && update.contains("For finalize turns, report what was reviewed if stale")
+            && update.contains("Do not push automatically on a hold-only message")
+            && update.contains("do not guess finalize"),
+        "presentation and stop conditions must match the hold/finalize split"
+    );
+    assert!(
+        update.contains("do not move it")
+            && update.contains("do not revert")
+            && update.contains("bounded inline PR-feedback fix")
+            && update.contains("Build's eligibility gate")
+            && update.contains("flat"),
+        "existing pinned update wording must remain intact"
+    );
+}
+
+#[test]
+fn router_update_summary_matches_hold_by_default() {
+    let router = read_repo_file("engine/router.md");
+    let update = read_repo_file("engine/commands/update.md");
+
+    assert!(
+        router.contains("applies bounded inline fixes")
+            && router.contains("either holds locally or finalizes with push")
+            && router.contains("holds locally by default")
+            && router.contains("explicit finalize signal reviews-if-stale once"),
+        "router update summaries must describe hold-by-default and explicit finalize"
+    );
+    assert!(
+        !router.contains("applies bounded inline fixes, re-verifies, pushes")
+            && !router.contains("bounded inline code fix, then re-verifies, pushes"),
+        "router must not claim every bounded inline fix immediately pushes"
+    );
+    assert!(
+        router.contains("commands/update.md")
+            && router.contains("PR Feedback Loop Routing")
+            && update.contains("hold-by-default for bare feedback"),
+        "routing decision must still point PR feedback to update while update owns the hold contract"
+    );
+}
+
+#[test]
 fn engine_open_update_close_defined_no_ship_verb() {
     for cmd in ["open", "update", "close"] {
         let doc = read_repo_file(&format!("engine/commands/{cmd}.md"));
@@ -691,6 +766,36 @@ fn build_ends_at_approved_without_pr_or_move() {
 }
 
 #[test]
+fn build_documents_post_completion_bounded_fix_window() {
+    let build = read_repo_file("engine/commands/build.md");
+
+    assert!(
+        build.contains("Post-completion bounded fixes before open")
+            && build.contains("After all tasks (or the single logical-unit commit for taskless/micro specs) complete and before `open` runs")
+            && build.contains("applied and committed locally with no `Task:` trailer"),
+        "build must document the post-completion bounded-fix window before open"
+    );
+    assert!(
+        build.contains("shared bounded-fix judgment in `reference/risk.md`")
+            && build.contains("no task-structure change")
+            && build.contains("no new AC")
+            && build.contains("no new design decision"),
+        "build must reference the shared in-scope judgment rather than redefining a new one"
+    );
+    assert!(
+        build.contains("This post-completion fix is held")
+            && build.contains("do not re-run the task loop")
+            && build.contains("do not tick another checkbox")
+            && build.contains("do not run the mandatory reviewer at that moment"),
+        "post-completion bounded fixes must be held outside the task loop"
+    );
+    assert!(
+        build.contains("Stop when an out-of-scope change or a new design decision is needed."),
+        "existing out-of-scope stop condition must remain verbatim"
+    );
+}
+
+#[test]
 fn open_orders_acceptance_fold_accept_pr_gate() {
     let open = read_repo_file("engine/commands/open.md");
     assert!(
@@ -711,6 +816,33 @@ fn open_orders_acceptance_fold_accept_pr_gate() {
     assert!(
         open.contains("owns authoring the fold (not `accept`)"),
         "open (not accept) owns authoring the fold"
+    );
+}
+
+#[test]
+fn open_generalizes_freshness_trigger_to_reviewed_through() {
+    let open = read_repo_file("engine/commands/open.md");
+
+    assert!(
+        open.contains("step-6\n     accept-gate freshness check")
+            && open.contains("do not run a second,\n     separate reviewer mechanism here"),
+        "QA-FAIL rework must feed the step-6 freshness gate instead of defining another reviewer path"
+    );
+    assert!(
+        open.contains("accept-gate freshness check")
+            && open.contains(
+                "any code-changing commit exists beyond the recorded `Reviewed through` sha"
+            )
+            && open.contains("re-run `agents/change-reviewer.md` once on the full diff from git")
+            && open.contains("updated `Reviewed through: <sha>`"),
+        "open step 6 must re-review stale code-changing commits before accept"
+    );
+    assert!(
+        open.contains("independent of whether the QA round-trip (step 3) ran at all")
+            && open.contains("held post-build bounded fixes")
+            && open.contains("runs at most once for the accumulated set")
+            && open.contains("optional `docs(context)` commit from step (c) does not by itself"),
+        "open freshness gate must cover skipped QA round trips and ignore docs-only context commits"
     );
 }
 
@@ -1062,6 +1194,50 @@ fn auto_commit_gate_is_verification_not_reviewer() {
 }
 
 #[test]
+fn risk_defines_shared_bounded_fix_judgment_and_reviewed_through() {
+    let risk = read_repo_file("engine/reference/risk.md");
+    let design_template = read_repo_file("engine/templates/spec/design.md");
+    let build = read_repo_file("engine/commands/build.md");
+    let open = read_repo_file("engine/commands/open.md");
+    let update = read_repo_file("engine/commands/update.md");
+
+    assert!(
+        risk.contains("Shared bounded-fix judgment")
+            && risk.contains("no task-structure change")
+            && risk.contains("no new AC")
+            && risk.contains("no new design decision")
+            && risk.contains("reference this shared judgment rather than redefining it"),
+        "risk reference must define the shared in-scope/out-of-scope judgment once"
+    );
+    assert!(
+        build.contains("shared bounded-fix judgment in `reference/risk.md`")
+            && open.contains("shared\n     bounded-fix judgment in `reference/risk.md`")
+            && update.contains("shared bounded-fix judgment in `reference/risk.md`"),
+        "build/open/update must point to the shared bounded-fix judgment"
+    );
+    assert!(
+        risk.contains("next push/accept boundary")
+            && risk.contains("code-changing commit exists beyond")
+            && risk.contains("recorded `Reviewed through`")
+            && risk.contains("A non-code commit such as")
+            && risk.contains("does not by itself make the verdict")
+            && risk.contains("stale. A stale pass verdict"),
+        "risk reference must batch held code changes until the push/accept boundary"
+    );
+    assert!(
+        risk.contains("`Reviewed through: <sha>` on its own line directly below")
+            && risk.contains("fresh verdict plus updated `Reviewed through: <sha>`")
+            && design_template.contains("Reviewed through: <sha> on its own line below Verdict"),
+        "mandatory reviewer results must record Reviewed through separately from Verdict"
+    );
+    assert!(
+        risk.contains("Review batching changes trigger frequency, not review scope")
+            && risk.contains("reviewer input remains the full diff from git"),
+        "risk reference must preserve the full-diff reviewer input scope"
+    );
+}
+
+#[test]
 fn build_commit_cadence_is_task_based_not_risk_based() {
     let risk = read_repo_file("engine/reference/risk.md");
     let build = read_repo_file("engine/commands/build.md");
@@ -1086,6 +1262,11 @@ fn build_commit_cadence_is_task_based_not_risk_based() {
             && build.contains("docs(spec): record build verification")
             && build.contains("no `Task:` trailer"),
         "build command must define task-based commit units"
+    );
+    assert!(
+        build.contains("reviewer mode, verdict, and `Reviewed through: <sha>`")
+            && build.contains("Reviewed through` on its own line directly below `Verdict:`"),
+        "build command must record the reviewed-through sha for mandatory reviewer runs"
     );
     assert!(
         !build.contains("standard = one commit")

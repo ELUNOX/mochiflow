@@ -90,7 +90,7 @@ Never guess between multiple candidate specs.
 
 If PR feedback, CI failure, reviewer comments, or PR-body approval follow-up
 requires code changes before merge, route the work to the in-review spec via
-`commands/update.md`, unless the change is unrelated to that spec. The spec stays flat at `{specs_dir}/{slug}/` (no restore needed); `update` applies bounded inline fixes, re-verifies, pushes, and updates the PR body when needed.
+`commands/update.md`, unless the change is unrelated to that spec. The spec stays flat at `{specs_dir}/{slug}/` (no restore needed); `update` applies bounded inline fixes, re-verifies, and either holds locally or finalizes with push / PR body updates when explicitly signaled.
 
 ## Merge Report Routing
 
@@ -126,7 +126,7 @@ contextual handling.
 | plan | inline | `commands/plan.md` |
 | build | inline; main agent confirms eligibility (`mochiflow ready {slug}`), then implements task units in order, verifies, commits, records the AC Matrix, and runs risk-cadence review through the change-reviewer transport when required | `commands/build.md` |
 | open | inline; through acceptance → fold + context-check → optional `docs(context)` commit (regenerated `[context]`, before accept) → accept close-out → PR title/body → approve-PR gate → PR. The QA-`FAIL` rework loop applies a bounded inline code fix, re-verifies, and refreshes review when needed; judgment / fold / PR-body / gates stay inline | `commands/open.md` |
-| update | inline; the PR-feedback / CI-fix code change applies a bounded inline code fix, then re-verifies, pushes, and updates PR metadata. Feedback interpretation and PR-metadata updates stay inline; no move, no revert | `commands/update.md` |
+| update | inline; the PR-feedback / CI-fix code change applies a bounded inline code fix, re-verifies, and holds locally by default; an explicit finalize signal reviews-if-stale once, pushes, and updates PR metadata. Feedback interpretation and PR-metadata updates stay inline; no move, no revert | `commands/update.md` |
 | close | inline; post-merge local hygiene only; nothing written to the base branch | `commands/close.md` |
 | review (non-phase) | inline trigger; read-only review uses plan-auditor before implementation and change-reviewer after implementation; no state transition | `commands/review.md` |
 | refresh-context (non-phase) | inline; regenerate foundational context (`[context]`) from code under human confirm; no state transition | `commands/refresh-context.md` |

@@ -67,17 +67,16 @@ optional `docs(context)` commit → accept transition → PR title/body → appr
      for that specific item with a clear pass/fail question. Do not guess.
    - 3e. **Rework loop**: if any item is `FAIL`, pause open (status stays
      `approved`). Apply a **bounded inline code fix** on the feature branch using
-     the build discipline (read, modify, verify, commit), but do not re-run
+     the build discipline (read, modify, verify, commit), using the shared
+     bounded-fix judgment in `reference/risk.md`; do not re-run
      build's phase-entry gate (`mochiflow ready`) and do not revert the asserted
      state. The fix is not an open `tasks.md` task (build is already complete):
      there is no checkbox to tick and no `Task:` trailer. Commit per this verb's
      rework-commit convention (`reference/git.md`). Acceptance judgment, the
      fold, PR-body synthesis, and the approve-PR gate stay inline on the main
-     agent. If the spec is `risk ≥ elevated`, a QA-`FAIL` rework that changes
-     code makes any prior reviewer verdict **stale**: re-run
-     `agents/change-reviewer.md` on the new diff and record the fresh
-     verdict before accept, per `reference/risk.md ## Consequences` (verdict
-     freshness). After the fix, re-present: (1) the failed items, plus
+     agent. A QA-`FAIL` rework that changes code is reviewed by the step-6
+     accept-gate freshness check for `risk ≥ elevated`; do not run a second,
+     separate reviewer mechanism here. After the fix, re-present: (1) the failed items, plus
      (2) any previously-passed items whose implementation files were modified by
      the fix (regression check). Repeat from 3b for the re-presented items only.
    - 3f. When all human QA items reach a done-eligible result (`CONFIRMED` or
@@ -137,7 +136,13 @@ optional `docs(context)` commit → accept transition → PR title/body → appr
 6. When the acceptance conditions in
    `reference/workflow.md ## AC Verification Matrix` all hold (matrix complete,
    every result done-eligible, and the reviewer verdict recorded when
-   `risk ≥ elevated`), run `mochiflow accept {slug}`. The command re-runs final
+   `risk ≥ elevated`), first enforce the accept-gate freshness check. For
+   `risk ≥ elevated`, when any code-changing commit exists beyond the recorded `Reviewed through` sha, re-run `agents/change-reviewer.md` once on the full diff from git, record the fresh verdict and updated `Reviewed through: <sha>`, then proceed to `mochiflow accept`.
+   This accept-gate freshness check is independent of whether the QA round-trip (step 3) ran at all.
+   It covers QA-`FAIL` rework commits and held post-build bounded fixes carried
+   into `open`; it runs at most once for the accumulated set. A non-code commit
+   such as the optional `docs(context)` commit from step (c) does not by itself
+   trigger the check. Then run `mochiflow accept {slug}`. The command re-runs final
    verification, appends final verification evidence to already-`PASS`
    automated AC Matrix rows, sets `spec.yaml` `status: accepted` and `updated`,
    and runs `lint`. In tracked mode, it stages the target spec
