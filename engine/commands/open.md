@@ -67,7 +67,8 @@ optional `docs(context)` commit → accept transition → PR title/body → appr
      for that specific item with a clear pass/fail question. Do not guess.
    - 3e. **Rework loop**: if any item is `FAIL`, pause open (status stays
      `approved`). Apply a **bounded inline code fix** on the feature branch using
-     the build discipline (read, modify, verify, commit), but do not re-run
+     the build discipline (read, modify, verify, commit), using the shared
+     bounded-fix judgment in `reference/risk.md`; do not re-run
      build's phase-entry gate (`mochiflow ready`) and do not revert the asserted
      state. The fix is not an open `tasks.md` task (build is already complete):
      there is no checkbox to tick and no `Task:` trailer. Commit per this verb's

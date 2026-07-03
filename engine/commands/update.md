@@ -51,7 +51,8 @@ for its whole life, so there is nothing to restore.
 2. Classify the input as hold-only or finalize:
    - Hold-only feedback signals are the existing bare natural-language triggers
      with no slug qualifier: `修正依頼`, `PR feedback`, `PRを直して`, and
-     equivalent in-scope requests. For hold-only input, apply the requested code
+     equivalent in-scope requests. Use the shared bounded-fix judgment in `reference/risk.md` for whether a request is in scope.
+     For hold-only input, apply the requested code
      changes as a **bounded inline PR-feedback fix** using build discipline
      (read, edit, TDD where applicable, verify, commit). This is not an open
      `tasks.md` task (build is already complete): there is no checkbox to tick

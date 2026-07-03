@@ -1197,6 +1197,9 @@ fn auto_commit_gate_is_verification_not_reviewer() {
 fn risk_defines_shared_bounded_fix_judgment_and_reviewed_through() {
     let risk = read_repo_file("engine/reference/risk.md");
     let design_template = read_repo_file("engine/templates/spec/design.md");
+    let build = read_repo_file("engine/commands/build.md");
+    let open = read_repo_file("engine/commands/open.md");
+    let update = read_repo_file("engine/commands/update.md");
 
     assert!(
         risk.contains("Shared bounded-fix judgment")
@@ -1205,6 +1208,12 @@ fn risk_defines_shared_bounded_fix_judgment_and_reviewed_through() {
             && risk.contains("no new design decision")
             && risk.contains("reference this shared judgment rather than redefining it"),
         "risk reference must define the shared in-scope/out-of-scope judgment once"
+    );
+    assert!(
+        build.contains("shared bounded-fix judgment in `reference/risk.md`")
+            && open.contains("shared\n     bounded-fix judgment in `reference/risk.md`")
+            && update.contains("shared bounded-fix judgment in `reference/risk.md`"),
+        "build/open/update must point to the shared bounded-fix judgment"
     );
     assert!(
         risk.contains("next push/accept boundary")
