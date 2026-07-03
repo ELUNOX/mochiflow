@@ -790,6 +790,33 @@ fn open_orders_acceptance_fold_accept_pr_gate() {
 }
 
 #[test]
+fn open_generalizes_freshness_trigger_to_reviewed_through() {
+    let open = read_repo_file("engine/commands/open.md");
+
+    assert!(
+        open.contains("step-6\n     accept-gate freshness check")
+            && open.contains("do not run a second,\n     separate reviewer mechanism here"),
+        "QA-FAIL rework must feed the step-6 freshness gate instead of defining another reviewer path"
+    );
+    assert!(
+        open.contains("accept-gate freshness check")
+            && open.contains(
+                "any code-changing commit exists beyond the recorded `Reviewed through` sha"
+            )
+            && open.contains("re-run `agents/change-reviewer.md` once on the full diff from git")
+            && open.contains("updated `Reviewed through: <sha>`"),
+        "open step 6 must re-review stale code-changing commits before accept"
+    );
+    assert!(
+        open.contains("independent of whether the QA round-trip (step 3) ran at all")
+            && open.contains("held post-build bounded fixes")
+            && open.contains("runs at most once for the accumulated set")
+            && open.contains("optional `docs(context)` commit from step (c) does not by itself"),
+        "open freshness gate must cover skipped QA round trips and ignore docs-only context commits"
+    );
+}
+
+#[test]
 fn close_is_local_hygiene_only() {
     let close = read_repo_file("engine/commands/close.md");
     let git = read_repo_file("engine/reference/git.md");
