@@ -651,6 +651,81 @@ fn pr_feedback_routes_to_update_without_restore() {
 }
 
 #[test]
+fn update_holds_fixes_until_explicit_finalize_signal() {
+    let update = read_repo_file("engine/commands/update.md");
+
+    assert!(
+        update.contains("hold-by-default for bare feedback")
+            && update.contains("Hold-only feedback signals")
+            && update.contains("no slug qualifier")
+            && update.contains("`修正依頼`, `PR feedback`, `PRを直して`"),
+        "update frontmatter and procedure must describe bare feedback as hold-only"
+    );
+    assert!(
+        update.contains("apply, commit locally, re-verify, update the touched AC Matrix rows, then stop")
+            && update.contains("No push, no `mochiflow accept`, and no mandatory reviewer run happen on a hold-only message"),
+        "hold-only update must apply and hold without push, accept, or reviewer"
+    );
+    assert!(
+        update.contains("Finalize signals are the explicit `mochiflow-update` command")
+            && update.contains("`{slug} update`, `{slug}")
+            && update.contains("`{slug} 修正依頼`, `{slug} PR feedback`")
+            && update.contains("that's everything / push it / update the")
+            && update.contains("over every held commit since the last recorded"),
+        "update must require a distinct explicit finalize signal before pushing"
+    );
+    assert!(
+        update.contains("when no code-changing commit exists beyond")
+            && update.contains("do not re-run the reviewer")
+            && update.contains("`agents/change-reviewer.md` exactly once")
+            && update.contains("full diff from git")
+            && update.contains("fresh verdict plus updated")
+            && update.contains("Reviewed through"),
+        "finalize must review stale held code commits once and skip PR-body-only corrections"
+    );
+    assert!(
+        update.contains("For hold-only turns, report what changed")
+            && update.contains("For finalize turns, report what was reviewed if stale")
+            && update.contains("Do not push automatically on a hold-only message")
+            && update.contains("do not guess finalize"),
+        "presentation and stop conditions must match the hold/finalize split"
+    );
+    assert!(
+        update.contains("do not move it")
+            && update.contains("do not revert")
+            && update.contains("bounded inline PR-feedback fix")
+            && update.contains("Build's eligibility gate")
+            && update.contains("flat"),
+        "existing pinned update wording must remain intact"
+    );
+}
+
+#[test]
+fn router_update_summary_matches_hold_by_default() {
+    let router = read_repo_file("engine/router.md");
+    let update = read_repo_file("engine/commands/update.md");
+
+    assert!(
+        router.contains("applies bounded inline fixes")
+            && router.contains("either holds locally or finalizes with push")
+            && router.contains("holds locally by default")
+            && router.contains("explicit finalize signal reviews-if-stale once"),
+        "router update summaries must describe hold-by-default and explicit finalize"
+    );
+    assert!(
+        !router.contains("applies bounded inline fixes, re-verifies, pushes")
+            && !router.contains("bounded inline code fix, then re-verifies, pushes"),
+        "router must not claim every bounded inline fix immediately pushes"
+    );
+    assert!(
+        router.contains("commands/update.md")
+            && router.contains("PR Feedback Loop Routing")
+            && update.contains("hold-by-default for bare feedback"),
+        "routing decision must still point PR feedback to update while update owns the hold contract"
+    );
+}
+
+#[test]
 fn engine_open_update_close_defined_no_ship_verb() {
     for cmd in ["open", "update", "close"] {
         let doc = read_repo_file(&format!("engine/commands/{cmd}.md"));
