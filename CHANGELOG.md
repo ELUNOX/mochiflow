@@ -4,6 +4,23 @@ All notable changes to MochiFlow are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.3] - 2026-07-03
+
+### Added
+
+- Local-only spec persistence mode for projects that do not use provider-backed
+  PR delivery. MochiFlow now detects local mode, validates the delivery
+  preflight accordingly, skips provider-only accept close-out, and derives
+  completion from the local branch tip after merge.
+
+### Changed
+
+- PR feedback and bounded post-build fixes now hold locally until an explicit
+  finalize signal, with review freshness tied to the final reviewed diff and
+  shared fix-scope guidance reflected across build, open, and update.
+- README and Japanese README onboarding copy were simplified to reduce user
+  friction and keep wording tests focused on durable guarantees.
+
 ## [1.2.2] - 2026-07-01
 
 ### Added
