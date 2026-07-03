@@ -247,6 +247,11 @@ contract each carries:
 
 ## Review Results
 
-Filled during build: the mandatory `change-reviewer` run for `risk >= elevated`
-records `Reviewer mode: delegated | inline`, `Verdict: pass |
-pass-with-comments | fail`, and `Reviewed through: <sha>` here.
+Review profile: change-reviewer
+Reviewer mode: delegated
+Verdict: pass
+Reviewed through: 8365f03
+
+Notes: Mandatory elevated-risk build review. The delegated reviewer reported no
+findings and independently checked the full diff, conformance suite, freeze
+check, spec lint, readiness, and doctor.
