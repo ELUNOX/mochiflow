@@ -16,7 +16,7 @@ Critical Stop Conditions:
 
 ## Tasks
 
-- [ ] T-001 [AC-01, AC-03] risk.md: shared judgment + hold/finalize boundary + Reviewed-through convention
+- [x] T-001 [AC-01, AC-03] risk.md: shared judgment + hold/finalize boundary + Reviewed-through convention
   - Depends on: none
   - Files:
     - `engine/reference/risk.md`

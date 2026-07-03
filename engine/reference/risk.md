@@ -48,18 +48,29 @@ mandatory reviewer run; reviewer findings are fixed, verified, and committed as
 follow-up work before build completes. Record mandatory reviewer runs in
 `design.md ## Review Results`, using `Review profile: change-reviewer`,
 `Reviewer mode: delegated | inline`, and `Verdict: pass | pass-with-comments |
-fail`. For `critical`, append one entry per required review run; for
+fail`, followed by `Reviewed through: <sha>` on its own line directly below
+`Verdict:`. For `critical`, append one entry per required review run; for
 `elevated`, append the single post-task review entry.
 
+**Shared bounded-fix judgment.** An in-scope code change has no task-structure change, no new AC, and no new design decision.
+An out-of-scope change routes to `plan` before `open`, or to a new spec after `open`.
+`build.md`, `open.md`, and `update.md` reference this shared judgment rather than redefining it.
+
 **Verdict freshness.** A recorded reviewer verdict is valid only for the code
-diff it actually reviewed. Any later code change at `risk ≥ elevated` — including
-`open`'s QA-`FAIL` rework and `update`'s PR-feedback fix — makes the recorded
-verdict **stale**: a fresh reviewer run (same transport, on the new full diff
-from git) is required and its verdict recorded in `design.md ## Review Results`
-before that change is accepted (`mochiflow accept`) or pushed. A stale pass
-verdict must not be reused to clear the gate for an unreviewed diff. Branch / PR
-/ archive mechanics live in `git.md`; the AC Matrix format and delivery approval
-gates live in `workflow.md`.
+diff it actually reviewed through the recorded `Reviewed through: <sha>`. For
+`risk ≥ elevated`, an in-scope code change after the recorded reviewer verdict
+is applied and committed locally, then held until the next push/accept boundary:
+a `git push` that updates an open PR, or `mochiflow accept`. At that boundary,
+when any code-changing commit exists beyond the recorded `Reviewed through`
+sha, a fresh reviewer run (same transport, on the new full diff from git) is
+required at most once for the accumulated commits before the change is pushed or
+accepted, and the fresh verdict plus updated `Reviewed through: <sha>` are
+recorded in `design.md ## Review Results`. A non-code commit such as
+`docs(context)` or PR-body-only metadata does not by itself make the verdict
+stale. A stale pass verdict must not be reused to clear the gate for an
+unreviewed diff. Review batching changes trigger frequency, not review scope: reviewer input remains the full diff from git.
+Branch / PR / archive mechanics live in `git.md`; the AC Matrix format and
+delivery approval gates live in `workflow.md`.
 
 ## QA attack coverage
 

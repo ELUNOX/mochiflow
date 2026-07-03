@@ -1062,6 +1062,41 @@ fn auto_commit_gate_is_verification_not_reviewer() {
 }
 
 #[test]
+fn risk_defines_shared_bounded_fix_judgment_and_reviewed_through() {
+    let risk = read_repo_file("engine/reference/risk.md");
+    let design_template = read_repo_file("engine/templates/spec/design.md");
+
+    assert!(
+        risk.contains("Shared bounded-fix judgment")
+            && risk.contains("no task-structure change")
+            && risk.contains("no new AC")
+            && risk.contains("no new design decision")
+            && risk.contains("reference this shared judgment rather than redefining it"),
+        "risk reference must define the shared in-scope/out-of-scope judgment once"
+    );
+    assert!(
+        risk.contains("next push/accept boundary")
+            && risk.contains("code-changing commit exists beyond")
+            && risk.contains("recorded `Reviewed through`")
+            && risk.contains("A non-code commit such as")
+            && risk.contains("does not by itself make the verdict")
+            && risk.contains("stale. A stale pass verdict"),
+        "risk reference must batch held code changes until the push/accept boundary"
+    );
+    assert!(
+        risk.contains("`Reviewed through: <sha>` on its own line directly below")
+            && risk.contains("fresh verdict plus updated `Reviewed through: <sha>`")
+            && design_template.contains("Reviewed through: <sha> on its own line below Verdict"),
+        "mandatory reviewer results must record Reviewed through separately from Verdict"
+    );
+    assert!(
+        risk.contains("Review batching changes trigger frequency, not review scope")
+            && risk.contains("reviewer input remains the full diff from git"),
+        "risk reference must preserve the full-diff reviewer input scope"
+    );
+}
+
+#[test]
 fn build_commit_cadence_is_task_based_not_risk_based() {
     let risk = read_repo_file("engine/reference/risk.md");
     let build = read_repo_file("engine/commands/build.md");

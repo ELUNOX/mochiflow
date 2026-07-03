@@ -40,7 +40,7 @@
 
 ## Review Results
 
-<!-- Record mandatory reviewer runs for risk>=elevated. Delete this heading when it does not apply. Optional Review profile: plan-auditor | change-reviewer / Reviewer mode: delegated | inline / Verdict: pass | pass-with-comments | fail -->
+<!-- Record mandatory reviewer runs for risk>=elevated. Delete this heading when it does not apply. Optional Review profile: plan-auditor | change-reviewer / Reviewer mode: delegated | inline / Verdict: pass | pass-with-comments | fail / Reviewed through: <sha> on its own line below Verdict -->
 
 ## Integration Log
 
