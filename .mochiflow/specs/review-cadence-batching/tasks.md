@@ -50,7 +50,7 @@ Critical Stop Conditions:
     - `cli/crates/mochiflow-cli/tests/conformance.rs`
   - Done: `build.md` documents that after all tasks (or the single logical-unit commit for taskless/micro specs) complete and before `open` runs, an in-scope request is applied and committed locally with no `Task:` trailer (mirroring the existing convention already used for `open`'s QA-`FAIL` rework and `update`'s PR-feedback fix commits) and held — no reviewer run, no reopening of the task loop. An out-of-scope request keeps routing to `plan`, and the existing stop-condition sentence ("Stop when an out-of-scope change or a new design decision is needed.") remains present verbatim. The existing `prevent-build-phase-spec-mutation` task-structure rule (step 3d) is untouched. A new conformance test `build_documents_post_completion_bounded_fix_window` asserts the new section's wording and that the out-of-scope stop-condition sentence is still present; `build_ends_at_approved_without_pr_or_move` still passes unmodified. `mochiflow freeze` is run and the regenerated `engine/MANIFEST.json` is committed with this task.
   - Stop: if the post-completion window would require reopening `tasks.md`'s checkbox loop or ticking a task for the held fix, stop — this window is explicitly outside the task loop (no `Task:` trailer, no checkbox).
-- [ ] T-005 [AC-08, AC-10] Final dogfood sync, full regression check, and default verification
+- [x] T-005 [AC-08, AC-10] Final dogfood sync, full regression check, and default verification
   - Depends on: T-001, T-002, T-003, T-004
   - Files:
     - `engine/MANIFEST.json`
