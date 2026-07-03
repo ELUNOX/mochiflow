@@ -54,6 +54,14 @@ Implement the approved spec and produce verification and the AC Verification Mat
 6. Record the AC Verification Matrix in `spec.md ## Verification Plan / AC Matrix` (its canonical location per `reference/workflow.md ## AC Matrix`; a legacy matrix living at the end of `tasks.md` is updated in place). After final verification, settle automated AC as `PASS` / `FAIL` / `N/A: <reason>` before build completes. `UNVERIFIED` is allowed only as an in-progress placeholder before the final build record; do not leave automated rows `UNVERIFIED` at build completion. Record AC needing human/visual checking as `PENDING_HUMAN` without requesting that QA here (the request is made once, in open). Provisional tokens (`UNVERIFIED`, `PENDING_HUMAN`) are build-time placeholders only and are not done-eligible (`reference/workflow.md ## AC Matrix`).
 7. Include the final AC Verification Matrix update in the final build record commit for this phase, then stop. When implementation has already been committed by task commits, create a record-only commit with subject `docs(spec): record build verification`, the required `Spec: {slug}` trailer, and no `Task:` trailer. For taskless / micro specs, the single logical-unit build commit may include the implementation and final Matrix together when no earlier implementation commit exists. `open` only commits human QA results, final verification evidence appended by `mochiflow accept`, and fold/context changes as part of the close-out path.
 
+## Post-completion bounded fixes before open
+
+After all tasks (or the single logical-unit commit for taskless/micro specs) complete and before `open` runs, an in-scope request is applied and committed locally with no `Task:` trailer.
+Use the shared bounded-fix judgment in `reference/risk.md`: the request must require no task-structure change, no new AC, and no new design decision.
+This post-completion fix is held; do not re-run the task loop, do not tick another checkbox, and do not run the mandatory reviewer at that moment.
+The fresh review, when required for `risk ≥ elevated`, runs later at the next push/accept boundary described in `reference/risk.md`.
+An out-of-scope request still routes back to `plan` for re-approval.
+
 ## Presentation
 
 - In user-facing summaries, call the AC Verification Matrix the acceptance

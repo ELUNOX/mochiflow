@@ -766,6 +766,36 @@ fn build_ends_at_approved_without_pr_or_move() {
 }
 
 #[test]
+fn build_documents_post_completion_bounded_fix_window() {
+    let build = read_repo_file("engine/commands/build.md");
+
+    assert!(
+        build.contains("Post-completion bounded fixes before open")
+            && build.contains("After all tasks (or the single logical-unit commit for taskless/micro specs) complete and before `open` runs")
+            && build.contains("applied and committed locally with no `Task:` trailer"),
+        "build must document the post-completion bounded-fix window before open"
+    );
+    assert!(
+        build.contains("shared bounded-fix judgment in `reference/risk.md`")
+            && build.contains("no task-structure change")
+            && build.contains("no new AC")
+            && build.contains("no new design decision"),
+        "build must reference the shared in-scope judgment rather than redefining a new one"
+    );
+    assert!(
+        build.contains("This post-completion fix is held")
+            && build.contains("do not re-run the task loop")
+            && build.contains("do not tick another checkbox")
+            && build.contains("do not run the mandatory reviewer at that moment"),
+        "post-completion bounded fixes must be held outside the task loop"
+    );
+    assert!(
+        build.contains("Stop when an out-of-scope change or a new design decision is needed."),
+        "existing out-of-scope stop condition must remain verbatim"
+    );
+}
+
+#[test]
 fn open_orders_acceptance_fold_accept_pr_gate() {
     let open = read_repo_file("engine/commands/open.md");
     assert!(
