@@ -1255,6 +1255,11 @@ fn build_commit_cadence_is_task_based_not_risk_based() {
         "build command must define task-based commit units"
     );
     assert!(
+        build.contains("reviewer mode, verdict, and `Reviewed through: <sha>`")
+            && build.contains("Reviewed through` on its own line directly below `Verdict:`"),
+        "build command must record the reviewed-through sha for mandatory reviewer runs"
+    );
+    assert!(
         !build.contains("standard = one commit")
             && !build.contains("elevated = per logical step")
             && !build.contains("critical = per task"),
