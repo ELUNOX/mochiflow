@@ -113,19 +113,7 @@ explicit concrete request without `pitch.md`. Do not start implementation.
    (`reference/workflow.md ## Delivery approval gates`): the two gates stay
    approve-to-build and approve-PR, and review never sets `status` by itself.
    The card's ordering depends on risk:
-   - When `risk >= elevated`: present **Review** (recommended; `review` /
-     `mochiflow-review`) **before** **Confirm the plan**, so the recommended
-     quality check can inform the approve-to-build decision instead of running
-     only after the spec has locked to `approved`. **Review** runs
-     `mochiflow-review` on the draft spec with `agents/plan-auditor.md` (S0
-     Grounding, S1 Internal Coherence, S2 Impact & Regression, S4 Knowledge
-     Confrontation, and Falsification with S3
-     `N/A`, no diff/changed-files input, per `reference/risk.md ## Review
-     transport`). On `pass` /
-     `pass-with-comments`, re-present **Confirm the plan**. On `fail`, report the
-     findings and stop: leave `spec.yaml` `status: draft`, make no plan commit,
-     and let the user revise and re-review or confirm directly. Review stays
-     optional — the user may choose **Confirm the plan** without taking review.
+   - When `risk >= elevated`: present **Review** actions before **Confirm the plan**. The visible actions are **Review results** (`review` / `mochiflow-review`) and **Review and fix** (`review fix`) **before** **Confirm the plan**, so the recommended quality check can inform the approve-to-build decision instead of running only after the spec has locked to `approved`. **Review results** runs `mochiflow-review` on the draft spec with `agents/plan-auditor.md` (S0 Grounding, S1 Internal Coherence, S2 Impact & Regression, S4 Knowledge Confrontation, and Falsification with S3 `N/A`, no diff/changed-files input, per `reference/risk.md ## Review transport`). **Review and fix** runs `{slug} review fix`, uses `agents/plan-auditor.md`, limits edits to spec artifacts, updates the local review-fix ledger under `{install_dir}/state/{slug}/`, and re-presents the readiness card after verification. On `pass` / `pass-with-comments`, re-present **Confirm the plan**. On `fail` from result-only review, report the findings and stop: leave `spec.yaml` `status: draft`, make no plan commit, and let the user revise and re-review, choose review-and-fix, or confirm directly. Review stays optional — the user may choose **Confirm the plan** without taking review.
    - When `risk = standard`: present **Confirm the plan** as today; review is not
      offered pre-approval and remains available post-approval at step 10.
 8. Re-run `mochiflow lint --spec {slug}` after setting `status: approved`; fix any FAIL before ending plan.
@@ -146,15 +134,22 @@ explicit concrete request without `pitch.md`. Do not start implementation.
       Pre-approval review was already offered at step 7, so it is **not**
       re-offered here; ad-hoc `mochiflow-review` remains available on request but
       is not a listed action.
-    - When `risk = standard`: **Start implementation** / **Review** /
-      **Create a resume prompt**.
+    - When `risk = standard`: **Start implementation** / **Review results** /
+      **Review and fix** / **Create a resume prompt**. Compatibility **Review**
+      (`risk = standard` only) maps to **Review results**.
 
     Behavior per choice:
-    - **Review** (`risk = standard` only) — run `mochiflow-review` (spec/design
-      quality review, not code review) on the current spec. On `pass` /
-      `pass-with-comments`, re-present **Start implementation** /
-      **Create a resume prompt** only. On `fail`, report findings and stop; the
-      user decides whether to fix and re-review or proceed.
+    - **Review results** (`risk = standard` only; compatibility `review` /
+      `mochiflow-review`) — run one result-only spec/design quality review, not
+      code review, on the current spec. On `pass` / `pass-with-comments`,
+      re-present **Start implementation** / **Create a resume prompt** only. On
+      `fail`, report findings and stop; the user decides whether to fix and
+      re-review or proceed.
+    - **Review and fix** (`risk = standard` only; `review fix`) — run
+      `{slug} review fix` with `agents/plan-auditor.md`, limit edits to spec
+      artifacts, update the local review-fix ledger, verify, and re-present
+      **Start implementation** / **Create a resume prompt** when the bounded
+      fix round completes.
     - **Start implementation** — proceed to `mochiflow-build` in the same session.
     - **Create a resume prompt** — stop here; output a resume note (rendered from
       `templates/handoff/build-session-prompt.md`, includes `{slug}` and

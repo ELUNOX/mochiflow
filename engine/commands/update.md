@@ -93,6 +93,14 @@ for its whole life, so there is nothing to restore.
 8. Each spec-lane commit step regenerates the board via `mochiflow index` so the
    gitignored `INDEX.md` stays fresh; `INDEX.md` is never staged or committed.
 
+`{slug} review fix [1-3]` while the spec is in review uses
+`agents/change-reviewer.md` and update's bounded inline PR-feedback fix
+discipline. The main agent applies in-scope fixes, verifies, commits locally,
+updates the local review-fix ledger under `{install_dir}/state/{slug}/`, and
+holds by default. It does not push, update PR metadata, or run
+`mochiflow accept` unless the active update flow later receives an explicit
+finalize signal. Result-only `{slug} review` reports findings without editing.
+
 ## Presentation
 
 - Describe update as addressing PR feedback / revising the open PR in the
@@ -102,6 +110,10 @@ for its whole life, so there is nothing to restore.
   commit is held locally and not yet pushed or reviewed.
 - For finalize turns, report what was reviewed if stale, what was pushed, and
   what PR metadata changed.
+- When an update-adjacent choice card offers review actions, distinguish
+  **Review results** (`review` / `mochiflow-review`) from **Review and fix**
+  (`review fix`). Both map to `commands/review.md`; neither adds a delivery
+  gate, and review-and-fix keeps update hold-by-default until finalize.
 
 ## Stop conditions
 

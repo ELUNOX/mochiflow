@@ -1062,10 +1062,10 @@ fn open_ships_context_refresh_in_pr_before_accept() {
 
 #[test]
 fn plan_offers_pre_approval_review_before_confirm_for_elevated() {
-    // Change A: for risk >= elevated, the plan readiness card offers a
-    // pre-approval Review with plan-auditor before the
-    // confirm-plan (approve-to-build) action; the standard-risk order is
-    // unchanged (confirm as today, review only post-approval at step 10).
+    // Change A: for risk >= elevated, the plan readiness card offers
+    // pre-approval review actions with plan-auditor before the confirm-plan
+    // (approve-to-build) action; the standard-risk order keeps confirm first
+    // and offers review actions only post-approval at step 10.
     let plan = read_repo_file("engine/commands/plan.md");
 
     assert!(
@@ -1091,8 +1091,10 @@ fn plan_offers_pre_approval_review_before_confirm_for_elevated() {
         "plan.md must keep the standard-risk approve-then-review order unchanged"
     );
     assert!(
-        plan.contains("**Review** (`risk = standard` only)"),
-        "plan.md step 10 must keep post-approval Review for standard risk only"
+        plan.contains("**Review results** /")
+            && plan.contains("**Review and fix** / **Create a resume prompt**")
+            && plan.contains("Compatibility **Review**"),
+        "plan.md step 10 must keep post-approval review actions for standard risk only"
     );
 
     // Positional guard: the elevated pre-approval Review offer precedes the
@@ -1106,6 +1108,54 @@ fn plan_offers_pre_approval_review_before_confirm_for_elevated() {
     assert!(
         elevated_review < post_approval_card,
         "the pre-approval review offer must precede the post-approval next-step card"
+    );
+}
+
+#[test]
+fn review_fix_choice_cards_and_phase_discipline_are_pinned() {
+    let plan = read_repo_file("engine/commands/plan.md");
+    let build = read_repo_file("engine/commands/build.md");
+    let open = read_repo_file("engine/commands/open.md");
+    let update = read_repo_file("engine/commands/update.md");
+    let router = read_repo_file("engine/router.md");
+
+    assert!(
+        plan.contains("**Review results** (`review` / `mochiflow-review`)")
+            && plan.contains("**Review and fix** (`review fix`)")
+            && plan.contains("uses `agents/plan-auditor.md`, limits edits to spec artifacts")
+            && plan.contains("Review stays optional"),
+        "plan.md must distinguish result-only review from review-and-fix without adding a gate"
+    );
+    assert!(
+        build.contains(
+            "`{slug} review fix [1-3]` after implementation uses `agents/change-reviewer.md`"
+        ) && build.contains("commits without a `Task:` trailer")
+            && build.contains("holds the change for\nthe next open / accept boundary")
+            && build
+                .contains("A result-only review remains `{slug} review`\nand does not edit files"),
+        "build.md must connect review fix to post-completion bounded fixes"
+    );
+    assert!(
+        open.contains("uses `agents/change-reviewer.md`, applies the shared bounded-fix judgment")
+            && open
+                .contains("feeds any\n  code-changing commit into the accept-gate freshness check")
+            && open.contains("rather than pushing\n  or accepting by itself"),
+        "open.md must route review fix through accept freshness instead of direct delivery"
+    );
+    assert!(
+        update.contains("while the spec is in review uses\n`agents/change-reviewer.md`")
+            && update.contains("holds by default")
+            && update.contains(
+                "unless the active update flow later receives an explicit\nfinalize signal"
+            )
+            && update.contains("review-and-fix keeps update hold-by-default until finalize"),
+        "update.md must preserve hold-by-default and finalize semantics for review fix"
+    );
+    assert!(
+        router.contains("**Review results** is read-only")
+            && router.contains("**Review and fix** maps to `review fix [1-3]`")
+            && router.contains("no state transition"),
+        "router.md must map both choice labels to the review command family"
     );
 }
 

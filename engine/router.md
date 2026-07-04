@@ -129,7 +129,7 @@ contextual handling.
 | open | inline; through acceptance → fold + context-check → optional `docs(context)` commit (regenerated `[context]`, before accept) → accept close-out → PR title/body → approve-PR gate → PR. The QA-`FAIL` rework loop applies a bounded inline code fix, re-verifies, and refreshes review when needed; judgment / fold / PR-body / gates stay inline | `commands/open.md` |
 | update | inline; the PR-feedback / CI-fix code change applies a bounded inline code fix, re-verifies, and holds locally by default; an explicit finalize signal reviews-if-stale once, pushes, and updates PR metadata. Feedback interpretation and PR-metadata updates stay inline; no move, no revert | `commands/update.md` |
 | close | inline; post-merge local hygiene only; nothing written to the base branch | `commands/close.md` |
-| review (non-phase) | inline trigger; result-only review is read-only; `review fix [1-3]` lets the main agent apply bounded fixes while reviewers stay read-only; no state transition | `commands/review.md` |
+| review (non-phase) | inline trigger; **Review results** is read-only; **Review and fix** maps to `review fix [1-3]` and lets the main agent apply bounded fixes while reviewers stay read-only; no state transition | `commands/review.md` |
 | refresh-context (non-phase) | inline; regenerate foundational context (`[context]`) from code under human confirm; no state transition | `commands/refresh-context.md` |
 | onboard (non-phase) | inline; setup / first-run project onboarding | `commands/onboard.md` |
 

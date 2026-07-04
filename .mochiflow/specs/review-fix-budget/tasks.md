@@ -34,7 +34,7 @@ Critical Stop Conditions:
     - `engine/MANIFEST.json`
   - Done: `risk.md` states the review-fix loop boundaries: reviewers remain read-only; the main agent applies fixes; automatic fixes are limited to no task-structure change, no new AC, no new design decision, no spec split, no unrelated work, and no unresolved repeated finding; verification failure stops the loop. It also defines the local review-fix recovery ledger under `{install_dir}/state/{slug}/` for main-agent-only recovery, with requested fix rounds, completed fix rounds, current phase/profile, touched files, verification evidence, and stop reason; it states ledger contents and prior findings are not passed to later reviewers. `plan-auditor.md` and `change-reviewer.md` state that later review cycles may receive cycle-local changed files/diff as focus input, but must not receive previous findings, previous verdicts, previous reviewer summaries, ledger contents, or conversation history. Conformance tests pin fresh-independent review input, the recovery ledger contract, and no-worker/no-write reviewer boundaries. Run `mochiflow freeze` and include the regenerated `engine/MANIFEST.json`.
   - Stop: if preserving reviewer independence conflicts with the remediation guidance needed by the main agent, keep the remediation guidance on the main-agent side and do not pass it to later reviewers.
-- [ ] T-003 [AC-06, AC-07, AC-09] Update lifecycle command choice cards and phase-specific fix discipline
+- [x] T-003 [AC-06, AC-07, AC-09] Update lifecycle command choice cards and phase-specific fix discipline
   - Depends on: T-001, T-002
   - Files:
     - `engine/commands/plan.md`

@@ -62,6 +62,13 @@ This post-completion fix is held; do not re-run the task loop, do not tick anoth
 The fresh review, when required for `risk ≥ elevated`, runs later at the next push/accept boundary described in `reference/risk.md`.
 An out-of-scope request still routes back to `plan` for re-approval.
 
+`{slug} review fix [1-3]` after implementation uses `agents/change-reviewer.md`
+and this same post-completion bounded-fix discipline: the main agent applies
+in-scope fixes, verifies, commits without a `Task:` trailer, updates the local
+review-fix ledger under `{install_dir}/state/{slug}/`, and holds the change for
+the next open / accept boundary. A result-only review remains `{slug} review`
+and does not edit files.
+
 ## Presentation
 
 - In user-facing summaries, call the AC Verification Matrix the acceptance
@@ -69,6 +76,10 @@ An out-of-scope request still routes back to `plan` for re-approval.
   only when pointing to the document.
 - Report reviewer output as the review result. Include `delegated` / `inline`
   only when it explains how the review ran or when the user asks.
+- When a build-adjacent choice card offers review actions, distinguish
+  **Review results** (`review` / `mochiflow-review`) from **Review and fix**
+  (`review fix`). Both map to `commands/review.md`; neither adds a delivery
+  gate.
 - Summarize implementation as what changed, what was checked, and what remains
   for wrap-up; do not lead with `risk`, `status`, or reviewer mode.
 - On build completion, always include: (1) the verification result (all items
