@@ -2063,6 +2063,13 @@ fn review_fix_budget_grammar_is_pinned() {
         "review fix N must mean maximum fix rounds and must not force a final review"
     );
     assert!(
+        review.contains("Result-only review must not edit files, stage, or commit")
+            && review
+                .contains("In fix mode, staging and commits follow the active lifecycle context")
+            && review.contains("does\n  not invent a separate commit or push rule"),
+        "review.md must not apply result-only no-commit rules to review fix mode"
+    );
+    assert!(
         router.contains("`review fix [1-3]`")
             && router.contains("{slug} review fix 1")
             && router.contains("{slug} review fix 2")

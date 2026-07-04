@@ -108,10 +108,13 @@ Follow `reference/risk.md ## Ad-hoc review`, `## Review-fix loop`, and
 
 ## Stop conditions
 
-- Do not change `spec.yaml` `status`, stage, commit, or create PR metadata —
-  ad-hoc review is non-transitional (`reference/risk.md ## Ad-hoc review`).
-- Do not edit source or spec files during result-only ad-hoc review. It is
-  report-only.
+- Do not change `spec.yaml` `status` or create PR metadata — review is
+  non-transitional (`reference/risk.md ## Ad-hoc review`).
+- Result-only review must not edit files, stage, or commit. It is report-only.
+- In fix mode, staging and commits follow the active lifecycle context
+  (`plan` spec-artifact fixes, `build` post-completion bounded fixes, `open`
+  rework, or `update` hold/finalize discipline); the review command itself does
+  not invent a separate commit or push rule.
 - Do not let fix mode exceed the parsed fix-round budget. Allowed fix rounds
   are 1, 2, or 3.
 - Do not use this in place of the mandatory risk-cadence review during build
