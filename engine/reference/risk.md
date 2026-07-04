@@ -167,8 +167,12 @@ results — **never conversation history**. The mandatory risk-cadence review
 reconstructs the full diff from git (`git diff origin/{base}...HEAD` for the
 completion-gate review, or a task's own commit for a per-task `critical` review)
 and reads the changed code from scratch.
-For mandatory risk-cadence review during `build`, after the verdict is produced, return to builder role before fixing findings or resuming the flow.
-For ad-hoc review, do not fix findings inline; report them and ask whether to enter the appropriate build/fix flow.
+For mandatory risk-cadence review during `build`, after the verdict is
+produced, return to builder role before fixing findings or resuming the flow.
+For result-only ad-hoc review, do not fix findings inline; report them and ask
+whether to enter the appropriate build/fix flow. For `review fix [1-3]`, the
+reviewer remains read-only and the main agent applies only bounded fixes under
+`## Review-fix loop`.
 
 ## Review-fix loop
 
@@ -234,16 +238,24 @@ Otherwise `design.md` is optional and the spec may be `spec.md` only.
 
 When the user explicitly requests review (`レビューして` / `mochiflow-review`),
 run the appropriate canonical reviewer via `## Review transport` regardless of
-risk level. Ad-hoc review is report-only and read-only.
+risk level. Plain `{slug} review` is result-only and read-only. `{slug} review
+fix [1-3]` is still user-triggered ad-hoc review, but only the reviewer is
+read-only; the main agent may apply bounded fixes under `## Review-fix loop`.
 
 - Target: the active spec's latest artifacts (spec.md, design.md, tasks.md as applicable).
 - A code-less spec (no implementation yet) uses `plan-auditor` per
   `## Review transport`; once code exists, ad-hoc review uses
   `change-reviewer`.
-- On High or Critical findings: report findings only, then ask whether to enter
-  the appropriate build/fix flow. Do not edit files as part of ad-hoc review.
+- On High or Critical findings in result-only mode: report findings only, then
+  ask whether to enter the appropriate build/fix flow. Do not edit files as
+  part of result-only review.
+- In `review fix [1-3]` mode: keep the reviewer read-only, then let the main
+  agent apply at most one bounded fix pass for that round under
+  `## Review-fix loop`.
 - On PASS / pass-with-comments: report the result and resume the interrupted flow.
-- Does not edit files, change `status`, create commits, or block approval by itself.
+- Review by itself does not change `status`, create PR metadata, or block
+  approval. Result-only review also does not edit files or create commits; fix
+  mode follows the active lifecycle context for edits, staging, and commits.
 
 This is independent of the risk-cadence table above. Risk-cadence review is
 automatic and mandatory; ad-hoc review is user-triggered and optional.

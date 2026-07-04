@@ -2023,13 +2023,23 @@ fn ad_hoc_review_is_report_only() {
 
     assert!(
         review.contains("Reports findings only")
-            && review.contains("Do not fix inline as part of ad-hoc review"),
-        "ad-hoc review command must be report-only"
+            && review.contains("Result-only review must not edit files, stage, or commit"),
+        "plain review must be report-only"
     );
     assert!(
         risk.contains("For mandatory risk-cadence review during `build`")
-            && risk.contains("For ad-hoc review, do not fix findings inline"),
-        "risk reference must separate build review fixes from ad-hoc review reporting"
+            && risk.contains("For result-only ad-hoc review, do not fix findings inline")
+            && risk.contains("For `review fix [1-3]`, the")
+            && risk.contains("reviewer remains read-only")
+            && risk.contains("the main agent applies only bounded fixes"),
+        "risk reference must separate result-only review from review-fix mode"
+    );
+    assert!(
+        risk.contains("Plain `{slug} review` is result-only and read-only")
+            && risk.contains("`{slug} review\nfix [1-3]` is still user-triggered ad-hoc review")
+            && risk.contains("only the reviewer is\nread-only")
+            && risk.contains("fix\n  mode follows the active lifecycle context"),
+        "ad-hoc review section must not make review fix report-only"
     );
     assert!(
         !review.contains("fix inline and re-run") && !risk.contains("fix inline and re-run"),
