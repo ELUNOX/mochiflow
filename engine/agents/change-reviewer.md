@@ -127,13 +127,22 @@ unverified notes.
 - full design
 - full tasks or change plan
 - read access to all changed files, or the full diff
+- optional cycle-local changed files or diff as focus input when this is a later
+  `review fix` cycle
 - `design.md ## Integration Log` when required by `reference/risk.md`
 - verification results and AC Matrix evidence when available
+
+For a later `review fix` cycle, focus input may point to the current cycle's
+local code/spec edits, but it must not include previous findings, previous
+verdicts, previous reviewer summaries, review-fix ledger contents, or
+conversation history. Review the current artifacts and full diff independently.
 
 ## Operating rules
 
 - Read only. Do not edit files, update spec status, stage, commit, or create PR
   metadata.
+- Judge the current implementation independently. Do not review prior reviewer
+  output and do not use the local review-fix ledger as input.
 - In inline mode, temporarily switch to this reviewer role; after producing the
   verdict, return to builder role before fixing findings or resuming work.
 - Ask for missing spec excerpts or diff excerpts before reviewing if conformance

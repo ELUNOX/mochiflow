@@ -24,7 +24,7 @@ Critical Stop Conditions:
     - `engine/MANIFEST.json`
   - Done: `review.md` documents `{slug} review` as one read-only report-only pass; documents `{slug} review fix`, `{slug} review fix 1`, `{slug} review fix 2`, and `{slug} review fix 3` as bounded automatic fix-round forms; states the number after `fix` is the maximum fix-round count and the loop ends after the final fix round; rejects `{slug} review 2`, `fix 0`, and `fix 4+` before any review runs. `router.md` recognizes the expanded trigger pattern without adding another verb. Conformance tests pin these command forms, invalid forms, and the unchanged report-only behavior of plain `{slug} review`. Run `mochiflow freeze` and include the regenerated `engine/MANIFEST.json`.
   - Stop: if the implementation requires a second public verb (`revise`/`refine`) or a new Rust CLI subcommand, stop and return to plan.
-- [ ] T-002 [AC-04, AC-05, AC-06, AC-09] Define fresh independent review-loop boundaries and recovery ledger
+- [x] T-002 [AC-04, AC-05, AC-06, AC-09] Define fresh independent review-loop boundaries and recovery ledger
   - Depends on: T-001
   - Files:
     - `engine/reference/risk.md`

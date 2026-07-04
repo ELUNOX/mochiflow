@@ -170,6 +170,52 @@ and reads the changed code from scratch.
 For mandatory risk-cadence review during `build`, after the verdict is produced, return to builder role before fixing findings or resuming the flow.
 For ad-hoc review, do not fix findings inline; report them and ask whether to enter the appropriate build/fix flow.
 
+## Review-fix loop
+
+`commands/review.md` owns the public grammar. This section owns the shared
+boundaries for `review fix [1-3]`.
+
+Reviewers remain read-only in every review-fix cycle. The main agent owns
+fixes, verification, stop decisions, staging, commits, push boundaries, status
+changes, and PR metadata. Do not create or invoke a write-capable reviewer or
+worker role for review fixes.
+
+Each fix round is one reviewer pass followed by at most one bounded main-agent
+fix pass. The number after `fix` is the maximum fix-round budget. The loop stops
+after the final requested fix round and does not require a clean post-fix review.
+
+Automatic fixes are allowed only when they satisfy the shared bounded-fix
+judgment above: no task-structure change, no new AC, no new design decision, no
+spec split, and no unrelated work. A finding that requires human judgment,
+planning, a new contract decision, or a repeated unresolved issue after a prior
+fix stops the loop instead of spending more budget. Verification failure after a
+fix also stops the loop until the failure is resolved.
+
+Later review cycles must be fresh independent reviews. Reviewer input is the
+current artifacts or current full diff, plus cycle-local changed files or diff
+as focus input when useful. Do not pass previous findings, previous verdicts,
+previous reviewer summaries, review-fix ledger contents, or conversation
+history to the reviewer. The main agent may retain prior findings for applying
+fixes and deciding whether a finding repeated after a prior fix, but that
+memory is not reviewer input.
+
+Review-fix recovery state is local and gitignored under
+`{install_dir}/state/{slug}/`, for example
+`{install_dir}/state/{slug}/review-fix.json`. The ledger is for main-agent
+recovery only and is not durable spec evidence. Record at least:
+
+- requested fix rounds;
+- completed fix rounds;
+- current phase and reviewer profile;
+- touched files;
+- verification evidence;
+- stop reason;
+- updated_at.
+
+On resume, recover from repository files plus the local review-fix ledger, not
+from hidden conversation memory. If the ledger is missing or unreadable, do not
+invent prior loop state; restart review or ask for explicit direction.
+
 ## design.md required condition
 
 `design.md` MUST exist when **any** of:

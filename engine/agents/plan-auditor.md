@@ -106,13 +106,21 @@ into findings; keep unprovable suspicions as unverified notes.
 - full tasks when present
 - read-only access to code, config, tests, templates, generated outputs, and ADR
   records needed for grounding
+- optional cycle-local changed spec files or diff as focus input when this is a
+  later `review fix` cycle
 
-No diff, changed-files list, integration log, or verification output is required.
+No diff, changed-files list, integration log, or verification output is required
+for an initial plan audit. For a later `review fix` cycle, focus input may point
+to the current cycle's local spec edits, but it must not include previous
+findings, previous verdicts, previous reviewer summaries, review-fix ledger
+contents, or conversation history.
 
 ## Operating rules
 
 - Read only. Do not edit files, update spec status, stage, commit, or create PR
   metadata.
+- Judge the current artifacts independently. Do not review prior reviewer output
+  and do not use the local review-fix ledger as input.
 - In inline mode, temporarily switch to this reviewer role; after producing the
   verdict, return to the main workflow role before fixing findings or resuming
   work.

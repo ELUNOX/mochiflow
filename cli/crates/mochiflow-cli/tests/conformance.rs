@@ -1986,6 +1986,62 @@ fn review_fix_budget_grammar_is_pinned() {
 }
 
 #[test]
+fn review_fix_loop_boundaries_are_pinned() {
+    let risk = read_repo_file("engine/reference/risk.md");
+    let plan_auditor = read_repo_file("engine/agents/plan-auditor.md");
+    let change_reviewer = read_repo_file("engine/agents/change-reviewer.md");
+
+    assert!(
+        risk.contains("## Review-fix loop")
+            && risk.contains("Reviewers remain read-only in every review-fix cycle")
+            && risk.contains("The main agent owns\nfixes, verification, stop decisions")
+            && risk.contains("Do not create or invoke a write-capable reviewer or\nworker role"),
+        "risk.md must keep review fixes main-agent owned and reviewer read-only"
+    );
+    assert!(
+        risk.contains("no task-structure change")
+            && risk.contains("no new AC")
+            && risk.contains("no new design decision")
+            && risk.contains("no\nspec split")
+            && risk.contains("repeated unresolved issue after a prior\nfix stops the loop"),
+        "risk.md must pin automatic-fix stop boundaries"
+    );
+    assert!(
+        risk.contains("Later review cycles must be fresh independent reviews")
+            && risk.contains("current artifacts or current full diff")
+            && risk.contains("cycle-local changed files or diff\nas focus input")
+            && risk.contains("Do not pass previous findings, previous verdicts")
+            && risk.contains("review-fix ledger contents, or conversation\nhistory"),
+        "risk.md must forbid passing prior review context into later reviewers"
+    );
+    assert!(
+        risk.contains("`{install_dir}/state/{slug}/review-fix.json`")
+            && risk.contains("requested fix rounds")
+            && risk.contains("completed fix rounds")
+            && risk.contains("current phase and reviewer profile")
+            && risk.contains("verification evidence")
+            && risk.contains("stop reason")
+            && risk.contains("updated_at"),
+        "risk.md must define the local main-agent-only review-fix ledger"
+    );
+    for body in [plan_auditor.as_str(), change_reviewer.as_str()] {
+        assert!(
+            body.contains("optional cycle-local changed")
+                && body.contains("`review fix` cycle")
+                && body.contains("previous")
+                && body.contains("findings")
+                && body.contains("verdicts")
+                && body.contains("previous reviewer summaries")
+                && body.contains("review-fix ledger")
+                && body.contains("conversation history")
+                && body.contains("Do not review prior reviewer")
+                && body.contains("do not use the local review-fix ledger as input"),
+            "reviewer contracts must accept only cycle-local focus and reject prior review context"
+        );
+    }
+}
+
+#[test]
 fn workflow_todo_verify_is_not_runnable() {
     let workflow = read_repo_file("engine/reference/workflow.md");
     assert!(
