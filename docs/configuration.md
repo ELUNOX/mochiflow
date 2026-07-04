@@ -37,6 +37,11 @@ spec/design/task audit before implementation, and `change-reviewer` for
 post-implementation code review. Older `independent-reviewer` adapter targets
 are treated as legacy aliases during migration.
 
+Plain `review` and `mochiflow-review` are result-only. `review fix [1-3]` uses
+the same read-only reviewer profiles, then lets the main agent apply bounded
+in-scope fixes. It does not add a worker role, a severity flag, or another
+approval gate.
+
 MochiFlow does not generate or manage tool permission settings. File, shell, and
 network permissions remain the responsibility of the AI tool, user environment,
 and operating system running the agent.

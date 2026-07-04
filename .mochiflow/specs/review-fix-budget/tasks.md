@@ -46,7 +46,7 @@ Critical Stop Conditions:
     - `engine/MANIFEST.json`
   - Done: Plan/build/open/update presentation sections distinguish "Review results" from "Review and fix" while mapping both to the `review` command family. Plan-time `review fix` uses `plan-auditor` and limits edits to spec artifacts. Code-present `review fix` uses `change-reviewer` and follows the current build/open/update bounded-fix discipline, including update's hold/finalize behavior and build's no-checkbox/no-`Task:` post-completion touch-up rule. Each fix round updates the local recovery ledger, and resume guidance says to recover from the ledger plus repository state rather than hidden conversation memory. Existing mandatory risk-cadence review requirements remain unchanged. Conformance tests pin the choice-card mapping and that review-fix does not add a new delivery gate. Run `mochiflow freeze` and include the regenerated `engine/MANIFEST.json`.
   - Stop: if adding the choice-card labels would make review mandatory or would change approve-to-build / approve-PR semantics, stop and return to plan.
-- [ ] T-004 [AC-07, AC-10] Update user-facing documentation and adapter-facing summaries
+- [x] T-004 [AC-07, AC-10] Update user-facing documentation and adapter-facing summaries
   - Depends on: T-001, T-002, T-003
   - Files:
     - `README.md`

@@ -1160,6 +1160,43 @@ fn review_fix_choice_cards_and_phase_discipline_are_pinned() {
 }
 
 #[test]
+fn public_docs_explain_review_fix_budget() {
+    let readme = read_repo_file("README.md");
+    let readme_ja = read_repo_file("README.ja.md");
+    let concepts = read_repo_file("docs/concepts.md");
+    let config = read_repo_file("docs/configuration.md");
+
+    assert!(
+        readme.contains("Plain review is result-only")
+            && readme.contains("saved-filters review fix 2")
+            && readme.contains("Reviewers stay read-only")
+            && readme.contains("Review is a quality assist, not an extra approval gate"),
+        "English README must document result-only review and bounded review fix"
+    );
+    assert!(
+        readme_ja.contains("通常のレビューは結果を見るだけ")
+            && readme_ja.contains("saved-filters review fix 2")
+            && readme_ja.contains("reviewer は read-only")
+            && readme_ja.contains("追加の承認ゲートではありません"),
+        "Japanese README must document result-only review and bounded review fix"
+    );
+    assert!(
+        concepts.contains("MochiFlow review is a quality assist, not a third approval gate")
+            && concepts.contains("Plain review is\nresult-only")
+            && concepts.contains("{slug} review fix 2")
+            && concepts.contains("fresh independent reviews"),
+        "concept docs must describe review as optional bounded quality assistance"
+    );
+    assert!(
+        config.contains("Plain `review` and `mochiflow-review` are result-only")
+            && config.contains("`review fix [1-3]`")
+            && config
+                .contains("does not add a worker role, a severity flag, or another\napproval gate"),
+        "configuration docs must describe adapter review profiles without adding workers or gates"
+    );
+}
+
+#[test]
 fn accept_guidance_uses_cli_and_persistence_modes() {
     let open = read_repo_file("engine/commands/open.md");
     let git = read_repo_file("engine/reference/git.md");
