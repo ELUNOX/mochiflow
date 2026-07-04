@@ -3,17 +3,25 @@ name: spec-review
 description: |
   mochiflow's ad-hoc review. On an explicit user request, run the read-only
   plan-auditor or change-reviewer against the active spec's latest artifacts via
-  the review transport rule, regardless of risk level. This is a non-phase command: it
-  exposes the existing ad-hoc review as a discoverable entry point; the behavior
-  itself is governed by reference/risk.md ## Ad-hoc review. Activate on the
-  explicit command `mochiflow-review`, or natural phrasing like "レビューして".
-  Reports findings only; does not edit files, change status, create commits, or
-  block approval.
+  the review transport rule, regardless of risk level. Plain review is
+  result-only and reports findings only. `review fix [1-3]` runs bounded
+  automatic fix rounds on the main agent. This is a non-phase command: it
+  exposes ad-hoc review as a discoverable entry point and adds no delivery gate.
+  Activate on the explicit command `mochiflow-review`, or natural phrasing like
+  "レビューして". Reports findings only in result-only mode; fix mode may edit
+  in-scope files but never changes status, pushes, or creates PR metadata by
+  itself.
 triggers:
   - mochiflow-review
   - レビューして
 trigger_patterns:
   - "{slug} review"
+  - "{slug} review fix"
+  - "{slug} review fix 1"
+  - "{slug} review fix 2"
+  - "{slug} review fix 3"
+  - "{slug} review {number} (invalid; route to correction)"
+  - "{slug} review fix {number} (invalid outside 1..3; route to correction)"
 delegate_to:
   - agents/plan-auditor.md
   - agents/change-reviewer.md
@@ -27,15 +35,34 @@ references:
 ## Purpose
 
 Run an on-demand review of the active spec when the user asks for it,
-independent of the automatic risk-cadence review. This command is the
-discoverable entry point only; it adds no review rules of its own.
+independent of the automatic risk-cadence review. Plain `{slug} review` is
+result-only and report-only. `{slug} review fix [N]` is the bounded automatic
+fix path.
+
+Supported forms:
+
+- `{slug} review` — run exactly one read-only review and report findings.
+- `{slug} review fix` — run one review/fix round.
+- `{slug} review fix 1` — same as `{slug} review fix`.
+- `{slug} review fix 2` — run at most two review/fix rounds.
+- `{slug} review fix 3` — run at most three review/fix rounds.
+
+Invalid forms are rejected before any reviewer runs. `{slug} review 2` is
+ambiguous because result-only review has no numeric budget; use
+`{slug} review fix 2` for automatic fixes. `{slug} review fix 0` and
+`{slug} review fix 4` or higher are out of range; allowed fix rounds are 1, 2,
+or 3.
 
 ## Procedure
 
-Follow `reference/risk.md ## Ad-hoc review` and `## Review transport` (the
-single source of truth for this behavior):
+Follow `reference/risk.md ## Ad-hoc review`, `## Review-fix loop`, and
+`## Review transport` (the single source of truth for this behavior):
 
-1. Run the selected canonical reviewer read-only using the review transport:
+1. Parse the requested mode. If the input is `{slug} review`, select
+   result-only mode. If the input is `{slug} review fix` or
+   `{slug} review fix N`, select fix mode with a fix-round budget of 1, 2, or
+   3. Reject invalid forms before any review runs.
+2. Run the selected canonical reviewer read-only using the review transport:
    prefer delegated subagent dispatch when available, and use inline reviewer
    role only when subagents are unavailable or dispatch fails for a
    runtime/tooling reason. The explicit review trigger is also the user's
@@ -47,11 +74,18 @@ single source of truth for this behavior):
    `agents/change-reviewer.md`. Pass only the slug, the command path, a summary
    of the latest artifact, and a pointer to the spec — never the conversation
    history (`router.md` routing principle 5).
-2. Report `Review profile: plan-auditor | change-reviewer`,
+3. Report `Review profile: plan-auditor | change-reviewer`,
    `Reviewer mode: delegated | inline`, and the verdict / findings.
-3. On High or Critical findings, stop after reporting and ask whether to enter
-   the appropriate build/fix flow. Do not fix inline as part of ad-hoc review.
-4. On `pass` / `pass-with-comments`, resume the interrupted flow.
+4. In result-only mode, stop after reporting. On High or Critical findings, ask whether to enter the appropriate build/fix flow. Do not fix inline as part of ad-hoc review in result-only mode.
+5. In fix mode, the reviewer still remains read-only. The main agent applies at
+   most one bounded fix pass for that round, verifies according to the current
+   lifecycle context, updates the local review-fix ledger, and then either
+   starts the next fresh independent review cycle or stops when the requested
+   fix-round budget is spent. The number after `fix` is the maximum number of
+   fix rounds, not the number of reviewer opinions. End after the final
+   requested fix round; do not require a clean post-fix review.
+6. On `pass` / `pass-with-comments` with no in-scope fix to apply, resume the
+   interrupted flow.
 
 ## Presentation
 
@@ -59,8 +93,12 @@ single source of truth for this behavior):
   language. Keep `Reviewer mode` and `delegated` / `inline` as a short
   `MochiFlow:` detail when useful, not as the main headline.
 - Summarize findings by severity and required fixes. If High or Critical
-  findings exist, state that fixes require a separate build/fix step. Avoid
-  exposing routing terms unless the user asks how the review was run.
+  findings exist in result-only mode, state that fixes require a separate
+  build/fix step. Avoid exposing routing terms unless the user asks how the
+  review was run.
+- For invalid numeric forms, use a concise correction: result-only review is
+  `{slug} review`; automatic fixes are `{slug} review fix`, `{slug} review fix
+  2`, or `{slug} review fix 3`.
 - When review resumes a plan-confirmed flow or another `status: approved`
   implementation-ready context, present a numbered choice card with
   **Start implementation** (`build` / `mochiflow-build`) and
@@ -72,7 +110,10 @@ single source of truth for this behavior):
 
 - Do not change `spec.yaml` `status`, stage, commit, or create PR metadata —
   ad-hoc review is non-transitional (`reference/risk.md ## Ad-hoc review`).
-- Do not edit source or spec files during ad-hoc review. It is report-only.
+- Do not edit source or spec files during result-only ad-hoc review. It is
+  report-only.
+- Do not let fix mode exceed the parsed fix-round budget. Allowed fix rounds
+  are 1, 2, or 3.
 - Do not use this in place of the mandatory risk-cadence review during build
   (`reference/risk.md ## Consequences`); the two are independent.
 - Do not pass the conversation history to the reviewer; pass only the spec

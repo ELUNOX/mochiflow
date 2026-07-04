@@ -15,7 +15,7 @@ Critical Stop Conditions:
 
 ## Tasks
 
-- [ ] T-001 [AC-01, AC-02, AC-03, AC-08] Define review command grammar and result-only vs fix-mode behavior
+- [x] T-001 [AC-01, AC-02, AC-03, AC-08] Define review command grammar and result-only vs fix-mode behavior
   - Depends on: none
   - Files:
     - `engine/commands/review.md`

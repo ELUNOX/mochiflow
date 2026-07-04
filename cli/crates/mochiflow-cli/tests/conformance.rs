@@ -1951,6 +1951,41 @@ fn ad_hoc_review_is_report_only() {
 }
 
 #[test]
+fn review_fix_budget_grammar_is_pinned() {
+    let review = read_repo_file("engine/commands/review.md");
+    let router = read_repo_file("engine/router.md");
+
+    assert!(
+        review.contains("Plain `{slug} review` is\nresult-only and report-only")
+            && review.contains("`{slug} review fix` — run one review/fix round")
+            && review.contains("`{slug} review fix 1` — same as `{slug} review fix`")
+            && review.contains("`{slug} review fix 2` — run at most two review/fix rounds")
+            && review.contains("`{slug} review fix 3` — run at most three review/fix rounds"),
+        "review.md must pin result-only review and the 1-3 fix budget forms"
+    );
+    assert!(
+        review.contains("Invalid forms are rejected before any reviewer runs")
+            && review.contains("`{slug} review 2` is\nambiguous")
+            && review.contains("allowed fix rounds are 1, 2,\nor 3"),
+        "review.md must reject ambiguous or out-of-range numeric review forms"
+    );
+    assert!(
+        review
+            .contains("the maximum number of\n   fix rounds, not the number of reviewer opinions")
+            && review.contains("do not require a clean post-fix review"),
+        "review fix N must mean maximum fix rounds and must not force a final review"
+    );
+    assert!(
+        router.contains("`review fix [1-3]`")
+            && router.contains("{slug} review fix 1")
+            && router.contains("{slug} review fix 2")
+            && router.contains("{slug} review fix 3")
+            && router.contains("{slug} review 2` is ambiguous"),
+        "router.md must route expanded review forms without adding another verb"
+    );
+}
+
+#[test]
 fn workflow_todo_verify_is_not_runnable() {
     let workflow = read_repo_file("engine/reference/workflow.md");
     assert!(
