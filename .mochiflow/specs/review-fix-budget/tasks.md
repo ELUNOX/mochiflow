@@ -56,7 +56,7 @@ Critical Stop Conditions:
     - `cli/crates/mochiflow-cli/tests/conformance.rs`
   - Done: User docs describe plain `review` as result-only and `review fix [1-3]` as bounded automatic fixing without introducing another public verb or severity/gate flags. Documentation keeps review framed as a quality assist, not a delivery approval gate. Conformance tests pin any engine-doc strings needed for adapter generation or public command summaries.
   - Stop: if docs would need to document unsupported numeric forms like `review 2`, keep the docs focused on supported forms only.
-- [ ] T-005 [AC-11] Dogfood sync and final verification
+- [x] T-005 [AC-11] Dogfood sync and final verification
   - Depends on: T-001, T-002, T-003, T-004
   - Files:
     - `engine/MANIFEST.json`

@@ -120,3 +120,8 @@ the likely labels are:
 - Run the full configured `cli` default verification after dogfood sync.
 
 ## Review Results
+
+Review profile: change-reviewer
+Reviewer mode: inline
+Verdict: pass
+Reviewed through: a0317bb
