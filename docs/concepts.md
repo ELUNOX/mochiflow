@@ -59,3 +59,17 @@ same view.
 
 Riskier changes can require stricter review cadence, but the normal user flow
 remains the same.
+
+## Review
+
+MochiFlow review is a quality assist, not a third approval gate. Plain review is
+result-only: `{slug} review` or `mochiflow-review` runs one read-only reviewer
+pass and reports findings without editing files, changing status, committing,
+pushing, or creating PR metadata.
+
+For bounded automatic fixing, use `{slug} review fix`, `{slug} review fix 2`,
+or `{slug} review fix 3`. The number is the maximum number of fix rounds.
+Reviewers remain read-only; the main agent applies only in-scope fixes, verifies
+the result in the current lifecycle context, and stops after the requested
+budget. Later review cycles are fresh independent reviews of the current
+artifacts or diff, not a review of prior reviewer output.

@@ -124,7 +124,7 @@ When you want to be explicit, send one of these messages to your AI tool:
 | `mochiflow-discuss` | Clarify the idea, scope, and acceptance criteria |
 | `mochiflow-plan` | Write the spec, design, and task plan |
 | `mochiflow-build` | Implement, test, and verify the change |
-| `mochiflow-review` | Review the spec, design, implementation, or PR readiness |
+| `mochiflow-review` | Review the spec, design, implementation, or PR readiness and show results only |
 | `mochiflow-open` | Prepare and open the PR |
 | `mochiflow-update` | Apply PR feedback and re-verify |
 | `mochiflow-close` | Clean up locally after the PR is merged |
@@ -154,6 +154,21 @@ mochiflow-review
 
 The review checks whether the spec is clear, the design and implementation
 match, the acceptance criteria are verified, and the PR is ready to hand off.
+Plain review is result-only: it does not edit files, change status, commit, push,
+or create PR metadata.
+
+When you want bounded automatic fixing, use the same review command family with
+a fix budget:
+
+```text
+saved-filters review fix
+saved-filters review fix 2
+saved-filters review fix 3
+```
+
+The number is the maximum number of fix rounds. Reviewers stay read-only; the
+main agent applies only in-scope fixes and stops after the requested budget.
+Review is a quality assist, not an extra approval gate.
 
 ## What MochiFlow Adds
 

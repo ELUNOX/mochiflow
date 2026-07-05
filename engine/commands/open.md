@@ -231,6 +231,13 @@ optional `docs(context)` commit → accept transition → PR title/body → appr
   merge, never written.
 - Describe the AC Matrix as the acceptance checks or verification items, and the
   reviewer verdict as the review result.
+- When an open-adjacent choice card offers review actions, distinguish
+  **Review results** (`review` / `mochiflow-review`) from **Review and fix**
+  (`review fix`). Result-only review reports without editing. Review-and-fix
+  uses `agents/change-reviewer.md`, applies the shared bounded-fix judgment in
+  `reference/risk.md`, updates the local review-fix ledger, and feeds any
+  code-changing commit into the accept-gate freshness check rather than pushing
+  or accepting by itself.
 - After PR creation, state the next human action conversationally: merge the PR
   in the provider, then return to chat and report the merge so local cleanup can
   run. Keep this next action out of the PR body.

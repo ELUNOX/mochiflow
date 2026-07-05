@@ -119,7 +119,7 @@ PRを作成して。
 | `mochiflow-discuss` | アイデア、スコープ、受け入れ条件を整理する |
 | `mochiflow-plan` | spec、設計、作業リストを作る |
 | `mochiflow-build` | 実装し、テストし、検証する |
-| `mochiflow-review` | spec、設計、実装、PR準備をレビューする |
+| `mochiflow-review` | spec、設計、実装、PR準備をレビューし、結果だけを見る |
 | `mochiflow-open` | PR作成に進む |
 | `mochiflow-update` | PRフィードバックに対応し、再検証する |
 | `mochiflow-close` | PRマージ後にローカルを片付ける |
@@ -147,7 +147,17 @@ MochiFlowの観点でレビューを依頼することもできます。
 mochiflow-review
 ```
 
-このレビューでは、specが曖昧でないか、設計と実装がずれていないか、受け入れ条件に対して検証が足りているか、PRに出せる状態かを確認します。
+このレビューでは、specが曖昧でないか、設計と実装がずれていないか、受け入れ条件に対して検証が足りているか、PRに出せる状態かを確認します。通常のレビューは結果を見るだけで、ファイル編集、status変更、commit、push、PRメタデータ作成はしません。
+
+レビュー結果をもとに自動修正まで任せたいときは、同じ `review` 系の合図で修正回数の上限を指定できます。
+
+```text
+saved-filters review fix
+saved-filters review fix 2
+saved-filters review fix 3
+```
+
+数字は最大の修正ラウンド数です。reviewer は read-only のままで、main agent が範囲内の修正だけを行い、指定した上限で止まります。review は品質確認の補助であり、追加の承認ゲートではありません。
 
 ## MochiFlowが作るもの
 

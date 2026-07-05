@@ -1062,10 +1062,10 @@ fn open_ships_context_refresh_in_pr_before_accept() {
 
 #[test]
 fn plan_offers_pre_approval_review_before_confirm_for_elevated() {
-    // Change A: for risk >= elevated, the plan readiness card offers a
-    // pre-approval Review with plan-auditor before the
-    // confirm-plan (approve-to-build) action; the standard-risk order is
-    // unchanged (confirm as today, review only post-approval at step 10).
+    // Change A: for risk >= elevated, the plan readiness card offers
+    // pre-approval review actions with plan-auditor before the confirm-plan
+    // (approve-to-build) action; the standard-risk order keeps confirm first
+    // and offers review actions only post-approval at step 10.
     let plan = read_repo_file("engine/commands/plan.md");
 
     assert!(
@@ -1091,8 +1091,10 @@ fn plan_offers_pre_approval_review_before_confirm_for_elevated() {
         "plan.md must keep the standard-risk approve-then-review order unchanged"
     );
     assert!(
-        plan.contains("**Review** (`risk = standard` only)"),
-        "plan.md step 10 must keep post-approval Review for standard risk only"
+        plan.contains("**Review results** /")
+            && plan.contains("**Review and fix** / **Create a resume prompt**")
+            && plan.contains("Compatibility **Review**"),
+        "plan.md step 10 must keep post-approval review actions for standard risk only"
     );
 
     // Positional guard: the elevated pre-approval Review offer precedes the
@@ -1106,6 +1108,91 @@ fn plan_offers_pre_approval_review_before_confirm_for_elevated() {
     assert!(
         elevated_review < post_approval_card,
         "the pre-approval review offer must precede the post-approval next-step card"
+    );
+}
+
+#[test]
+fn review_fix_choice_cards_and_phase_discipline_are_pinned() {
+    let plan = read_repo_file("engine/commands/plan.md");
+    let build = read_repo_file("engine/commands/build.md");
+    let open = read_repo_file("engine/commands/open.md");
+    let update = read_repo_file("engine/commands/update.md");
+    let router = read_repo_file("engine/router.md");
+
+    assert!(
+        plan.contains("**Review results** (`review` / `mochiflow-review`)")
+            && plan.contains("**Review and fix** (`review fix`)")
+            && plan.contains("uses `agents/plan-auditor.md`, limits edits to spec artifacts")
+            && plan.contains("Review stays optional"),
+        "plan.md must distinguish result-only review from review-and-fix without adding a gate"
+    );
+    assert!(
+        build.contains(
+            "`{slug} review fix [1-3]` after implementation uses `agents/change-reviewer.md`"
+        ) && build.contains("commits without a `Task:` trailer")
+            && build.contains("holds the change for\nthe next open / accept boundary")
+            && build
+                .contains("A result-only review remains `{slug} review`\nand does not edit files"),
+        "build.md must connect review fix to post-completion bounded fixes"
+    );
+    assert!(
+        open.contains("uses `agents/change-reviewer.md`, applies the shared bounded-fix judgment")
+            && open
+                .contains("feeds any\n  code-changing commit into the accept-gate freshness check")
+            && open.contains("rather than pushing\n  or accepting by itself"),
+        "open.md must route review fix through accept freshness instead of direct delivery"
+    );
+    assert!(
+        update.contains("while the spec is in review uses\n`agents/change-reviewer.md`")
+            && update.contains("holds by default")
+            && update.contains(
+                "unless the active update flow later receives an explicit\nfinalize signal"
+            )
+            && update.contains("review-and-fix keeps update hold-by-default until finalize"),
+        "update.md must preserve hold-by-default and finalize semantics for review fix"
+    );
+    assert!(
+        router.contains("**Review results** is read-only")
+            && router.contains("**Review and fix** maps to `review fix [1-3]`")
+            && router.contains("no state transition"),
+        "router.md must map both choice labels to the review command family"
+    );
+}
+
+#[test]
+fn public_docs_explain_review_fix_budget() {
+    let readme = read_repo_file("README.md");
+    let readme_ja = read_repo_file("README.ja.md");
+    let concepts = read_repo_file("docs/concepts.md");
+    let config = read_repo_file("docs/configuration.md");
+
+    assert!(
+        readme.contains("Plain review is result-only")
+            && readme.contains("saved-filters review fix 2")
+            && readme.contains("Reviewers stay read-only")
+            && readme.contains("Review is a quality assist, not an extra approval gate"),
+        "English README must document result-only review and bounded review fix"
+    );
+    assert!(
+        readme_ja.contains("通常のレビューは結果を見るだけ")
+            && readme_ja.contains("saved-filters review fix 2")
+            && readme_ja.contains("reviewer は read-only")
+            && readme_ja.contains("追加の承認ゲートではありません"),
+        "Japanese README must document result-only review and bounded review fix"
+    );
+    assert!(
+        concepts.contains("MochiFlow review is a quality assist, not a third approval gate")
+            && concepts.contains("Plain review is\nresult-only")
+            && concepts.contains("{slug} review fix 2")
+            && concepts.contains("fresh independent reviews"),
+        "concept docs must describe review as optional bounded quality assistance"
+    );
+    assert!(
+        config.contains("Plain `review` and `mochiflow-review` are result-only")
+            && config.contains("`review fix [1-3]`")
+            && config
+                .contains("does not add a worker role, a severity flag, or another\napproval gate"),
+        "configuration docs must describe adapter review profiles without adding workers or gates"
     );
 }
 
@@ -1936,18 +2023,126 @@ fn ad_hoc_review_is_report_only() {
 
     assert!(
         review.contains("Reports findings only")
-            && review.contains("Do not fix inline as part of ad-hoc review"),
-        "ad-hoc review command must be report-only"
+            && review.contains("Result-only review must not edit files, stage, or commit"),
+        "plain review must be report-only"
     );
     assert!(
         risk.contains("For mandatory risk-cadence review during `build`")
-            && risk.contains("For ad-hoc review, do not fix findings inline"),
-        "risk reference must separate build review fixes from ad-hoc review reporting"
+            && risk.contains("For result-only ad-hoc review, do not fix findings inline")
+            && risk.contains("For `review fix [1-3]`, the")
+            && risk.contains("reviewer remains read-only")
+            && risk.contains("the main agent applies only bounded fixes"),
+        "risk reference must separate result-only review from review-fix mode"
+    );
+    assert!(
+        risk.contains("Plain `{slug} review` is result-only and read-only")
+            && risk.contains("`{slug} review\nfix [1-3]` is still user-triggered ad-hoc review")
+            && risk.contains("only the reviewer is\nread-only")
+            && risk.contains("fix\n  mode follows the active lifecycle context"),
+        "ad-hoc review section must not make review fix report-only"
     );
     assert!(
         !review.contains("fix inline and re-run") && !risk.contains("fix inline and re-run"),
         "review docs must not auto-fix from ad-hoc review"
     );
+}
+
+#[test]
+fn review_fix_budget_grammar_is_pinned() {
+    let review = read_repo_file("engine/commands/review.md");
+    let router = read_repo_file("engine/router.md");
+
+    assert!(
+        review.contains("Plain `{slug} review` is\nresult-only and report-only")
+            && review.contains("`{slug} review fix` — run one review/fix round")
+            && review.contains("`{slug} review fix 1` — same as `{slug} review fix`")
+            && review.contains("`{slug} review fix 2` — run at most two review/fix rounds")
+            && review.contains("`{slug} review fix 3` — run at most three review/fix rounds"),
+        "review.md must pin result-only review and the 1-3 fix budget forms"
+    );
+    assert!(
+        review.contains("Invalid forms are rejected before any reviewer runs")
+            && review.contains("`{slug} review 2` is\nambiguous")
+            && review.contains("allowed fix rounds are 1, 2,\nor 3"),
+        "review.md must reject ambiguous or out-of-range numeric review forms"
+    );
+    assert!(
+        review
+            .contains("the maximum number of\n   fix rounds, not the number of reviewer opinions")
+            && review.contains("do not require a clean post-fix review"),
+        "review fix N must mean maximum fix rounds and must not force a final review"
+    );
+    assert!(
+        review.contains("Result-only review must not edit files, stage, or commit")
+            && review
+                .contains("In fix mode, staging and commits follow the active lifecycle context")
+            && review.contains("does\n  not invent a separate commit or push rule"),
+        "review.md must not apply result-only no-commit rules to review fix mode"
+    );
+    assert!(
+        router.contains("`review fix [1-3]`")
+            && router.contains("{slug} review fix 1")
+            && router.contains("{slug} review fix 2")
+            && router.contains("{slug} review fix 3")
+            && router.contains("{slug} review 2` is ambiguous"),
+        "router.md must route expanded review forms without adding another verb"
+    );
+}
+
+#[test]
+fn review_fix_loop_boundaries_are_pinned() {
+    let risk = read_repo_file("engine/reference/risk.md");
+    let plan_auditor = read_repo_file("engine/agents/plan-auditor.md");
+    let change_reviewer = read_repo_file("engine/agents/change-reviewer.md");
+
+    assert!(
+        risk.contains("## Review-fix loop")
+            && risk.contains("Reviewers remain read-only in every review-fix cycle")
+            && risk.contains("The main agent owns\nfixes, verification, stop decisions")
+            && risk.contains("Do not create or invoke a write-capable reviewer or\nworker role"),
+        "risk.md must keep review fixes main-agent owned and reviewer read-only"
+    );
+    assert!(
+        risk.contains("no task-structure change")
+            && risk.contains("no new AC")
+            && risk.contains("no new design decision")
+            && risk.contains("no\nspec split")
+            && risk.contains("repeated unresolved issue after a prior\nfix stops the loop"),
+        "risk.md must pin automatic-fix stop boundaries"
+    );
+    assert!(
+        risk.contains("Later review cycles must be fresh independent reviews")
+            && risk.contains("current artifacts or current full diff")
+            && risk.contains("cycle-local changed files or diff\nas focus input")
+            && risk.contains("Do not pass previous findings, previous verdicts")
+            && risk.contains("review-fix ledger contents, or conversation\nhistory"),
+        "risk.md must forbid passing prior review context into later reviewers"
+    );
+    assert!(
+        risk.contains("`{install_dir}/state/{slug}/review-fix.json`")
+            && risk.contains("requested fix rounds")
+            && risk.contains("completed fix rounds")
+            && risk.contains("current phase and reviewer profile")
+            && risk.contains("verification evidence")
+            && risk.contains("stop reason")
+            && risk.contains("updated_at"),
+        "risk.md must define the local main-agent-only review-fix ledger"
+    );
+    for body in [plan_auditor.as_str(), change_reviewer.as_str()] {
+        assert!(
+            body.contains("optional cycle-local changed")
+                && body.contains("`review fix` cycle")
+                && body.contains("previous")
+                && body.contains("findings")
+                && body.contains("verdicts")
+                && body.contains("previous reviewer summaries")
+                && body.contains("review-fix ledger")
+                && body.contains("conversation history")
+                && body.contains("Do not review prior reviewer")
+                && body.contains("do not use the local review-fix ledger as input"),
+            "reviewer contracts must accept only cycle-local focus and reject prior review context"
+        );
+    }
 }
 
 #[test]

@@ -1,0 +1,11 @@
+version: 1
+slug: "review-fix-budget"
+title: "Add review budget loops with optional automatic fixes"
+type: "feature"
+surfaces:
+  - "cli"
+integration: "none"
+risk: "elevated"
+status: "accepted"
+created: "2026-07-04"
+updated: "2026-07-05"
