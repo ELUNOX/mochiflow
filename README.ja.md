@@ -171,10 +171,14 @@ saved-filters review fix 3
   context/           # 現在のプロジェクト地図
   specs/             # ワークフローで作られるspec
   adr/               # 判断とハマりどころ
+  instructions/       # 任意のユーザーMarkdown。通常のGit方針で共有候補
+  instructions.local/ # 任意のユーザーMarkdown。デフォルトではローカル専用
 
 AGENTS.md / CLAUDE.md / .kiro/ / .github/
   # AIコーディングツール用の入口ファイル
 ```
+
+`.mochiflow/instructions/` と `.mochiflow/instructions.local/` の中身はユーザー所有のMarkdownです。MochiFlowはこれらを自動ロード、解析、索引化、検証、drift checkしません。AIエージェントに使わせたい場合は、依頼文でファイルパスを明示してください。
 
 ## Specの中身
 
@@ -203,13 +207,13 @@ mochiflow index                        # 生成インデックスを更新
 
 ## 一時的に外す
 
-MochiFlowの生成済みadapter内容とローカルstateだけを外したい場合は、次を実行します。
+MochiFlowの生成済みadapter内容とローカルstateだけを外し、プロジェクト知識とユーザーinstructionsを残したい場合は、次を実行します。
 
 ```bash
 mochiflow detach
 ```
 
-MochiFlowのプロジェクトデータをすべて削除したい場合だけ、確認フレーズ付きでpurgeします。
+両方のinstructionsディレクトリを含むMochiFlowのプロジェクトデータをすべて削除したい場合だけ、確認フレーズ付きでpurgeします。
 
 ```bash
 mochiflow detach --purge --confirm "delete mochiflow data"

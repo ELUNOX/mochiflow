@@ -183,10 +183,17 @@ your AI coding tools.
   context/           # Current project map
   specs/             # Specs created during the workflow
   adr/               # Decisions and pitfalls
+  instructions/       # Optional user Markdown, shareable by normal Git policy
+  instructions.local/ # Optional user Markdown, local-only by default
 
 AGENTS.md / CLAUDE.md / .kiro/ / .github/
   # Entry files for AI coding tools
 ```
+
+Files under `.mochiflow/instructions/` and
+`.mochiflow/instructions.local/` are user-owned Markdown. MochiFlow does not
+automatically load, parse, index, validate, or drift-check them. When you want an
+AI agent to use one, cite the file path explicitly in your request.
 
 ## What A Spec Contains
 
@@ -218,13 +225,14 @@ mochiflow index                        # Refresh generated indexes
 ## Temporarily Remove The Integration
 
 To remove generated adapter content and local state while keeping project
-knowledge:
+knowledge and user instructions:
 
 ```bash
 mochiflow detach
 ```
 
-To delete all MochiFlow project data, use the explicit purge command:
+To delete all MochiFlow project data, including both instruction directories,
+use the explicit purge command:
 
 ```bash
 mochiflow detach --purge --confirm "delete mochiflow data"

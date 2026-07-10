@@ -473,36 +473,18 @@ fn main() -> Result<()> {
                         println!("{message}");
                     }
                 }
-                if json {
-                    eprintln!(
-                        "MochiFlow is already initialized; running join-style local setup. Use `mochiflow join` for existing projects."
-                    );
-                } else {
-                    println!(
-                        "MochiFlow is already initialized; running join-style local setup. Use `mochiflow join` for existing projects."
-                    );
-                }
-                mochiflow_core::join::run_join(
-                    &target,
-                    dry_run,
-                    json,
-                    false,
-                    &bundled_engine_version(),
-                    Some(&extract_fn),
-                )
-            } else {
-                mochiflow_core::init::run_init(
-                    &target,
-                    &adapter,
-                    artifact_language.as_deref(),
-                    conversation_language.as_deref(),
-                    force,
-                    dry_run,
-                    json,
-                    yes,
-                    Some(&extract_fn),
-                )
             }
+            mochiflow_core::init::run_init(
+                &target,
+                &adapter,
+                artifact_language.as_deref(),
+                conversation_language.as_deref(),
+                force,
+                dry_run,
+                json,
+                yes,
+                Some(&extract_fn),
+            )
         }
         Commands::Join {
             target,
