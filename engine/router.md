@@ -2,9 +2,10 @@
 name: spec
 not_a_phase: true
 description: |
-  Compact standing router for mochiflow. Aggregates triggers and
-  trigger_patterns from commands/*.md to decide whether to stay in normal
-  conversation, enter a lifecycle verb, or run a non-phase command.
+  Compact standing router for mochiflow. Owns a compact route table and selects
+  routes from it alone — whether to stay in normal conversation, enter a
+  lifecycle verb, or run a non-phase command — without reading command
+  frontmatter to route.
   Loaded directly by adapter entrypoints such as Kiro steering or generated
   agent instructions.
 references:
@@ -19,6 +20,7 @@ references:
   - commands/onboard.md
   - reference/lifecycle.md
   - reference/risk.md
+  - reference/review.md
   - reference/language.md
   - reference/presentation.md
 ---
@@ -56,7 +58,7 @@ then the relevant active records.
 2. **Artifacts are the state.** A spec's `status` (`draft|approved|accepted`; `done` is legacy/derived only) and the documents in its folder are the source of truth for current state. There is no separate conversation-history state machine.
 3. **Activation strength follows the trigger form.** An explicit command (`mochiflow-<verb>`) or a slug pattern (`{slug} <verb>`) is unambiguous — declare the verb in one line and activate immediately. A natural-language trigger (e.g. "実装して" / "レビューして" / "進めて") is an intent hint, not a command: activate immediately only when an active spec context already scopes it; with no such context, propose "Start <verb>?" in one line and wait. With no trigger at all, propose only on clear intent.
 4. **On a state/intent conflict, ask exactly one two-choice question.** Do not silently roll back — e.g. "rework the design" against an already-approved spec.
-5. **State lives in files; judgment and implementation stay single-threaded; review may delegate.** discuss / plan / build / open / update / close are conducted by the main agent, which holds the whole picture. **Invariant:** judgment, implementation, gates, integration, and the living-spec fold stay single-threaded on the top model — they are never delegated. **Review transport:** independent review runs the selected read-only contract (`agents/plan-auditor.md` before implementation, `agents/change-reviewer.md` after implementation) via `reference/risk.md ## Review transport`, preferring delegated subagent dispatch when available and falling back to inline reviewer role only when subagents are unavailable or dispatch fails for a runtime/tooling reason. A review trigger, `review fix [1-3]`, or a user-approved build flow that reaches mandatory risk-cadence review, is an explicit request to use delegated reviewer transport when the runtime requires one. Pass just the review contract (the slug, command path, a summary of the latest artifact or diff, and a pointer to the spec) — never the conversation history. Risk-cadence review (automatic, per `reference/risk.md ## Consequences`) and ad-hoc review (user-triggered via `レビューして` / `mochiflow-review`; see `reference/risk.md ## Ad-hoc review`) both use this transport.
+5. **State lives in files; judgment and implementation stay single-threaded; review may delegate.** discuss / plan / build / open / update / close are conducted by the main agent, which holds the whole picture. **Invariant:** judgment, implementation, gates, integration, and the living-spec fold stay single-threaded on the top model — they are never delegated. **Review transport:** independent review runs the selected read-only contract (`agents/plan-auditor.md` before implementation, `agents/change-reviewer.md` after implementation) via `reference/review.md ## Review transport`, preferring delegated subagent dispatch when available and falling back to inline reviewer role only when subagents are unavailable or dispatch fails for a runtime/tooling reason. A review trigger, `review fix [1-3]`, or a user-approved build flow that reaches mandatory risk-cadence review, is an explicit request to use delegated reviewer transport when the runtime requires one. Pass just the review contract (the slug, command path, a summary of the latest artifact or diff, and a pointer to the spec) — never the conversation history. Risk-cadence review (automatic, per `reference/review.md ## Reviewer cadence`) and ad-hoc review (user-triggered via `レビューして` / `mochiflow-review`; see `reference/review.md ## Ad-hoc review`) both use this transport.
 6. **Small concrete work stays in the spec lane.** With no active spec, concrete small-edit requests are plan intent hints: propose `Start plan?` and wait. Do not route them to a separate no-spec lane.
 
 ## Route table
@@ -90,7 +92,7 @@ feedback, merged-event cleanup) are detailed in `## Decision Flow`,
 1. Match the message against the `## Route table` above — the router's own route vocabulary; do not read command frontmatter to route. In the table, a `mochiflow-<verb>` token is an **explicit command**; every natural-language entry is a **natural-language hint**.
 2. On the retired explicit command `mochiflow-patch`, say in one line that `patch` is retired and small fixes now start with `plan`; then propose `Start plan?` and wait.
 3. On any other explicit command (`mochiflow-<verb>`) match, declare the command in one line and activate.
-4. Match `{slug}` in `trigger_patterns` only against a spec slug that exists under `{specs_dir}/{slug}/`; on a match, declare the verb in one line and activate.
+4. Match `{slug}` against the `## Route table` slug / event patterns column, only for a spec slug that exists under `{specs_dir}/{slug}/`; on a match, declare the verb in one line and activate.
    - Exception: `{slug} discuss` resolves against a seed at `{specs_dir}/_backlog/{slug}.md` when the slug exists only there; if `{specs_dir}/{slug}/` already exists, re-open that spec instead.
    - `{slug} plan` requires an existing active spec directory at `{specs_dir}/{slug}/` created by discuss. If only `{specs_dir}/_backlog/{slug}.md` exists, do not activate plan — guide back to `{slug} discuss` because backlog files are raw seeds, not plan-ready handoffs.
    - Event patterns `{slug} merged` / `{slug} マージ済み` / `{slug} 完了` are the only trigger-pattern exception for delivered specs: resolve `{slug}` against the flat `{specs_dir}/{slug}/` (specs are never moved to `_done/`), then run close's post-merge local cleanup only (`commands/close.md`), not a fresh open. `merged` is derived (provider, tracked-mode `Spec: {slug}` trailer in `origin/{base_branch}`, or local-mode source branch tip reachable from `origin/{base_branch}` while the local branch still exists); the fold already merged via the open PR, so close writes nothing to the base branch.
