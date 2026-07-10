@@ -17,6 +17,7 @@ Critical Stop Conditions:
 - [ ] T-001 [AC-01, AC-02, AC-03, AC-04] Add idempotent init scaffolding and ignore safety
   - Depends on: none
   - Files:
+    - `cli/crates/mochiflow-cli/src/main.rs`
     - `cli/crates/mochiflow-core/src/init.rs`
     - `cli/crates/mochiflow-cli/tests/cli.rs`
     - `cli/crates/mochiflow-cli/tests/first_run.rs`

@@ -37,6 +37,12 @@ generated indexes. `join` and `upgrade` do not create or inspect them. `doctor`,
 them. A repeated explicit `init` may create missing scaffolding, but no other
 repair or upgrade command backfills it.
 
+The CLI currently redirects a non-forced `init` for an initialized project into
+the `join` implementation. That alias must be removed for this contract:
+explicit `init` keeps the existing config but continues through init's
+idempotent scaffold/presentation path, while an explicit `join` remains a local
+repair command and never creates the instruction directories.
+
 Normal `detach` preserves both directories as user project data. Purge already
 removes the entire `.mochiflow/` tree; its prompt, pre-action warning, and
 reports must now name both instruction directories so users understand that
@@ -81,6 +87,9 @@ workflow without making MochiFlow load or manage them.
   `init --force` leave it byte-for-byte unchanged.
 - If either directory is absent in an existing project, an explicit init may
   create it; join and upgrade leave it absent.
+- If an initialized project runs init without `--force`, its config and user
+  files remain unchanged while missing init-owned scaffolding is created; the
+  command no longer changes identity into join.
 - If `.mochiflow/.gitignore` already contains custom content, init without
   `--force` retains that content and appends `instructions.local/` only when the
   exact rule is missing.
@@ -145,10 +154,10 @@ workflow without making MochiFlow load or manage them.
 
 | AC | Scope | Verification method | Planned test/QA | Implementation | Result | Evidence | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| AC-01 | cli | automated | Init fixture assertions; QA-01, QA-04 | `cli/crates/mochiflow-core/src/init.rs`; `cli/crates/mochiflow-cli/tests/cli.rs`; `cli/crates/mochiflow-cli/tests/first_run.rs` | UNVERIFIED | | Includes human-readable and JSON/dry-run output expectations plus path-collision safety. |
-| AC-02 | cli | automated | Repeated and forced init preservation test; QA-02 | `cli/crates/mochiflow-core/src/init.rs`; `cli/crates/mochiflow-cli/tests/cli.rs` | UNVERIFIED | | Locks the README as user-owned after creation. |
+| AC-01 | cli | automated | Init fixture assertions; QA-01, QA-04 | `cli/crates/mochiflow-cli/src/main.rs`; `cli/crates/mochiflow-core/src/init.rs`; `cli/crates/mochiflow-cli/tests/cli.rs`; `cli/crates/mochiflow-cli/tests/first_run.rs` | UNVERIFIED | | Includes fresh/existing human-readable and JSON/dry-run output expectations plus path-collision safety. |
+| AC-02 | cli | automated | Repeated and forced init preservation test; QA-02 | `cli/crates/mochiflow-cli/src/main.rs`; `cli/crates/mochiflow-core/src/init.rs`; `cli/crates/mochiflow-cli/tests/cli.rs` | UNVERIFIED | | Locks the README as user-owned after creation. |
 | AC-03 | cli | automated | Custom ignore and Git status fixture; QA-03 | `cli/crates/mochiflow-core/src/init.rs`; `.mochiflow/.gitignore`; `cli/crates/mochiflow-cli/tests/cli.rs` | UNVERIFIED | | Existing custom content is preserved without force. |
-| AC-04 | cli | automated | Join/upgrade/diagnostic regression and standing-contract content checks; QA-06, QA-07, QA-08 | `cli/crates/mochiflow-cli/tests/cli.rs`; `cli/crates/mochiflow-cli/tests/conformance.rs` | UNVERIFIED | | No config, engine, or adapter implementation file is added to the feature. |
+| AC-04 | cli | automated | Init dispatch plus join/upgrade/diagnostic regression and standing-contract content checks; QA-06, QA-07, QA-08 | `cli/crates/mochiflow-cli/src/main.rs`; `cli/crates/mochiflow-cli/tests/cli.rs`; `cli/crates/mochiflow-cli/tests/conformance.rs` | UNVERIFIED | | Explicit join remains separate and does not backfill; no config, engine, or adapter implementation file is added. |
 | AC-05 | cli | automated | Detach/purge fixture assertions; QA-05 | `cli/crates/mochiflow-core/src/detach.rs`; `cli/crates/mochiflow-cli/tests/cli.rs` | UNVERIFIED | | Covers text and structured reporting without changing the confirmation phrase. |
-| AC-06 | cli | automated / AI-observed | Output/golden assertions and documentation read-through; QA-01, QA-07 | `cli/crates/mochiflow-core/src/init.rs`; `cli/crates/mochiflow-cli/tests/golden/init_npm.json`; `README.md`; `README.ja.md`; `docs/getting-started.md`; `docs/configuration.md` | UNVERIFIED | | Seeded README content is generated from the CLI implementation. |
+| AC-06 | cli | automated / AI-observed | Output/golden assertions and documentation read-through; QA-01, QA-07 | `cli/crates/mochiflow-cli/src/main.rs`; `cli/crates/mochiflow-core/src/init.rs`; `cli/crates/mochiflow-cli/tests/golden/init_npm.json`; `README.md`; `README.ja.md`; `docs/getting-started.md`; `docs/configuration.md` | UNVERIFIED | | Seeded README content and every explicit init presentation share the same contract. |
 | AC-07 | cli | AI-observed | Inspect ignored local files after migration; QA-07 | `.mochiflow/constitution.local.md`; `.mochiflow/instructions.local/release.md` | UNVERIFIED | | Local working-copy evidence only; neither path is staged. |

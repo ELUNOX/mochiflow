@@ -17,6 +17,10 @@
 - Do not add directory accessors to `Config`. Keeping the paths out of config
   prevents doctor, join, upgrade, adapter generation, and drift code from
   acquiring accidental ownership.
+- Keep explicit init and join as distinct command paths. Remove the CLI's
+  existing-config redirect from init to join; core init already preserves an
+  existing config without `--force`, so it can own idempotent scaffolding and
+  init-specific text/JSON presentation while explicit join stays unchanged.
 - Represent purge data-loss guidance in the detach report so text and JSON
   callers receive the same explicit warning. Also emit the path-specific
   warning to stderr before adapter cleanup or install-directory removal; this
@@ -31,15 +35,18 @@
 
 The init path owns the only creation behavior:
 
-1. Ensure the install directory and install-level ignore policy.
-2. Load or create config and install the engine as today.
-3. Create `instructions/` and `instructions.local/` alongside existing
+1. The CLI dispatches every explicit init invocation to core init, including an
+   initialized target; it may still warn that `--adapter` is ignored when the
+   existing config is preserved, but it does not call core join.
+2. Ensure the install directory and install-level ignore policy.
+3. Load or create config and install the engine as today.
+4. Create `instructions/` and `instructions.local/` alongside existing
    scaffolding.
-4. Create `instructions/README.md` only when missing and always add one
+5. Create `instructions/README.md` only when missing and always add one
    localized init-summary item naming both the shared and local paths, whether
    the README was created or preserved. Dry-run and JSON presentations carry
    the same discoverability contract.
-5. Continue existing adapter generation and doctor checks without passing the
+6. Continue existing adapter generation and doctor checks without passing the
    new directories into either subsystem.
 
 Detach continues to remove adapter integration first. Normal mode removes
@@ -103,8 +110,9 @@ default privacy of `instructions.local/`.
 - Response: every successful or dry-run init output names the two paths and
   their shared/local semantics, whether the README is created or preserved.
 - Compatibility: join and upgrade remain repair/update commands and do not
-  create new tracked candidates; adapters, router, constitution, doctor,
-  freeze, and drift behavior stay unchanged.
+  create new tracked candidates. Repeated init preserves config but remains an
+  init invocation rather than aliasing to join. Adapters, router, constitution,
+  doctor, freeze, and drift behavior stay unchanged.
 - Failure handling: init fails before claiming success when it cannot create
   the scaffold or guarantee the local ignore rule; existing user files remain
   intact.
