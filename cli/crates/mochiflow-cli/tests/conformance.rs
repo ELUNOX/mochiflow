@@ -626,6 +626,28 @@ fn adapters_separate_standing_inputs_from_load_on_demand() {
 }
 
 #[test]
+fn user_instruction_dirs_are_not_standing_or_adapter_inputs() {
+    for path in [
+        "engine/router.md",
+        ".mochiflow/engine/router.md",
+        "engine/adapters/agents/AGENTS.md.tpl",
+        "engine/adapters/claude-code/CLAUDE.md.tpl",
+        "engine/adapters/copilot/copilot-instructions.md.tpl",
+        "engine/adapters/kiro/steering/mochiflow.md.tpl",
+        "AGENTS.md",
+        ".kiro/steering/mochiflow.md",
+        ".mochiflow/constitution.md",
+        ".mochiflow/constitution.local.md",
+    ] {
+        let body = read_repo_file(path);
+        assert!(
+            !body.contains(".mochiflow/instructions") && !body.contains("instructions.local/"),
+            "{path} must not make user instruction directories a standing, adapter, router, or constitution input"
+        );
+    }
+}
+
+#[test]
 fn router_preserves_named_routing_branches() {
     let router = read_repo_file("engine/router.md");
 

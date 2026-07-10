@@ -77,6 +77,13 @@ mochiflow doctor
 When `doctor` passes, the project has the context and workflow instructions your
 AI tool needs.
 
+`init` also creates two optional Markdown directories:
+`.mochiflow/instructions/` for shareable notes and
+`.mochiflow/instructions.local/` for local-only notes. MochiFlow does not
+automatically load, parse, index, validate, or drift-check files in either
+directory. When you want an AI agent to use one of those files, cite its path
+explicitly in your request.
+
 ## Join an initialized team project
 
 If `.mochiflow/config.toml` and `.mochiflow/engine/` are already tracked in the
@@ -95,10 +102,12 @@ AI-tool entrypoints and `INDEX.md` when needed.
 ## Detach later
 
 Use `mochiflow detach` when you want to remove MochiFlow from the active AI
-tools without deleting project knowledge. The command removes generated adapter
-content plus `.mochiflow/state/`, but keeps the tracked engine,
-`.mochiflow/config.toml`, specs, ADR, context, and constitution files. Running
-`mochiflow join` repairs local state and adapters from the preserved config.
+tools without deleting project knowledge or user instructions. The command
+removes generated adapter content plus `.mochiflow/state/`, but keeps the
+tracked engine, `.mochiflow/config.toml`, specs, ADR, context, constitution
+files, `.mochiflow/instructions/`, and `.mochiflow/instructions.local/`.
+Running `mochiflow join` repairs local state and adapters from the preserved
+config.
 
 Use purge mode only for a full deletion:
 
@@ -107,4 +116,4 @@ mochiflow detach --purge --confirm "delete mochiflow data"
 ```
 
 Purge removes all MochiFlow project data, including specs, ADR, context,
-constitution, and config.
+constitution, config, and both instruction directories.

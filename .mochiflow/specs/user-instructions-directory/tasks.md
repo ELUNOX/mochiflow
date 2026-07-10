@@ -32,7 +32,7 @@ Critical Stop Conditions:
     - `cli/crates/mochiflow-cli/tests/cli.rs`
   - Done: Normal detach reports and retains both instruction directories; every purge path explicitly identifies both user-owned paths on stderr before removal and in its text/JSON report; JSON stdout remains one valid document; unconfirmed purge is non-destructive; confirmed purge still removes the full install tree using the unchanged phrase. The shared CLI test file retains all T-001 init fixtures and adds isolated detach/purge coverage.
   - Stop: The warning would require weakening confirmation, changing the phrase, or emitting invalid mixed JSON output.
-- [ ] T-003 [AC-04, AC-06, AC-07] Document the ownership contract and migrate local release guidance
+- [x] T-003 [AC-04, AC-06, AC-07] Document the ownership contract and migrate local release guidance
   - Depends on: T-001, T-002
   - Files:
     - `README.md`
