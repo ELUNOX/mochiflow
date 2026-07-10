@@ -2,10 +2,11 @@
 name: spec-close
 phase: close
 description: |
-  mochiflow's close action. Run after the PR is confirmed merged. It performs
+  mochiflow's close action. Run after PR integration is confirmed. It performs
   local hygiene only: switch to base, fast-forward pull, delete the local branch,
   clear ephemeral delivery state, and regenerate the board. It writes nothing to
-  the base branch — the fold and the spec were already merged via the `open` PR.
+  the base branch — the fold and the spec were already incorporated via the
+  `open` PR.
 artifacts: []
 prerequisites:
   - "The PR is merged (the human reports it; `merged` is derived, never stored)"

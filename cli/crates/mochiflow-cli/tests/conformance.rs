@@ -450,31 +450,33 @@ fn version_gate_hash_matches_committed_lock() {
 #[test]
 fn router_merged_event_is_cleanup_only() {
     let router = read_repo_file("engine/router.md");
+    let delivery = read_repo_file("engine/reference/delivery.md");
     let merged_line = router
         .lines()
         .find(|line| line.contains("Event patterns `{slug} merged`"))
         .expect("router merged-event routing line exists");
 
     assert!(
-        merged_line.contains("post-merge local cleanup only"),
-        "merged-event routing must resume cleanup only; got: {merged_line}"
+        merged_line.contains("reference/delivery.md"),
+        "merged-event routing must resolve eligibility through delivery.md; got: {merged_line}"
     );
     assert!(
         merged_line.contains("commands/close.md"),
         "merged-event routing must route to close; got: {merged_line}"
     );
     assert!(
-        merged_line.contains("flat `{specs_dir}/{slug}/`")
-            && merged_line.contains("never moved to `_done/`"),
-        "merged-event routing must resolve the flat spec, not a _done archive; got: {merged_line}"
+        merged_line.contains("not a fresh open"),
+        "merged-event routing must select cleanup rather than open; got: {merged_line}"
     );
     assert!(
-        merged_line.contains("`merged` is derived"),
-        "merged-event routing must state merged is derived; got: {merged_line}"
+        delivery.contains("`merged` — derived in priority order")
+            && delivery.contains("tracked-mode `Spec: {slug}` trailer reachable"),
+        "delivery.md must own merged-state derivation"
     );
     assert!(
-        merged_line.contains("local-mode source branch tip reachable"),
-        "merged-event routing must include local-mode branch-tip derivation; got: {merged_line}"
+        delivery.contains("local source branch\n  tip reachable")
+            && delivery.contains("spec is never moved into `_done/`"),
+        "delivery.md must own local-mode derivation and flat-spec persistence"
     );
     assert!(
         !merged_line.contains("fold → archive") && !merged_line.contains("fold -> archive"),
@@ -502,8 +504,8 @@ fn router_plan_requires_existing_draft_spec() {
     );
     assert!(
         router.contains("Event patterns `{slug} merged`")
-            && router.contains("flat `{specs_dir}/{slug}/`"),
-        "router must resolve the merged-event against the flat spec"
+            && router.contains("confirm merge/cleanup eligibility via `reference/delivery.md`"),
+        "router must resolve merged-event eligibility through delivery.md"
     );
 }
 
@@ -551,10 +553,10 @@ fn adapters_separate_standing_inputs_from_load_on_demand() {
         let body = read_repo_file(path);
         let standing = body.find("### Standing inputs").expect("standing section");
         let load = body.find("### Load on demand").expect("load section");
-        let roles = body.find("### Artifact roles").expect("roles section");
+        let end = body.len();
         assert!(
-            standing < load && load < roles,
-            "{path} must order standing inputs, load-on-demand, then artifact roles"
+            standing < load && load < end,
+            "{path} must order standing inputs before load-on-demand"
         );
         // Standing layer is constitution + router only; context/config are deferred.
         let standing_section = &body[standing..load];
@@ -567,7 +569,7 @@ fn adapters_separate_standing_inputs_from_load_on_demand() {
                 && !standing_section.contains("read before any work"),
             "{path} must not keep foundational context in the standing layer"
         );
-        let load_section = &body[load..roles];
+        let load_section = &body[load..end];
         assert!(
             load_section.contains("{{context.product}}") && load_section.contains("config show"),
             "{path} must defer foundational context and config to load-on-demand"
@@ -577,6 +579,13 @@ fn adapters_separate_standing_inputs_from_load_on_demand() {
                 && load_section.contains(reference_list),
             "{path} must keep command/reference files in the load-on-demand section"
         );
+        assert!(
+            !body.contains("### Artifact roles")
+                && !body.contains("## Rules")
+                && !body.contains("Run verification via")
+                && !body.contains("At open, fold durable knowledge"),
+            "{path} standing adapter must not duplicate selected-workflow policy"
+        );
     }
 
     let kiro = read_repo_file("engine/adapters/kiro/steering/mochiflow.md.tpl");
@@ -584,10 +593,10 @@ fn adapters_separate_standing_inputs_from_load_on_demand() {
         .find("## Always loaded")
         .expect("always-loaded section");
     let load = kiro.find("### Load on demand").expect("load section");
-    let roles = kiro.find("### Artifact roles").expect("roles section");
+    let end = kiro.len();
     assert!(
-        always < load && load < roles,
-        "Kiro must order always-loaded, load-on-demand, then artifact roles"
+        always < load && load < end,
+        "Kiro must order always-loaded before load-on-demand"
     );
     let always_section = &kiro[always..load];
     assert!(
@@ -604,8 +613,15 @@ fn adapters_separate_standing_inputs_from_load_on_demand() {
         "Kiro file references must stay limited to standing inputs:\n{kiro}"
     );
     assert!(
-        kiro[load..roles].contains("{{context.product}}"),
+        kiro[load..end].contains("{{context.product}}"),
         "Kiro must describe foundational context as a load-on-demand input"
+    );
+    assert!(
+        !kiro.contains("### Artifact roles")
+            && !kiro.contains("## Rules")
+            && !kiro.contains("Run verification via")
+            && !kiro.contains("At open, fold durable knowledge"),
+        "Kiro standing adapter must not duplicate selected-workflow policy"
     );
 }
 
@@ -621,7 +637,7 @@ fn router_preserves_named_routing_branches() {
         "`{slug} plan` requires an existing active spec directory",
         "concrete small-edit requests",
         "as plan intent hints",
-        "ad-hoc review (user-triggered via `レビューして` / `mochiflow-review`",
+        "| `commands/review.md` | `mochiflow-review` | レビューして",
         "Feedback patterns `{slug} feedback`",
         "Event patterns `{slug} merged`",
     ] {
@@ -661,9 +677,11 @@ fn pr_feedback_routes_to_update_without_restore() {
         "update must apply bounded inline feedback fixes without moving or reverting the flat spec"
     );
     assert!(
-        router.contains("applies bounded inline fixes")
+        router.contains("Resolve\nin-review eligibility through `reference/delivery.md`")
+            && router.contains("update owns the fix and\npublication procedure")
+            && !router.contains("bounded inline fixes")
             && !router.contains("delegates the code change through `build`"),
-        "router PR feedback must describe bounded inline update fixes, not build delegation"
+        "router must route feedback to update while deferring its procedure"
     );
     assert!(
         !build.contains("when build resumes from `commands/update.md`")
@@ -727,21 +745,15 @@ fn update_holds_fixes_until_explicit_finalize_signal() {
 }
 
 #[test]
-fn router_update_summary_matches_hold_by_default() {
+fn router_update_route_defers_hold_policy_to_command() {
     let router = read_repo_file("engine/router.md");
     let update = read_repo_file("engine/commands/update.md");
 
     assert!(
-        router.contains("applies bounded inline fixes")
-            && router.contains("either holds locally or finalizes with push")
-            && router.contains("holds locally by default")
-            && router.contains("explicit finalize signal reviews-if-stale once"),
-        "router update summaries must describe hold-by-default and explicit finalize"
-    );
-    assert!(
-        !router.contains("applies bounded inline fixes, re-verifies, pushes")
-            && !router.contains("bounded inline code fix, then re-verifies, pushes"),
-        "router must not claim every bounded inline fix immediately pushes"
+        !router.contains("holds locally by default")
+            && !router.contains("explicit finalize signal reviews-if-stale once")
+            && !router.contains("bounded inline code fix"),
+        "router must defer update execution policy to the selected command"
     );
     assert!(
         router.contains("commands/update.md")
@@ -1005,7 +1017,6 @@ fn open_ships_context_refresh_in_pr_before_accept() {
     let git = read_repo_file("engine/reference/git.md");
     let knowledge = read_repo_file("engine/reference/knowledge.md");
     let refresh = read_repo_file("engine/commands/refresh-context.md");
-    let router = read_repo_file("engine/router.md");
 
     // open.md: in-branch refresh, separate docs(context) commit before accept.
     assert!(
@@ -1091,12 +1102,6 @@ fn open_ships_context_refresh_in_pr_before_accept() {
     assert!(
         !git.contains("Context refresh is separate work after PR creation / merge"),
         "git.md must not present a post-merge refresh as the primary path"
-    );
-
-    // router.md: open summary mentions the optional docs(context) commit before accept.
-    assert!(
-        router.contains("optional `docs(context)` commit (regenerated `[context]`, before accept)"),
-        "router.md open summary must mention the optional docs(context) commit before accept"
     );
 }
 
@@ -1192,10 +1197,11 @@ fn review_fix_choice_cards_and_phase_discipline_are_pinned() {
         "update.md must preserve hold-by-default and finalize semantics for review fix"
     );
     assert!(
-        router.contains("**Review results** is read-only")
-            && router.contains("**Review and fix** maps to `review fix [1-3]`")
-            && router.contains("no state transition"),
-        "router.md must map both choice labels to the review command family"
+        router.contains("| `commands/review.md` | `mochiflow-review` | レビューして")
+            && router.contains("`{slug} review fix 1`")
+            && router.contains("`{slug} review fix 2`")
+            && router.contains("`{slug} review fix 3`"),
+        "router.md must route the review command family without owning its mode policy"
     );
 }
 
@@ -1641,6 +1647,7 @@ fn behavioral_kiro_retires_spec_worker_agent_and_self_heals() {
 #[test]
 fn inline_rework_lifecycle_and_adapter_lifecycle_are_specified() {
     let git = read_repo_file("engine/reference/git.md");
+    let lifecycle = read_repo_file("engine/reference/lifecycle.md");
     let open = read_repo_file("engine/commands/open.md");
     let update = read_repo_file("engine/commands/update.md");
 
@@ -1680,14 +1687,21 @@ fn inline_rework_lifecycle_and_adapter_lifecycle_are_specified() {
     ] {
         let body = read_repo_file(tpl);
         assert!(
-            body.contains("draft → approved → accepted"),
-            "{tpl} must use the draft -> approved -> accepted lifecycle"
+            body.contains("reference/{lifecycle,specs,verification")
+                && !body.contains("draft → approved → accepted"),
+            "{tpl} must defer lifecycle state policy to reference/lifecycle.md"
         );
         assert!(
             !body.contains("draft → approved → done"),
             "{tpl} must not keep the stale draft -> approved -> done lifecycle"
         );
     }
+    assert!(
+        lifecycle.contains("`draft`")
+            && lifecycle.contains("`approved`")
+            && lifecycle.contains("`accepted`"),
+        "lifecycle.md must own the current asserted state set"
+    );
 }
 
 #[test]
@@ -1962,7 +1976,6 @@ fn kiro_reviewer_template_resources_are_grounded_and_read_only() {
 #[test]
 fn build_is_inline_and_review_transport_is_reviewer_only() {
     let build = read_repo_file("engine/commands/build.md");
-    let router = read_repo_file("engine/router.md");
     let risk = read_repo_file("engine/reference/review.md");
 
     assert!(
@@ -1979,18 +1992,6 @@ fn build_is_inline_and_review_transport_is_reviewer_only() {
             && !build.contains("orchestrator")
             && !build.contains("compact report"),
         "build.md must not retain worker/orchestrator contract"
-    );
-    assert!(
-        router.contains("judgment and implementation stay single-threaded; review may delegate"),
-        "router principle 5 must state the new invariant"
-    );
-    let build_row = router
-        .lines()
-        .find(|l| l.starts_with("| build |"))
-        .expect("router Verb Delegation build row exists");
-    assert!(
-        build_row.contains("inline") && !build_row.contains("worker"),
-        "build row must be inline and worker-free: {build_row}"
     );
     assert!(
         risk.contains("reviewer transport")
@@ -2012,6 +2013,44 @@ fn build_is_inline_and_review_transport_is_reviewer_only() {
             ),
         "the risk-cadence table must stay unchanged"
     );
+}
+
+#[test]
+fn standing_router_does_not_duplicate_selected_workflow_policy() {
+    let router = read_repo_file("engine/router.md");
+    let fm = frontmatter(&router).expect("router frontmatter");
+    assert!(
+        fm.contains("- reference/git.md") && fm.contains("- reference/delivery.md"),
+        "router must declare routing-time branch and delivery-state owners"
+    );
+    for retired_section in [
+        "## Verb Delegation",
+        "## Transition Discipline",
+        "## Completion Output",
+    ] {
+        assert!(
+            !router.contains(retired_section),
+            "router must not own selected-workflow section {retired_section}"
+        );
+    }
+    for owner_detail in [
+        "optional `docs(context)` commit",
+        "records the AC Matrix",
+        "approve-PR gate",
+        "Review results** is read-only",
+        "`draft|approved|accepted`",
+        "specs are never moved to `_done/`",
+        "`merged` is derived",
+        "tracked-mode `Spec: {slug}` trailer",
+        "holds locally or finalizes with push",
+        "writes nothing to the base branch",
+        "source branch tip is the local-git merge signal",
+    ] {
+        assert!(
+            !router.contains(owner_detail),
+            "router must defer selected-workflow detail `{owner_detail}`"
+        );
+    }
 }
 
 #[test]
@@ -2123,8 +2162,7 @@ fn review_fix_budget_grammar_is_pinned() {
         "review.md must not apply result-only no-commit rules to review fix mode"
     );
     assert!(
-        router.contains("`review fix [1-3]`")
-            && router.contains("{slug} review fix 1")
+        router.contains("{slug} review fix 1")
             && router.contains("{slug} review fix 2")
             && router.contains("{slug} review fix 3")
             && router.contains("{slug} review 2` is ambiguous"),
@@ -5191,12 +5229,42 @@ fn commands_and_reviewers_use_the_load_contract() {
     }
 }
 
+#[test]
+fn bounded_fix_commands_conditionally_load_review_policy() {
+    for command in ["build", "open", "update"] {
+        let body = read_repo_file(&format!("engine/commands/{command}.md"));
+        let fm = frontmatter(&body).expect("command frontmatter");
+        assert!(
+            body.contains("bounded-fix judgment in `reference/review.md`")
+                && fm.contains("bounded-fix judgment is needed")
+                && fm.contains("- reference/review.md"),
+            "{command}.md must make review.md reachable for every bounded-fix path"
+        );
+    }
+}
+
 /// AC-02 / AC-06: route vocabulary belongs to router.md, not command
 /// frontmatter descriptions. Command bodies may still name their procedure and
 /// document review grammar after routing has selected them.
 #[test]
 fn command_frontmatter_descriptions_do_not_own_routes() {
     let repo = repo_root();
+    let router = read_repo_file("engine/router.md");
+    let route_table = router
+        .split_once("## Route table")
+        .and_then(|(_, rest)| rest.split_once("## Decision Flow"))
+        .map(|(table, _)| table)
+        .expect("router route table");
+    let natural_hints: Vec<&str> = route_table
+        .lines()
+        .filter(|line| line.starts_with('|'))
+        .filter_map(|line| line.split('|').nth(3))
+        .flat_map(|cell| cell.split('·'))
+        .map(str::trim)
+        .filter(|hint| {
+            !hint.is_empty() && *hint != "natural-language hints" && *hint != "---" && *hint != "—"
+        })
+        .collect();
     let mut files = Vec::new();
     collect_files(&repo.join("engine/commands"), &mut files);
     for path in files {
@@ -5206,6 +5274,10 @@ fn command_frontmatter_descriptions_do_not_own_routes() {
         let body = std::fs::read_to_string(&path)
             .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
         let fm = frontmatter(&body).expect("command frontmatter");
+        let command_name = fm
+            .lines()
+            .find_map(|line| line.strip_prefix("name: "))
+            .expect("command name");
         let description = fm
             .split_once("description: |\n")
             .map(|(_, rest)| {
@@ -5226,6 +5298,16 @@ fn command_frontmatter_descriptions_do_not_own_routes() {
             assert!(
                 !description.contains(route_marker),
                 "{}: command description must not own route marker `{route_marker}`",
+                path.display()
+            );
+        }
+        for hint in &natural_hints {
+            if command_name.contains(hint) {
+                continue;
+            }
+            assert!(
+                !description.contains(hint),
+                "{}: command description must not repeat router hint `{hint}`",
                 path.display()
             );
         }

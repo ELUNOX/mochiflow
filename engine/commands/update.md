@@ -21,7 +21,7 @@ load:
     - reference/verification.md
     - reference/git.md
   conditional:
-    - when: finalize on risk >= elevated re-reviews a stale verdict, or a review/fix runs
+    - when: finalize on risk >= elevated re-reviews a stale verdict, a review/fix runs, or any bounded-fix judgment is needed
       files:
         - reference/review.md
     - when: PR metadata changes and the title/body is regenerated
@@ -78,7 +78,7 @@ for its whole life, so there is nothing to restore.
    `agents/change-reviewer.md` exactly once on the full diff from git and record
    the fresh verdict plus updated `Reviewed through: <sha>` in
    `design.md ## Review Results` before pushing, per
-   `reference/review.md ## Reviewer cadence` (verdict freshness).
+   `reference/review.md ## Verdict freshness`.
 6. On finalize, push the branch so the open PR updates.
 7. Update PR metadata when needed: regenerate the PR title/body into
    `{install_dir}/state/{slug}/pr-body.md` and update the PR via the provider

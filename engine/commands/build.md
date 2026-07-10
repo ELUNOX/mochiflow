@@ -24,7 +24,7 @@ load:
     - reference/git.md
     - reference/engineering-standards.md
   conditional:
-    - when: risk >= elevated needs mandatory review, or an ad-hoc review/fix runs
+    - when: risk >= elevated needs mandatory review, an ad-hoc review/fix runs, or any bounded-fix judgment is needed
       files:
         - reference/review.md
 ---

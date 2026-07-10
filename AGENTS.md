@@ -29,31 +29,3 @@ workflow.
   a generated, gitignored `INDEX.md`). Load the `INDEX.md` first, then open only
   active records whose `area` intersects the spec's `surfaces`
   (`mochiflow adr list | show | search`).
-
-### Artifact roles
-
-- `spec.md` is the product contract, `design.md` is the
-  technical contract when required, `tasks.md` is the executable checklist when
-  required, and the AC Matrix in `spec.md` tracks AC → implementation →
-  verification → evidence → result.
-
-## Rules
-
-- Do not start a spec verb unless the user clearly intends it (`router.md` routing principles).
-- Concrete small fixes stay in the spec lane; use plan when no active spec
-  already scopes the work.
-- Specs live under `.mochiflow/specs/{slug}/`; metadata is `spec.yaml` (status `draft → approved → accepted`; `done` is derived/legacy).
-- Run verification via the command for the spec's surface from `[surfaces.<surface>.verify]`.
-- Validate specs with `mochiflow lint`; quality gate is `mochiflow doctor`.
-- Artifact language: `en`; conversation language:
-  `ja`. Follow `.mochiflow/engine/reference/language.md` for
-  user-facing wording and `auto` conversation behavior.
-- At open, fold durable knowledge as new per-file records under
-  `.mochiflow/adr/decisions` (decisions) / `.mochiflow/adr/pitfalls` (pitfalls) in the PR's
-  close-out commit, superseding earlier records via `supersedes` /
-  `superseded_by` rather than rewriting them; regenerate each store's gitignored
-  `INDEX.md` (never stage it). The spec stays flat (no `_done/` move, never
-  `status: done`). The
-  context layer (`.mochiflow/context/product.md` / `.mochiflow/context/structure.md` /
-  `.mochiflow/context/tech.md`) is refreshed from code (onboard / refresh-context), never
-  folded.

@@ -353,6 +353,57 @@ and that `update.md` retained a stale claim to own trigger patterns. Both are
 existing AC-05/AC-06 obligations with no new design decision, so they are fixed
 as a bounded post-task follow-up before the final review.
 
+Review profile: change-reviewer
+Reviewer mode: delegated
+Verdict: pass-with-comments
+Reviewed through: bcf64aa
+
+The fresh full-diff review found no blocking defects. Its Medium comment found
+that `merged` still duplicated a router natural-language hint in the close
+description and the initial guard checked only generic markers; its Low comment
+found update's verdict-freshness pointer still named the cadence section. Both
+comments are corrected before final evidence is recorded, so one final fresh
+review will cover the comment-fix commit.
+
+Review profile: change-reviewer
+Reviewer mode: delegated
+Verdict: fail
+Reviewed through: bcf64aa + working tree
+
+The next fresh full-diff review found one High AC-06/NFR-02 defect: the standing
+router still reproduced review transport, per-verb execution, transition, and
+completion policy, while the always-on adapter entrypoints reproduced artifact,
+verification, lifecycle, language, and fold rules. This is a direct missed
+implementation of the approved single-owner and standing-layer decisions, not a
+new design choice. The bounded review fix removes those blocks, keeps routing
+vocabulary and selection behavior unchanged, and adds structural guards before
+another fresh review.
+
+Review profile: change-reviewer
+Reviewer mode: delegated
+Verdict: fail
+Reviewed through: bcf64aa + working tree
+
+The next fresh review found one High AC-04/NFR-03 load-contract gap. Build's
+post-completion fix, open's QA-failure rework, and update's hold-only feedback
+all invoke the shared bounded-fix judgment at standard risk, but their
+`reference/review.md` condition covered only review cadence or explicit
+review/fix. The bounded correction makes any bounded-fix judgment select the
+policy in all three commands and adds a cross-command reachability guard.
+
+Review profile: change-reviewer
+Reviewer mode: delegated
+Verdict: fail
+Reviewed through: bcf64aa + working tree
+
+The next fresh review found one High AC-06/NFR-02 standing-router ownership
+gap. Asserted/derived state, flat persistence, merge-signal derivation,
+update execution, and cleanup mechanics were still repeated in routing prose,
+and the router's lazy catalog omitted the git/delivery owners it referenced.
+The bounded correction keeps route vocabulary, activation strength, candidate
+order, and outcomes intact while replacing those mechanics with conditional
+owner pointers and expanding the structural guard across the cited semantics.
+
 ## Integration Log
 
 Build records only ownership drift, unexpected cross-file consumers, removed
@@ -581,3 +632,27 @@ design. Do not record ordinary file moves or restate this plan.
   patterns while preserving hold/finalize behavior. Targeted tests were observed
   failing before both fixes; full verification and generation checks pass after
   the correction.
+- After the fresh reviewer returned `pass-with-comments`, extended the command
+  description guard to derive the real natural-language hints from
+  `router.md ## Route table` while allowing a command's stable procedure name.
+  The new mutation was observed failing on close's `merged` wording, then passed
+  after neutralizing the description. Also corrected update's section pointer to
+  `reference/review.md ## Verdict freshness`.
+- A later fresh reviewer exposed remaining policy duplication in the standing
+  layer. Removed router sections for verb execution, transitions, and completion
+  plus the detailed review-transport rule, leaving route recognition/selection
+  and a post-selection owner pointer. Removed artifact and workflow rule blocks
+  from all four adapter entrypoints, leaving constitution/router standing inputs
+  and conditional input pointers. Conformance now rejects those retired router
+  sections, owner details, and adapter policy blocks.
+- A subsequent fresh reviewer exposed that three standard-risk bounded-fix paths
+  named the shared review judgment without selecting its owner. Expanded the
+  build/open/update conditional predicates to load `reference/review.md` whenever
+  bounded-fix judgment is needed, and added a guard tying each body dependency to
+  its frontmatter path and predicate.
+- The next fresh reviewer found lifecycle/delivery mechanics still embedded in
+  merge/update routing. Replaced asserted-state, persistence, derivation,
+  hold/finalize, base-write, and branch-tip details with conditional pointers to
+  `reference/git.md` / `reference/delivery.md`; added both to the router catalog.
+  Tests now keep route outcomes in the router while pinning delivery mechanics to
+  their canonical owner and rejecting the duplicated standing-layer phrases.

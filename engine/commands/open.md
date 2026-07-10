@@ -22,7 +22,7 @@ load:
     - reference/knowledge.md
     - reference/git.md
   conditional:
-    - when: risk >= elevated triggers the accept-gate freshness re-review, or a review/fix runs
+    - when: risk >= elevated triggers the accept-gate freshness re-review, a review/fix runs, or any bounded-fix judgment is needed
       files:
         - reference/review.md
     - when: generating the PR title/body
