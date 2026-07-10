@@ -1,61 +1,51 @@
 # Product (foundational context)
 
-Regenerated from code/intent via `refresh-context`. Minimal, slow-changing slice.
-
 ## Purpose
 
-MochiFlow is a spec-driven workflow engine for AI coding agents. It drives work
-through `discuss → plan → build → open → update → close`, keeps state in
-repository files, and keeps durable knowledge, verification, and PR handoff
-mechanics consistent across supported tools.
+MochiFlow is a spec-driven workflow engine for AI coding agents. It guides work
+through `discuss → plan → build → open → update → close`, retains auditable
+specification and decision records in the repository, and coordinates
+verification and PR handoff across supported tools.
 
-## Users
+## Users / Actors
 
-Developers using AI coding tools (Kiro, Claude Code, Copilot, generic `AGENTS.md`)
-who want a disciplined, auditable spec-to-PR flow.
+Developers using AI coding tools (Kiro, Claude Code, Copilot, and generic
+`AGENTS.md` adapters) who want a disciplined spec-to-PR workflow.
 
-## Domain terms
+## Domain Terms
 
-- **verb**: a lifecycle phase (`discuss`, `plan`, `build`, `open`, `update`,
-  `close`).
-- **non-phase command**: workflow utilities outside the lifecycle, including
-  `review`, `refresh-context`, and `onboard`.
-- **micro**: the smallest spec depth (`spec.yaml` + `spec.md` only) for concrete
-  small work, inferred from file presence and kept inside the normal
-  spec-to-PR lifecycle.
-- **surface**: a build target with its own verify command (`[surfaces.*]`).
-- **risk**: ordered enum `standard < elevated < critical` deciding reviewer
-  cadence / integration log / commit granularity.
-- **AC Matrix**: the traceability table in `spec.md` connecting acceptance
-  criteria to implementation, verification, evidence, and result.
-- **constitution**: user-authored always-loaded project / local rules.
-- **context**: code/config-derived current-state orientation refreshed by onboard / `refresh-context`.
-- **ADR**: durable decision and pitfall records under directory-rooted stores
-  (`[adr].decisions` / `[adr].pitfalls`), each one immutable per-file record
-  with front-matter + supersession lifecycle; folded at open.
-- **fold**: appending a per-file ADR record (dated *why* / active pitfall) to
-  `[adr]` at open, with supersession via `supersedes`/`superseded_by`.
-- **refresh**: regenerating `[context]` from code/config (onboard / refresh-context).
-- **adapter**: per-tool entrypoint generated from engine templates.
-- **vendored engine**: project-local `.mochiflow/engine` copy used by generated
-  adapters and dogfood runs.
-- **version-gate / contracts.lock**: hash freezing the contract surface.
+| Term | Meaning | Source |
+| --- | --- | --- |
+| verb | A lifecycle phase: `discuss`, `plan`, `build`, `open`, `update`, or `close`. | `engine/reference/lifecycle.md` |
+| non-phase command | A workflow utility such as `review`, `refresh-context`, or `onboard`. | `engine/router.md` |
+| router | The sole standing routing contract; it selects a workflow before command procedures are read. | `engine/router.md` |
+| foundational context | Code/config-derived orientation loaded only when a selected workflow or repository task needs it. | `engine/router.md` |
+| AC Matrix | The table in `spec.md` that traces acceptance criteria to implementation and verification evidence. | `engine/reference/verification.md` |
+| ADR | Per-file decision and pitfall records folded during `open`; current state remains code-derived. | `engine/reference/knowledge.md` |
 
-## Core invariants
+## Core Invariants
 
-- Code is the source of truth for current state; prose never overrides code.
-- Engine docs (`commands/`, `reference/`, `templates/`, `agents/`) are English and
-  project-agnostic; project specifics live in `config.toml`.
-- The contract surface is frozen by `contracts.lock`; changing a schema requires
-  regenerating the lock and bumping `engine/VERSION` in the same commit.
-- Exactly two delivery approval gates: approve-to-build and approve-PR.
-  `open` sets `accepted`; `done` is derived from merge, never written.
-- PR handoff is produced through `mochiflow pr`.
-- Engine source, adapter templates, schemas, and golden fixtures are the frozen
-  contract surface guarded by manifests / locks and tests.
+- Constitution files and `engine/router.md` are standing MochiFlow inputs; project
+  configuration and foundational context are loaded on demand.
+- Code is the source of truth for current state; context is regenerated and ADRs
+  record durable rationale rather than implementation state.
+- Exactly two human delivery approval gates exist: approve-to-build and
+  approve-PR. `accepted` is set by open; merged/done is derived from VCS/provider state.
+- Engine source, adapter templates, schemas, and frozen contract artifacts are
+  verified through the Rust CLI and dogfood synchronization.
 
 ## Non-goals
 
-- Not a CI/build system; it invokes the project's own verify commands.
-- Does not host or merge PRs; it delegates to `gh` / a pr_driver / manual handoff.
-- Not a runtime framework; it is a workflow + living-spec engine.
+- MochiFlow is not a CI system, runtime framework, or PR hosting service.
+- It does not use token/word budgets or a prompt compiler to assemble context.
+
+## Evidence
+
+- `engine/router.md`: routing and standing-load contract
+- `engine/reference/lifecycle.md`: lifecycle and approval gates
+- `cli/Cargo.toml`: CLI workspace metadata
+
+## Last refreshed
+
+- Date: 2026-07-10
+- Source commit: fe9a752
