@@ -18,11 +18,8 @@ canonical_commands:
 load:
   required:
     - agents/reviewer-core.md
-    - reference/risk.md
-  conditional:
-    - when: producing user-facing review wording
-      files:
-        - reference/language.md
+    - reference/specs.md
+    - reference/verification.md
 ---
 
 # Plan Auditor

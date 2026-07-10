@@ -342,6 +342,17 @@ search also found `engineering-standards.md` pointing at deleted
 reconciled to the actual owner-narrowing commit and T-008 owns the corrective
 implementation, regression guards, synchronization, and fresh review.
 
+Review profile: change-reviewer
+Reviewer mode: delegated
+Verdict: fail
+Reviewed through: 681aaa9
+
+The first completion-gate review after T-008 found that the reviewer profiles
+still omitted their approved `specs.md` / `verification.md` policy dependencies,
+and that `update.md` retained a stale claim to own trigger patterns. Both are
+existing AC-05/AC-06 obligations with no new design decision, so they are fixed
+as a bounded post-task follow-up before the final review.
+
 ## Integration Log
 
 Build records only ownership drift, unexpected cross-file consumers, removed
@@ -559,3 +570,14 @@ design. Do not record ordinary file moves or restate this plan.
 - Ran `mochiflow freeze`, `mochiflow upgrade --source engine`, adapter drift
   check, and the configured CLI verification. All 189 conformance tests plus the
   remaining CLI/unit/integration suites, fmt, clippy, and freeze check passed.
+- The completion-gate reviewer then exposed a missing dependency-resolution
+  seam: core already owned shared `risk` and conditional `language`, but both
+  profiles redundantly loaded `risk` and neither loaded the artifact/Matrix
+  policies its S1 stage cites. The bounded follow-up makes plan-auditor add
+  `specs` + `verification`, change-reviewer add `verification`, and materializes
+  those resolved sets in Kiro resources without changing reviewer behavior.
+- Reworded update finalize classification to consume the slug-qualified event
+  selected by `router.md`, removing the stale claim that update owns trigger
+  patterns while preserving hold/finalize behavior. Targeted tests were observed
+  failing before both fixes; full verification and generation checks pass after
+  the correction.

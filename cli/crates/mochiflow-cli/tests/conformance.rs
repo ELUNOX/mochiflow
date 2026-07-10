@@ -693,10 +693,10 @@ fn update_holds_fixes_until_explicit_finalize_signal() {
         "hold-only update must apply and hold without push, accept, or reviewer"
     );
     assert!(
-        update.contains("Finalize signals are the explicit `mochiflow-update` command")
-            && update.contains("`{slug} update`, `{slug}")
-            && update.contains("`{slug} 修正依頼`, `{slug} PR feedback`")
-            && update.contains("that's everything / push it / update the")
+        update.contains("Finalize signals are an explicit finalize invocation")
+            && update.contains("slug-qualified")
+            && update.contains("update event selected by `router.md`")
+            && update.contains("that's everything / push it / update the PR")
             && update.contains("over every held commit since the last recorded"),
         "update must require a distinct explicit finalize signal before pushing"
     );
@@ -748,6 +748,12 @@ fn router_update_summary_matches_hold_by_default() {
             && router.contains("PR Feedback Loop Routing")
             && update.contains("hold-by-default for bare feedback"),
         "routing decision must still point PR feedback to update while update owns the hold contract"
+    );
+    assert!(
+        update.contains("slug-qualified")
+            && update.contains("update event selected by `router.md`")
+            && !update.contains("this file's own trigger patterns"),
+        "update must consume router-owned finalize routes without claiming trigger ownership"
     );
 }
 
@@ -1807,15 +1813,29 @@ fn canonical_reviewers_grounded_adversary_contract_is_pinned() {
         "change-reviewer must keep its S1/S3 duties and refactor safety"
     );
 
-    for (name, body) in [
-        ("plan-auditor", &plan_auditor),
-        ("change-reviewer", &change_reviewer),
-    ] {
-        let fm = frontmatter(body).unwrap_or_else(|| panic!("{name} frontmatter"));
-        assert!(
-            fm.contains("agents/reviewer-core.md") && fm.contains("reference/risk.md"),
-            "{name} frontmatter must load reviewer-core and risk"
-        );
+    let core_fm = frontmatter(&core).expect("reviewer-core frontmatter");
+    assert!(
+        core_fm.contains("reference/risk.md") && core_fm.contains("reference/language.md"),
+        "reviewer-core must own shared risk and conditional language loads"
+    );
+    let plan_fm = frontmatter(&plan_auditor).expect("plan-auditor frontmatter");
+    assert!(
+        plan_fm.contains("agents/reviewer-core.md")
+            && plan_fm.contains("reference/specs.md")
+            && plan_fm.contains("reference/verification.md")
+            && !plan_fm.contains("reference/risk.md")
+            && !plan_fm.contains("reference/language.md"),
+        "plan-auditor must add specs + verification without duplicating core loads"
+    );
+    let change_fm = frontmatter(&change_reviewer).expect("change-reviewer frontmatter");
+    assert!(
+        change_fm.contains("agents/reviewer-core.md")
+            && change_fm.contains("reference/verification.md")
+            && !change_fm.contains("reference/risk.md")
+            && !change_fm.contains("reference/language.md"),
+        "change-reviewer must add verification without duplicating core loads"
+    );
+    for (name, fm) in [("plan-auditor", plan_fm), ("change-reviewer", change_fm)] {
         assert!(
             !fm.contains("reference/workflow.md") && !fm.contains("reference/authoring.md"),
             "{name} frontmatter must not load the retired monoliths"
@@ -1866,14 +1886,19 @@ fn canonical_reviewers_grounded_adversary_contract_is_pinned() {
 
 #[test]
 fn kiro_reviewer_template_resources_are_grounded_and_read_only() {
-    for (path, agent) in [
+    for (path, agent, profile_resources) in [
         (
             "engine/adapters/kiro/agents/spec-plan-auditor.json.tpl",
             "plan-auditor",
+            &[
+                "file://{{engine}}/reference/specs.md",
+                "file://{{engine}}/reference/verification.md",
+            ][..],
         ),
         (
             "engine/adapters/kiro/agents/spec-change-reviewer.json.tpl",
             "change-reviewer",
+            &["file://{{engine}}/reference/verification.md"][..],
         ),
     ] {
         let template = read_repo_file(path);
@@ -1904,6 +1929,12 @@ fn kiro_reviewer_template_resources_are_grounded_and_read_only() {
                 "{path} must include {resource}"
             );
         }
+        for resource in profile_resources {
+            assert!(
+                resource_strings.contains(resource),
+                "{path} must include profile policy {resource}"
+            );
+        }
         for absent in [
             "file://{{engine}}/reference/workflow.md",
             "file://{{engine}}/reference/authoring.md",
@@ -1916,8 +1947,8 @@ fn kiro_reviewer_template_resources_are_grounded_and_read_only() {
         }
         assert_eq!(
             resource_strings.len(),
-            4,
-            "{path} must list exactly reviewer-core + profile + risk + language"
+            4 + profile_resources.len(),
+            "{path} must list core/profile shared resources plus its profile policies"
         );
         assert!(
             resource_strings

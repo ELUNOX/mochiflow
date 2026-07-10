@@ -7,6 +7,7 @@
   "resources": [
     "file://.mochiflow/engine/agents/reviewer-core.md",
     "file://.mochiflow/engine/agents/change-reviewer.md",
+    "file://.mochiflow/engine/reference/verification.md",
     "file://.mochiflow/engine/reference/risk.md",
     "file://.mochiflow/engine/reference/language.md"
   ],

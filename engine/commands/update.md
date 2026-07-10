@@ -57,11 +57,10 @@ for its whole life, so there is nothing to restore.
    reverted to `approved`).
      For hold-only input: apply, commit locally, re-verify, update the touched AC Matrix rows, then stop.
      No push, no `mochiflow accept`, and no mandatory reviewer run happen on a hold-only message.
-   - Finalize signals are the explicit `mochiflow-update` command, any match
-     against this file's own trigger patterns (`{slug} update`, `{slug}
-     feedback`, `{slug} 修正依頼`, `{slug} PR feedback`), or an unambiguous
-     completion statement such as "that's everything / push it / update the
-     PR". A finalize input runs the review-if-stale, push, and PR-metadata
+   - Finalize signals are an explicit finalize invocation, the slug-qualified
+     update event selected by `router.md`, or an unambiguous completion statement
+     such as "that's everything / push it / update the PR". A finalize input
+     runs the review-if-stale, push, and PR-metadata
      steps below over every held commit since the last recorded
      `Reviewed through` sha, not just the latest commit.
    Feedback interpretation and PR-metadata updates stay inline on the main

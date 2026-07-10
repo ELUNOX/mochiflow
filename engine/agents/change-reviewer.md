@@ -21,11 +21,7 @@ canonical_commands:
 load:
   required:
     - agents/reviewer-core.md
-    - reference/risk.md
-  conditional:
-    - when: producing user-facing review wording
-      files:
-        - reference/language.md
+    - reference/verification.md
 ---
 
 # Change Reviewer

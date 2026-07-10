@@ -6,6 +6,8 @@
   "resources": [
     "file://{{engine}}/agents/reviewer-core.md",
     "file://{{engine}}/agents/plan-auditor.md",
+    "file://{{engine}}/reference/specs.md",
+    "file://{{engine}}/reference/verification.md",
     "file://{{engine}}/reference/risk.md",
     "file://{{engine}}/reference/language.md"
   ],

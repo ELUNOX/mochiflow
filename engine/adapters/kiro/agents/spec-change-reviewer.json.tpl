@@ -6,6 +6,7 @@
   "resources": [
     "file://{{engine}}/agents/reviewer-core.md",
     "file://{{engine}}/agents/change-reviewer.md",
+    "file://{{engine}}/reference/verification.md",
     "file://{{engine}}/reference/risk.md",
     "file://{{engine}}/reference/language.md"
   ],
