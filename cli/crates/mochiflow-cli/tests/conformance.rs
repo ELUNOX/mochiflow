@@ -515,7 +515,7 @@ fn router_defines_lazy_load_contract_without_second_card() {
         router.contains("`router.md` is the only standing router artifact")
             && router.contains("lazy-load catalog")
             && router.contains("matching `commands/{verb}.md`")
-            && router.contains("frontmatter `references`"),
+            && router.contains("declared load contract"),
         "router must define the standing-vs-lazy loading contract"
     );
     assert!(

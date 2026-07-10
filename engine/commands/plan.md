@@ -7,13 +7,6 @@ description: |
   Drive to a single human implementation approval gate. Activate on the explicit
   command `mochiflow-plan`, or natural phrasing like "仕様作って" / "プランして" /
   "計画作って". Does not implement.
-triggers:
-  - mochiflow-plan
-  - 仕様作って
-  - プランして
-  - 計画作って
-trigger_patterns:
-  - "{slug} plan"
 artifacts:
   - "{specs_dir}/{slug}/spec.yaml"
   - "{specs_dir}/{slug}/pitch.md (standard-or-larger)"
@@ -25,18 +18,42 @@ prerequisites:
   - "standard-or-larger existing spec path: {specs_dir}/{slug}/pitch.md exists"
   - "direct micro path: explicit concrete request with no existing draft"
 execution: inline
-references:
-  - reference/workflow.md
-  - reference/risk.md
-  - reference/authoring.md
-  - reference/engineering-standards.md
-  - templates/spec/spec.yaml
-  - templates/spec/spec.md
-  - templates/spec/spec.micro.md
-  - templates/spec/spec.standard.md
-  - templates/spec/design.md
-  - templates/spec/tasks.md
-  - templates/handoff/build-session-prompt.md
+load:
+  required:
+    - reference/lifecycle.md
+    - reference/specs.md
+    - reference/risk.md
+    - reference/verification.md
+    - reference/git.md
+    - reference/presentation.md
+  conditional:
+    - when: writing spec.yaml metadata
+      files:
+        - templates/spec/spec.yaml
+    - when: direct micro or other trivial / narrow spec body
+      files:
+        - templates/spec/spec.micro.md
+    - when: standard-or-larger spec body needing the fuller contract
+      files:
+        - templates/spec/spec.standard.md
+    - when: the compatibility standard spec body is used
+      files:
+        - templates/spec/spec.md
+    - when: design.md is required (reference/risk.md ## design.md required condition)
+      files:
+        - templates/spec/design.md
+    - when: the change is multi-step and needs a task checklist
+      files:
+        - templates/spec/tasks.md
+    - when: offering pre-approval review (risk >= elevated) or step-10 review actions
+      files:
+        - reference/review.md
+    - when: creating a resume prompt for a new session
+      files:
+        - templates/handoff/build-session-prompt.md
+    - when: an upstream-standard decision needs the rule
+      files:
+        - reference/engineering-standards.md
 ---
 
 # mochiflow-plan

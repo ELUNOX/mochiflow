@@ -8,25 +8,26 @@ description: |
   / "相談したい". Writes the agreed pitch as the first durable spec artifact,
   creates the spec branch, and commits `spec.yaml (draft)` + `pitch.md`.
   Discuss is optional for explicit concrete micro requests handled by plan.
-triggers:
-  - mochiflow-discuss
-  - ブレストして
-  - 壁打ちして
-  - 相談したい
-trigger_patterns:
-  - "{slug} discuss"
 artifacts:
   - "{specs_dir}/{slug}/spec.yaml (status: draft)"
   - "{specs_dir}/{slug}/pitch.md"
 prerequisites: []
 execution: inline
-references:
-  - reference/workflow.md
-  - reference/git.md
-  - reference/language.md
-  - reference/engineering-standards.md
-  - templates/spec/pitch.md
-  - templates/spec/spec.yaml
+load:
+  required:
+    - reference/specs.md
+    - reference/git.md
+    - reference/knowledge.md
+    - reference/presentation.md
+  conditional:
+    - when: writing the agreed pitch and lint-valid draft metadata
+      files:
+        - templates/spec/pitch.md
+        - templates/spec/spec.yaml
+    - when: user-facing wording or an upstream-standard decision needs the rule
+      files:
+        - reference/language.md
+        - reference/engineering-standards.md
 ---
 
 # spec-discuss
@@ -42,7 +43,7 @@ pitchless draft directly.
 ## Procedure
 
 1. Investigate before asking. Always fix current state from **code**; never ask the user what code can answer. Read the constitution (`[constitution].project` / `[constitution].local`) and foundational context (`[context].product` / `[context].structure` / `[context].tech`) for current-state orientation (a map derived from code, refreshed via onboard / `refresh-context`). Read ADR (`[adr].decisions` / `[adr].pitfalls`) only on demand, as historical records of *why* (decision rationale, rejected alternatives, known pitfalls): load each store's generated `INDEX.md` first, then open only the records whose `area` intersects the spec's `surfaces` and whose `status` is active (use `mochiflow adr list` / `search` to filter); open superseded / deprecated records only when explicitly tracing supersession lineage. Re-verify any current-state claim against code. Prose is never the source of truth for current state.
-2. `{slug} discuss` reads `_backlog/{slug}.md` as raw input (`reference/workflow.md ## Backlog seeds`) when the slug exists only in `_backlog/`; if `{specs_dir}/{slug}/` already exists it re-opens that spec instead. Do not copy seed content straight into conclusions.
+2. `{slug} discuss` reads `_backlog/{slug}.md` as raw input (`reference/specs.md ## Backlog seeds`) when the slug exists only in `_backlog/`; if `{specs_dir}/{slug}/` already exists it re-opens that spec instead. Do not copy seed content straight into conclusions.
 3. Organize the UI / data model / API / migration / error handling / testing decision tree internally and resolve it dependency-first.
 4. One question at a time, each with a recommended answer, rationale, why the main alternatives are rejected, and impact.
 5. Ask for specifics when answers are vague ("make it nice", "your call").

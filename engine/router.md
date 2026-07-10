@@ -17,9 +17,10 @@ references:
   - commands/review.md
   - commands/refresh-context.md
   - commands/onboard.md
-  - reference/workflow.md
+  - reference/lifecycle.md
   - reference/risk.md
   - reference/language.md
+  - reference/presentation.md
 ---
 
 # spec
@@ -34,15 +35,20 @@ this as a standing instruction. Do not load it from planning / reviewer roles.
 card for normal operation. The standing layer is:
 
 - the adapter entrypoint;
-- the configured constitution and foundational context;
+- the configured constitution;
 - this router;
-- project config when verification / git / surface details are needed.
+- foundational context and project config only when a selected workflow or
+  repository-specific task needs current-state orientation, verification, git,
+  or surface details.
 
 The `references` frontmatter above is a lazy-load catalog, not an instruction to
-read every file before routing. After the router selects a lifecycle verb or
-non-phase command, read the matching `commands/{verb}.md` and that command's
-frontmatter `references` (reference / templates). Read ADR records only on
-demand: load the store `INDEX.md` first, then the relevant active records.
+read every file before routing. The router selects routes from its own
+`## Route table` below and never reads command frontmatter to route. After the
+router selects a lifecycle verb or non-phase command, read the matching
+`commands/{verb}.md` and that command's declared load contract (`load.required`
+immediately, then the `load.conditional` entries whose `when` condition
+resolves). Read ADR records only on demand: load the store `INDEX.md` first,
+then the relevant active records.
 
 ## Routing Principles
 
@@ -53,9 +59,35 @@ demand: load the store `INDEX.md` first, then the relevant active records.
 5. **State lives in files; judgment and implementation stay single-threaded; review may delegate.** discuss / plan / build / open / update / close are conducted by the main agent, which holds the whole picture. **Invariant:** judgment, implementation, gates, integration, and the living-spec fold stay single-threaded on the top model — they are never delegated. **Review transport:** independent review runs the selected read-only contract (`agents/plan-auditor.md` before implementation, `agents/change-reviewer.md` after implementation) via `reference/risk.md ## Review transport`, preferring delegated subagent dispatch when available and falling back to inline reviewer role only when subagents are unavailable or dispatch fails for a runtime/tooling reason. A review trigger, `review fix [1-3]`, or a user-approved build flow that reaches mandatory risk-cadence review, is an explicit request to use delegated reviewer transport when the runtime requires one. Pass just the review contract (the slug, command path, a summary of the latest artifact or diff, and a pointer to the spec) — never the conversation history. Risk-cadence review (automatic, per `reference/risk.md ## Consequences`) and ad-hoc review (user-triggered via `レビューして` / `mochiflow-review`; see `reference/risk.md ## Ad-hoc review`) both use this transport.
 6. **Small concrete work stays in the spec lane.** With no active spec, concrete small-edit requests are plan intent hints: propose `Start plan?` and wait. Do not route them to a separate no-spec lane.
 
+## Route table
+
+The router owns the complete route vocabulary and routes from this table alone;
+it does not read command frontmatter to select a route. A `mochiflow-<verb>`
+token is an explicit command; a natural-language entry is an intent hint whose
+activation strength is decided by `## Routing Principles`.
+
+| target | explicit command | natural-language hints | slug / event patterns |
+| --- | --- | --- | --- |
+| `commands/discuss.md` | `mochiflow-discuss` | ブレストして · 壁打ちして · 相談したい | `{slug} discuss` (seed exception, step 4) |
+| `commands/plan.md` | `mochiflow-plan` | 仕様作って · プランして · 計画作って | `{slug} plan` (requires existing draft, step 4) |
+| `commands/build.md` | `mochiflow-build` | 実装して · 進めて · ビルドして | `{slug} build` |
+| `commands/open.md` | `mochiflow-open` | PR出して · PRを作って | `{slug} open` |
+| `commands/update.md` | `mochiflow-update` | 修正依頼 · PR feedback · PRを直して | `{slug} update` · `{slug} feedback` / `{slug} 修正依頼` / `{slug} PR feedback` |
+| `commands/close.md` | `mochiflow-close` | merged · マージ済み · 完了 | `{slug} close` · `{slug} merged` / `{slug} マージ済み` / `{slug} 完了` (cleanup only) |
+| `commands/review.md` | `mochiflow-review` | レビューして | `{slug} review` · `{slug} review fix` · `{slug} review fix 1` · `{slug} review fix 2` · `{slug} review fix 3` |
+| `commands/onboard.md` | — | オンボーディングして · MochiFlow 入れて · mochiflow セットアップ · mochiflow setup · setup mochiflow | — |
+| `commands/refresh-context.md` | — | コンテクスト更新して · コンテクストを再生成して · refresh context · refresh-context | — |
+| (retired) | `mochiflow-patch` | — | — → say patch is retired, propose `Start plan?` (step 2) |
+
+Numeric review forms route to `commands/review.md` only for correction:
+`{slug} review 2` is ambiguous, and `{slug} review fix 0` / `fix 4+` are out of
+range. Slug / event pattern nuances (discuss seed exception, plan-requires-draft,
+feedback, merged-event cleanup) are detailed in `## Decision Flow`,
+`## PR Feedback Loop Routing`, and `## Merge Report Routing`.
+
 ## Decision Flow
 
-1. Read `triggers` and `trigger_patterns` from the `commands/*.md` frontmatter. In `triggers`, a `mochiflow-<verb>` token is an **explicit command**; every other entry is a **natural-language hint**.
+1. Match the message against the `## Route table` above — the router's own route vocabulary; do not read command frontmatter to route. In the table, a `mochiflow-<verb>` token is an **explicit command**; every natural-language entry is a **natural-language hint**.
 2. On the retired explicit command `mochiflow-patch`, say in one line that `patch` is retired and small fixes now start with `plan`; then propose `Start plan?` and wait.
 3. On any other explicit command (`mochiflow-<verb>`) match, declare the command in one line and activate.
 4. Match `{slug}` in `trigger_patterns` only against a spec slug that exists under `{specs_dir}/{slug}/`; on a match, declare the verb in one line and activate.
@@ -68,7 +100,7 @@ demand: load the store `INDEX.md` first, then the relevant active records.
 6. On a natural-language spec hint, activate immediately only when an active spec context already scopes the verb; otherwise propose "Start <verb>?" in one line and wait. A generic "直して" with no active spec context is a plan hint, not a build hint.
 7. With no trigger but clear mochiflow intent, propose the verb or non-phase command in one line and wait for approval.
 8. With ambiguous intent, do not activate mochiflow.
-9. Once committed to a verb or non-phase command, before starting, consult the matching `commands/{verb}.md` and that command's frontmatter `references` (reference / templates). If they are not in standing context, lazy-load them from the engine root with read.
+9. Once committed to a verb or non-phase command, before starting, consult the matching `commands/{verb}.md` and that command's declared load contract (`load.required`, then the `load.conditional` entries whose `when` resolves). If they are not in standing context, lazy-load them from the engine root with read.
 10. For user-facing speech, follow `reference/language.md ## User-facing communication`: use conversation-language plain wording first, and keep internal MochiFlow vocabulary only for commands, file names, metadata, or a short `MochiFlow:` note.
 
 ## Active Spec Resolution
@@ -137,17 +169,14 @@ contextual handling.
 
 - discuss fixes current state from **code** and clarifies scope and trade-offs. The constitution (`[constitution]`) is user-authored always-loaded guidance, and the foundational context (`[context]`) is a code-derived current-state map (kept fresh via `refresh-context`); ADR (`[adr]`) is consulted only for *why*, never as the source of current state; re-verify any prose claim against code. A backlog seed is raw input for discuss.
 - When readiness is clear, propose the next verb in one line. Never chain verbs without user approval.
-- Let depth (spec.md / +design.md / +tasks.md) emerge per `reference/workflow.md ## Depth scaling`. Do not pick a lane up front.
+- Let depth (spec.md / +design.md / +tasks.md) emerge per `reference/specs.md ## Depth scaling`. Do not pick a lane up front.
 - At the end of each verb, present the artifact and the next stage or the human action needed next.
 
 ## Completion Output
 
-After running, summarize in the conversation language using plain user-facing labels:
-what changed / what was checked / what the user needs to do next. Do not lead
-with an internal state list. Include internal state only when useful, as a brief
-`MochiFlow:` note after the summary.
-
-When presenting next steps, prefer a numbered choice card whose labels describe
-user actions in the conversation language. Numbers are aliases for the most
-recent unambiguous card only; otherwise route by the explicit label, keyword, or
-normal intent rules.
+After running, summarize per `reference/presentation.md`: what changed / what was
+checked / what the user needs to do next, in the conversation language, without
+leading with an internal state list, keeping internal state to a brief
+`MochiFlow:` note. Present next steps as a numbered choice card whose labels are
+user actions; a number is an alias for the most recent unambiguous card only
+(`reference/lifecycle.md ## Choice cards`).

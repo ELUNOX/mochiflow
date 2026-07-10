@@ -5,18 +5,23 @@ description: |
   by reading the project, turning its workflow into config.toml, generating
   adapters, and verifying with doctor. Activate when the user requests setup /
   onboarding / installation of MochiFlow.
-triggers:
-  - オンボーディングして
-  - MochiFlow 入れて
-  - mochiflow セットアップ
-  - mochiflow setup
-  - setup mochiflow
-trigger_patterns: []
-references:
-  - reference/workflow.md
-  - templates/context/product.md
-  - templates/context/structure.md
-  - templates/context/tech.md
+load:
+  required:
+    - reference/specs.md
+    - reference/knowledge.md
+  conditional:
+    - when: confirming git provider and the manual-PR default
+      files:
+        - reference/delivery.md
+    - when: generating the foundational context layer after config is resolved
+      files:
+        - templates/context/product.md
+        - templates/context/structure.md
+        - templates/context/tech.md
+        - reference/language.md
+    - when: presenting the usage card
+      files:
+        - reference/presentation.md
 ---
 
 # Onboard
@@ -81,7 +86,7 @@ defensible choices for surfaces, verification, and git.
 6. **Resolve git config — never auto-adopt a provider**: read the current branch
    for `base_branch`. `git remote -v` may reveal a hosting provider, but keep
    `provider = "none"` (manual PR is the first-class default in
-   `reference/git.md`). Present any detected provider as a *confirm item* — "the
+   `reference/delivery.md`). Present any detected provider as a *confirm item* — "the
    remote looks like X; keep manual PR handoff, or automate?" — and set
    `provider` / `pr_driver` **only** when the user explicitly opts in. Do not
    infer a `pr_command` from the provider.

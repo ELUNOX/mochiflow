@@ -31,7 +31,7 @@ Critical Stop Conditions:
     - `engine/MANIFEST.json`
   - Done: every existing workflow, authoring, risk/review, git/delivery, knowledge, language, and presentation rule has exactly one target owner from `design.md`; new files are added without deleting old owners yet; differing duplicate behavior is reported rather than silently merged; freeze is refreshed so the intermediate commit is verifiable.
   - Stop: one rule cannot be assigned to a single owner without changing its behavior or introducing a new public contract.
-- [ ] T-002 [AC-01, AC-02, AC-04, AC-06] Make the router self-sufficient and migrate planning/setup commands
+- [x] T-002 [AC-01, AC-02, AC-04, AC-06] Make the router self-sufficient and migrate planning/setup commands
   - Depends on: T-001
   - Files:
     - `engine/router.md`

@@ -19,13 +19,20 @@ triggers:
   - refresh-context
 trigger_patterns: []
 execution: inline
-references:
-  - commands/onboard.md
-  - reference/git.md
-  - reference/language.md
-  - templates/context/product.md
-  - templates/context/structure.md
-  - templates/context/tech.md
+load:
+  required:
+    - reference/knowledge.md
+    - reference/presentation.md
+  conditional:
+    - when: regenerating the foundational context layer
+      files:
+        - commands/onboard.md
+        - templates/context/product.md
+        - templates/context/structure.md
+        - templates/context/tech.md
+    - when: user-facing wording needs the rule
+      files:
+        - reference/language.md
 ---
 
 # refresh-context
@@ -72,7 +79,7 @@ Code is the source of truth; this layer is a derived map, not new knowledge.
 ## Stop conditions
 
 - Refresh-context updates only the current-state context layer.
-- ADR remains the fold target (`reference/git.md ## Living-spec fold`);
+- ADR remains the fold target (`reference/knowledge.md ## Living-spec fold`);
   constitution remains user-authored always-loaded guidance.
 - Dated history and rationale belong to the fold, not context refresh.
 - The human confirms current-state accuracy before any commit.

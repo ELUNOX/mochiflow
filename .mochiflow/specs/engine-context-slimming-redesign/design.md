@@ -299,3 +299,30 @@ design. Do not record ordinary file moves or restate this plan.
   monoliths and the narrowed owners (`risk`, `git`, `language`) stay intact until
   their consumers and the matching conformance assertions migrate (T-002–T-006).
   No differing duplicate behavior was found; content was moved, not rewritten.
+
+### T-002 (router self-sufficient; planning/setup commands migrated)
+
+- PITFALL (recovered): the first pass of the router + discuss/plan/onboard/
+  refresh-context edits was mistakenly applied to the gitignored vendored copy
+  `.mochiflow/engine/` instead of the repo-root `engine/` source — the exact
+  hazard the constitution warns about. It was caught by `cargo test`, which
+  reads repo-root `engine/router.md` (the assertion failed because the source
+  was unchanged). Fixed by re-applying every edit to repo-root `engine/` and
+  running `upgrade --source engine --force` to discard the divergent vendored
+  edits and re-sync from source. Guardrail for the rest of this build: all
+  engine edits target repo-root `engine/`; the vendored copy is only regenerated.
+- The router now owns a compact `## Route table` (all explicit commands, JA/EN
+  natural-language hints, slug/event patterns) and routes from it without reading
+  command frontmatter. The standing layer is reduced to constitution + router;
+  foundational context/config are deferred. discuss/plan/onboard/refresh-context
+  frontmatter moved from flat `references` to `load.required` / `load.conditional`
+  (mutually exclusive spec templates split into separate conditional entries),
+  triggers/trigger_patterns removed. Body cross-refs in those commands and the
+  router were repointed to the new owners.
+- Behavioral observation (router family, validated against the new table): every
+  existing route — explicit `mochiflow-<verb>`, JA/EN hints, `{slug} <verb>`, the
+  discuss-seed exception, plan-requires-draft, the small-fix→plan hint, ad-hoc
+  review plus numeric review-fix forms, feedback→update, and merged→close cleanup
+  — still selects the same command or the same clarification class; retired
+  `mochiflow-patch` still routes to the plan proposal. The full adapter-channel
+  matrix (Kiro + AGENTS) is consolidated in T-007.
