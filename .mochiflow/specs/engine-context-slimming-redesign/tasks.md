@@ -14,7 +14,7 @@ Critical Stop Conditions:
 
 ## Tasks
 
-- [ ] T-001 [AC-03, AC-06] Create the responsibility-sized policy graph
+- [x] T-001 [AC-03, AC-06] Create the responsibility-sized policy graph
   - Depends on: none
   - Files:
     - `engine/reference/lifecycle.md`

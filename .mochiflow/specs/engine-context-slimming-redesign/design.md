@@ -281,3 +281,21 @@ No plan review has run yet.
 Build records only ownership drift, unexpected cross-file consumers, removed
 path cleanup, and adapter/runtime constraints discovered while executing this
 design. Do not record ordinary file moves or restate this plan.
+
+### T-001 (policy graph created)
+
+- The frozen-surface hash (`contracts/contracts.lock`) covers only
+  `contracts/*.json` and `tests/conformance/golden/**`
+  (`freeze::compute_contracts_hash`), not engine markdown or `MANIFEST.json`.
+  Engine-layout edits therefore need `mochiflow freeze` to regenerate
+  `MANIFEST.json` but never a version bump; the version triple stays driven by
+  `cli/Cargo.toml`. This is why every task commit stays verifiable under
+  `freeze --check` without touching version/release files.
+- `conformance.rs` pins literal substrings inside `workflow.md` / `authoring.md`
+  / `risk.md` / `git.md` / `language.md` and is not in T-001's file set, so the
+  split is staged additive-first: the seven new owner files
+  (`lifecycle`, `specs`, `verification`, `review`, `delivery`, `knowledge`,
+  `presentation`) are created now with content moved verbatim, while the
+  monoliths and the narrowed owners (`risk`, `git`, `language`) stay intact until
+  their consumers and the matching conformance assertions migrate (T-002–T-006).
+  No differing duplicate behavior was found; content was moved, not rewritten.
