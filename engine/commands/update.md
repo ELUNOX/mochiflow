@@ -11,27 +11,24 @@ description: |
   never moved and never resurrected — it has stayed flat the whole time. Activate
   on the explicit command `mochiflow-update`, or natural phrasing like "修正依頼" /
   "PR feedback" / "PRを直して".
-triggers:
-  - mochiflow-update
-  - 修正依頼
-  - PR feedback
-  - PRを直して
-trigger_patterns:
-  - "{slug} update"
-  - "{slug} feedback"
-  - "{slug} 修正依頼"
-  - "{slug} PR feedback"
 artifacts:
   - "{install_dir}/state/{slug}/pr-body.md"
   - "{specs_dir}/{slug}/ (flat; never moved)"
 prerequisites:
   - "A PR is open for the spec (derived `in_review`); spec is flat at `{specs_dir}/{slug}/`"
 execution: inline
-references:
-  - reference/workflow.md
-  - reference/risk.md
-  - reference/git.md
-  - templates/delivery/pr-description.md
+load:
+  required:
+    - reference/delivery.md
+    - reference/verification.md
+    - reference/git.md
+  conditional:
+    - when: finalize on risk >= elevated re-reviews a stale verdict, or a review/fix runs
+      files:
+        - reference/review.md
+    - when: PR metadata changes and the title/body is regenerated
+      files:
+        - templates/delivery/pr-description.md
 ---
 
 # mochiflow-update

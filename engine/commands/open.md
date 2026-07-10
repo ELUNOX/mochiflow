@@ -9,12 +9,6 @@ description: |
   `{specs_dir}/{slug}/` — there is no `_done/` move and no `done` write. Activate
   on the explicit command `mochiflow-open`, or natural phrasing like "PR出して" /
   "PRを作って".
-triggers:
-  - mochiflow-open
-  - PR出して
-  - PRを作って
-trigger_patterns:
-  - "{slug} open"
 artifacts:
   - "{install_dir}/state/{slug}/pr-body.md"
   - "{install_dir}/state/{slug}/pr-request.json (pr_driver backend only)"
@@ -22,11 +16,20 @@ artifacts:
 prerequisites:
   - "Implementation and verification complete (AC Matrix exists); `status: approved`"
 execution: inline
-references:
-  - reference/workflow.md
-  - reference/risk.md
-  - reference/git.md
-  - templates/delivery/pr-description.md
+load:
+  required:
+    - reference/lifecycle.md
+    - reference/verification.md
+    - reference/delivery.md
+    - reference/knowledge.md
+    - reference/git.md
+  conditional:
+    - when: risk >= elevated triggers the accept-gate freshness re-review, or a review/fix runs
+      files:
+        - reference/review.md
+    - when: generating the PR title/body
+      files:
+        - templates/delivery/pr-description.md
 ---
 
 # mochiflow-open

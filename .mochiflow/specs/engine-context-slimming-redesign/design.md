@@ -326,3 +326,28 @@ design. Do not record ordinary file moves or restate this plan.
   — still selects the same command or the same clarification class; retired
   `mochiflow-patch` still routes to the plan proposal. The full adapter-channel
   matrix (Kiro + AGENTS) is consolidated in T-007.
+
+### T-003 (implementation / delivery / review commands migrated)
+
+- build/open/update/close/review frontmatter moved from flat `references` to
+  `load.required` / `load.conditional` per the design ownership table (build:
+  lifecycle/verification/risk/git/engineering + review conditional; open:
+  lifecycle/verification/delivery/knowledge/git + review & PR-template
+  conditional; update: delivery/verification/git + review & PR-template
+  conditional; close: delivery/presentation; review: review/presentation +
+  reviewer-profile conditional). triggers/trigger_patterns removed from all
+  five; the router route table (T-002) is the sole route owner.
+- `engine_open_update_close_defined_no_ship_verb` was updated: it no longer
+  requires a `triggers:` block in the command files; it asserts the router route
+  table owns each `mochiflow-<verb>` and its `commands/<verb>.md` target. The
+  pr-description template needed no change (no old-owner references).
+- Command bodies still cross-reference the not-yet-narrowed monoliths
+  (`risk.md` / `git.md` / `workflow.md`); those refs still resolve and are
+  repointed together with the risk.md/git.md narrowing and workflow/authoring
+  deletion in T-006.
+- PLAN-ACCURACY NOTE: narrowing `risk.md` / `git.md` / `language.md` (removing
+  the content that moved to review/delivery/knowledge) is required by the
+  approved design ("narrower owners") and by the AC-06 single-ownership check,
+  but no task `Files:` list enumerates those three files. It is folded into T-006
+  ("remove old owners / all live references use the new ownership graph") rather
+  than re-planning, since the design already specifies it.

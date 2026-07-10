@@ -9,13 +9,6 @@ description: |
   Activate on the explicit command `mochiflow-build`, or natural phrasing
   like "実装して" / "進めて" / "ビルドして". Does not create PRs, set a terminal
   state, or move the spec (that is open).
-triggers:
-  - mochiflow-build
-  - 実装して
-  - 進めて
-  - ビルドして
-trigger_patterns:
-  - "{slug} build"
 artifacts:
   - "{specs_dir}/{slug}/pitch.md (when present)"
   - "{specs_dir}/{slug}/spec.md (AC Verification Matrix)"
@@ -25,11 +18,17 @@ prerequisites:
 execution: inline
 delegate_to:
   - agents/change-reviewer.md
-references:
-  - reference/workflow.md
-  - reference/risk.md
-  - reference/git.md
-  - reference/engineering-standards.md
+load:
+  required:
+    - reference/lifecycle.md
+    - reference/verification.md
+    - reference/risk.md
+    - reference/git.md
+    - reference/engineering-standards.md
+  conditional:
+    - when: risk >= elevated needs mandatory review, or an ad-hoc review/fix runs
+      files:
+        - reference/review.md
 ---
 
 # mochiflow-build

@@ -11,23 +11,20 @@ description: |
   "レビューして". Reports findings only in result-only mode; fix mode may edit
   in-scope files but never changes status, pushes, or creates PR metadata by
   itself.
-triggers:
-  - mochiflow-review
-  - レビューして
-trigger_patterns:
-  - "{slug} review"
-  - "{slug} review fix"
-  - "{slug} review fix 1"
-  - "{slug} review fix 2"
-  - "{slug} review fix 3"
-  - "{slug} review {number} (invalid; route to correction)"
-  - "{slug} review fix {number} (invalid outside 1..3; route to correction)"
 delegate_to:
   - agents/plan-auditor.md
   - agents/change-reviewer.md
-references:
-  - reference/risk.md
-  - reference/workflow.md
+load:
+  required:
+    - reference/review.md
+    - reference/presentation.md
+  conditional:
+    - when: reviewing a code-less spec before implementation
+      files:
+        - agents/plan-auditor.md
+    - when: reviewing a change once code exists
+      files:
+        - agents/change-reviewer.md
 ---
 
 # spec-review

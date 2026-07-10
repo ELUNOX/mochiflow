@@ -8,22 +8,14 @@ description: |
   the base branch — the fold and the spec were already merged via the `open` PR.
   Activate on the human merge report "{slug} merged" / "{slug} マージ済み" /
   "{slug} 完了", or the explicit command `mochiflow-close`.
-triggers:
-  - mochiflow-close
-  - merged
-  - マージ済み
-  - 完了
-trigger_patterns:
-  - "{slug} close"
-  - "{slug} merged"
-  - "{slug} マージ済み"
-  - "{slug} 完了"
 artifacts: []
 prerequisites:
   - "The PR is merged (the human reports it; `merged` is derived, never stored)"
 execution: inline
-references:
-  - reference/git.md
+load:
+  required:
+    - reference/delivery.md
+    - reference/presentation.md
 ---
 
 # mochiflow-close

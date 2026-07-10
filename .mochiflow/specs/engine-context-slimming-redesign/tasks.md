@@ -49,7 +49,7 @@ Critical Stop Conditions:
     - `engine/MANIFEST.json`
   - Done: router owns the complete compact route table and selects commands without command pre-reads; migrated commands use required/conditional loads and only selected templates; generic presentation and invariant prose points to the new owners; routing and plan/onboard conformance passes with no command trigger metadata dependency; router, hostile source/test-fixture content, ambiguous quoted user text, instruction-priority, and spec-depth rows from the Behavioral Observation Matrix run through Kiro plus AGENTS-style adapters and record selected/declined routes, outcomes, and selected/skipped load sets.
   - Stop: preserving an existing route requires loading a command before route selection or duplicating route vocabulary outside the router.
-- [ ] T-003 [AC-02, AC-04, AC-06] Migrate implementation, delivery, and review commands
+- [x] T-003 [AC-02, AC-04, AC-06] Migrate implementation, delivery, and review commands
   - Depends on: T-002
   - Files:
     - `engine/commands/build.md`

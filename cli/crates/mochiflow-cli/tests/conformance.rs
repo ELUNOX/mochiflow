@@ -727,14 +727,19 @@ fn router_update_summary_matches_hold_by_default() {
 
 #[test]
 fn engine_open_update_close_defined_no_ship_verb() {
+    let router = read_repo_file("engine/router.md");
     for cmd in ["open", "update", "close"] {
         let doc = read_repo_file(&format!("engine/commands/{cmd}.md"));
         assert!(
-            doc.contains(&format!("mochiflow-{cmd}")) && doc.contains("triggers:"),
-            "{cmd}.md must define its explicit command and triggers"
+            doc.contains(&format!("mochiflow-{cmd}")),
+            "{cmd}.md must still name its explicit command"
+        );
+        assert!(
+            router.contains(&format!("`mochiflow-{cmd}`"))
+                && router.contains(&format!("commands/{cmd}.md")),
+            "router route table must own the {cmd} explicit command and target"
         );
     }
-    let router = read_repo_file("engine/router.md");
     assert!(
         router.contains("commands/open.md")
             && router.contains("commands/update.md")
