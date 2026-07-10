@@ -541,3 +541,21 @@ design. Do not record ordinary file moves or restate this plan.
   change-reviewer verdict.
 - The corrective work introduces no new AC, design decision, public contract,
   schema change, lifecycle behavior, or adapter behavior.
+
+### T-008 (adversarial findings corrected)
+
+- Removed activation clauses and exact route grammar from all nine command
+  frontmatter descriptions while leaving command procedures, body-level review
+  grammar, and router vocabulary unchanged.
+- Corrected the two live foundational-context claims in `refresh-context.md` and
+  `specs.md`; constitution remains the only always-loaded guidance layer and the
+  frozen config schema remains intentionally unchanged.
+- Repointed the engineering-standards workaround rule to
+  `reference/specs.md ## Backlog seeds`.
+- Added conformance guards for command-description route ownership, live-engine
+  foundational-context terminology, and deleted owner basenames. Each guard was
+  observed failing against the pre-fix implementation before passing after the
+  correction.
+- Ran `mochiflow freeze`, `mochiflow upgrade --source engine`, adapter drift
+  check, and the configured CLI verification. All 189 conformance tests plus the
+  remaining CLI/unit/integration suites, fmt, clippy, and freeze check passed.

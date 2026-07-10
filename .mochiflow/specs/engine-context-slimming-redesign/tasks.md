@@ -134,7 +134,7 @@ Critical Stop Conditions:
     - `.mochiflow/specs/engine-context-slimming-redesign/tasks.md`
   - Done: structural tests prove declared path existence, required/conditional separation, route ownership, reviewer composition, adapter standing inputs, upgrade removal, frozen-schema/version no-change, and absence of live legacy paths without measuring size; the complete Behavioral Observation Matrix has recorded evidence for every route family and representative conditional-load class through Kiro and AGENTS-style adapters; `mochiflow freeze`, `mochiflow upgrade --source engine`, `mochiflow adapter generate --check`, the full configured CLI verification, lint, and mandatory elevated-risk change review pass; the AC Matrix records final evidence and open has the two ADR supersessions plus deferred release follow-up ready for close-out.
   - Stop: full verification exposes a behavior regression, generated artifact outside the planned ownership set, or a need for a context-budget/assembly subsystem.
-- [ ] T-008 [AC-01, AC-02, AC-03, AC-04, AC-05, AC-06, AC-07, AC-08] Correct adversarial review findings and renew evidence
+- [x] T-008 [AC-01, AC-02, AC-03, AC-04, AC-05, AC-06, AC-07, AC-08] Correct adversarial review findings and renew evidence
   - Depends on: T-007
   - Files:
     - `engine/commands/build.md`

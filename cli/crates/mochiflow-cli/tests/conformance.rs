@@ -5160,8 +5160,71 @@ fn commands_and_reviewers_use_the_load_contract() {
     }
 }
 
+/// AC-02 / AC-06: route vocabulary belongs to router.md, not command
+/// frontmatter descriptions. Command bodies may still name their procedure and
+/// document review grammar after routing has selected them.
+#[test]
+fn command_frontmatter_descriptions_do_not_own_routes() {
+    let repo = repo_root();
+    let mut files = Vec::new();
+    collect_files(&repo.join("engine/commands"), &mut files);
+    for path in files {
+        if path.extension().and_then(|e| e.to_str()) != Some("md") {
+            continue;
+        }
+        let body = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+        let fm = frontmatter(&body).expect("command frontmatter");
+        let description = fm
+            .split_once("description: |\n")
+            .map(|(_, rest)| {
+                rest.lines()
+                    .take_while(|line| line.starts_with("  "))
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            })
+            .expect("command description block");
+        for route_marker in [
+            "Activate on",
+            "Activate when",
+            "explicit command",
+            "natural phrasing",
+            "mochiflow-",
+            "review fix [",
+        ] {
+            assert!(
+                !description.contains(route_marker),
+                "{}: command description must not own route marker `{route_marker}`",
+                path.display()
+            );
+        }
+    }
+}
+
+/// AC-01: live engine prose must describe foundational context as conditional;
+/// the frozen config schema is intentionally outside this engine-only sweep.
+#[test]
+fn live_engine_foundational_context_claims_are_conditional() {
+    for path in engine_markdown_files() {
+        let body = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+        for line in body.lines() {
+            let normalized = line.to_ascii_lowercase();
+            let calls_context_always_loaded = normalized
+                .contains("always-loaded foundational context")
+                || normalized.contains("foundational context always-loaded")
+                || (normalized.contains("`[context]`") && normalized.contains("| always-loaded"));
+            assert!(
+                !calls_context_always_loaded,
+                "{}: live foundational context must be loaded on demand: {line}",
+                path.display()
+            );
+        }
+    }
+}
+
 /// AC-03 / AC-07: the deleted monoliths and the legacy reviewer wrapper are gone
-/// and no live engine markdown references their paths.
+/// and no live engine markdown references their paths or bare basenames.
 #[test]
 fn removed_monolith_and_wrapper_paths_are_absent() {
     let repo = repo_root();
@@ -5175,14 +5238,10 @@ fn removed_monolith_and_wrapper_paths_are_absent() {
     for path in engine_markdown_files() {
         let body = std::fs::read_to_string(&path)
             .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
-        for legacy in [
-            "reference/workflow.md",
-            "reference/authoring.md",
-            "agents/independent-reviewer.md",
-        ] {
+        for legacy in ["workflow.md", "authoring.md", "independent-reviewer.md"] {
             assert!(
                 !body.contains(legacy),
-                "{}: must not reference removed path {legacy}",
+                "{}: must not reference removed engine owner {legacy}",
                 path.display()
             );
         }

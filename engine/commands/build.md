@@ -6,9 +6,7 @@ description: |
   on the main agent, verify, commit, maintain the integration log per risk, run
   read-only review through the change-reviewer transport, and produce the
   AC Verification Matrix. A micro spec may run with spec.yaml + spec.md only.
-  Activate on the explicit command `mochiflow-build`, or natural phrasing
-  like "実装して" / "進めて" / "ビルドして". Does not create PRs, set a terminal
-  state, or move the spec (that is open).
+  Does not create PRs, set a terminal state, or move the spec (that is open).
 artifacts:
   - "{specs_dir}/{slug}/pitch.md (when present)"
   - "{specs_dir}/{slug}/spec.md (AC Verification Matrix)"

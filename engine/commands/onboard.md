@@ -3,8 +3,7 @@ name: mochiflow-onboard
 description: |
   MochiFlow's onboard command. Bootstraps MochiFlow into the current project
   by reading the project, turning its workflow into config.toml, generating
-  adapters, and verifying with doctor. Activate when the user requests setup /
-  onboarding / installation of MochiFlow.
+  adapters, and verifying with doctor.
 load:
   required:
     - reference/specs.md

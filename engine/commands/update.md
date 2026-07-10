@@ -8,9 +8,7 @@ description: |
   hold-by-default for bare feedback: it re-verifies, commits locally, and holds;
   an explicit finalize signal reviews-if-stale once, pushes, updates PR
   metadata, and revises the fold when feedback changes a decision. The spec is
-  never moved and never resurrected — it has stayed flat the whole time. Activate
-  on the explicit command `mochiflow-update`, or natural phrasing like "修正依頼" /
-  "PR feedback" / "PRを直して".
+  never moved and never resurrected — it has stayed flat the whole time.
 artifacts:
   - "{install_dir}/state/{slug}/pr-body.md"
   - "{specs_dir}/{slug}/ (flat; never moved)"

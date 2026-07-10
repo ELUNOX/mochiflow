@@ -6,8 +6,6 @@ description: |
   local hygiene only: switch to base, fast-forward pull, delete the local branch,
   clear ephemeral delivery state, and regenerate the board. It writes nothing to
   the base branch — the fold and the spec were already merged via the `open` PR.
-  Activate on the human merge report "{slug} merged" / "{slug} マージ済み" /
-  "{slug} 完了", or the explicit command `mochiflow-close`.
 artifacts: []
 prerequisites:
   - "The PR is merged (the human reports it; `merged` is derived, never stored)"

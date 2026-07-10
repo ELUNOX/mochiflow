@@ -4,9 +4,7 @@ phase: plan
 description: |
   mochiflow's plan phase. Turn an agreed pitch or explicit concrete micro
   request into spec.md, and grow design.md / tasks.md only as the change needs.
-  Drive to a single human implementation approval gate. Activate on the explicit
-  command `mochiflow-plan`, or natural phrasing like "仕様作って" / "プランして" /
-  "計画作って". Does not implement.
+  Drive to a single human implementation approval gate. Does not implement.
 artifacts:
   - "{specs_dir}/{slug}/spec.yaml"
   - "{specs_dir}/{slug}/pitch.md (standard-or-larger)"

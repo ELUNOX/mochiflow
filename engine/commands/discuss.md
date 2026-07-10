@@ -3,9 +3,8 @@ name: spec-discuss
 phase: discuss
 description: |
   mochiflow's discuss phase. Investigate code, organize design decisions through
-  interactive interview, and reach an agreed why/what. Activate on the explicit
-  command `mochiflow-discuss`, or natural phrasing like "ブレストして" / "壁打ちして"
-  / "相談したい". Writes the agreed pitch as the first durable spec artifact,
+  interactive interview, and reach an agreed why/what. Writes the agreed pitch as
+  the first durable spec artifact,
   creates the spec branch, and commits `spec.yaml (draft)` + `pitch.md`.
   Discuss is optional for explicit concrete micro requests handled by plan.
 artifacts:

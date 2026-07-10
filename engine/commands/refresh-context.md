@@ -6,8 +6,7 @@ description: |
   human confirmation. This is the operational counterpart to the emergent fold:
   context is a current-state orientation map derived from code (forward-placed,
   refreshed), never a dated history log (the fold owns that, in `[adr]`).
-  Activate when the user asks to refresh / regenerate project context. If open
-  detects a coarse structural shift, it runs this on the feature branch under
+  If open detects a coarse structural shift, it runs this on the feature branch under
   human confirmation and commits the result as a separate `docs(context)` commit
   before the accept close-out, so the refresh ships inside the PR; this command
   itself never auto-commits (branch / PR / commit handling is open's
@@ -33,8 +32,9 @@ load:
 
 ## Purpose
 
-Regenerate the always-loaded foundational context (`[context].product` /
-`[context].structure` / `[context].tech`) from the current code so orientation never silently rots.
+Regenerate the foundational context (`[context].product` /
+`[context].structure` / `[context].tech`) from the current code so workflows can
+load current orientation on demand without letting it silently rot.
 Code is the source of truth; this layer is a derived map, not new knowledge.
 
 ## When it runs

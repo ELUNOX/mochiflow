@@ -4,13 +4,11 @@ description: |
   mochiflow's ad-hoc review. On an explicit user request, run the read-only
   plan-auditor or change-reviewer against the active spec's latest artifacts via
   the review transport rule, regardless of risk level. Plain review is
-  result-only and reports findings only. `review fix [1-3]` runs bounded
-  automatic fix rounds on the main agent. This is a non-phase command: it
+  result-only and reports findings only. Fix mode runs bounded automatic rounds
+  on the main agent. This is a non-phase command: it
   exposes ad-hoc review as a discoverable entry point and adds no delivery gate.
-  Activate on the explicit command `mochiflow-review`, or natural phrasing like
-  "レビューして". Reports findings only in result-only mode; fix mode may edit
-  in-scope files but never changes status, pushes, or creates PR metadata by
-  itself.
+  Reports findings only in result-only mode; fix mode may edit in-scope files but
+  never changes status, pushes, or creates PR metadata by itself.
 delegate_to:
   - agents/plan-auditor.md
   - agents/change-reviewer.md

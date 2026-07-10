@@ -54,7 +54,8 @@ A decision without a verifiable basis is not done.
 If the standard approach genuinely cannot be used, label the change a
 **Workaround** and record: (a) why the standard approach does not work, (b) what
 the standard approach is, (c) the backlog seed slug tracking the proper fix
-(`workflow.md ## Backlog seeds`). Never leave an unlabeled, untracked workaround.
+(`reference/specs.md ## Backlog seeds`). Never leave an unlabeled, untracked
+workaround.
 
 ## Project's canonical practices
 

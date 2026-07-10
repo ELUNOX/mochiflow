@@ -102,7 +102,7 @@ Fix each fact in one place; reference by ID elsewhere.
 | QA scenarios | `spec.md` | PR `## Testing` derives from it; no intermediate file |
 | reviewer / git / journal cadence | `reference/review.md` / `reference/risk.md` | not repeated |
 | user-authored standing rules | `[constitution]` (project / local), written by the user | always-loaded; never generated from code |
-| current-state orientation (purpose / layout / tech) | code/config, mapped into `[context]` (product / structure / tech) via onboard / `refresh-context` | always-loaded; never folded |
+| current-state orientation (purpose / layout / tech) | code/config, mapped into `[context]` (product / structure / tech) via onboard / `refresh-context` | loaded on demand for workflow or repository orientation; never folded |
 | design rationale (*why*) / pitfalls history | `[adr]` (directory-rooted `decisions` / `pitfalls` stores: one immutable per-file record each, plus a generated gitignored `INDEX.md`), grown by open's fold via supersession | on-demand / phase load |
 
 The three durable guidance layers differ by lifecycle: `[constitution]` is

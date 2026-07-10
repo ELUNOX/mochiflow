@@ -6,9 +6,7 @@ description: |
   finalize the living-spec fold, set `accepted` with tracked/local persistence
   behavior, generate the PR title/body, take the approve-PR gate, then push and
   create the PR. The spec stays flat at
-  `{specs_dir}/{slug}/` — there is no `_done/` move and no `done` write. Activate
-  on the explicit command `mochiflow-open`, or natural phrasing like "PR出して" /
-  "PRを作って".
+  `{specs_dir}/{slug}/` — there is no `_done/` move and no `done` write.
 artifacts:
   - "{install_dir}/state/{slug}/pr-body.md"
   - "{install_dir}/state/{slug}/pr-request.json (pr_driver backend only)"
