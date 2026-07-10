@@ -103,7 +103,7 @@ feedback, merged-event cleanup) are detailed in `## Decision Flow`,
 7. With no trigger but clear mochiflow intent, propose the verb or non-phase command in one line and wait for approval.
 8. With ambiguous intent, do not activate mochiflow.
 9. Once committed to a verb or non-phase command, before starting, consult the matching `commands/{verb}.md` and that command's declared load contract (`load.required`, then the `load.conditional` entries whose `when` resolves). If they are not in standing context, lazy-load them from the engine root with read.
-10. For user-facing speech, follow `reference/language.md ## User-facing communication`: use conversation-language plain wording first, and keep internal MochiFlow vocabulary only for commands, file names, metadata, or a short `MochiFlow:` note.
+10. For user-facing speech, follow `reference/language.md ## Conversation Language`: use conversation-language plain wording first, and keep internal MochiFlow vocabulary only for commands, file names, metadata, or a short `MochiFlow:` note.
 
 ## Active Spec Resolution
 
