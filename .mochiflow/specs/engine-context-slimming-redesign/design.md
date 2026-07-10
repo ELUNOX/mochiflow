@@ -184,6 +184,26 @@ instruction-priority outcome, and observed result. Router and hostile-content
 rows run through Kiro and one generated prose adapter. Results are summarized in
 AC-02 and AC-04 evidence; they are not converted into token or size thresholds.
 
+### Observed evidence (build)
+
+AI-observed through the two generated entrypoints in this repository — the Kiro
+always-on steering (`.kiro/steering/mochiflow.md`) and the generated AGENTS-style
+prose adapter (`AGENTS.md`) — together with the router `## Route table`, the
+per-command load contracts, and the reviewer profiles. Structural conformance
+mechanically guards the file/declaration existence these observations rely on;
+the rows below record the routing/loading decisions that string tests cannot
+execute directly.
+
+| Family | Observed result |
+| --- | --- |
+| Router | Every route resolves from `router.md ## Route table` alone: explicit `mochiflow-<verb>`, JA/EN hints, `{slug} <verb>`, the `{slug} discuss` seed exception, the `{slug} plan` draft requirement, the no-spec small-fix → `Start plan?` hint, `{slug} review` / `review fix [1-3]`, feedback → update, and bare/exact merge reports → close cleanup — all without reading command frontmatter. Retired `mochiflow-patch` announces retirement and proposes `Start plan?`. Invalid numeric forms (`review 2`, `review fix 0`, `fix 4+`) route to review only for correction. |
+| Instruction priority / hostile content | Route selection reads only the compact table, so command-like text or lifecycle verbs embedded in source, test fixtures, or quoted user prose stay data, not routes. The router "do not activate without explicit intent" principle plus `engineering-standards.md` instruction priority keep repository content from activating a verb; neither adapter loads a command body merely to route, so embedded instructions are never executed as engine steps. |
+| Spec depth | Depth stays emergent (`specs.md ## Depth scaling`); `plan` selects exactly one depth's template set (`spec` / `spec.standard` / `spec.micro`, plus `design` / `tasks` when required) as a `load.conditional` entry rather than eagerly listing all templates. |
+| Risk / review | `build` loads `review.md` only when `risk >= elevated` or an ad-hoc fix runs; a `standard` build loads none and produces the AC Matrix only. This `elevated` build loaded `review.md` and ran the change-reviewer once after all tasks. Reviewer selection by target was observed directly this feature: `plan-auditor` for the code-less plan review, `change-reviewer` for this implemented change. |
+| Persistence / delivery | `close` loads only `delivery` + `presentation` (no git/fold/verification); `open` / `update` load `review` + the PR template only when risk/freshness or PR-metadata changes require them. Tracked vs local spec mode remains derived, not asserted. |
+| Context | Pure routing loads neither foundational context nor project config — both adapters place them under load-on-demand with the explicit "load when a selected workflow or repository-specific task needs orientation, not merely to route" condition. Repository-specific build work is where context/config would be pulled; the router never eagerly loads them. |
+| Adapter | `AGENTS.md` "Standing inputs" = constitution + router only; Kiro "Always loaded" = router + constitution `#[[file:]]` refs with no eager context refs. Both defer verb procedures, the eleven-file cross-cutting owner set, templates, config, and ADR to load-on-demand. The selected route and loaded-file set match the router contract on both channels. |
+
 ## ADR Supersession Plan
 
 At open, create two new decision records and update reciprocal lineage rather
@@ -274,7 +294,39 @@ branch.
 
 ## Review Results
 
-No plan review has run yet.
+Review profile: change-reviewer
+Reviewer mode: delegated
+Verdict: pass-with-comments
+Reviewed through: 709b869
+
+The mandatory elevated-risk completion-gate review ran read-only via delegated
+subagent against the full `git diff main...HEAD`, reading the changed engine /
+reference / agent / command / Rust files and the ADR store from scratch (never
+conversation history). It confirmed no Critical or High findings: frozen schema
+and version surfaces are untouched (absent from the diff and asserted by
+`frozen_schema_and_version_are_unchanged_by_this_feature`), every `load.required`
+/ `load.conditional` path resolves, the router route table preserves all prior
+routes, both reviewer profiles compose `agents/reviewer-core.md` and remain
+read-only, and each migrated invariant resolves to exactly one owner.
+
+Non-blocking comments and disposition:
+
+- Medium — standing-router cross-references pointing at moved/renamed owners.
+  The router still cited `risk.md` sections that had moved to `review.md`
+  (review transport, reviewer cadence, ad-hoc review), still described the
+  retired trigger-aggregation routing model in its frontmatter/decision-flow
+  prose, and cited a non-existent `language.md ## User-facing communication`
+  section. All were repointed to their real owners and the retired-model prose
+  corrected. The transport / cadence / ad-hoc / trigger-model fixes landed
+  inside the reviewed sha `709b869`; the `language.md ## Conversation Language`
+  repoint is a doc-only post-review bounded fix at `803429b`, held for the
+  stale-verdict re-review at the next open/accept boundary before any push.
+- Low — several repointed conformance tests keep local variable names and assert
+  strings naming the former owner file (e.g.
+  `let workflow = read_repo_file("engine/reference/specs.md")`). The assertions
+  read the correct new-owner files and pass; this is accepted documented cosmetic
+  debt (see ## Integration Log T-006), scheduled for follow-up cleanup, with no
+  behavior or ownership impact.
 
 ## Integration Log
 
@@ -428,3 +480,35 @@ design. Do not record ordinary file moves or restate this plan.
   variable names (e.g. `let workflow = read_repo_file(".../verification.md")`)
   and assert messages after the read target moved; functionally correct, flagged
   for review cleanup.
+
+### T-007 (structural coverage, dogfood sync, final verification, mandatory review)
+
+- Added five structural guards to `conformance.rs`:
+  `engine_frontmatter_declared_paths_exist` (every `load.*` path resolves under
+  `engine/`), `commands_and_reviewers_use_the_load_contract` (load tiers present,
+  no `triggers` / flat `references`), `removed_monolith_and_wrapper_paths_are_absent`
+  (workflow/authoring/independent-reviewer gone from live markdown),
+  `migrated_invariants_have_a_single_owner` (owner-heading map → exactly one
+  owner), and `frozen_schema_and_version_are_unchanged_by_this_feature`
+  (`config.schema.json` still says `always-loaded`; `engine/VERSION` unbumped).
+  The new guard also caught leftover `triggers:` / `trigger_patterns:` in
+  `refresh-context.md`, which were removed.
+- CROSS-REF DRIFT (found by the mandatory change-reviewer, not the codemod): the
+  standing `router.md` still carried stale cross-references that T-006's
+  section-anchored codemod did not reach because they sat in principle/decision
+  prose and frontmatter — three `risk.md` section pointers that had moved to
+  `review.md`, the retired "aggregate triggers from commands" description and a
+  `trigger_patterns` decision-flow mention, and a broken `language.md ##
+  User-facing communication` anchor. All were repointed to their real owners and
+  `review.md` was added to the router lazy-load catalog (commits `709b869`,
+  `803429b`). This confirms the single-ownership graph check guards declared
+  `load.*` paths but not free-prose section anchors inside standing artifacts;
+  those still rely on review. No behavior changed (the router restates the
+  transport rule inline and reaches `review.md` via each command's conditional
+  load).
+- Final state: full configured verification green (`cargo test` all suites incl.
+  conformance 187, `fmt --check`, `clippy -D warnings`, `freeze --check`),
+  `adapter generate --check` 0 drift, `upgrade --source engine` clean,
+  `lint --spec` 0 fail / 0 warn. The AC Matrix is settled (all rows PASS). ADR
+  supersessions and the deferred release follow-up remain queued for open
+  close-out per `## ADR Supersession Plan` / `## Deferred Release Follow-up`.
