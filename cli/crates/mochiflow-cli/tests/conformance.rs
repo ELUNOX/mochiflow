@@ -634,14 +634,14 @@ fn router_preserves_named_routing_branches() {
 
 #[test]
 fn branch_placeholders_use_prefix_slug() {
-    let git = read_repo_file("engine/reference/git.md");
+    let delivery = read_repo_file("engine/reference/delivery.md");
 
     assert!(
-        git.contains("git branch -d {prefix}/{slug}"),
+        delivery.contains("git branch -d {prefix}/{slug}"),
         "post-merge cleanup must delete the real branch placeholder"
     );
     assert!(
-        !git.contains("git branch -d {type}/{slug}"),
+        !delivery.contains("git branch -d {type}/{slug}"),
         "post-merge cleanup must not delete the unmapped branch placeholder"
     );
 }
@@ -807,7 +807,7 @@ fn build_documents_post_completion_bounded_fix_window() {
         "build must document the post-completion bounded-fix window before open"
     );
     assert!(
-        build.contains("shared bounded-fix judgment in `reference/risk.md`")
+        build.contains("shared bounded-fix judgment in `reference/review.md`")
             && build.contains("no task-structure change")
             && build.contains("no new AC")
             && build.contains("no new design decision"),
@@ -880,7 +880,7 @@ fn open_generalizes_freshness_trigger_to_reviewed_through() {
 #[test]
 fn close_is_local_hygiene_only() {
     let close = read_repo_file("engine/commands/close.md");
-    let git = read_repo_file("engine/reference/git.md");
+    let delivery = read_repo_file("engine/reference/delivery.md");
     assert!(
         close.contains("local hygiene") && close.contains("writes nothing to the base branch"),
         "close must be local hygiene only with no base write"
@@ -891,8 +891,8 @@ fn close_is_local_hygiene_only() {
     );
     assert!(
         close.contains("local source\nbranch tip is reachable")
-            && git.contains("branch-tip signal is gone"),
-        "close/git guidance must document local-mode branch-tip merge signal and branch-delete limitation"
+            && delivery.contains("branch-tip signal is gone"),
+        "close/delivery guidance must document local-mode branch-tip merge signal and branch-delete limitation"
     );
 }
 
@@ -901,7 +901,7 @@ fn delivery_guidance_is_conversational_and_language_aware() {
     let open = read_repo_file("engine/commands/open.md");
     let router = read_repo_file("engine/router.md");
     let close = read_repo_file("engine/commands/close.md");
-    let language = read_repo_file("engine/reference/language.md");
+    let delivery = read_repo_file("engine/reference/delivery.md");
 
     // open.md: PR-created conversational handoff with URL-when-available and a
     // URL-less manual-handoff path, kept out of the PR body. (Single-line
@@ -953,20 +953,20 @@ fn delivery_guidance_is_conversational_and_language_aware() {
         "close completion must report local branch and delivery-file cleanup"
     );
 
-    // language.md: delivery next-action ownership (conversation vs artifact).
+    // delivery.md: delivery next-action ownership (conversation vs artifact).
     assert!(
-        language.contains("## Delivery Next Actions"),
-        "language reference must own delivery next-action language policy"
+        delivery.contains("## Delivery next actions"),
+        "delivery reference must own delivery next-action language policy"
     );
     assert!(
-        language.contains("local cleanup pending")
-            && language.contains("`[i18n].artifact_language` deterministically"),
-        "language reference must cover the cleanup hint and the auto CLI fallback"
+        delivery.contains("local cleanup pending")
+            && delivery.contains("`[i18n].artifact_language` deterministically"),
+        "delivery reference must cover the cleanup hint and the auto CLI fallback"
     );
     assert!(
-        language.contains("into the PR body")
-            && language.contains("intent examples, not fixed trigger strings"),
-        "language reference must keep next actions out of the PR body and examples non-canonical"
+        delivery.contains("into the PR body")
+            && delivery.contains("intent examples, not fixed trigger strings"),
+        "delivery reference must keep next actions out of the PR body and examples non-canonical"
     );
 }
 
@@ -997,6 +997,7 @@ fn open_ships_context_refresh_in_pr_before_accept() {
     // refresh as the primary path for open-detected staleness.
     let open = read_repo_file("engine/commands/open.md");
     let git = read_repo_file("engine/reference/git.md");
+    let knowledge = read_repo_file("engine/reference/knowledge.md");
     let refresh = read_repo_file("engine/commands/refresh-context.md");
     let router = read_repo_file("engine/router.md");
 
@@ -1059,14 +1060,16 @@ fn open_ships_context_refresh_in_pr_before_accept() {
         "refresh-context.md must not present a post-merge refresh as the primary path"
     );
 
-    // git.md: in-PR primary path, preceding docs(context) commit, post-merge fallback.
+    // knowledge.md: in-PR primary path, preceding docs(context) commit, post-merge fallback.
     assert!(
-        git.contains("human confirmation and ship the regenerated context **inside the PR** as a"),
-        "git.md fold guidance must ship the context refresh inside the PR"
+        knowledge
+            .contains("human confirmation and ship the regenerated context **inside the PR** as a"),
+        "knowledge.md fold guidance must ship the context refresh inside the PR"
     );
     assert!(
-        git.contains("before the PR is the primary path — never a post-merge base-branch edit."),
-        "git.md must make the in-branch refresh primary and post-merge the fallback"
+        knowledge
+            .contains("before the PR is the primary path — never a post-merge base-branch edit."),
+        "knowledge.md must make the in-branch refresh primary and post-merge the fallback"
     );
     assert!(
         git.contains(
@@ -1231,7 +1234,7 @@ fn public_docs_explain_review_fix_budget() {
 fn accept_guidance_uses_cli_and_persistence_modes() {
     let open = read_repo_file("engine/commands/open.md");
     let git = read_repo_file("engine/reference/git.md");
-    let workflow = read_repo_file("engine/reference/workflow.md");
+    let lifecycle = read_repo_file("engine/reference/lifecycle.md");
     let docs = read_repo_file("docs/configuration.md");
 
     assert!(
@@ -1260,12 +1263,13 @@ fn accept_guidance_uses_cli_and_persistence_modes() {
         "git reference must not require staging a _done move"
     );
     assert!(
-        workflow.contains("`mochiflow accept {slug}`") && workflow.contains("mechanical close-out"),
-        "workflow must name the accept CLI as the accepted close-out mechanism"
+        lifecycle.contains("`mochiflow accept {slug}`")
+            && lifecycle.contains("mechanical close-out"),
+        "lifecycle must name the accept CLI as the accepted close-out mechanism"
     );
     assert!(
-        !workflow.contains("there is no CLI transition command"),
-        "workflow must not claim accepted has no CLI transition command"
+        !lifecycle.contains("there is no CLI transition command"),
+        "lifecycle must not claim accepted has no CLI transition command"
     );
 }
 
@@ -1313,51 +1317,51 @@ fn auto_commit_gate_is_verification_not_reviewer() {
 
 #[test]
 fn risk_defines_shared_bounded_fix_judgment_and_reviewed_through() {
-    let risk = read_repo_file("engine/reference/risk.md");
+    let review = read_repo_file("engine/reference/review.md");
     let design_template = read_repo_file("engine/templates/spec/design.md");
     let build = read_repo_file("engine/commands/build.md");
     let open = read_repo_file("engine/commands/open.md");
     let update = read_repo_file("engine/commands/update.md");
 
     assert!(
-        risk.contains("Shared bounded-fix judgment")
-            && risk.contains("no task-structure change")
-            && risk.contains("no new AC")
-            && risk.contains("no new design decision")
-            && risk.contains("reference this shared judgment rather than redefining it"),
-        "risk reference must define the shared in-scope/out-of-scope judgment once"
+        review.contains("Shared bounded-fix judgment")
+            && review.contains("no task-structure change")
+            && review.contains("no new AC")
+            && review.contains("no new design decision")
+            && review.contains("reference this shared judgment rather than redefining it"),
+        "review reference must define the shared in-scope/out-of-scope judgment once"
     );
     assert!(
-        build.contains("shared bounded-fix judgment in `reference/risk.md`")
-            && open.contains("shared\n     bounded-fix judgment in `reference/risk.md`")
-            && update.contains("shared bounded-fix judgment in `reference/risk.md`"),
+        build.contains("shared bounded-fix judgment in `reference/review.md`")
+            && open.contains("shared\n     bounded-fix judgment in `reference/review.md`")
+            && update.contains("shared bounded-fix judgment in `reference/review.md`"),
         "build/open/update must point to the shared bounded-fix judgment"
     );
     assert!(
-        risk.contains("next push/accept boundary")
-            && risk.contains("code-changing commit exists beyond")
-            && risk.contains("recorded `Reviewed through`")
-            && risk.contains("A non-code commit such as")
-            && risk.contains("does not by itself make the verdict")
-            && risk.contains("stale. A stale pass verdict"),
-        "risk reference must batch held code changes until the push/accept boundary"
+        review.contains("next push/accept boundary")
+            && review.contains("code-changing commit exists beyond")
+            && review.contains("recorded `Reviewed through`")
+            && review.contains("A non-code commit such as")
+            && review.contains("does not by itself make the verdict")
+            && review.contains("stale. A stale pass verdict"),
+        "review reference must batch held code changes until the push/accept boundary"
     );
     assert!(
-        risk.contains("`Reviewed through: <sha>` on its own line directly below")
-            && risk.contains("fresh verdict plus updated `Reviewed through: <sha>`")
+        review.contains("`Reviewed through: <sha>` on its own line directly below")
+            && review.contains("fresh verdict plus updated `Reviewed through: <sha>`")
             && design_template.contains("Reviewed through: <sha> on its own line below Verdict"),
         "mandatory reviewer results must record Reviewed through separately from Verdict"
     );
     assert!(
-        risk.contains("Review batching changes trigger frequency, not review scope")
-            && risk.contains("reviewer input remains the full diff from git"),
-        "risk reference must preserve the full-diff reviewer input scope"
+        review.contains("Review batching changes trigger frequency, not review scope")
+            && review.contains("reviewer input remains the full diff from git"),
+        "review reference must preserve the full-diff reviewer input scope"
     );
 }
 
 #[test]
 fn build_commit_cadence_is_task_based_not_risk_based() {
-    let risk = read_repo_file("engine/reference/risk.md");
+    let risk = read_repo_file("engine/reference/review.md");
     let build = read_repo_file("engine/commands/build.md");
     let git = read_repo_file("engine/reference/git.md");
     let concepts = read_repo_file("docs/concepts.md");
@@ -1460,7 +1464,7 @@ fn spec_templates_require_done_eligible_matrix_results() {
 #[test]
 fn discuss_persists_pitch_draft_spec() {
     let discuss = read_repo_file("engine/commands/discuss.md");
-    let workflow = read_repo_file("engine/reference/workflow.md");
+    let workflow = read_repo_file("engine/reference/specs.md");
     let plan = read_repo_file("engine/commands/plan.md");
     let pitch = read_repo_file("engine/templates/spec/pitch.md");
 
@@ -1505,7 +1509,7 @@ fn discuss_persists_pitch_draft_spec() {
 #[test]
 fn direct_micro_plan_is_pitchless_and_branch_durable() {
     let plan = read_repo_file("engine/commands/plan.md");
-    let workflow = read_repo_file("engine/reference/workflow.md");
+    let workflow = read_repo_file("engine/reference/specs.md");
     let git = read_repo_file("engine/reference/git.md");
     let risk = read_repo_file("engine/reference/risk.md");
 
@@ -1559,7 +1563,7 @@ fn direct_micro_plan_is_pitchless_and_branch_durable() {
 
 #[test]
 fn ac_matrix_pending_human_is_canonical_provisional_token() {
-    let workflow = read_repo_file("engine/reference/workflow.md");
+    let workflow = read_repo_file("engine/reference/verification.md");
     let build = read_repo_file("engine/commands/build.md");
     let language = read_repo_file("engine/reference/language.md");
     let open = read_repo_file("engine/commands/open.md");
@@ -1683,7 +1687,7 @@ fn inline_rework_lifecycle_and_adapter_lifecycle_are_specified() {
 #[test]
 fn session_recoverability_is_authoring_rule_not_lint() {
     let plan = read_repo_file("engine/commands/plan.md");
-    let authoring = read_repo_file("engine/reference/authoring.md");
+    let authoring = read_repo_file("engine/reference/specs.md");
     let reviewer = read_repo_file("engine/agents/plan-auditor.md");
 
     assert!(
@@ -1706,7 +1710,7 @@ fn session_recoverability_is_authoring_rule_not_lint() {
     );
     assert!(
         plan.contains("session-recoverable")
-            && plan.contains("reference/authoring.md ## Session-recoverability"),
+            && plan.contains("reference/specs.md ## Session-recoverability"),
         "plan.md must reference the session-recoverability authoring rule"
     );
     assert!(
@@ -1726,7 +1730,7 @@ fn canonical_reviewers_grounded_adversary_contract_is_pinned() {
     let core = read_repo_file("engine/agents/reviewer-core.md");
     let plan_auditor = read_repo_file("engine/agents/plan-auditor.md");
     let change_reviewer = read_repo_file("engine/agents/change-reviewer.md");
-    let risk = read_repo_file("engine/reference/risk.md");
+    let risk = read_repo_file("engine/reference/review.md");
     let plan = read_repo_file("engine/commands/plan.md");
     let review = read_repo_file("engine/commands/review.md");
     let specs = read_repo_file("engine/reference/specs.md");
@@ -1928,7 +1932,7 @@ fn kiro_reviewer_template_resources_are_grounded_and_read_only() {
 fn build_is_inline_and_review_transport_is_reviewer_only() {
     let build = read_repo_file("engine/commands/build.md");
     let router = read_repo_file("engine/router.md");
-    let risk = read_repo_file("engine/reference/risk.md");
+    let risk = read_repo_file("engine/reference/review.md");
 
     assert!(
         build.contains("Implement an approved spec inline")
@@ -2027,7 +2031,7 @@ fn kiro_docs_and_router_do_not_reference_retired_workers() {
 #[test]
 fn ad_hoc_review_is_report_only() {
     let review = read_repo_file("engine/commands/review.md");
-    let risk = read_repo_file("engine/reference/risk.md");
+    let risk = read_repo_file("engine/reference/review.md");
 
     assert!(
         review.contains("Reports findings only")
@@ -2099,7 +2103,7 @@ fn review_fix_budget_grammar_is_pinned() {
 
 #[test]
 fn review_fix_loop_boundaries_are_pinned() {
-    let risk = read_repo_file("engine/reference/risk.md");
+    let risk = read_repo_file("engine/reference/review.md");
     let reviewer_core = read_repo_file("engine/agents/reviewer-core.md");
     let plan_auditor = read_repo_file("engine/agents/plan-auditor.md");
     let change_reviewer = read_repo_file("engine/agents/change-reviewer.md");
@@ -2159,7 +2163,7 @@ fn review_fix_loop_boundaries_are_pinned() {
 
 #[test]
 fn workflow_todo_verify_is_not_runnable() {
-    let workflow = read_repo_file("engine/reference/workflow.md");
+    let workflow = read_repo_file("engine/reference/verification.md");
     assert!(
         workflow.contains("`TODO:` placeholder is not yet runnable")
             && workflow.contains("define\nits command before building that surface"),
@@ -2169,8 +2173,9 @@ fn workflow_todo_verify_is_not_runnable() {
 
 #[test]
 fn pr_bypass_fast_path_is_removed() {
-    let workflow = read_repo_file("engine/reference/workflow.md");
+    let workflow = read_repo_file("engine/reference/lifecycle.md");
     let git = read_repo_file("engine/reference/git.md");
+    let delivery = read_repo_file("engine/reference/delivery.md");
     let build = read_repo_file("engine/commands/build.md");
     let open = read_repo_file("engine/commands/open.md");
 
@@ -2183,8 +2188,8 @@ fn pr_bypass_fast_path_is_removed() {
     );
     assert!(
         git.contains("depth delivers through the feature branch + PR path")
-            && git.contains("Every spec depth uses `mochiflow pr`"),
-        "git reference must make PR delivery universal"
+            && delivery.contains("Every spec depth uses `mochiflow pr`"),
+        "git/delivery reference must make PR delivery universal"
     );
     assert!(
         build.contains("A micro spec may run with spec.yaml + spec.md only")
@@ -2209,10 +2214,8 @@ fn active_patch_lane_and_pr_bypass_residue_are_absent() {
         "engine/commands/build.md",
         "engine/commands/open.md",
         "engine/commands/update.md",
-        "engine/reference/authoring.md",
         "engine/reference/git.md",
         "engine/reference/risk.md",
-        "engine/reference/workflow.md",
     ];
     let retired_patterns = [
         "commands/patch.md",
@@ -2252,7 +2255,7 @@ fn active_patch_lane_and_pr_bypass_residue_are_absent() {
 
 #[test]
 fn workflow_gate_2_uses_mochiflow_pr() {
-    let workflow = read_repo_file("engine/reference/workflow.md");
+    let workflow = read_repo_file("engine/reference/lifecycle.md");
     let gate_2 = workflow
         .lines()
         .find(|line| line.contains("**approve-PR**"))

@@ -32,7 +32,8 @@ pub struct RawConfig {
     pub index: String,
     /// Always-loaded user-authored rules: project / local.
     pub constitution: RawConstitution,
-    /// Foundational living-spec layer (refresh targets, always-loaded):
+    /// Foundational living-spec layer (refresh targets; loaded on demand when a
+    /// workflow or repository-specific task needs orientation):
     /// product / structure / tech.
     pub context: RawContext,
     /// Decision records and active operational pitfalls.
@@ -61,7 +62,7 @@ pub struct RawConstitution {
 }
 
 /// Foundational layer — refresh targets (`onboard` / `refresh-context`
-/// regenerate from code; always-loaded orientation map).
+/// regenerate from code; a conditional orientation map loaded on demand).
 #[derive(Debug, Deserialize)]
 pub struct RawContext {
     pub product: String,

@@ -28,7 +28,7 @@ pub const CONTEXT_STUB_BODY: &str =
 pub enum LivingSpecLayer {
     /// User-authored rules, always-loaded, not filled by onboard.
     Constitution,
-    /// Foundational: refresh targets, always-loaded (product / structure / tech).
+    /// Foundational: refresh targets, loaded on demand (product / structure / tech).
     Context,
 }
 

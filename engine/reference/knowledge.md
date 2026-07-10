@@ -57,12 +57,10 @@ current-state orientation map regenerated from code via onboard /
 `refresh-context`, never appended to during fold. For coarse code-layout changes
 (new module, responsibility move, technology/verification change) detected during
 `open`, run `refresh-context` (`commands/refresh-context.md`) on the feature
-branch under human confirmation and ship the regenerated context **inside the
-PR** as a separate `docs(context)` commit placed after the fold/context-check and
+branch under human confirmation and ship the regenerated context **inside the PR** as a separate `docs(context)` commit placed after the fold/context-check and
 before the accept close-out commit (`reference/git.md ## Auto-commit and
 staging`); code remains the source of truth and the refresh is never folded.
-Running the refresh in-branch before the PR is the primary path — never a
-post-merge base-branch edit.
+Running the refresh in-branch before the PR is the primary path — never a post-merge base-branch edit.
 
 ## Knowledge discovered at or after merge
 

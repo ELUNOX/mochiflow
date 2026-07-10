@@ -1,9 +1,11 @@
 # Git Reference
 
-Branch / commit / PR / fold rules during mochiflow. Reviewer cadence and
-integration-log requirements are defined in `risk.md`; this file owns the git
-mechanics and the living-spec fold. Specs stay flat at `{specs_dir}/{slug}/` for
-their whole life — there is no `_done/` move and no committed board.
+Branch, commit, trailer, and staging mechanics during mochiflow. Reviewer
+cadence lives in `reference/review.md`; PR handoff, derived delivery state, and
+post-merge cleanup live in `reference/delivery.md`; the living-spec fold and ADR
+mechanics live in `reference/knowledge.md`. Specs stay flat at
+`{specs_dir}/{slug}/` for their whole life — there is no `_done/` move and no
+committed board.
 
 ## Branch
 
@@ -107,7 +109,7 @@ git log --format="%s | %(trailers:key=Spec,valueonly)" -- path/to/file -5
 ## Auto-commit and staging
 
 The AI auto-commits in all flows. Commit only after verification PASS; never
-commit on verification FAIL. When `risk.md` requires a reviewer verdict,
+commit on verification FAIL. When `reference/review.md` requires a reviewer verdict,
 reviewer PASS is a phase-completion / acceptance gate, not a pre-commit gate.
 If reviewer FAIL findings require changes, fix them, verify, and commit the
 follow-up before build completes.
@@ -201,141 +203,4 @@ the Commit convention above — Conventional Commits, artifact language, and **n
 spec slug, no AC IDs, no mochiflow vocabulary** (never "fold" in the summary).
 This keeps the judgment-bearing durable record (the fold) inside the PR, under
 review, so it merges atomically with the code; `close` then does only local
-hygiene (`## Post-merge local cleanup`).
-
-## PR
-
-The PR title/body (per `templates/delivery/pr-description.md`: artifact
-language, external-reviewer facing, no spec-internal references, no spec slug, no
-AC IDs, no mochiflow vocabulary; includes verification evidence, review result,
-and durable decision summary) are generated after human gate 2
-(`workflow.md`). Every spec depth uses `mochiflow pr` after acceptance and
-approve-PR.
-
-The open procedure uses **`mochiflow pr`** for PR handoff. The command runs
-pre-flight, pushes the branch, resolves the backend, and reports its exit code
-(`0` created, `10` manual handoff, `3` pre-flight FAIL, `1`/`2` failure).
-Tracked mode pre-flight requires a clean tree, current branch as source,
-source ≠ target, and a committed accepted spec at `{specs_dir}/{slug}/` with a
-`Spec: {slug}` trailer. Local mode pre-flight does not require committed spec
-artifacts or a `Spec:` trailer; it requires a clean tracked tree, current branch
-as source, source ≠ target, source ahead of target, local accepted state, and
-complete verification/review evidence.
-
-`mochiflow pr` resolves the creation backend in precedence order:
-
-- **`[git].pr_driver`** — a custom executable implementing the pr-request
-  contract: invoked as `<driver> <request-dir>`, reads `pr-request.json`
-  (the repo-level CLI contract at `contracts/pr-request.schema.json`), prints
-  `{"url": "..."}`. For providers/auth not covered by a built-in (e.g. an
-  enterprise provider + secret-store PAT).
-  The request-dir is `{install_dir}/state/{slug}/` (gitignored), where
-  `mochiflow pr` writes `pr-request.json` — only for this driver backend; the
-  schema is unchanged, only its location moved out of the tracked spec tree.
-- **`[git].provider` built-in** — a maintained provider integration. `github`
-  shells out to `gh`. (gitlab / azure-devops are additive, not yet built in.)
-- **legacy `[git].pr_command`** — a raw command string (deprecated). Run via the
-  shell with `{spec_dir}` substituted, after `mochiflow pr` has already done
-  pre-flight + push. Kept for backward compatibility; prefer `pr_driver`.
-- **manual handoff** — nothing configured (the zero-config default). `mochiflow
-  pr` still runs pre-flight and pushes the branch, then presents the PR content
-  and hands off: the human creates the PR via their provider UI/CLI and reports
-  the URL / merge. This is a first-class default, not an "incomplete" state.
-
-Note: `git push` now happens inside `mochiflow pr` for **all** modes including
-manual handoff — the branch is pushed so the human can open the PR from it. (This
-supersedes the earlier rule that manual handoff performed no push.)
-
-Duplicate-PR detection is provider-specific and is left to the driver / provider
-CLI; `mochiflow pr`'s agnostic pre-flight does not perform it.
-
-## Derived delivery state
-
-Delivery state is observed, never stored. `mochiflow status` and the regenerated
-`INDEX.md` compute it; `spec.yaml` keeps only the asserted states
-`draft → approved → accepted`.
-
-- `in_review` — a PR is open (provider reports it, or `provider = none` and the
-  spec branch is pushed to `origin` and unmerged).
-- `merged` — derived in priority order: the provider API when configured and
-  available, else a tracked-mode `Spec: {slug}` trailer reachable from
-  `origin/{[git].base_branch}`, else for local mode only the local source branch
-  tip reachable from `origin/{[git].base_branch}`. The human merge report only
-  initiates `close` locally and is never persisted as a merged signal.
-  Provider-none local mode has one limitation: if the source branch is deleted
-  before `close`, the branch-tip signal is gone and Done may no longer be
-  derivable without provider state.
-
-## Living-spec fold (on the feature branch, before `mochiflow pr`)
-
-The fold happens **on the feature branch as part of the single close-out commit**
-(see `## Auto-commit and staging`), created before `mochiflow pr` — never as a
-post-merge push to the base branch. This keeps the judgment-bearing durable
-record inside the PR, under review. Fold only knowledge that **code cannot
-reproduce**, as dated historical records — never as a "current state" description
-(current state is always derived from code):
-
-- The *why* behind design decisions / contracts (why a new type, schema shape,
-  ownership, registry rule, or persistence model was chosen, and which
-  alternatives were rejected) → add a new per-file record under `[adr].decisions`
-  named `{YYYY-MM-DD}-{slug}.md` with front-matter (`id`, `date`, `area`
-  defaulting to the spec's `surfaces`, `spec: {slug}`, `status: active`). Write it as a
-  fact *as of that date*; never rewrite an existing record. When a decision
-  overrides an earlier one, add the new record with `supersedes: <id>` and flip
-  the old record to `status: superseded` with the reciprocal `superseded_by:
-  <id>` (status/link change only — its body stays immutable).
-- Operational pitfalls found during implementation (to prevent recurrence) →
-  a new per-file record under `[adr].pitfalls`, using `Applies to`, `Signal`,
-  `Cause`, `Guardrail`, `Check`, and `Status`. Resolved pitfalls flip to
-  `status: resolved` rather than being deleted.
-
-Each store keeps a generated, gitignored `INDEX.md` content catalog; regenerate
-it after adding a record and **never stage it** (consistent with the board
-`INDEX.md`). `mochiflow accept {slug}` stages only ADR record files linked to
-that slug, plus reciprocal supersession records; the per-store `INDEX.md` files
-are not staged.
-
-Do not fold prose that describes current state ("how the system is put together
-now", "where things live"). The context layer (`[context].product` /
-`[context].structure` / `[context].tech`) is **not** a fold target — it is a current-state
-orientation map regenerated from code via onboard / `refresh-context`, never
-appended to during fold. For coarse code-layout changes (new module,
-responsibility move, technology/verification change) detected during `open`, run
-`refresh-context` (`commands/refresh-context.md`) on the feature branch under
-human confirmation and ship the regenerated context **inside the PR** as a
-separate `docs(context)` commit placed after the fold/context-check and before
-the accept close-out commit (see `## Auto-commit and staging`); code remains the
-source of truth and the refresh is never folded. Running the refresh in-branch
-before the PR is the primary path — never a post-merge base-branch edit. Context
-staleness discovered only **at or after merge** is the fallback: route it to a
-follow-up (a `fix` spec when it carries a code change, or a backlog seed for
-later `discuss`) rather than a base-branch edit.
-
-Fold is skipped when the change yields no new rationale or pitfall (e.g. a trivial
-display fix). Do not create the close-out commit until the fold (or the decision
-that none is needed) is done.
-
-Knowledge discovered **at or after merge** is not appended to the merged spec
-(that would re-introduce an unreviewed base-branch edit). Route it to a
-follow-up: a small `fix` spec when it carries a code change, or a backlog seed
-when it is pure rationale/pitfall for a later `discuss`.
-
-## Post-merge local cleanup
-
-When the human confirms merge (「完了」/「マージ済み」/「merged」), in the same
-session — **local git hygiene only; no content commit or push to the base
-branch** (the fold and the spec were already merged via the PR's close-out
-commit):
-
-1. `git status --short` clean — else stop.
-2. `git switch {[git].base_branch}`
-3. `git pull --ff-only origin {[git].base_branch}` — stop if ff-only fails (divergent local).
-4. `git branch -d {prefix}/{slug}` (safe delete; fails if unmerged → leave it, ask human). Resolve `prefix` from `type`: `feature` → `feat`; all other types use `type` as-is. For provider-none local mode, delete the branch only here, after the merge report, because its tip is the local merge signal.
-5. Remote branch cleanup is outside post-merge local cleanup.
-6. Remove the spec's ephemeral delivery scratch: `rm -rf {install_dir}/state/{slug}/` (gitignored — PR body / `pr-request.json` are not archived).
-7. Regenerate the board (`mochiflow index`); `INDEX.md` is gitignored and never staged.
-
-Nothing is committed or pushed to the base branch here — the fold and the spec
-already merged via the PR's close-out commit, so `close` is local hygiene only.
-The spec is never moved into `_done/`; its merged state is observed (derived),
-not written.
+hygiene (`reference/delivery.md ## Post-merge local cleanup`).

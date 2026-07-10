@@ -97,8 +97,8 @@ PR-created next action (merge the PR, then report the merge in chat), the
 in-review and `local cleanup pending` next-action hints in status / board
 output, and the `close` start and completion wording. When
 `conversation_language = auto`, resolve per the language rule; CLI-only output
-(no live conversation context) falls back to `[i18n].artifact_language`
-deterministically.
+(no live conversation context) falls back to
+`[i18n].artifact_language` deterministically.
 
 PR titles, PR descriptions, and other durable artifacts stay in
 `[i18n].artifact_language`. The post-merge next action is therefore never written

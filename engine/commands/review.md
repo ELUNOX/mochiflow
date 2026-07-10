@@ -52,7 +52,7 @@ or 3.
 
 ## Procedure
 
-Follow `reference/risk.md ## Ad-hoc review`, `## Review-fix loop`, and
+Follow `reference/review.md ## Ad-hoc review`, `## Review-fix loop`, and
 `## Review transport` (the single source of truth for this behavior):
 
 1. Parse the requested mode. If the input is `{slug} review`, select
@@ -106,7 +106,7 @@ Follow `reference/risk.md ## Ad-hoc review`, `## Review-fix loop`, and
 ## Stop conditions
 
 - Do not change `spec.yaml` `status` or create PR metadata — review is
-  non-transitional (`reference/risk.md ## Ad-hoc review`).
+  non-transitional (`reference/review.md ## Ad-hoc review`).
 - Result-only review must not edit files, stage, or commit. It is report-only.
 - In fix mode, staging and commits follow the active lifecycle context
   (`plan` spec-artifact fixes, `build` post-completion bounded fixes, `open`
@@ -115,10 +115,10 @@ Follow `reference/risk.md ## Ad-hoc review`, `## Review-fix loop`, and
 - Do not let fix mode exceed the parsed fix-round budget. Allowed fix rounds
   are 1, 2, or 3.
 - Do not use this in place of the mandatory risk-cadence review during build
-  (`reference/risk.md ## Consequences`); the two are independent.
+  (`reference/review.md ## Reviewer cadence`); the two are independent.
 - Do not pass the conversation history to the reviewer; pass only the spec
   pointers per `router.md` routing principle 5.
 - Do not choose inline while delegated subagent dispatch is available. If
   subagents are unavailable or dispatch fails for a runtime/tooling reason, do
-  not stop; use inline reviewer role per `reference/risk.md ## Review
+  not stop; use inline reviewer role per `reference/review.md ## Review
   transport`.

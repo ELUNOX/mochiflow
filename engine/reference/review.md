@@ -19,7 +19,7 @@ reviewer cadence and the integration-log requirement:
 | `critical` | change-reviewer after **each** task | required, appended per task |
 
 Build commit cadence is task-based and owned by `commands/build.md` plus
-`reference/git.md`, not by this table. When `tasks.md` exists, normal build
+`reference/git.md`, not by this risk table. When `tasks.md` exists, normal build
 commits complete one task at a time regardless of risk; taskless / micro specs
 produce one logical-unit build commit.
 
@@ -32,8 +32,8 @@ committed before the mandatory reviewer run; reviewer findings are fixed,
 verified, and committed as follow-up work before build completes. Record
 mandatory reviewer runs in `design.md ## Review Results`, using
 `Review profile: change-reviewer`, `Reviewer mode: delegated | inline`, and
-`Verdict: pass | pass-with-comments | fail`, followed by `Reviewed through:
-<sha>` on its own line directly below `Verdict:`. For `critical`, append one
+`Verdict: pass | pass-with-comments | fail`, followed by
+`Reviewed through: <sha>` on its own line directly below `Verdict:`. For `critical`, append one
 entry per required review run; for `elevated`, append the single post-task
 review entry.
 
@@ -56,10 +56,10 @@ reviewer run (same transport, on the new full diff from git) is required at most
 once for the accumulated commits before the change is pushed or accepted, and
 the fresh verdict plus updated `Reviewed through: <sha>` are recorded in
 `design.md ## Review Results`. A non-code commit such as `docs(context)` or
-PR-body-only metadata does not by itself make the verdict stale. A stale pass
-verdict must not be reused to clear the gate for an unreviewed diff. Review
-batching changes trigger frequency, not review scope: reviewer input remains the
-full diff from git.
+PR-body-only metadata does not by itself make the verdict
+stale. A stale pass verdict must not be reused to clear the gate for an
+unreviewed diff. Review batching changes trigger frequency, not review scope:
+reviewer input remains the full diff from git.
 
 ## Review transport
 

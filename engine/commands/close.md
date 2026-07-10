@@ -34,7 +34,7 @@ branch tip is reachable from `origin/{base_branch}`).
 
 ## Procedure
 
-Run `reference/git.md ## Post-merge local cleanup`:
+Run `reference/delivery.md ## Post-merge local cleanup`:
 
 1. `git status --short` clean — else stop.
 2. `git switch {[git].base_branch}`.

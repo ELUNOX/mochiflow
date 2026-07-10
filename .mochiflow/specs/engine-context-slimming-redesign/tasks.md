@@ -92,7 +92,7 @@ Critical Stop Conditions:
     - `.kiro/agents/spec-change-reviewer.json`
   - Done: all adapters identify only constitution and router as standing MochiFlow inputs; config/context/commands/policies/templates/ADR are conditional; Kiro removes eager context file references; managed-block/full-file/model-override/candidate semantics remain unchanged; configured generated outputs are synchronized and deterministic.
   - Stop: deferring context requires removing constitution, weakening instruction priority, or changing adapter ownership/overwrite behavior.
-- [ ] T-006 [AC-01, AC-03, AC-06, AC-07, AC-08] Align non-frozen terminology and remove old owners
+- [x] T-006 [AC-01, AC-03, AC-06, AC-07, AC-08] Align non-frozen terminology and remove old owners
   - Depends on: T-003, T-004, T-005
   - Files:
     - deleted: `engine/reference/workflow.md`

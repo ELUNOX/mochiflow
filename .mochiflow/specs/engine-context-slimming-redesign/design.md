@@ -400,3 +400,31 @@ design. Do not record ordinary file moves or restate this plan.
   (this repo generates the agents + kiro adapters); `adapter generate --check` =
   0 drift. Managed-block / full-file / model-override / candidate semantics are
   unchanged.
+
+
+### T-006 (monoliths removed; owners narrowed; terminology aligned)
+
+- Deleted `engine/reference/workflow.md` and `engine/reference/authoring.md`;
+  their content already lived in lifecycle/specs/verification/presentation
+  (workflow) and specs (authoring).
+- Narrowed the kept owners to remove the content that moved in T-001 (the
+  plan-gap folded here): `risk.md` keeps risk classification, QA attack coverage,
+  the design-condition, and micro escalation (reviewer cadence / transport /
+  bounded-fix / verdict-freshness / review-fix / ad-hoc now live only in
+  `review.md`); `git.md` keeps branch / commit / trailers / staging (PR, derived
+  state, post-merge cleanup → `delivery.md`; living-spec fold → `knowledge.md`);
+  `language.md` delegates the delivery-next-actions prose to `delivery.md`.
+- Repointed every live body cross-reference and conformance assertion to the new
+  owners (a mechanical codemod for the section-anchored refs plus targeted edits
+  for bare refs and test reads). Fixed several prose re-wrapping mismatches where
+  the T-001 copies had wrapped a pinned single-line substring across lines.
+- Aligned non-frozen terminology: `config.rs` / `init.rs` doc comments and
+  `engine/README.md` now describe foundational context as loaded on demand;
+  constitution stays always-loaded. The frozen `contracts/config.schema.json`
+  and all version/release files are untouched.
+- Recorded the deferred frozen-schema correction as a durable backlog seed at
+  `.mochiflow/specs/_backlog/release-config-schema-context-terminology.md`.
+- COSMETIC DEBT: several repointed conformance tests keep their original local
+  variable names (e.g. `let workflow = read_repo_file(".../verification.md")`)
+  and assert messages after the read target moved; functionally correct, flagged
+  for review cleanup.

@@ -90,7 +90,7 @@ blast radius.
 - read access to all changed files, or the full diff
 - optional cycle-local changed files or diff as focus input when this is a later
   `review fix` cycle
-- `design.md ## Integration Log` when required by `reference/risk.md`
+- `design.md ## Integration Log` when required by `reference/review.md ## Reviewer cadence`
 - verification results and AC Matrix evidence when available
 
 For a later `review fix` cycle, focus input may point to the current cycle's
