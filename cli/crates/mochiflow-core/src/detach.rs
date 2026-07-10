@@ -10,6 +10,7 @@ use crate::adapter::{MARKER_PREFIX, is_embeddable_target, load_manifest, managed
 use crate::config::Config;
 
 pub const PURGE_CONFIRM_PHRASE: &str = "delete mochiflow data";
+const USER_INSTRUCTIONS_PURGE_WARNING: &str = "WARNING: purge deletes user-authored Markdown under .mochiflow/instructions/ and .mochiflow/instructions.local/.";
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -27,6 +28,7 @@ pub struct DetachReport {
     pub updated: Vec<String>,
     pub kept: Vec<String>,
     pub skipped: Vec<String>,
+    pub warnings: Vec<String>,
     pub errors: Vec<String>,
     pub exit_code: i32,
 }
@@ -74,6 +76,12 @@ pub fn run_detach(
         dry_run,
         ..DetachReport::default()
     };
+    if purge {
+        report
+            .warnings
+            .push(USER_INSTRUCTIONS_PURGE_WARNING.to_string());
+        eprintln!("{USER_INSTRUCTIONS_PURGE_WARNING}");
+    }
 
     if purge && !purge_confirmed(json, confirm) {
         report.errors.push(format!(
@@ -308,6 +316,8 @@ fn keep_default_project_data(cfg: &Config, report: &mut DetachReport) {
         cfg.tech_path(),
         cfg.constitution_path(),
         cfg.constitution_local_path(),
+        cfg.install_dir_path().join("instructions"),
+        cfg.install_dir_path().join("instructions.local"),
         cfg.index_path(),
     ];
     for path in paths {
@@ -350,6 +360,9 @@ fn present_report(report: &DetachReport, json: bool) {
     }
     for item in &report.skipped {
         println!("skipped: {item}");
+    }
+    for warning in &report.warnings {
+        println!("{warning}");
     }
     for error in &report.errors {
         println!("FAIL: {error}");

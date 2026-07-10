@@ -25,7 +25,7 @@ Critical Stop Conditions:
     - `.mochiflow/.gitignore`
   - Done: Fresh init creates both directories and the explanatory README; repeated and forced init preserve user files; every fresh, repeated, dry-run, and JSON init presentation names both paths; existing custom ignore content is retained while the local rule is added exactly once; Git exposes shared instructions and ignores local instructions; join/upgrade and non-init subsystems remain outside the creation path. The shared CLI test file is left with init-focused fixtures passing and no detach assumptions changed.
   - Stop: The scaffold cannot remain fixed-path and config-free, or ignore safety cannot be added without replacing custom content.
-- [ ] T-002 [AC-05] Preserve user instructions across detach and make purge loss explicit
+- [x] T-002 [AC-05] Preserve user instructions across detach and make purge loss explicit
   - Depends on: T-001
   - Files:
     - `cli/crates/mochiflow-core/src/detach.rs`

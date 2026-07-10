@@ -1093,6 +1093,12 @@ fn detach_removes_managed_block_and_runtime_but_preserves_project_data() {
     assert!(!dir.path().join(".mochiflow/adr/decisions.md").exists());
     assert!(dir.path().join(".mochiflow/context/product.md").exists());
     assert!(dir.path().join(".mochiflow/constitution.md").exists());
+    assert!(
+        dir.path()
+            .join(".mochiflow/instructions/README.md")
+            .exists()
+    );
+    assert!(dir.path().join(".mochiflow/instructions.local").is_dir());
 
     bin()
         .args(["join", "--target", dir.path().to_str().unwrap()])
@@ -1240,8 +1246,18 @@ fn detach_purge_requires_exact_confirmation_and_deletes_all_project_data() {
         .write_stdin("")
         .assert()
         .success();
+    fs::write(
+        dir.path().join(".mochiflow/instructions/shared.md"),
+        "# Shared\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.path().join(".mochiflow/instructions.local/private.md"),
+        "# Private\n",
+    )
+    .unwrap();
 
-    bin()
+    let result = bin()
         .args([
             "detach",
             "--purge",
@@ -1251,6 +1267,18 @@ fn detach_purge_requires_exact_confirmation_and_deletes_all_project_data() {
         .assert()
         .failure()
         .code(1);
+    let stdout = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
+    let stderr = String::from_utf8_lossy(&result.get_output().stderr).into_owned();
+    assert!(
+        stdout.contains(".mochiflow/instructions/")
+            && stdout.contains(".mochiflow/instructions.local/"),
+        "{stdout}"
+    );
+    assert!(
+        stderr.contains(".mochiflow/instructions/")
+            && stderr.contains(".mochiflow/instructions.local/"),
+        "{stderr}"
+    );
     assert!(dir.path().join(".mochiflow").exists());
     assert!(
         fs::read_to_string(&agents)
@@ -1258,7 +1286,7 @@ fn detach_purge_requires_exact_confirmation_and_deletes_all_project_data() {
             .contains("<!-- mochiflow:begin adapter=agents -->")
     );
 
-    bin()
+    let result = bin()
         .args([
             "detach",
             "--purge",
@@ -1269,9 +1297,62 @@ fn detach_purge_requires_exact_confirmation_and_deletes_all_project_data() {
         ])
         .assert()
         .success();
+    let stdout = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
+    let stderr = String::from_utf8_lossy(&result.get_output().stderr).into_owned();
+    assert!(
+        stdout.contains(".mochiflow/instructions/")
+            && stdout.contains(".mochiflow/instructions.local/"),
+        "{stdout}"
+    );
+    assert!(
+        stderr.contains(".mochiflow/instructions/")
+            && stderr.contains(".mochiflow/instructions.local/"),
+        "{stderr}"
+    );
 
     assert!(!dir.path().join(".mochiflow").exists());
     assert_eq!(fs::read_to_string(&agents).unwrap(), "CUSTOM AGENTS\n");
+}
+
+#[test]
+fn detach_json_purge_warning_stays_out_of_stdout_document() {
+    let dir = tempfile::tempdir().unwrap();
+    bin()
+        .args(["init", "--target", dir.path().to_str().unwrap()])
+        .write_stdin("")
+        .assert()
+        .success();
+
+    let result = bin()
+        .args([
+            "detach",
+            "--purge",
+            "--json",
+            "--confirm",
+            "delete mochiflow data",
+            "--target",
+            dir.path().to_str().unwrap(),
+        ])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
+    let stderr = String::from_utf8_lossy(&result.get_output().stderr).into_owned();
+    let json: serde_json::Value = serde_json::from_str(&stdout).unwrap();
+    assert_eq!(json["mode"].as_str(), Some("purge"), "{stdout}");
+    assert_eq!(json["warnings"].as_array().unwrap().len(), 1, "{stdout}");
+    assert!(
+        json["warnings"][0]
+            .as_str()
+            .unwrap()
+            .contains(".mochiflow/instructions.local/"),
+        "{stdout}"
+    );
+    assert!(
+        stderr.contains(".mochiflow/instructions/")
+            && stderr.contains(".mochiflow/instructions.local/"),
+        "{stderr}"
+    );
+    assert!(!dir.path().join(".mochiflow").exists());
 }
 
 /// Markdown targets are extended, while structured unmanaged targets still
