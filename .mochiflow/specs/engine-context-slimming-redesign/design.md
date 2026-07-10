@@ -328,6 +328,20 @@ Non-blocking comments and disposition:
   debt (see ## Integration Log T-006), scheduled for follow-up cleanup, with no
   behavior or ownership impact.
 
+Review profile: change-reviewer
+Reviewer mode: delegated
+Verdict: fail
+Reviewed through: f93564e
+
+The post-implementation adversarial review found one High and two Medium
+confirmed defects: live foundational-context prose still contradicted AC-01;
+command frontmatter still duplicated router-owned activation vocabulary; and
+T-006 had changed owner files outside its approved `Files` list. Direct impact
+search also found `engineering-standards.md` pointing at deleted
+`workflow.md ## Backlog seeds`. The spec has been returned to `draft`; T-006 is
+reconciled to the actual owner-narrowing commit and T-008 owns the corrective
+implementation, regression guards, synchronization, and fresh review.
+
 ## Integration Log
 
 Build records only ownership drift, unexpected cross-file consumers, removed
@@ -512,3 +526,18 @@ design. Do not record ordinary file moves or restate this plan.
   `lint --spec` 0 fail / 0 warn. The AC Matrix is settled (all rows PASS). ADR
   supersessions and the deferred release follow-up remain queued for open
   close-out per `## ADR Supersession Plan` / `## Deferred Release Follow-up`.
+
+### Re-plan after adversarial review
+
+- The prior final state is retained as historical evidence only; its PASS matrix
+  is stale for delivery because the latest independent review failed at
+  `f93564e`.
+- T-006 now enumerates the complete intentional source-file set from commit
+  `60ef9ab`, rather than relying on design prose to expand an approved task.
+- T-008 is a single session-recoverable corrective unit: eliminate the two live
+  context-loading contradictions, remove route activation catalogs from command
+  frontmatter, repair the deleted-owner pointer, add regression guards, sync the
+  manifest and dogfood engine, rerun full verification, and obtain a fresh
+  change-reviewer verdict.
+- The corrective work introduces no new AC, design decision, public contract,
+  schema change, lifecycle behavior, or adapter behavior.

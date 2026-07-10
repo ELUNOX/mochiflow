@@ -102,8 +102,21 @@ Critical Stop Conditions:
     - `cli/crates/mochiflow-core/src/config.rs`
     - `cli/crates/mochiflow-core/src/init.rs`
     - `cli/crates/mochiflow-cli/tests/conformance.rs`
+    - `engine/agents/change-reviewer.md`
+    - `engine/commands/build.md`
+    - `engine/commands/close.md`
+    - `engine/commands/open.md`
+    - `engine/commands/plan.md`
+    - `engine/commands/review.md`
+    - `engine/commands/update.md`
+    - `engine/reference/delivery.md`
+    - `engine/reference/git.md`
+    - `engine/reference/knowledge.md`
+    - `engine/reference/language.md`
+    - `engine/reference/review.md`
+    - `engine/reference/risk.md`
     - `engine/MANIFEST.json`
-  - Done: Rust sources and live non-frozen docs describe foundational context conditionally without changing keys, validation, `schema_version`, or path behavior; all live references use the new ownership graph; every conformance assertion previously pinned to `reference/workflow.md`, `reference/authoring.md`, command `triggers:`, or the Kiro `## Always loaded` block is enumerated and confirmed rehomed to its new owner (not dropped); old monolithic paths and the independent reviewer engine wrapper are absent; no compatibility stub remains; documentation explains upgrade replacement and generated-target cleanup accurately; repository search finds removed paths only in intentional migration fixtures or historical durable records; `contracts/config.schema.json`, version files, CHANGELOG, and release-facing README references are absent from the feature diff and the deferred release follow-up is recorded for open as a durable backlog seed.
+  - Done: the complete source-file set intentionally changed by the owner-narrowing commit is enumerated above; shared command/reference files end with their body pointers aligned to the responsibility map, and later tasks may change them only for their separately declared structural guards or review fixes. Rust sources and live non-frozen docs describe foundational context conditionally without changing keys, validation, `schema_version`, or path behavior; all live references use the new ownership graph; every conformance assertion previously pinned to `reference/workflow.md`, `reference/authoring.md`, command `triggers:`, or the Kiro `## Always loaded` block is enumerated and confirmed rehomed to its new owner (not dropped); old monolithic paths and the independent reviewer engine wrapper are absent; no compatibility stub remains; documentation explains upgrade replacement and generated-target cleanup accurately; repository search finds removed paths only in intentional migration fixtures or historical durable records; `contracts/config.schema.json`, version files, CHANGELOG, and release-facing README references are absent from the feature diff and the deferred release follow-up is recorded for open as a durable backlog seed.
   - Stop: the task would edit a frozen schema/version/release file, or a live adapter/command/reviewer/template/public document still requires an old engine path.
 - [x] T-007 [AC-02, AC-03, AC-04, AC-05, AC-06, AC-07, AC-08] Complete structural coverage, dogfood synchronization, and final verification
   - Depends on: T-006
@@ -121,3 +134,25 @@ Critical Stop Conditions:
     - `.mochiflow/specs/engine-context-slimming-redesign/tasks.md`
   - Done: structural tests prove declared path existence, required/conditional separation, route ownership, reviewer composition, adapter standing inputs, upgrade removal, frozen-schema/version no-change, and absence of live legacy paths without measuring size; the complete Behavioral Observation Matrix has recorded evidence for every route family and representative conditional-load class through Kiro and AGENTS-style adapters; `mochiflow freeze`, `mochiflow upgrade --source engine`, `mochiflow adapter generate --check`, the full configured CLI verification, lint, and mandatory elevated-risk change review pass; the AC Matrix records final evidence and open has the two ADR supersessions plus deferred release follow-up ready for close-out.
   - Stop: full verification exposes a behavior regression, generated artifact outside the planned ownership set, or a need for a context-budget/assembly subsystem.
+- [ ] T-008 [AC-01, AC-02, AC-03, AC-04, AC-05, AC-06, AC-07, AC-08] Correct adversarial review findings and renew evidence
+  - Depends on: T-007
+  - Files:
+    - `engine/commands/build.md`
+    - `engine/commands/close.md`
+    - `engine/commands/discuss.md`
+    - `engine/commands/onboard.md`
+    - `engine/commands/open.md`
+    - `engine/commands/plan.md`
+    - `engine/commands/refresh-context.md`
+    - `engine/commands/review.md`
+    - `engine/commands/update.md`
+    - `engine/reference/engineering-standards.md`
+    - `engine/reference/specs.md`
+    - `cli/crates/mochiflow-cli/tests/conformance.rs`
+    - `engine/MANIFEST.json`
+    - `.mochiflow/engine/`
+    - `.mochiflow/specs/engine-context-slimming-redesign/spec.md`
+    - `.mochiflow/specs/engine-context-slimming-redesign/design.md`
+    - `.mochiflow/specs/engine-context-slimming-redesign/tasks.md`
+  - Done: shared command files keep their procedure identity and mutation guards while their frontmatter descriptions contain no explicit commands, natural-language hints, or slug/event route patterns; `router.md` remains the sole activation-vocabulary owner and observed routing behavior is unchanged. All live non-frozen engine prose describes foundational context as conditionally loaded, while constitution remains standing and the frozen schema remains unchanged. `engineering-standards.md` points to `reference/specs.md ## Backlog seeds`; conformance detects stale live context claims, route vocabulary in command frontmatter, and removed owner references with or without a `reference/` prefix. The manifest and dogfood engine are synchronized; adapter drift, spec lint, full configured verification, and a fresh delegated change-reviewer run pass; the AC Matrix and latest Review Results record renewed evidence through the corrective commit.
+  - Stop: removing frontmatter activation prose changes router vocabulary or route selection; a stale-path guard cannot distinguish live engine instructions from intentional historical/migration fixtures; the fix would edit `contracts/config.schema.json`, a version/release file, or any public runtime/schema contract.

@@ -44,6 +44,13 @@ deferred to a later release-preparation change so this spec does not force an
 early version bump; config keys, validation, path behavior, and `schema_version`
 remain unchanged.
 
+A post-implementation adversarial review found that the initial build left two
+live `always-loaded` claims, retained activation vocabulary in command
+frontmatter, and missed one deleted-owner cross-reference. It also found that
+the approved T-006 file list did not reconstruct the owner-narrowing commit.
+This re-plan returns the spec to `draft`, reconciles that historical task scope,
+and adds one corrective task without changing the product contract or design.
+
 ## User Story
 
 As a developer using MochiFlow through any supported AI coding tool, I want the
@@ -71,6 +78,10 @@ evidence receive the available attention without weakening workflow safety.
   - Update engine documentation and structural/behavioral conformance coverage.
   - Correct non-frozen `always-loaded` terminology in Rust config/init sources
     and live engine/docs without changing config shape or behavior.
+  - Remove exact activation vocabulary from command frontmatter descriptions so
+    route tokens and natural-language hints remain owned only by `router.md`.
+  - Reject removed owner references even when they omit the `reference/` prefix,
+    and guard live foundational-context terminology outside the frozen schema.
   - Record the frozen config-schema description correction as a required later
     release-preparation follow-up.
   - Regenerate the engine manifest, dogfood vendored engine, and configured
@@ -94,6 +105,9 @@ evidence receive the available attention without weakening workflow safety.
 - A natural-language message must be routable without opening every command
   file, including ambiguous intent, concrete small fixes, review-fix numeric
   forms, PR feedback, and bare merge reports.
+- Command files may identify their procedure and responsibilities, but their
+  frontmatter descriptions must not repeat explicit commands, natural-language
+  hints, or slug/event patterns from the router-owned route table.
 - A command may need metadata such as risk, spec depth, persistence mode, or
   delivery state before it can choose a conditional reference. The command must
   read only the minimal artifact or config value needed to evaluate that
@@ -194,11 +208,11 @@ evidence receive the available attention without weakening workflow safety.
 
 | AC | Scope | Verification method | Planned test/QA | Implementation | Result | Evidence | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| AC-01 | cli | automated + AI-observed | QA-02, QA-04; adapter outputs and non-frozen terminology checks | `engine/router.md`; `engine/adapters/**`; config/init sources | PASS | `adapters_separate_standing_inputs_from_load_on_demand`, `router_defines_lazy_load_contract_without_second_card`; AGENTS.md/.kiro standing = constitution+router (df1e19d); config.rs/init.rs terminology (60ef9ab); `frozen_schema_and_version_are_unchanged_by_this_feature`; Behavioral Observation Matrix Adapter/Context rows | Kiro eager file references and live runtime/source terminology receive explicit coverage. |
-| AC-02 | cli | automated + AI-observed | QA-01, QA-03; routing conformance plus hostile-content behavioral observations | `engine/router.md`; `engine/commands/*.md`; adapters; conformance tests | PASS | `router.md ## Route table` (30426c4); `engine_open_update_close_defined_no_ship_verb`, `commands_and_reviewers_use_the_load_contract` (no triggers); Behavioral Observation Matrix Router + instruction-priority rows | Router becomes the only trigger owner; Kiro and AGENTS-style observations record declined routes, instruction-priority outcomes, and loaded/skipped files. |
-| AC-03 | cli | automated + inspection | QA-07; declared-reference existence and stale-path search | `engine/reference/**`; engine documentation | PASS | `removed_monolith_and_wrapper_paths_are_absent`, `engine_frontmatter_declared_paths_exist`; owners created 3de9b1e, workflow.md/authoring.md deleted 60ef9ab | Old monolithic paths are removed after migration. |
-| AC-04 | cli | automated + AI-observed | QA-01, QA-02, QA-06; load-structure checks plus conditional-load observation matrix | `engine/commands/*.md`; selected templates | PASS | `commands_and_reviewers_use_the_load_contract`, `router_defines_lazy_load_contract_without_second_card`, `engine_frontmatter_declared_paths_exist`; load.required/conditional frontmatter (30426c4, fc376ae); Behavioral Observation Matrix spec-depth/risk-review/persistence rows | Representative risk/depth/persistence/delivery/reviewer conditions record the selected file set; no size threshold is asserted. |
-| AC-05 | cli | automated + independent review | QA-06, QA-07; reviewer profile/resource assertions | `engine/agents/**`; Kiro reviewer templates | PASS | `canonical_reviewers_grounded_adversary_contract_is_pinned`, `kiro_reviewer_template_resources_are_grounded_and_read_only`, `review_fix_loop_boundaries_are_pinned`; reviewer-core 9454c3b; delegated change-reviewer run in `design.md ## Review Results` (pass-with-comments) | Reviewer behavior remains read-only and grounded. |
-| AC-06 | cli | automated + inspection | QA-07; owner-map and duplicate-contract review; single-ownership structural check | `engine/reference/**`; commands; templates | PASS | `migrated_invariants_have_a_single_owner`; `design.md ## Target policy ownership` owner-map; reviewer Falsification found no zero/two-owner invariant | One owner plus local mutation guard; `design.md ## Target policy ownership` is the owner-map evidence source and a graph-integrity check asserts each migrated invariant resolves to exactly one owner file (no size/token budget). |
-| AC-07 | cli | automated | QA-04, QA-05; bundled/source upgrade and adapter collision fixtures | upgrade/adapter behavior; engine/adapters layout | PASS | `behavioral_upgrade_from_source_engine`, `behavioral_upgrade_from_bundled_engine_regenerates_adapters`, `behavioral_upgrade_from_bundled_engine_respects_drift_force`; `join_blocks_handwritten_structured_adapter_and_writes_candidate`, `init_blocked_json_exits_1_and_includes_candidate`; `DEPRECATED_KIRO_PATHS` retained (adapter.rs); live `upgrade --source engine` clean | Deprecated target cleanup remains code-owned. |
-| AC-08 | cli | automated | QA-04, QA-06, QA-07; configured verification, frozen-surface no-change check, and dogfood sync | generated/vendored artifacts and spec evidence | PASS | Full configured verification green (`cargo test` incl. conformance 187, `fmt --check`, `clippy -D warnings`, `freeze --check`); `adapter generate --check` 0 drift; `lint --spec` 0/0; `frozen_schema_and_version_are_unchanged_by_this_feature`; no size/token test added | Frozen schema/version files, budget tests, and measurement commands remain absent from the diff. |
+| AC-01 | cli | automated + AI-observed | QA-02, QA-04; adapter outputs and non-frozen terminology checks | `engine/router.md`; `engine/adapters/**`; config/init sources; T-008 live-claim cleanup | UNVERIFIED | Prior evidence remains the baseline; T-008 must add a live-engine terminology guard and rerun it after correcting `refresh-context.md` and `specs.md`. | The frozen schema stays intentionally unchanged. |
+| AC-02 | cli | automated + AI-observed | QA-01, QA-03; routing conformance plus hostile-content behavioral observations | `engine/router.md`; `engine/commands/*.md`; adapters; conformance tests | UNVERIFIED | T-008 must prove command frontmatter contains no router-owned activation vocabulary while preserving the router table and observed routing results. | Command procedure names and body references remain allowed; the activation catalog does not. |
+| AC-03 | cli | automated + inspection | QA-07; declared-reference existence and stale-path search | `engine/reference/**`; engine documentation | UNVERIFIED | T-008 must correct `engineering-standards.md` and strengthen removed-path coverage to catch bare deleted-owner names. | Historical specs, ADRs, fixtures, and explicit deprecated generated-target cleanup remain allowed exceptions. |
+| AC-04 | cli | automated + AI-observed | QA-01, QA-02, QA-06; load-structure checks plus conditional-load observation matrix | `engine/commands/*.md`; selected templates | UNVERIFIED | Re-run the staged-load structural checks and Behavioral Observation Matrix after T-008 changes command frontmatter. | No load contract or routing behavior change is planned. |
+| AC-05 | cli | automated + independent review | QA-06, QA-07; reviewer profile/resource assertions | `engine/agents/**`; Kiro reviewer templates | UNVERIFIED | The adversarial review correctly failed the stale implementation; a fresh delegated change-reviewer pass is required after T-008. | Reviewer behavior remains read-only and grounded. |
+| AC-06 | cli | automated + inspection | QA-07; owner-map and duplicate-contract review; single-ownership structural check | `engine/reference/**`; commands; templates | UNVERIFIED | T-006 scope is reconciled in `tasks.md`; T-008 removes the remaining duplicate route vocabulary and broken owner reference, then reruns ownership checks. | One owner plus local mutation guards; no size/token budget. |
+| AC-07 | cli | automated | QA-04, QA-05; bundled/source upgrade and adapter collision fixtures | upgrade/adapter behavior; engine/adapters layout | UNVERIFIED | Re-run bundled/source upgrade tests and the live dogfood upgrade after T-008 regenerates the engine manifest. | Deprecated target cleanup remains code-owned. |
+| AC-08 | cli | automated | QA-04, QA-06, QA-07; configured verification, frozen-surface no-change check, and dogfood sync | generated/vendored artifacts and spec evidence | UNVERIFIED | T-008 must run the full configured verification, `freeze`, dogfood upgrade, adapter drift check, spec lint, and fresh review. | Frozen schema/version files, budget tests, and measurement commands remain out of scope. |
