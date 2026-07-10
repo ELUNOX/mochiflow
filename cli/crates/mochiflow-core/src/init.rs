@@ -602,6 +602,11 @@ fn scaffold_user_instructions(install_abs: &Path) -> std::io::Result<()> {
     let readme = instructions_dir.join("README.md");
     if !readme.exists() {
         std::fs::write(readme, USER_INSTRUCTIONS_README)?;
+    } else if !readme.is_file() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::AlreadyExists,
+            format!("{} exists but is not a file", readme.display()),
+        ));
     }
     Ok(())
 }

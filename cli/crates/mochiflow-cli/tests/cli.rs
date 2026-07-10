@@ -419,6 +419,30 @@ fn init_fails_when_instruction_paths_are_files() {
 }
 
 #[test]
+fn init_fails_when_instructions_readme_path_is_directory() {
+    let dir = tempfile::tempdir().unwrap();
+    let readme = dir.path().join(".mochiflow/instructions/README.md");
+    fs::create_dir_all(&readme).unwrap();
+
+    let result = bin()
+        .args(["init", "--target", dir.path().to_str().unwrap()])
+        .write_stdin("")
+        .assert()
+        .failure()
+        .code(1);
+    let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
+    assert!(
+        out.contains("FAIL: could not create user instructions"),
+        "{out}"
+    );
+    assert!(
+        readme.is_dir(),
+        "{} should remain a directory",
+        readme.display()
+    );
+}
+
+#[test]
 fn join_requires_existing_config() {
     let dir = tempfile::tempdir().unwrap();
     let result = bin()
