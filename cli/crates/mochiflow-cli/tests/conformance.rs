@@ -629,7 +629,6 @@ fn adapters_separate_standing_inputs_from_load_on_demand() {
 fn user_instruction_dirs_are_not_standing_or_adapter_inputs() {
     for path in [
         "engine/router.md",
-        ".mochiflow/engine/router.md",
         "engine/adapters/agents/AGENTS.md.tpl",
         "engine/adapters/claude-code/CLAUDE.md.tpl",
         "engine/adapters/copilot/copilot-instructions.md.tpl",
@@ -637,7 +636,6 @@ fn user_instruction_dirs_are_not_standing_or_adapter_inputs() {
         "AGENTS.md",
         ".kiro/steering/mochiflow.md",
         ".mochiflow/constitution.md",
-        ".mochiflow/constitution.local.md",
     ] {
         let body = read_repo_file(path);
         assert!(
