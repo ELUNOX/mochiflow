@@ -12,12 +12,6 @@ description: |
   before the accept close-out, so the refresh ships inside the PR; this command
   itself never auto-commits (branch / PR / commit handling is open's
   responsibility).
-triggers:
-  - コンテクスト更新して
-  - コンテクストを再生成して
-  - refresh context
-  - refresh-context
-trigger_patterns: []
 execution: inline
 load:
   required:

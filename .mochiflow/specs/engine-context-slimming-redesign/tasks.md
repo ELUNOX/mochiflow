@@ -105,7 +105,7 @@ Critical Stop Conditions:
     - `engine/MANIFEST.json`
   - Done: Rust sources and live non-frozen docs describe foundational context conditionally without changing keys, validation, `schema_version`, or path behavior; all live references use the new ownership graph; every conformance assertion previously pinned to `reference/workflow.md`, `reference/authoring.md`, command `triggers:`, or the Kiro `## Always loaded` block is enumerated and confirmed rehomed to its new owner (not dropped); old monolithic paths and the independent reviewer engine wrapper are absent; no compatibility stub remains; documentation explains upgrade replacement and generated-target cleanup accurately; repository search finds removed paths only in intentional migration fixtures or historical durable records; `contracts/config.schema.json`, version files, CHANGELOG, and release-facing README references are absent from the feature diff and the deferred release follow-up is recorded for open as a durable backlog seed.
   - Stop: the task would edit a frozen schema/version/release file, or a live adapter/command/reviewer/template/public document still requires an old engine path.
-- [ ] T-007 [AC-02, AC-03, AC-04, AC-05, AC-06, AC-07, AC-08] Complete structural coverage, dogfood synchronization, and final verification
+- [x] T-007 [AC-02, AC-03, AC-04, AC-05, AC-06, AC-07, AC-08] Complete structural coverage, dogfood synchronization, and final verification
   - Depends on: T-006
   - Files:
     - `cli/crates/mochiflow-cli/tests/conformance.rs`

@@ -5092,3 +5092,156 @@ fn doctor_adr_gates_on_unknown_area() {
     assert_eq!(code, 1, "unknown area must gate adr lint:\n{out}");
     assert!(out.contains("unknown area"), "{out}");
 }
+
+// --- (f) engine-context-slimming-redesign structural guards ------------------
+
+/// AC-03 / AC-04: every engine-relative `.md` path declared in command/reviewer
+/// frontmatter (load.required, load.conditional, delegate_to, canonical_commands)
+/// resolves to a real file under `engine/`.
+#[test]
+fn engine_frontmatter_declared_paths_exist() {
+    let repo = repo_root();
+    for path in engine_markdown_files() {
+        let body = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+        let Some(fm) = frontmatter(&body) else {
+            continue;
+        };
+        for line in fm.lines() {
+            let Some(rel) = line.trim().strip_prefix("- ") else {
+                continue;
+            };
+            let rel = rel.trim();
+            let engine_relative = rel.starts_with("reference/")
+                || rel.starts_with("templates/")
+                || rel.starts_with("commands/")
+                || rel.starts_with("agents/");
+            if engine_relative && rel.ends_with(".md") && !rel.contains('{') {
+                assert!(
+                    repo.join("engine").join(rel).exists(),
+                    "{}: declared frontmatter path engine/{rel} is missing",
+                    path.display()
+                );
+            }
+        }
+    }
+}
+
+/// AC-02 / AC-04: commands and reviewers use the staged load contract and carry
+/// no trigger metadata (the router owns routes) or flat references catalog.
+#[test]
+fn commands_and_reviewers_use_the_load_contract() {
+    let repo = repo_root();
+    let mut files = Vec::new();
+    collect_files(&repo.join("engine/commands"), &mut files);
+    collect_files(&repo.join("engine/agents"), &mut files);
+    for path in files {
+        if path.extension().and_then(|e| e.to_str()) != Some("md") {
+            continue;
+        }
+        let body = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+        let fm = frontmatter(&body).unwrap_or_default();
+        assert!(
+            fm.contains("load:") && fm.contains("required:"),
+            "{}: must declare a load.required contract",
+            path.display()
+        );
+        assert!(
+            !fm.contains("triggers:") && !fm.contains("trigger_patterns:"),
+            "{}: trigger metadata must live only in the router route table",
+            path.display()
+        );
+        assert!(
+            !fm.contains("\nreferences:"),
+            "{}: the flat references catalog must be replaced by the load contract",
+            path.display()
+        );
+    }
+}
+
+/// AC-03 / AC-07: the deleted monoliths and the legacy reviewer wrapper are gone
+/// and no live engine markdown references their paths.
+#[test]
+fn removed_monolith_and_wrapper_paths_are_absent() {
+    let repo = repo_root();
+    for gone in [
+        "engine/reference/workflow.md",
+        "engine/reference/authoring.md",
+        "engine/agents/independent-reviewer.md",
+    ] {
+        assert!(!repo.join(gone).exists(), "{gone} must be deleted");
+    }
+    for path in engine_markdown_files() {
+        let body = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+        for legacy in [
+            "reference/workflow.md",
+            "reference/authoring.md",
+            "agents/independent-reviewer.md",
+        ] {
+            assert!(
+                !body.contains(legacy),
+                "{}: must not reference removed path {legacy}",
+                path.display()
+            );
+        }
+    }
+}
+
+/// AC-06: each migrated invariant heading resolves to exactly one owner file
+/// under `engine/reference/` (single-ownership; graph-integrity, not size).
+#[test]
+fn migrated_invariants_have_a_single_owner() {
+    let repo = repo_root();
+    let mut refs = Vec::new();
+    collect_files(&repo.join("engine/reference"), &mut refs);
+    let ref_bodies: Vec<(String, String)> = refs
+        .into_iter()
+        .filter(|p| p.extension().and_then(|e| e.to_str()) == Some("md"))
+        .map(|p| {
+            let name = p.file_name().unwrap().to_string_lossy().into_owned();
+            let body = std::fs::read_to_string(&p).unwrap();
+            (name, body)
+        })
+        .collect();
+    for (invariant, owner) in [
+        ("## Delivery approval gates", "lifecycle.md"),
+        ("## Depth scaling", "specs.md"),
+        ("## AC Matrix", "verification.md"),
+        ("## Reviewer cadence", "review.md"),
+        ("## Review transport", "review.md"),
+        ("## Living-spec fold", "knowledge.md"),
+        ("## Post-merge local cleanup", "delivery.md"),
+        ("## Derived delivery state", "delivery.md"),
+    ] {
+        let owners: Vec<&str> = ref_bodies
+            .iter()
+            .filter(|(_, body)| body.lines().any(|l| l.starts_with(invariant)))
+            .map(|(name, _)| name.as_str())
+            .collect();
+        assert_eq!(
+            owners,
+            vec![owner],
+            "invariant `{invariant}` must be owned by exactly {owner}"
+        );
+    }
+}
+
+/// AC-08: this feature does not touch the frozen config schema wording or bump
+/// the version (the schema correction is a deferred release follow-up).
+#[test]
+fn frozen_schema_and_version_are_unchanged_by_this_feature() {
+    let schema = read_repo_file("contracts/config.schema.json");
+    assert!(
+        schema.contains("always-loaded"),
+        "frozen config.schema.json context wording must be untouched by this feature"
+    );
+    let engine_version = read_repo_file("engine/VERSION");
+    let version = mochiflow_core::freeze::read_workspace_version(&repo_root()).unwrap();
+    assert_eq!(
+        engine_version.trim(),
+        version,
+        "engine/VERSION must match the workspace version (no bump in this feature)"
+    );
+}
