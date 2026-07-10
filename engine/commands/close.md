@@ -2,28 +2,19 @@
 name: spec-close
 phase: close
 description: |
-  mochiflow's close action. Run after the PR is confirmed merged. It performs
+  mochiflow's close action. Run after PR integration is confirmed. It performs
   local hygiene only: switch to base, fast-forward pull, delete the local branch,
   clear ephemeral delivery state, and regenerate the board. It writes nothing to
-  the base branch — the fold and the spec were already merged via the `open` PR.
-  Activate on the human merge report "{slug} merged" / "{slug} マージ済み" /
-  "{slug} 完了", or the explicit command `mochiflow-close`.
-triggers:
-  - mochiflow-close
-  - merged
-  - マージ済み
-  - 完了
-trigger_patterns:
-  - "{slug} close"
-  - "{slug} merged"
-  - "{slug} マージ済み"
-  - "{slug} 完了"
+  the base branch — the fold and the spec were already incorporated via the
+  `open` PR.
 artifacts: []
 prerequisites:
   - "The PR is merged (the human reports it; `merged` is derived, never stored)"
 execution: inline
-references:
-  - reference/git.md
+load:
+  required:
+    - reference/delivery.md
+    - reference/presentation.md
 ---
 
 # mochiflow-close
@@ -42,7 +33,7 @@ branch tip is reachable from `origin/{base_branch}`).
 
 ## Procedure
 
-Run `reference/git.md ## Post-merge local cleanup`:
+Run `reference/delivery.md ## Post-merge local cleanup`:
 
 1. `git status --short` clean — else stop.
 2. `git switch {[git].base_branch}`.

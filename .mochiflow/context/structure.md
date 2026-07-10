@@ -1,62 +1,53 @@
 # Structure (foundational context)
 
-Coarse orientation map, regenerated from code via `refresh-context`. Code is the
-source of truth; this is a forward-placed map to avoid first-move mistakes.
+## Source vs Generated vs Vendored
 
-## Source vs generated vs vendored
+- **Engine source (SoT):** `engine/`. Edit it here; `engine/MANIFEST.json` is
+  regenerated with `mochiflow freeze`.
+- **Vendored engine:** `.mochiflow/engine/`. It is regenerated from `engine/`
+  with `mochiflow upgrade --source engine`; never edit it directly.
+- **Generated adapters:** `engine/adapters/<tool>/*.tpl` render to repository
+  tool entrypoints such as `AGENTS.md` and `.kiro/`; regenerate them with
+  `mochiflow adapter generate`.
 
-- **Engine source (SoT)**: repo-root `engine/` — edit here. It is embedded into
-  the CLI binary and is also the source for dogfood updates. `engine/MANIFEST.json`
-  is generated with `mochiflow freeze`.
-- **Vendored engine copy**: `.mochiflow/engine/` — installed project-local copy
-  used by generated adapters and dogfood runs, **not** the source. For this
-  repo, sync it from repo-root `engine/` with `mochiflow upgrade --source engine`
-  after source-engine edits.
-- **Generated adapters**: `engine/adapters/<tool>/*.tpl` render into repo-root
-  tool entrypoints (`AGENTS.md`, `.kiro/`, `CLAUDE.md`, `.github/`). Regenerate
-  with `mochiflow adapter generate`; never hand-edit the outputs.
+## Code Layout
 
-## Code layout
+- `cli/crates/mochiflow-cli` — Clap binary and CLI/conformance tests.
+- `cli/crates/mochiflow-core` — workflow, adapter, ADR, verification, delivery,
+  and engine-installation library modules.
+- `engine/router.md` — the single route table and standing route contract.
+- `engine/commands/` — selected workflow procedures with required and
+  conditional load declarations.
+- `engine/reference/` — responsibility-sized lifecycle, verification, risk,
+  review, delivery, knowledge, language, and presentation policies.
+- `engine/agents/` — plan-auditor and change-reviewer profiles sharing
+  `reviewer-core.md`.
+- `.mochiflow/specs/` — active specs and `_backlog/` seeds; specs remain flat
+  through delivery and are never moved to `_done/`.
+- `.mochiflow/adr/` — per-file decision and pitfall stores with generated,
+  gitignored indexes.
 
-- `cli/crates/mochiflow-cli` — clap binary (`main.rs`) and CLI integration tests
-  (`tests/cli.rs`, `tests/conformance.rs`, `tests/first_run.rs`, `tests/pr.rs`).
-- `cli/crates/mochiflow-core` — library modules: `adapter`, `adr`, `backlog`,
-  `config`, `delivery`, `detach`, `detect`, `doctor`, `freeze`, `index`, `init`,
-  `join`, `lint`, `manifest`, `pr`, `present`, `spec_meta`, `spec_mode`,
-  `status`, `upgrade`.
-- `docs/` — user-facing concepts, setup, configuration, versioning, and release
-  verification.
-- `assets/` — logo / mark images used by README and distribution material.
-- `contracts/` — frozen JSON schemas + `contracts.lock` (the version-gate hash
-  covers `contracts/*.json`, conformance golden fixtures, and engine manifest
-  files).
-- `tests/conformance/` — schema fixtures and golden files used by CLI
-  conformance tests.
-- `.mochiflow/constitution.md` — user-authored always-loaded project rules.
-- `.mochiflow/constitution.local.md` — gitignored user/machine-local always-loaded rules.
-- `.mochiflow/context/` — code/config-derived current-state maps (refresh:
-  `product`, `structure`, `tech`).
-- `.mochiflow/adr/` — durable decision and pitfall record stores (directory-
-  rooted: `decisions/`, `pitfalls/`; each record is one `{date}-{slug}.md` with
-  front-matter; a generated gitignored `INDEX.md` per store).
-- `.mochiflow/specs/` — specs (`_backlog/`, `{slug}/`, `_done/`).
+## Entry Points
 
-## Adapter output layout
+- `mochiflow <command>` — CLI commands including `accept`, `adapter`, `adr`,
+  `freeze`, `lint`, `pr`, `ready`, `status`, and `upgrade`.
+- `AGENTS.md` and `.kiro/steering/mochiflow.md` — generated adapter entrypoints
+  that keep constitution plus router standing and defer the rest of the graph.
 
-| Adapter | Generated output | Mechanism |
-| --- | --- | --- |
-| `agents` | `AGENTS.md` | Embeddable managed block appended to existing file |
-| `claude-code` | `CLAUDE.md` | Embeddable managed block |
-| `copilot` | `.github/copilot-instructions.md` | Embeddable managed block |
-| `kiro` | `.kiro/steering/mochiflow.md` | Full-file managed (always-on steering with `#[[file:]]` pointers) |
-| `kiro` | `.kiro/agents/spec-plan-auditor.json` | Full-file managed (read-only plan-quality reviewer agent) |
-| `kiro` | `.kiro/agents/spec-change-reviewer.json` | Full-file managed (read-only post-implementation reviewer agent) |
+## Data / Artifact Locations
 
-Kiro uses no dedicated build agent, no `toolsSettings`, and no per-verb steering.
+- `contracts/` — frozen schemas and `contracts.lock`.
+- `engine/MANIFEST.json` — frozen source-engine manifest.
+- `.mochiflow/context/` — regenerated current-state orientation.
+- `.mochiflow/state/` — gitignored local review and delivery scratch.
 
-## Entry points
+## Evidence
 
-- `mochiflow <command>` — `accept`, `adapter`, `adr`, `backlog`, `completions`,
-  `config`, `detach`, `doctor`, `freeze`, `guide`, `index`, `init`, `join`,
-  `lint`, `pr`, `ready`, `status`, `upgrade`.
-- Verification surface: `cli` → `cargo test --manifest-path cli/Cargo.toml`.
+- `engine/router.md`: router and load contract
+- `engine/agents/reviewer-core.md`: shared reviewer contract
+- `.mochiflow/config.toml`: configured paths and adapter targets
+
+## Last refreshed
+
+- Date: 2026-07-10
+- Source commit: fe9a752

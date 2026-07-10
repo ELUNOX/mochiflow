@@ -12,47 +12,20 @@ workflow.
 
 - Constitution — **always loaded**: `.mochiflow/constitution.md` and
   `.mochiflow/constitution.local.md` (user-authored project / local rules).
-- Project context — **read before any work**: `.mochiflow/context/product.md`,
-  `.mochiflow/context/structure.md`, and `.mochiflow/context/tech.md`. This is the always-loaded
-  current-state orientation; load it first.
 - Router (read this first): `.mochiflow/engine/router.md`
-- Project config (surfaces / verify commands / git): run `mochiflow config show`
 
 ### Load on demand
 
+- Project context (current-state orientation): `.mochiflow/context/product.md`,
+  `.mochiflow/context/structure.md`, `.mochiflow/context/tech.md` — load when a selected workflow or
+  repository-specific task needs orientation, not merely to route.
+- Project config (surfaces / verify commands / git): run `mochiflow config show`
+  when route resolution, verification, git, or adapter paths need it.
 - Verb procedures: `.mochiflow/engine/commands/{discuss,plan,build,open,update,close}.md`
 - Non-phase commands: `.mochiflow/engine/commands/{review,refresh-context,onboard}.md`
-- Cross-cutting rules: `.mochiflow/engine/reference/{workflow,risk,authoring,git,language,engineering-standards}.md`
+- Cross-cutting rules: `.mochiflow/engine/reference/{lifecycle,specs,verification,risk,review,git,delivery,knowledge,language,presentation,engineering-standards}.md`
 - Decision history / pitfalls — **on-demand** (*why*, not current state):
   per-file records under `.mochiflow/adr/decisions` / `.mochiflow/adr/pitfalls` (each store has
   a generated, gitignored `INDEX.md`). Load the `INDEX.md` first, then open only
   active records whose `area` intersects the spec's `surfaces`
   (`mochiflow adr list | show | search`).
-
-### Artifact roles
-
-- `spec.md` is the product contract, `design.md` is the
-  technical contract when required, `tasks.md` is the executable checklist when
-  required, and the AC Matrix in `spec.md` tracks AC → implementation →
-  verification → evidence → result.
-
-## Rules
-
-- Do not start a spec verb unless the user clearly intends it (`router.md` routing principles).
-- Concrete small fixes stay in the spec lane; use plan when no active spec
-  already scopes the work.
-- Specs live under `.mochiflow/specs/{slug}/`; metadata is `spec.yaml` (status `draft → approved → accepted`; `done` is derived/legacy).
-- Run verification via the command for the spec's surface from `[surfaces.<surface>.verify]`.
-- Validate specs with `mochiflow lint`; quality gate is `mochiflow doctor`.
-- Artifact language: `en`; conversation language:
-  `ja`. Follow `.mochiflow/engine/reference/language.md` for
-  user-facing wording and `auto` conversation behavior.
-- At open, fold durable knowledge as new per-file records under
-  `.mochiflow/adr/decisions` (decisions) / `.mochiflow/adr/pitfalls` (pitfalls) in the PR's
-  close-out commit, superseding earlier records via `supersedes` /
-  `superseded_by` rather than rewriting them; regenerate each store's gitignored
-  `INDEX.md` (never stage it). The spec stays flat (no `_done/` move, never
-  `status: done`). The
-  context layer (`.mochiflow/context/product.md` / `.mochiflow/context/structure.md` /
-  `.mochiflow/context/tech.md`) is refreshed from code (onboard / refresh-context), never
-  folded.

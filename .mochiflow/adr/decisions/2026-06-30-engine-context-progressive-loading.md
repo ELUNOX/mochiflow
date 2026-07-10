@@ -3,7 +3,8 @@ id: 2026-06-30-engine-context-progressive-loading
 date: 2026-06-30
 area: [cli]
 spec: engine-context-progressive-loading
-status: active
+status: superseded
+superseded_by: 2026-07-10-engine-context-contract-layout
 ---
 ## 2026-06-30 - Keep routing compact and load engine detail by selected verb
 

@@ -4,16 +4,7 @@ phase: plan
 description: |
   mochiflow's plan phase. Turn an agreed pitch or explicit concrete micro
   request into spec.md, and grow design.md / tasks.md only as the change needs.
-  Drive to a single human implementation approval gate. Activate on the explicit
-  command `mochiflow-plan`, or natural phrasing like "仕様作って" / "プランして" /
-  "計画作って". Does not implement.
-triggers:
-  - mochiflow-plan
-  - 仕様作って
-  - プランして
-  - 計画作って
-trigger_patterns:
-  - "{slug} plan"
+  Drive to a single human implementation approval gate. Does not implement.
 artifacts:
   - "{specs_dir}/{slug}/spec.yaml"
   - "{specs_dir}/{slug}/pitch.md (standard-or-larger)"
@@ -25,18 +16,42 @@ prerequisites:
   - "standard-or-larger existing spec path: {specs_dir}/{slug}/pitch.md exists"
   - "direct micro path: explicit concrete request with no existing draft"
 execution: inline
-references:
-  - reference/workflow.md
-  - reference/risk.md
-  - reference/authoring.md
-  - reference/engineering-standards.md
-  - templates/spec/spec.yaml
-  - templates/spec/spec.md
-  - templates/spec/spec.micro.md
-  - templates/spec/spec.standard.md
-  - templates/spec/design.md
-  - templates/spec/tasks.md
-  - templates/handoff/build-session-prompt.md
+load:
+  required:
+    - reference/lifecycle.md
+    - reference/specs.md
+    - reference/risk.md
+    - reference/verification.md
+    - reference/git.md
+    - reference/presentation.md
+  conditional:
+    - when: writing spec.yaml metadata
+      files:
+        - templates/spec/spec.yaml
+    - when: direct micro or other trivial / narrow spec body
+      files:
+        - templates/spec/spec.micro.md
+    - when: standard-or-larger spec body needing the fuller contract
+      files:
+        - templates/spec/spec.standard.md
+    - when: the compatibility standard spec body is used
+      files:
+        - templates/spec/spec.md
+    - when: design.md is required (reference/risk.md ## design.md required condition)
+      files:
+        - templates/spec/design.md
+    - when: the change is multi-step and needs a task checklist
+      files:
+        - templates/spec/tasks.md
+    - when: offering pre-approval review (risk >= elevated) or step-10 review actions
+      files:
+        - reference/review.md
+    - when: creating a resume prompt for a new session
+      files:
+        - templates/handoff/build-session-prompt.md
+    - when: an upstream-standard decision needs the rule
+      files:
+        - reference/engineering-standards.md
 ---
 
 # mochiflow-plan
@@ -67,7 +82,7 @@ explicit concrete request without `pitch.md`. Do not start implementation.
    active (`mochiflow adr list` / `search`); open superseded / deprecated
    records only when explicitly tracing supersession lineage. ADR is never the
    source of truth for current state.
-2. Create or refine `spec.md` per `reference/authoring.md`, absorbing the pitch
+2. Create or refine `spec.md` per `reference/specs.md`, absorbing the pitch
    into `## Background and Design Rationale` when `pitch.md` exists. Use
    `templates/spec/spec.micro.md` for direct micro or other trivial / narrow
    changes and `templates/spec/spec.standard.md` for changes needing the fuller
@@ -85,8 +100,8 @@ explicit concrete request without `pitch.md`. Do not start implementation.
    reference an attack that backs an AC from the AC Matrix `Planned test/QA` /
    `Evidence` column by its `QA-XX` id. Do not promote attacks to ACs or mint a
    separate attack-id scheme.
-3. Create `design.md` only when `reference/risk.md ## design.md required condition` applies. When creating it, delete optional sections at creation time unless their condition applies (`## Workstreams` only for multiple workstreams / cross-surface, `## Integration Contract` only for `integration ≠ none`, `## Review Results` only for `risk ≥ elevated`, `## Integration Log` only when the risk table calls for it during build). Create `tasks.md` when multi-step. Let depth follow `reference/workflow.md ## Depth scaling` (a trivial change is spec.md only). Author tasks to be **session-recoverable** per `reference/authoring.md ## Session-recoverability`: because build may resume in a new session that has only the durable artifacts, committed code, and git trailers, write cross-task reasoning into `design.md` at plan time, and make each task shared by a file document that file's shared-state handling in its `Done`. This is plan authoring discipline enforced by reviewer S1 Internal Coherence judgment, not a new lint.
-4. Run `reference/authoring.md ## Consistency check` **exactly once**.
+3. Create `design.md` only when `reference/risk.md ## design.md required condition` applies. When creating it, delete optional sections at creation time unless their condition applies (`## Workstreams` only for multiple workstreams / cross-surface, `## Integration Contract` only for `integration ≠ none`, `## Review Results` only for `risk ≥ elevated`, `## Integration Log` only when the risk table calls for it during build). Create `tasks.md` when multi-step. Let depth follow `reference/specs.md ## Depth scaling` (a trivial change is spec.md only). Author tasks to be **session-recoverable** per `reference/specs.md ## Session-recoverability`: because build may resume in a new session that has only the durable artifacts, committed code, and git trailers, write cross-task reasoning into `design.md` at plan time, and make each task shared by a file document that file's shared-state handling in its `Done`. This is plan authoring discipline enforced by reviewer S1 Internal Coherence judgment, not a new lint.
+4. Run `reference/specs.md ## Consistency check` **exactly once**.
 5. Remove all template residue before asking for approval. `lint` enforces these
    checks for expanded spec documents; placeholder-like text inside fenced code
    blocks or inline code spans is ignored so legitimate examples can remain:
@@ -110,10 +125,10 @@ explicit concrete request without `pitch.md`. Do not start implementation.
    readiness instead of adding a separate "fix the plan" command.
 
    Review is a quality assist, not a delivery approval gate
-   (`reference/workflow.md ## Delivery approval gates`): the two gates stay
+   (`reference/lifecycle.md ## Delivery approval gates`): the two gates stay
    approve-to-build and approve-PR, and review never sets `status` by itself.
    The card's ordering depends on risk:
-   - When `risk >= elevated`: present **Review** actions before **Confirm the plan**. The visible actions are **Review results** (`review` / `mochiflow-review`) and **Review and fix** (`review fix`) **before** **Confirm the plan**, so the recommended quality check can inform the approve-to-build decision instead of running only after the spec has locked to `approved`. **Review results** runs `mochiflow-review` on the draft spec with `agents/plan-auditor.md` (S0 Grounding, S1 Internal Coherence, S2 Impact & Regression, S4 Knowledge Confrontation, and Falsification with S3 `N/A`, no diff/changed-files input, per `reference/risk.md ## Review transport`). **Review and fix** runs `{slug} review fix`, uses `agents/plan-auditor.md`, limits edits to spec artifacts, updates the local review-fix ledger under `{install_dir}/state/{slug}/`, and re-presents the readiness card after verification. On `pass` / `pass-with-comments`, re-present **Confirm the plan**. On `fail` from result-only review, report the findings and stop: leave `spec.yaml` `status: draft`, make no plan commit, and let the user revise and re-review, choose review-and-fix, or confirm directly. Review stays optional — the user may choose **Confirm the plan** without taking review.
+   - When `risk >= elevated`: present **Review** actions before **Confirm the plan**. The visible actions are **Review results** (`review` / `mochiflow-review`) and **Review and fix** (`review fix`) **before** **Confirm the plan**, so the recommended quality check can inform the approve-to-build decision instead of running only after the spec has locked to `approved`. **Review results** runs `mochiflow-review` on the draft spec with `agents/plan-auditor.md` (S0 Grounding, S1 Internal Coherence, S2 Impact & Regression, S4 Knowledge Confrontation, and Falsification with S3 `N/A`, no diff/changed-files input, per `reference/review.md ## Review transport`). **Review and fix** runs `{slug} review fix`, uses `agents/plan-auditor.md`, limits edits to spec artifacts, updates the local review-fix ledger under `{install_dir}/state/{slug}/`, and re-presents the readiness card after verification. On `pass` / `pass-with-comments`, re-present **Confirm the plan**. On `fail` from result-only review, report the findings and stop: leave `spec.yaml` `status: draft`, make no plan commit, and let the user revise and re-review, choose review-and-fix, or confirm directly. Review stays optional — the user may choose **Confirm the plan** without taking review.
    - When `risk = standard`: present **Confirm the plan** as today; review is not
      offered pre-approval and remains available post-approval at step 10.
 8. Re-run `mochiflow lint --spec {slug}` after setting `status: approved`; fix any FAIL before ending plan.

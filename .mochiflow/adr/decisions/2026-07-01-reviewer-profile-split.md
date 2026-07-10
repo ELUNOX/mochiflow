@@ -3,7 +3,8 @@ id: 2026-07-01-reviewer-profile-split
 date: 2026-07-01
 area: [cli]
 spec: qa-attack-dimensions-redesign
-status: active
+status: superseded
+superseded_by: 2026-07-10-reviewer-core-composition
 supersedes: 2026-07-01-grounded-independent-reviewer
 ---
 ## 2026-07-01 - Split independent reviewer into plan-auditor and change-reviewer

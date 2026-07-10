@@ -450,31 +450,33 @@ fn version_gate_hash_matches_committed_lock() {
 #[test]
 fn router_merged_event_is_cleanup_only() {
     let router = read_repo_file("engine/router.md");
+    let delivery = read_repo_file("engine/reference/delivery.md");
     let merged_line = router
         .lines()
         .find(|line| line.contains("Event patterns `{slug} merged`"))
         .expect("router merged-event routing line exists");
 
     assert!(
-        merged_line.contains("post-merge local cleanup only"),
-        "merged-event routing must resume cleanup only; got: {merged_line}"
+        merged_line.contains("reference/delivery.md"),
+        "merged-event routing must resolve eligibility through delivery.md; got: {merged_line}"
     );
     assert!(
         merged_line.contains("commands/close.md"),
         "merged-event routing must route to close; got: {merged_line}"
     );
     assert!(
-        merged_line.contains("flat `{specs_dir}/{slug}/`")
-            && merged_line.contains("never moved to `_done/`"),
-        "merged-event routing must resolve the flat spec, not a _done archive; got: {merged_line}"
+        merged_line.contains("not a fresh open"),
+        "merged-event routing must select cleanup rather than open; got: {merged_line}"
     );
     assert!(
-        merged_line.contains("`merged` is derived"),
-        "merged-event routing must state merged is derived; got: {merged_line}"
+        delivery.contains("`merged` — derived in priority order")
+            && delivery.contains("tracked-mode `Spec: {slug}` trailer reachable"),
+        "delivery.md must own merged-state derivation"
     );
     assert!(
-        merged_line.contains("local-mode source branch tip reachable"),
-        "merged-event routing must include local-mode branch-tip derivation; got: {merged_line}"
+        delivery.contains("local source branch\n  tip reachable")
+            && delivery.contains("spec is never moved into `_done/`"),
+        "delivery.md must own local-mode derivation and flat-spec persistence"
     );
     assert!(
         !merged_line.contains("fold → archive") && !merged_line.contains("fold -> archive"),
@@ -502,8 +504,8 @@ fn router_plan_requires_existing_draft_spec() {
     );
     assert!(
         router.contains("Event patterns `{slug} merged`")
-            && router.contains("flat `{specs_dir}/{slug}/`"),
-        "router must resolve the merged-event against the flat spec"
+            && router.contains("confirm merge/cleanup eligibility via `reference/delivery.md`"),
+        "router must resolve merged-event eligibility through delivery.md"
     );
 }
 
@@ -515,7 +517,7 @@ fn router_defines_lazy_load_contract_without_second_card() {
         router.contains("`router.md` is the only standing router artifact")
             && router.contains("lazy-load catalog")
             && router.contains("matching `commands/{verb}.md`")
-            && router.contains("frontmatter `references`"),
+            && router.contains("declared load contract"),
         "router must define the standing-vs-lazy loading contract"
     );
     assert!(
@@ -542,44 +544,84 @@ fn router_defines_lazy_load_contract_without_second_card() {
 
 #[test]
 fn adapters_separate_standing_inputs_from_load_on_demand() {
+    let reference_list = "reference/{lifecycle,specs,verification,risk,review,git,delivery,knowledge,language,presentation,engineering-standards}.md";
     for path in [
         "engine/adapters/agents/AGENTS.md.tpl",
         "engine/adapters/claude-code/CLAUDE.md.tpl",
         "engine/adapters/copilot/copilot-instructions.md.tpl",
     ] {
         let body = read_repo_file(path);
-        assert!(body.contains("### Standing inputs"), "{path}");
-        assert!(body.contains("### Load on demand"), "{path}");
-        assert!(body.contains("### Artifact roles"), "{path}");
+        let standing = body.find("### Standing inputs").expect("standing section");
+        let load = body.find("### Load on demand").expect("load section");
+        let end = body.len();
         assert!(
-            body.find("### Standing inputs") < body.find("### Load on demand"),
-            "{path} must present standing inputs before lazy-loaded files"
+            standing < load && load < end,
+            "{path} must order standing inputs before load-on-demand"
+        );
+        // Standing layer is constitution + router only; context/config are deferred.
+        let standing_section = &body[standing..load];
+        assert!(
+            standing_section.contains("Constitution") && standing_section.contains("router.md"),
+            "{path} standing inputs must keep constitution + router"
         );
         assert!(
-            body.find("### Load on demand") < body.find("### Artifact roles"),
-            "{path} must keep artifact-role descriptions outside load-on-demand files"
+            !standing_section.contains("{{context.")
+                && !standing_section.contains("read before any work"),
+            "{path} must not keep foundational context in the standing layer"
+        );
+        let load_section = &body[load..end];
+        assert!(
+            load_section.contains("{{context.product}}") && load_section.contains("config show"),
+            "{path} must defer foundational context and config to load-on-demand"
         );
         assert!(
-            body.contains("commands/{discuss,plan,build,open,update,close}.md")
-                && body.contains(
-                    "reference/{workflow,risk,authoring,git,language,engineering-standards}.md"
-                ),
+            load_section.contains("commands/{discuss,plan,build,open,update,close}.md")
+                && load_section.contains(reference_list),
             "{path} must keep command/reference files in the load-on-demand section"
+        );
+        assert!(
+            !body.contains("### Artifact roles")
+                && !body.contains("## Rules")
+                && !body.contains("Run verification via")
+                && !body.contains("At open, fold durable knowledge"),
+            "{path} standing adapter must not duplicate selected-workflow policy"
         );
     }
 
     let kiro = read_repo_file("engine/adapters/kiro/steering/mochiflow.md.tpl");
-    assert!(kiro.contains("## Always loaded"), "{kiro}");
-    assert!(kiro.contains("### Load on demand"), "{kiro}");
-    assert!(kiro.contains("### Artifact roles"), "{kiro}");
+    let always = kiro
+        .find("## Always loaded")
+        .expect("always-loaded section");
+    let load = kiro.find("### Load on demand").expect("load section");
+    let end = kiro.len();
     assert!(
-        kiro.find("### Load on demand") < kiro.find("### Artifact roles"),
-        "Kiro must keep artifact-role descriptions outside load-on-demand files"
+        always < load && load < end,
+        "Kiro must order always-loaded before load-on-demand"
+    );
+    let always_section = &kiro[always..load];
+    assert!(
+        always_section.contains("router.md") && always_section.contains("{{constitution.project}}"),
+        "Kiro always-loaded must keep router + constitution"
+    );
+    assert!(
+        !always_section.contains("#[[file:{{context."),
+        "Kiro must not eagerly reference foundational context files"
     );
     assert!(
         !kiro.contains("#[[file:{{engine}}/commands")
             && !kiro.contains("#[[file:{{engine}}/reference"),
         "Kiro file references must stay limited to standing inputs:\n{kiro}"
+    );
+    assert!(
+        kiro[load..end].contains("{{context.product}}"),
+        "Kiro must describe foundational context as a load-on-demand input"
+    );
+    assert!(
+        !kiro.contains("### Artifact roles")
+            && !kiro.contains("## Rules")
+            && !kiro.contains("Run verification via")
+            && !kiro.contains("At open, fold durable knowledge"),
+        "Kiro standing adapter must not duplicate selected-workflow policy"
     );
 }
 
@@ -595,7 +637,7 @@ fn router_preserves_named_routing_branches() {
         "`{slug} plan` requires an existing active spec directory",
         "concrete small-edit requests",
         "as plan intent hints",
-        "ad-hoc review (user-triggered via `レビューして` / `mochiflow-review`",
+        "| `commands/review.md` | `mochiflow-review` | レビューして",
         "Feedback patterns `{slug} feedback`",
         "Event patterns `{slug} merged`",
     ] {
@@ -608,14 +650,14 @@ fn router_preserves_named_routing_branches() {
 
 #[test]
 fn branch_placeholders_use_prefix_slug() {
-    let git = read_repo_file("engine/reference/git.md");
+    let delivery = read_repo_file("engine/reference/delivery.md");
 
     assert!(
-        git.contains("git branch -d {prefix}/{slug}"),
+        delivery.contains("git branch -d {prefix}/{slug}"),
         "post-merge cleanup must delete the real branch placeholder"
     );
     assert!(
-        !git.contains("git branch -d {type}/{slug}"),
+        !delivery.contains("git branch -d {type}/{slug}"),
         "post-merge cleanup must not delete the unmapped branch placeholder"
     );
 }
@@ -635,9 +677,11 @@ fn pr_feedback_routes_to_update_without_restore() {
         "update must apply bounded inline feedback fixes without moving or reverting the flat spec"
     );
     assert!(
-        router.contains("applies bounded inline fixes")
+        router.contains("Resolve\nin-review eligibility through `reference/delivery.md`")
+            && router.contains("update owns the fix and\npublication procedure")
+            && !router.contains("bounded inline fixes")
             && !router.contains("delegates the code change through `build`"),
-        "router PR feedback must describe bounded inline update fixes, not build delegation"
+        "router must route feedback to update while deferring its procedure"
     );
     assert!(
         !build.contains("when build resumes from `commands/update.md`")
@@ -667,10 +711,10 @@ fn update_holds_fixes_until_explicit_finalize_signal() {
         "hold-only update must apply and hold without push, accept, or reviewer"
     );
     assert!(
-        update.contains("Finalize signals are the explicit `mochiflow-update` command")
-            && update.contains("`{slug} update`, `{slug}")
-            && update.contains("`{slug} 修正依頼`, `{slug} PR feedback`")
-            && update.contains("that's everything / push it / update the")
+        update.contains("Finalize signals are an explicit finalize invocation")
+            && update.contains("slug-qualified")
+            && update.contains("update event selected by `router.md`")
+            && update.contains("that's everything / push it / update the PR")
             && update.contains("over every held commit since the last recorded"),
         "update must require a distinct explicit finalize signal before pushing"
     );
@@ -701,21 +745,15 @@ fn update_holds_fixes_until_explicit_finalize_signal() {
 }
 
 #[test]
-fn router_update_summary_matches_hold_by_default() {
+fn router_update_route_defers_hold_policy_to_command() {
     let router = read_repo_file("engine/router.md");
     let update = read_repo_file("engine/commands/update.md");
 
     assert!(
-        router.contains("applies bounded inline fixes")
-            && router.contains("either holds locally or finalizes with push")
-            && router.contains("holds locally by default")
-            && router.contains("explicit finalize signal reviews-if-stale once"),
-        "router update summaries must describe hold-by-default and explicit finalize"
-    );
-    assert!(
-        !router.contains("applies bounded inline fixes, re-verifies, pushes")
-            && !router.contains("bounded inline code fix, then re-verifies, pushes"),
-        "router must not claim every bounded inline fix immediately pushes"
+        !router.contains("holds locally by default")
+            && !router.contains("explicit finalize signal reviews-if-stale once")
+            && !router.contains("bounded inline code fix"),
+        "router must defer update execution policy to the selected command"
     );
     assert!(
         router.contains("commands/update.md")
@@ -723,18 +761,29 @@ fn router_update_summary_matches_hold_by_default() {
             && update.contains("hold-by-default for bare feedback"),
         "routing decision must still point PR feedback to update while update owns the hold contract"
     );
+    assert!(
+        update.contains("slug-qualified")
+            && update.contains("update event selected by `router.md`")
+            && !update.contains("this file's own trigger patterns"),
+        "update must consume router-owned finalize routes without claiming trigger ownership"
+    );
 }
 
 #[test]
 fn engine_open_update_close_defined_no_ship_verb() {
+    let router = read_repo_file("engine/router.md");
     for cmd in ["open", "update", "close"] {
         let doc = read_repo_file(&format!("engine/commands/{cmd}.md"));
         assert!(
-            doc.contains(&format!("mochiflow-{cmd}")) && doc.contains("triggers:"),
-            "{cmd}.md must define its explicit command and triggers"
+            doc.contains(&format!("mochiflow-{cmd}")),
+            "{cmd}.md must still name its explicit command"
+        );
+        assert!(
+            router.contains(&format!("`mochiflow-{cmd}`"))
+                && router.contains(&format!("commands/{cmd}.md")),
+            "router route table must own the {cmd} explicit command and target"
         );
     }
-    let router = read_repo_file("engine/router.md");
     assert!(
         router.contains("commands/open.md")
             && router.contains("commands/update.md")
@@ -776,7 +825,7 @@ fn build_documents_post_completion_bounded_fix_window() {
         "build must document the post-completion bounded-fix window before open"
     );
     assert!(
-        build.contains("shared bounded-fix judgment in `reference/risk.md`")
+        build.contains("shared bounded-fix judgment in `reference/review.md`")
             && build.contains("no task-structure change")
             && build.contains("no new AC")
             && build.contains("no new design decision"),
@@ -849,7 +898,7 @@ fn open_generalizes_freshness_trigger_to_reviewed_through() {
 #[test]
 fn close_is_local_hygiene_only() {
     let close = read_repo_file("engine/commands/close.md");
-    let git = read_repo_file("engine/reference/git.md");
+    let delivery = read_repo_file("engine/reference/delivery.md");
     assert!(
         close.contains("local hygiene") && close.contains("writes nothing to the base branch"),
         "close must be local hygiene only with no base write"
@@ -860,8 +909,8 @@ fn close_is_local_hygiene_only() {
     );
     assert!(
         close.contains("local source\nbranch tip is reachable")
-            && git.contains("branch-tip signal is gone"),
-        "close/git guidance must document local-mode branch-tip merge signal and branch-delete limitation"
+            && delivery.contains("branch-tip signal is gone"),
+        "close/delivery guidance must document local-mode branch-tip merge signal and branch-delete limitation"
     );
 }
 
@@ -870,7 +919,7 @@ fn delivery_guidance_is_conversational_and_language_aware() {
     let open = read_repo_file("engine/commands/open.md");
     let router = read_repo_file("engine/router.md");
     let close = read_repo_file("engine/commands/close.md");
-    let language = read_repo_file("engine/reference/language.md");
+    let delivery = read_repo_file("engine/reference/delivery.md");
 
     // open.md: PR-created conversational handoff with URL-when-available and a
     // URL-less manual-handoff path, kept out of the PR body. (Single-line
@@ -922,20 +971,20 @@ fn delivery_guidance_is_conversational_and_language_aware() {
         "close completion must report local branch and delivery-file cleanup"
     );
 
-    // language.md: delivery next-action ownership (conversation vs artifact).
+    // delivery.md: delivery next-action ownership (conversation vs artifact).
     assert!(
-        language.contains("## Delivery Next Actions"),
-        "language reference must own delivery next-action language policy"
+        delivery.contains("## Delivery next actions"),
+        "delivery reference must own delivery next-action language policy"
     );
     assert!(
-        language.contains("local cleanup pending")
-            && language.contains("`[i18n].artifact_language` deterministically"),
-        "language reference must cover the cleanup hint and the auto CLI fallback"
+        delivery.contains("local cleanup pending")
+            && delivery.contains("`[i18n].artifact_language` deterministically"),
+        "delivery reference must cover the cleanup hint and the auto CLI fallback"
     );
     assert!(
-        language.contains("into the PR body")
-            && language.contains("intent examples, not fixed trigger strings"),
-        "language reference must keep next actions out of the PR body and examples non-canonical"
+        delivery.contains("into the PR body")
+            && delivery.contains("intent examples, not fixed trigger strings"),
+        "delivery reference must keep next actions out of the PR body and examples non-canonical"
     );
 }
 
@@ -966,8 +1015,8 @@ fn open_ships_context_refresh_in_pr_before_accept() {
     // refresh as the primary path for open-detected staleness.
     let open = read_repo_file("engine/commands/open.md");
     let git = read_repo_file("engine/reference/git.md");
+    let knowledge = read_repo_file("engine/reference/knowledge.md");
     let refresh = read_repo_file("engine/commands/refresh-context.md");
-    let router = read_repo_file("engine/router.md");
 
     // open.md: in-branch refresh, separate docs(context) commit before accept.
     assert!(
@@ -1028,14 +1077,16 @@ fn open_ships_context_refresh_in_pr_before_accept() {
         "refresh-context.md must not present a post-merge refresh as the primary path"
     );
 
-    // git.md: in-PR primary path, preceding docs(context) commit, post-merge fallback.
+    // knowledge.md: in-PR primary path, preceding docs(context) commit, post-merge fallback.
     assert!(
-        git.contains("human confirmation and ship the regenerated context **inside the PR** as a"),
-        "git.md fold guidance must ship the context refresh inside the PR"
+        knowledge
+            .contains("human confirmation and ship the regenerated context **inside the PR** as a"),
+        "knowledge.md fold guidance must ship the context refresh inside the PR"
     );
     assert!(
-        git.contains("before the PR is the primary path — never a post-merge base-branch edit."),
-        "git.md must make the in-branch refresh primary and post-merge the fallback"
+        knowledge
+            .contains("before the PR is the primary path — never a post-merge base-branch edit."),
+        "knowledge.md must make the in-branch refresh primary and post-merge the fallback"
     );
     assert!(
         git.contains(
@@ -1051,12 +1102,6 @@ fn open_ships_context_refresh_in_pr_before_accept() {
     assert!(
         !git.contains("Context refresh is separate work after PR creation / merge"),
         "git.md must not present a post-merge refresh as the primary path"
-    );
-
-    // router.md: open summary mentions the optional docs(context) commit before accept.
-    assert!(
-        router.contains("optional `docs(context)` commit (regenerated `[context]`, before accept)"),
-        "router.md open summary must mention the optional docs(context) commit before accept"
     );
 }
 
@@ -1152,10 +1197,11 @@ fn review_fix_choice_cards_and_phase_discipline_are_pinned() {
         "update.md must preserve hold-by-default and finalize semantics for review fix"
     );
     assert!(
-        router.contains("**Review results** is read-only")
-            && router.contains("**Review and fix** maps to `review fix [1-3]`")
-            && router.contains("no state transition"),
-        "router.md must map both choice labels to the review command family"
+        router.contains("| `commands/review.md` | `mochiflow-review` | レビューして")
+            && router.contains("`{slug} review fix 1`")
+            && router.contains("`{slug} review fix 2`")
+            && router.contains("`{slug} review fix 3`"),
+        "router.md must route the review command family without owning its mode policy"
     );
 }
 
@@ -1200,7 +1246,7 @@ fn public_docs_explain_review_fix_budget() {
 fn accept_guidance_uses_cli_and_persistence_modes() {
     let open = read_repo_file("engine/commands/open.md");
     let git = read_repo_file("engine/reference/git.md");
-    let workflow = read_repo_file("engine/reference/workflow.md");
+    let lifecycle = read_repo_file("engine/reference/lifecycle.md");
     let docs = read_repo_file("docs/configuration.md");
 
     assert!(
@@ -1229,12 +1275,13 @@ fn accept_guidance_uses_cli_and_persistence_modes() {
         "git reference must not require staging a _done move"
     );
     assert!(
-        workflow.contains("`mochiflow accept {slug}`") && workflow.contains("mechanical close-out"),
-        "workflow must name the accept CLI as the accepted close-out mechanism"
+        lifecycle.contains("`mochiflow accept {slug}`")
+            && lifecycle.contains("mechanical close-out"),
+        "lifecycle must name the accept CLI as the accepted close-out mechanism"
     );
     assert!(
-        !workflow.contains("there is no CLI transition command"),
-        "workflow must not claim accepted has no CLI transition command"
+        !lifecycle.contains("there is no CLI transition command"),
+        "lifecycle must not claim accepted has no CLI transition command"
     );
 }
 
@@ -1282,51 +1329,51 @@ fn auto_commit_gate_is_verification_not_reviewer() {
 
 #[test]
 fn risk_defines_shared_bounded_fix_judgment_and_reviewed_through() {
-    let risk = read_repo_file("engine/reference/risk.md");
+    let review = read_repo_file("engine/reference/review.md");
     let design_template = read_repo_file("engine/templates/spec/design.md");
     let build = read_repo_file("engine/commands/build.md");
     let open = read_repo_file("engine/commands/open.md");
     let update = read_repo_file("engine/commands/update.md");
 
     assert!(
-        risk.contains("Shared bounded-fix judgment")
-            && risk.contains("no task-structure change")
-            && risk.contains("no new AC")
-            && risk.contains("no new design decision")
-            && risk.contains("reference this shared judgment rather than redefining it"),
-        "risk reference must define the shared in-scope/out-of-scope judgment once"
+        review.contains("Shared bounded-fix judgment")
+            && review.contains("no task-structure change")
+            && review.contains("no new AC")
+            && review.contains("no new design decision")
+            && review.contains("reference this shared judgment rather than redefining it"),
+        "review reference must define the shared in-scope/out-of-scope judgment once"
     );
     assert!(
-        build.contains("shared bounded-fix judgment in `reference/risk.md`")
-            && open.contains("shared\n     bounded-fix judgment in `reference/risk.md`")
-            && update.contains("shared bounded-fix judgment in `reference/risk.md`"),
+        build.contains("shared bounded-fix judgment in `reference/review.md`")
+            && open.contains("shared\n     bounded-fix judgment in `reference/review.md`")
+            && update.contains("shared bounded-fix judgment in `reference/review.md`"),
         "build/open/update must point to the shared bounded-fix judgment"
     );
     assert!(
-        risk.contains("next push/accept boundary")
-            && risk.contains("code-changing commit exists beyond")
-            && risk.contains("recorded `Reviewed through`")
-            && risk.contains("A non-code commit such as")
-            && risk.contains("does not by itself make the verdict")
-            && risk.contains("stale. A stale pass verdict"),
-        "risk reference must batch held code changes until the push/accept boundary"
+        review.contains("next push/accept boundary")
+            && review.contains("code-changing commit exists beyond")
+            && review.contains("recorded `Reviewed through`")
+            && review.contains("A non-code commit such as")
+            && review.contains("does not by itself make the verdict")
+            && review.contains("stale. A stale pass verdict"),
+        "review reference must batch held code changes until the push/accept boundary"
     );
     assert!(
-        risk.contains("`Reviewed through: <sha>` on its own line directly below")
-            && risk.contains("fresh verdict plus updated `Reviewed through: <sha>`")
+        review.contains("`Reviewed through: <sha>` on its own line directly below")
+            && review.contains("fresh verdict plus updated `Reviewed through: <sha>`")
             && design_template.contains("Reviewed through: <sha> on its own line below Verdict"),
         "mandatory reviewer results must record Reviewed through separately from Verdict"
     );
     assert!(
-        risk.contains("Review batching changes trigger frequency, not review scope")
-            && risk.contains("reviewer input remains the full diff from git"),
-        "risk reference must preserve the full-diff reviewer input scope"
+        review.contains("Review batching changes trigger frequency, not review scope")
+            && review.contains("reviewer input remains the full diff from git"),
+        "review reference must preserve the full-diff reviewer input scope"
     );
 }
 
 #[test]
 fn build_commit_cadence_is_task_based_not_risk_based() {
-    let risk = read_repo_file("engine/reference/risk.md");
+    let risk = read_repo_file("engine/reference/review.md");
     let build = read_repo_file("engine/commands/build.md");
     let git = read_repo_file("engine/reference/git.md");
     let concepts = read_repo_file("docs/concepts.md");
@@ -1429,7 +1476,7 @@ fn spec_templates_require_done_eligible_matrix_results() {
 #[test]
 fn discuss_persists_pitch_draft_spec() {
     let discuss = read_repo_file("engine/commands/discuss.md");
-    let workflow = read_repo_file("engine/reference/workflow.md");
+    let workflow = read_repo_file("engine/reference/specs.md");
     let plan = read_repo_file("engine/commands/plan.md");
     let pitch = read_repo_file("engine/templates/spec/pitch.md");
 
@@ -1474,7 +1521,7 @@ fn discuss_persists_pitch_draft_spec() {
 #[test]
 fn direct_micro_plan_is_pitchless_and_branch_durable() {
     let plan = read_repo_file("engine/commands/plan.md");
-    let workflow = read_repo_file("engine/reference/workflow.md");
+    let workflow = read_repo_file("engine/reference/specs.md");
     let git = read_repo_file("engine/reference/git.md");
     let risk = read_repo_file("engine/reference/risk.md");
 
@@ -1528,7 +1575,7 @@ fn direct_micro_plan_is_pitchless_and_branch_durable() {
 
 #[test]
 fn ac_matrix_pending_human_is_canonical_provisional_token() {
-    let workflow = read_repo_file("engine/reference/workflow.md");
+    let workflow = read_repo_file("engine/reference/verification.md");
     let build = read_repo_file("engine/commands/build.md");
     let language = read_repo_file("engine/reference/language.md");
     let open = read_repo_file("engine/commands/open.md");
@@ -1600,6 +1647,7 @@ fn behavioral_kiro_retires_spec_worker_agent_and_self_heals() {
 #[test]
 fn inline_rework_lifecycle_and_adapter_lifecycle_are_specified() {
     let git = read_repo_file("engine/reference/git.md");
+    let lifecycle = read_repo_file("engine/reference/lifecycle.md");
     let open = read_repo_file("engine/commands/open.md");
     let update = read_repo_file("engine/commands/update.md");
 
@@ -1639,20 +1687,27 @@ fn inline_rework_lifecycle_and_adapter_lifecycle_are_specified() {
     ] {
         let body = read_repo_file(tpl);
         assert!(
-            body.contains("draft → approved → accepted"),
-            "{tpl} must use the draft -> approved -> accepted lifecycle"
+            body.contains("reference/{lifecycle,specs,verification")
+                && !body.contains("draft → approved → accepted"),
+            "{tpl} must defer lifecycle state policy to reference/lifecycle.md"
         );
         assert!(
             !body.contains("draft → approved → done"),
             "{tpl} must not keep the stale draft -> approved -> done lifecycle"
         );
     }
+    assert!(
+        lifecycle.contains("`draft`")
+            && lifecycle.contains("`approved`")
+            && lifecycle.contains("`accepted`"),
+        "lifecycle.md must own the current asserted state set"
+    );
 }
 
 #[test]
 fn session_recoverability_is_authoring_rule_not_lint() {
     let plan = read_repo_file("engine/commands/plan.md");
-    let authoring = read_repo_file("engine/reference/authoring.md");
+    let authoring = read_repo_file("engine/reference/specs.md");
     let reviewer = read_repo_file("engine/agents/plan-auditor.md");
 
     assert!(
@@ -1675,7 +1730,7 @@ fn session_recoverability_is_authoring_rule_not_lint() {
     );
     assert!(
         plan.contains("session-recoverable")
-            && plan.contains("reference/authoring.md ## Session-recoverability"),
+            && plan.contains("reference/specs.md ## Session-recoverability"),
         "plan.md must reference the session-recoverability authoring rule"
     );
     assert!(
@@ -1692,133 +1747,112 @@ fn session_recoverability_is_authoring_rule_not_lint() {
 
 #[test]
 fn canonical_reviewers_grounded_adversary_contract_is_pinned() {
+    let core = read_repo_file("engine/agents/reviewer-core.md");
     let plan_auditor = read_repo_file("engine/agents/plan-auditor.md");
     let change_reviewer = read_repo_file("engine/agents/change-reviewer.md");
-    let legacy = read_repo_file("engine/agents/independent-reviewer.md");
-    let risk = read_repo_file("engine/reference/risk.md");
+    let risk = read_repo_file("engine/reference/review.md");
     let plan = read_repo_file("engine/commands/plan.md");
     let review = read_repo_file("engine/commands/review.md");
-    let authoring = read_repo_file("engine/reference/authoring.md");
-
+    let specs = read_repo_file("engine/reference/specs.md");
     assert!(
-        plan_auditor.contains("## S0 Grounding")
-            && plan_auditor.contains("## S1 Internal Coherence")
-            && plan_auditor.contains("## S2 Impact & Regression")
-            && plan_auditor.contains("## S3 Code Quality")
-            && plan_auditor.contains("## S4 Knowledge Confrontation")
-            && plan_auditor.contains("## Falsification"),
-        "plan-auditor must keep the grounded stage vocabulary"
-    );
-    assert!(
-        change_reviewer.contains("## S0 Grounding")
-            && change_reviewer.contains("## S1 Spec And Evidence Coherence")
-            && change_reviewer.contains("## S2 Impact & Regression")
-            && change_reviewer.contains("## S3 Code Quality")
-            && change_reviewer.contains("## S4 Knowledge Confrontation")
-            && change_reviewer.contains("## Falsification"),
-        "change-reviewer must keep the grounded stage vocabulary"
-    );
-    assert!(
-        legacy.contains("`plan-quality mode` -> `plan-auditor`")
-            && legacy.contains("`post-implementation mode` -> `change-reviewer`"),
-        "legacy independent-reviewer wrapper must map old modes to canonical profiles"
-    );
-    assert!(
-        plan_auditor.contains("new or relocated responsibilities")
-            && plan_auditor.contains("lifecycle vocabulary")
-            && plan_auditor.contains("distinctive nouns / identifiers")
-            && change_reviewer.contains("new or relocated responsibilities")
-            && change_reviewer.contains("lifecycle vocabulary"),
-        "reviewers S2 must define non-rename target derivation"
-    );
-    assert!(
-        plan_auditor.contains("generated `INDEX.md` is absent")
-            && plan_auditor.contains("unverified knowledge-unavailable note")
-            && change_reviewer.contains("generated `INDEX.md` is absent")
-            && change_reviewer.contains("unverified knowledge-unavailable note"),
-        "reviewers S4 must define absent-index behavior"
-    );
-    assert!(
-        plan_auditor.contains("Confidence: confirmed | predicted")
-            && plan_auditor.contains("A `predicted` finding is capped at Medium")
-            && change_reviewer.contains("Confidence: confirmed | predicted")
-            && change_reviewer.contains("A `predicted` finding is capped at Medium"),
-        "reviewers must pin Confidence field and predicted severity cap"
-    );
-    assert!(
-        plan_auditor.contains("Every finding, including Medium and Low")
-            && plan_auditor.contains("Remediation guidance")
-            && plan_auditor.contains("Minimal change:")
-            && plan_auditor.contains("Files to edit:")
-            && plan_auditor.contains("Suggested shape:")
-            && plan_auditor.contains("Verification:")
-            && plan_auditor.contains("Do not change:")
-            && change_reviewer.contains("Every finding, including Medium and Low")
-            && change_reviewer.contains("Remediation guidance")
-            && change_reviewer.contains("Minimal change:")
-            && change_reviewer.contains("Files to edit:")
-            && change_reviewer.contains("Suggested shape:")
-            && change_reviewer.contains("Verification:")
-            && change_reviewer.contains("Do not change:"),
-        "reviewers must require actionable remediation guidance for all severities"
-    );
-    assert!(
-        plan_auditor.contains("S3 Code Quality")
-            && plan_auditor.contains("N/A (no implementation yet)"),
-        "plan-auditor output must report S3 as N/A"
-    );
-    assert!(
-        change_reviewer.contains("behavior-preservation evidence")
-            && change_reviewer.contains("mechanical rename / move")
-            && change_reviewer.contains("semantic")
-            && change_reviewer.contains("refactor"),
-        "change-reviewer must cover refactor safety"
-    );
-    assert!(
-        plan_auditor.contains("Verdict is `fail` for any Critical or High confirmed finding")
-            && plan_auditor
-                .contains("Verdict is `pass-with-comments` for Medium or Low findings only")
-            && plan_auditor.contains("Verdict is `pass` when clean")
-            && change_reviewer
-                .contains("Verdict is `fail` for any Critical or High confirmed finding")
-            && change_reviewer
-                .contains("Verdict is `pass-with-comments` for Medium or Low findings only")
-            && change_reviewer.contains("Verdict is `pass` when clean"),
-        "reviewer verdict rule must be preserved"
-    );
-    assert!(
-        plan_auditor
-            .contains("QA attack coverage against `reference/risk.md ## QA attack coverage`")
-            && plan_auditor.contains("session-recoverability")
-            && change_reviewer
-                .contains("QA attack coverage against `reference/risk.md ## QA attack coverage`"),
-        "S1 must preserve QA attack coverage and session-recoverability duties"
+        !repo_root()
+            .join("engine/agents/independent-reviewer.md")
+            .exists(),
+        "legacy independent-reviewer wrapper must be deleted"
     );
 
-    let fm = frontmatter(&plan_auditor).expect("plan-auditor frontmatter");
-    for reference in [
-        "reference/language.md",
-        "reference/workflow.md",
-        "reference/risk.md",
-        "reference/authoring.md",
-        "reference/git.md",
-    ] {
+    assert!(
+        core.contains("## S0 Grounding")
+            && core.contains("## S2 Impact & Regression")
+            && core.contains("## S4 Knowledge Confrontation")
+            && core.contains("## Falsification"),
+        "reviewer-core must own the shared grounded stages"
+    );
+    for profile in [&plan_auditor, &change_reviewer] {
         assert!(
-            fm.contains(reference),
-            "plan-auditor frontmatter must include {reference}"
+            profile.contains("agents/reviewer-core.md"),
+            "each reviewer profile must compose reviewer-core"
         );
     }
-    let fm = frontmatter(&change_reviewer).expect("change-reviewer frontmatter");
-    for reference in [
-        "reference/language.md",
-        "reference/workflow.md",
-        "reference/risk.md",
-        "reference/authoring.md",
-        "reference/git.md",
-    ] {
+    assert!(
+        core.contains("new or relocated responsibilities")
+            && core.contains("lifecycle vocabulary")
+            && core.contains("distinctive nouns / identifiers"),
+        "reviewer-core S2 must define non-rename target derivation"
+    );
+    assert!(
+        core.contains("generated `INDEX.md` is absent")
+            && core.contains("unverified knowledge-unavailable note"),
+        "reviewer-core S4 must define absent-index behavior"
+    );
+    assert!(
+        core.contains("Confidence: confirmed | predicted")
+            && core.contains("A `predicted` finding is capped at Medium"),
+        "reviewer-core must pin Confidence field and predicted severity cap"
+    );
+    assert!(
+        core.contains("Every finding, including Medium and Low")
+            && core.contains("Remediation guidance")
+            && core.contains("Minimal change:")
+            && core.contains("Files to edit:")
+            && core.contains("Suggested shape:")
+            && core.contains("Verification:")
+            && core.contains("Do not change:"),
+        "reviewer-core must require actionable remediation guidance for all severities"
+    );
+    assert!(
+        core.contains("Verdict is `fail` for any Critical or High confirmed finding")
+            && core.contains("Verdict is `pass-with-comments` for Medium or Low findings only")
+            && core.contains("Verdict is `pass` when clean"),
+        "reviewer-core must pin the verdict rule"
+    );
+    assert!(
+        plan_auditor.contains("## S1 Internal Coherence")
+            && plan_auditor.contains("S3 Code Quality")
+            && plan_auditor.contains("N/A (no implementation yet)")
+            && plan_auditor
+                .contains("QA attack coverage against `reference/risk.md ## QA attack coverage`")
+            && plan_auditor.contains("session-recoverability"),
+        "plan-auditor must keep its S1 duties and S3 N/A"
+    );
+    assert!(
+        change_reviewer.contains("## S1 Spec And Evidence Coherence")
+            && change_reviewer.contains("## S3 Code Quality")
+            && change_reviewer.contains("behavior-preservation evidence")
+            && change_reviewer.contains("mechanical rename / move")
+            && change_reviewer.contains("semantic")
+            && change_reviewer.contains("refactor")
+            && change_reviewer
+                .contains("QA attack coverage against `reference/risk.md ## QA attack coverage`"),
+        "change-reviewer must keep its S1/S3 duties and refactor safety"
+    );
+
+    let core_fm = frontmatter(&core).expect("reviewer-core frontmatter");
+    assert!(
+        core_fm.contains("reference/risk.md") && core_fm.contains("reference/language.md"),
+        "reviewer-core must own shared risk and conditional language loads"
+    );
+    let plan_fm = frontmatter(&plan_auditor).expect("plan-auditor frontmatter");
+    assert!(
+        plan_fm.contains("agents/reviewer-core.md")
+            && plan_fm.contains("reference/specs.md")
+            && plan_fm.contains("reference/verification.md")
+            && !plan_fm.contains("reference/risk.md")
+            && !plan_fm.contains("reference/language.md"),
+        "plan-auditor must add specs + verification without duplicating core loads"
+    );
+    let change_fm = frontmatter(&change_reviewer).expect("change-reviewer frontmatter");
+    assert!(
+        change_fm.contains("agents/reviewer-core.md")
+            && change_fm.contains("reference/verification.md")
+            && !change_fm.contains("reference/risk.md")
+            && !change_fm.contains("reference/language.md"),
+        "change-reviewer must add verification without duplicating core loads"
+    );
+    for (name, fm) in [("plan-auditor", plan_fm), ("change-reviewer", change_fm)] {
         assert!(
-            fm.contains(reference),
-            "change-reviewer frontmatter must include {reference}"
+            !fm.contains("reference/workflow.md") && !fm.contains("reference/authoring.md"),
+            "{name} frontmatter must not load the retired monoliths"
         );
     }
 
@@ -1834,6 +1868,10 @@ fn canonical_reviewers_grounded_adversary_contract_is_pinned() {
         "risk.md must name canonical profiles and preserve impact scope"
     );
     assert!(
+        !risk.contains("independent-reviewer"),
+        "risk.md must not reference the deleted legacy wrapper"
+    );
+    assert!(
         plan.contains("agents/plan-auditor.md") && plan.contains("S0"),
         "plan.md must use plan-auditor vocabulary"
     );
@@ -1844,14 +1882,14 @@ fn canonical_reviewers_grounded_adversary_contract_is_pinned() {
         "review.md must describe canonical profiles"
     );
     assert!(
-        authoring.contains("`plan-auditor` S1 Internal Coherence"),
-        "authoring.md must use the plan-auditor stage vocabulary"
+        specs.contains("`plan-auditor` S1 Internal Coherence"),
+        "specs.md must use the plan-auditor stage vocabulary"
     );
     for body in [
         risk.as_str(),
         plan.as_str(),
         review.as_str(),
-        authoring.as_str(),
+        specs.as_str(),
     ] {
         assert!(
             !body.contains("Stage 1") && !body.contains("Stage 2"),
@@ -1862,14 +1900,19 @@ fn canonical_reviewers_grounded_adversary_contract_is_pinned() {
 
 #[test]
 fn kiro_reviewer_template_resources_are_grounded_and_read_only() {
-    for (path, agent) in [
+    for (path, agent, profile_resources) in [
         (
             "engine/adapters/kiro/agents/spec-plan-auditor.json.tpl",
             "plan-auditor",
+            &[
+                "file://{{engine}}/reference/specs.md",
+                "file://{{engine}}/reference/verification.md",
+            ][..],
         ),
         (
             "engine/adapters/kiro/agents/spec-change-reviewer.json.tpl",
             "change-reviewer",
+            &["file://{{engine}}/reference/verification.md"][..],
         ),
     ] {
         let template = read_repo_file(path);
@@ -1891,21 +1934,35 @@ fn kiro_reviewer_template_resources_are_grounded_and_read_only() {
             "{path} must include {agent_resource}"
         );
         for resource in [
-            "file://{{engine}}/reference/workflow.md",
-            "file://{{engine}}/reference/language.md",
+            "file://{{engine}}/agents/reviewer-core.md",
             "file://{{engine}}/reference/risk.md",
-            "file://{{engine}}/reference/authoring.md",
-            "file://{{engine}}/reference/git.md",
+            "file://{{engine}}/reference/language.md",
         ] {
             assert!(
                 resource_strings.contains(&resource),
                 "{path} must include {resource}"
             );
         }
+        for resource in profile_resources {
+            assert!(
+                resource_strings.contains(resource),
+                "{path} must include profile policy {resource}"
+            );
+        }
+        for absent in [
+            "file://{{engine}}/reference/workflow.md",
+            "file://{{engine}}/reference/authoring.md",
+            "file://{{engine}}/reference/git.md",
+        ] {
+            assert!(
+                !resource_strings.contains(&absent),
+                "{path} must omit unrelated resource {absent}"
+            );
+        }
         assert_eq!(
             resource_strings.len(),
-            6,
-            "{path} must list exactly the six engine resources"
+            4 + profile_resources.len(),
+            "{path} must list core/profile shared resources plus its profile policies"
         );
         assert!(
             resource_strings
@@ -1919,8 +1976,7 @@ fn kiro_reviewer_template_resources_are_grounded_and_read_only() {
 #[test]
 fn build_is_inline_and_review_transport_is_reviewer_only() {
     let build = read_repo_file("engine/commands/build.md");
-    let router = read_repo_file("engine/router.md");
-    let risk = read_repo_file("engine/reference/risk.md");
+    let risk = read_repo_file("engine/reference/review.md");
 
     assert!(
         build.contains("Implement an approved spec inline")
@@ -1936,18 +1992,6 @@ fn build_is_inline_and_review_transport_is_reviewer_only() {
             && !build.contains("orchestrator")
             && !build.contains("compact report"),
         "build.md must not retain worker/orchestrator contract"
-    );
-    assert!(
-        router.contains("judgment and implementation stay single-threaded; review may delegate"),
-        "router principle 5 must state the new invariant"
-    );
-    let build_row = router
-        .lines()
-        .find(|l| l.starts_with("| build |"))
-        .expect("router Verb Delegation build row exists");
-    assert!(
-        build_row.contains("inline") && !build_row.contains("worker"),
-        "build row must be inline and worker-free: {build_row}"
     );
     assert!(
         risk.contains("reviewer transport")
@@ -1969,6 +2013,44 @@ fn build_is_inline_and_review_transport_is_reviewer_only() {
             ),
         "the risk-cadence table must stay unchanged"
     );
+}
+
+#[test]
+fn standing_router_does_not_duplicate_selected_workflow_policy() {
+    let router = read_repo_file("engine/router.md");
+    let fm = frontmatter(&router).expect("router frontmatter");
+    assert!(
+        fm.contains("- reference/git.md") && fm.contains("- reference/delivery.md"),
+        "router must declare routing-time branch and delivery-state owners"
+    );
+    for retired_section in [
+        "## Verb Delegation",
+        "## Transition Discipline",
+        "## Completion Output",
+    ] {
+        assert!(
+            !router.contains(retired_section),
+            "router must not own selected-workflow section {retired_section}"
+        );
+    }
+    for owner_detail in [
+        "optional `docs(context)` commit",
+        "records the AC Matrix",
+        "approve-PR gate",
+        "Review results** is read-only",
+        "`draft|approved|accepted`",
+        "specs are never moved to `_done/`",
+        "`merged` is derived",
+        "tracked-mode `Spec: {slug}` trailer",
+        "holds locally or finalizes with push",
+        "writes nothing to the base branch",
+        "source branch tip is the local-git merge signal",
+    ] {
+        assert!(
+            !router.contains(owner_detail),
+            "router must defer selected-workflow detail `{owner_detail}`"
+        );
+    }
 }
 
 #[test]
@@ -2019,7 +2101,7 @@ fn kiro_docs_and_router_do_not_reference_retired_workers() {
 #[test]
 fn ad_hoc_review_is_report_only() {
     let review = read_repo_file("engine/commands/review.md");
-    let risk = read_repo_file("engine/reference/risk.md");
+    let risk = read_repo_file("engine/reference/review.md");
 
     assert!(
         review.contains("Reports findings only")
@@ -2080,8 +2162,7 @@ fn review_fix_budget_grammar_is_pinned() {
         "review.md must not apply result-only no-commit rules to review fix mode"
     );
     assert!(
-        router.contains("`review fix [1-3]`")
-            && router.contains("{slug} review fix 1")
+        router.contains("{slug} review fix 1")
             && router.contains("{slug} review fix 2")
             && router.contains("{slug} review fix 3")
             && router.contains("{slug} review 2` is ambiguous"),
@@ -2091,7 +2172,8 @@ fn review_fix_budget_grammar_is_pinned() {
 
 #[test]
 fn review_fix_loop_boundaries_are_pinned() {
-    let risk = read_repo_file("engine/reference/risk.md");
+    let risk = read_repo_file("engine/reference/review.md");
+    let reviewer_core = read_repo_file("engine/agents/reviewer-core.md");
     let plan_auditor = read_repo_file("engine/agents/plan-auditor.md");
     let change_reviewer = read_repo_file("engine/agents/change-reviewer.md");
 
@@ -2137,17 +2219,20 @@ fn review_fix_loop_boundaries_are_pinned() {
                 && body.contains("verdicts")
                 && body.contains("previous reviewer summaries")
                 && body.contains("review-fix ledger")
-                && body.contains("conversation history")
-                && body.contains("Do not review prior reviewer")
-                && body.contains("do not use the local review-fix ledger as input"),
-            "reviewer contracts must accept only cycle-local focus and reject prior review context"
+                && body.contains("conversation history"),
+            "reviewer profiles must accept only cycle-local focus and reject prior review context"
         );
     }
+    assert!(
+        reviewer_core.contains("Do not review prior reviewer")
+            && reviewer_core.contains("do not use the local review-fix ledger as input"),
+        "reviewer-core must forbid reusing prior reviewer output or the ledger as input"
+    );
 }
 
 #[test]
 fn workflow_todo_verify_is_not_runnable() {
-    let workflow = read_repo_file("engine/reference/workflow.md");
+    let workflow = read_repo_file("engine/reference/verification.md");
     assert!(
         workflow.contains("`TODO:` placeholder is not yet runnable")
             && workflow.contains("define\nits command before building that surface"),
@@ -2157,8 +2242,9 @@ fn workflow_todo_verify_is_not_runnable() {
 
 #[test]
 fn pr_bypass_fast_path_is_removed() {
-    let workflow = read_repo_file("engine/reference/workflow.md");
+    let workflow = read_repo_file("engine/reference/lifecycle.md");
     let git = read_repo_file("engine/reference/git.md");
+    let delivery = read_repo_file("engine/reference/delivery.md");
     let build = read_repo_file("engine/commands/build.md");
     let open = read_repo_file("engine/commands/open.md");
 
@@ -2171,8 +2257,8 @@ fn pr_bypass_fast_path_is_removed() {
     );
     assert!(
         git.contains("depth delivers through the feature branch + PR path")
-            && git.contains("Every spec depth uses `mochiflow pr`"),
-        "git reference must make PR delivery universal"
+            && delivery.contains("Every spec depth uses `mochiflow pr`"),
+        "git/delivery reference must make PR delivery universal"
     );
     assert!(
         build.contains("A micro spec may run with spec.yaml + spec.md only")
@@ -2197,10 +2283,8 @@ fn active_patch_lane_and_pr_bypass_residue_are_absent() {
         "engine/commands/build.md",
         "engine/commands/open.md",
         "engine/commands/update.md",
-        "engine/reference/authoring.md",
         "engine/reference/git.md",
         "engine/reference/risk.md",
-        "engine/reference/workflow.md",
     ];
     let retired_patterns = [
         "commands/patch.md",
@@ -2240,7 +2324,7 @@ fn active_patch_lane_and_pr_bypass_residue_are_absent() {
 
 #[test]
 fn workflow_gate_2_uses_mochiflow_pr() {
-    let workflow = read_repo_file("engine/reference/workflow.md");
+    let workflow = read_repo_file("engine/reference/lifecycle.md");
     let gate_2 = workflow
         .lines()
         .find(|line| line.contains("**approve-PR**"))
@@ -5076,4 +5160,362 @@ fn doctor_adr_gates_on_unknown_area() {
     let (code, out) = run_cli(&cfg, &["adr", "lint"]);
     assert_eq!(code, 1, "unknown area must gate adr lint:\n{out}");
     assert!(out.contains("unknown area"), "{out}");
+}
+
+// --- (f) engine-context-slimming-redesign structural guards ------------------
+
+/// AC-03 / AC-04: every engine-relative `.md` path declared in command/reviewer
+/// frontmatter (load.required, load.conditional, delegate_to, canonical_commands)
+/// resolves to a real file under `engine/`.
+#[test]
+fn engine_frontmatter_declared_paths_exist() {
+    let repo = repo_root();
+    for path in engine_markdown_files() {
+        let body = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+        let Some(fm) = frontmatter(&body) else {
+            continue;
+        };
+        for line in fm.lines() {
+            let Some(rel) = line.trim().strip_prefix("- ") else {
+                continue;
+            };
+            let rel = rel.trim();
+            let engine_relative = rel.starts_with("reference/")
+                || rel.starts_with("templates/")
+                || rel.starts_with("commands/")
+                || rel.starts_with("agents/");
+            if engine_relative && rel.ends_with(".md") && !rel.contains('{') {
+                assert!(
+                    repo.join("engine").join(rel).exists(),
+                    "{}: declared frontmatter path engine/{rel} is missing",
+                    path.display()
+                );
+            }
+        }
+    }
+}
+
+/// AC-02 / AC-04: commands and reviewers use the staged load contract and carry
+/// no trigger metadata (the router owns routes) or flat references catalog.
+#[test]
+fn commands_and_reviewers_use_the_load_contract() {
+    let repo = repo_root();
+    let mut files = Vec::new();
+    collect_files(&repo.join("engine/commands"), &mut files);
+    collect_files(&repo.join("engine/agents"), &mut files);
+    for path in files {
+        if path.extension().and_then(|e| e.to_str()) != Some("md") {
+            continue;
+        }
+        let body = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+        let fm = frontmatter(&body).unwrap_or_default();
+        assert!(
+            fm.contains("load:") && fm.contains("required:"),
+            "{}: must declare a load.required contract",
+            path.display()
+        );
+        assert!(
+            !fm.contains("triggers:") && !fm.contains("trigger_patterns:"),
+            "{}: trigger metadata must live only in the router route table",
+            path.display()
+        );
+        assert!(
+            !fm.contains("\nreferences:"),
+            "{}: the flat references catalog must be replaced by the load contract",
+            path.display()
+        );
+    }
+}
+
+#[test]
+fn bounded_fix_commands_conditionally_load_review_policy() {
+    for command in ["build", "open", "update"] {
+        let body = read_repo_file(&format!("engine/commands/{command}.md"));
+        let fm = frontmatter(&body).expect("command frontmatter");
+        assert!(
+            body.contains("bounded-fix judgment in `reference/review.md`")
+                && fm.contains("bounded-fix judgment is needed")
+                && fm.contains("- reference/review.md"),
+            "{command}.md must make review.md reachable for every bounded-fix path"
+        );
+    }
+}
+
+#[test]
+fn review_fix_conditionally_loads_the_active_lifecycle_owner() {
+    let body = read_repo_file("engine/commands/review.md");
+    let fm = frontmatter(&body).expect("review command frontmatter");
+
+    for (condition, owner) in [
+        ("before implementation", "commands/plan.md"),
+        (
+            "post-completion correction before open",
+            "commands/build.md",
+        ),
+        ("while open is in progress", "commands/open.md"),
+        ("while a PR is in review", "commands/update.md"),
+    ] {
+        assert!(
+            fm.contains(condition) && fm.contains(&format!("- {owner}")),
+            "review fix must declare {owner} for the `{condition}` context"
+        );
+    }
+    assert!(
+        body.contains("load exactly the matching\n   owner")
+            && body.contains("lifecycle alternatives."),
+        "review fix must select one lifecycle owner before the main-agent fix pass"
+    );
+}
+
+#[test]
+fn command_load_contracts_keep_tiers_disjoint_and_invocations_reachable() {
+    let repo = repo_root();
+    let mut files = Vec::new();
+    collect_files(&repo.join("engine/commands"), &mut files);
+    collect_files(&repo.join("engine/agents"), &mut files);
+
+    for path in files {
+        if path.extension().and_then(|e| e.to_str()) != Some("md") {
+            continue;
+        }
+        let body = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+        let fm = frontmatter(&body).unwrap_or_default();
+        let mut tier = "";
+        let mut required = Vec::new();
+        let mut conditional = Vec::new();
+        let mut when_count = 0;
+        let mut files_count = 0;
+
+        for line in fm.lines().skip_while(|line| *line != "load:").skip(1) {
+            if !line.starts_with("  ") {
+                break;
+            }
+            match line {
+                "  required:" => tier = "required",
+                "  conditional:" => tier = "conditional",
+                _ => {
+                    let trimmed = line.trim();
+                    if tier == "conditional" && trimmed.starts_with("- when:") {
+                        when_count += 1;
+                    } else if tier == "conditional" && trimmed == "files:" {
+                        files_count += 1;
+                    } else if let Some(declared) = trimmed.strip_prefix("- ")
+                        && declared.ends_with(".md")
+                    {
+                        if tier == "required" {
+                            required.push(declared);
+                        } else if tier == "conditional" {
+                            conditional.push(declared);
+                        }
+                    }
+                }
+            }
+        }
+
+        for declared in &required {
+            assert!(
+                !conditional.contains(declared),
+                "{}: `{declared}` must not appear in both load tiers",
+                path.display()
+            );
+            assert!(
+                !declared.starts_with("templates/"),
+                "{}: templates must be selected conditionally, not eagerly required",
+                path.display()
+            );
+        }
+        assert_eq!(
+            when_count,
+            files_count,
+            "{}: every conditional load must pair one when with one files block",
+            path.display()
+        );
+    }
+
+    let open = read_repo_file("engine/commands/open.md");
+    let open_fm = frontmatter(&open).expect("open command frontmatter");
+    assert!(
+        open.contains("run\n     `refresh-context` (`commands/refresh-context.md`)")
+            && open_fm.contains("coarse structural shift")
+            && open_fm.contains("- commands/refresh-context.md"),
+        "open must conditionally load the refresh-context command it invokes"
+    );
+}
+
+/// AC-02 / AC-06: route vocabulary belongs to router.md, not command
+/// frontmatter descriptions. Command bodies may still name their procedure and
+/// document review grammar after routing has selected them.
+#[test]
+fn command_frontmatter_descriptions_do_not_own_routes() {
+    let repo = repo_root();
+    let router = read_repo_file("engine/router.md");
+    let route_table = router
+        .split_once("## Route table")
+        .and_then(|(_, rest)| rest.split_once("## Decision Flow"))
+        .map(|(table, _)| table)
+        .expect("router route table");
+    let natural_hints: Vec<&str> = route_table
+        .lines()
+        .filter(|line| line.starts_with('|'))
+        .filter_map(|line| line.split('|').nth(3))
+        .flat_map(|cell| cell.split('·'))
+        .map(str::trim)
+        .filter(|hint| {
+            !hint.is_empty() && *hint != "natural-language hints" && *hint != "---" && *hint != "—"
+        })
+        .collect();
+    let mut files = Vec::new();
+    collect_files(&repo.join("engine/commands"), &mut files);
+    for path in files {
+        if path.extension().and_then(|e| e.to_str()) != Some("md") {
+            continue;
+        }
+        let body = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+        let fm = frontmatter(&body).expect("command frontmatter");
+        let command_name = fm
+            .lines()
+            .find_map(|line| line.strip_prefix("name: "))
+            .expect("command name");
+        let description = fm
+            .split_once("description: |\n")
+            .map(|(_, rest)| {
+                rest.lines()
+                    .take_while(|line| line.starts_with("  "))
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            })
+            .expect("command description block");
+        for route_marker in [
+            "Activate on",
+            "Activate when",
+            "explicit command",
+            "natural phrasing",
+            "mochiflow-",
+            "review fix [",
+        ] {
+            assert!(
+                !description.contains(route_marker),
+                "{}: command description must not own route marker `{route_marker}`",
+                path.display()
+            );
+        }
+        for hint in &natural_hints {
+            if command_name.contains(hint) {
+                continue;
+            }
+            assert!(
+                !description.contains(hint),
+                "{}: command description must not repeat router hint `{hint}`",
+                path.display()
+            );
+        }
+    }
+}
+
+/// AC-01: live engine prose must describe foundational context as conditional;
+/// the frozen config schema is intentionally outside this engine-only sweep.
+#[test]
+fn live_engine_foundational_context_claims_are_conditional() {
+    for path in engine_markdown_files() {
+        let body = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+        for line in body.lines() {
+            let normalized = line.to_ascii_lowercase();
+            let calls_context_always_loaded = normalized
+                .contains("always-loaded foundational context")
+                || normalized.contains("foundational context always-loaded")
+                || (normalized.contains("`[context]`") && normalized.contains("| always-loaded"));
+            assert!(
+                !calls_context_always_loaded,
+                "{}: live foundational context must be loaded on demand: {line}",
+                path.display()
+            );
+        }
+    }
+}
+
+/// AC-03 / AC-07: the deleted monoliths and the legacy reviewer wrapper are gone
+/// and no live engine markdown references their paths or bare basenames.
+#[test]
+fn removed_monolith_and_wrapper_paths_are_absent() {
+    let repo = repo_root();
+    for gone in [
+        "engine/reference/workflow.md",
+        "engine/reference/authoring.md",
+        "engine/agents/independent-reviewer.md",
+    ] {
+        assert!(!repo.join(gone).exists(), "{gone} must be deleted");
+    }
+    for path in engine_markdown_files() {
+        let body = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+        for legacy in ["workflow.md", "authoring.md", "independent-reviewer.md"] {
+            assert!(
+                !body.contains(legacy),
+                "{}: must not reference removed engine owner {legacy}",
+                path.display()
+            );
+        }
+    }
+}
+
+/// AC-06: each migrated invariant heading resolves to exactly one owner file
+/// under `engine/reference/` (single-ownership; graph-integrity, not size).
+#[test]
+fn migrated_invariants_have_a_single_owner() {
+    let repo = repo_root();
+    let mut refs = Vec::new();
+    collect_files(&repo.join("engine/reference"), &mut refs);
+    let ref_bodies: Vec<(String, String)> = refs
+        .into_iter()
+        .filter(|p| p.extension().and_then(|e| e.to_str()) == Some("md"))
+        .map(|p| {
+            let name = p.file_name().unwrap().to_string_lossy().into_owned();
+            let body = std::fs::read_to_string(&p).unwrap();
+            (name, body)
+        })
+        .collect();
+    for (invariant, owner) in [
+        ("## Delivery approval gates", "lifecycle.md"),
+        ("## Depth scaling", "specs.md"),
+        ("## AC Matrix", "verification.md"),
+        ("## Reviewer cadence", "review.md"),
+        ("## Review transport", "review.md"),
+        ("## Living-spec fold", "knowledge.md"),
+        ("## Post-merge local cleanup", "delivery.md"),
+        ("## Derived delivery state", "delivery.md"),
+    ] {
+        let owners: Vec<&str> = ref_bodies
+            .iter()
+            .filter(|(_, body)| body.lines().any(|l| l.starts_with(invariant)))
+            .map(|(name, _)| name.as_str())
+            .collect();
+        assert_eq!(
+            owners,
+            vec![owner],
+            "invariant `{invariant}` must be owned by exactly {owner}"
+        );
+    }
+}
+
+/// AC-08: this feature does not touch the frozen config schema wording or bump
+/// the version (the schema correction is a deferred release follow-up).
+#[test]
+fn frozen_schema_and_version_are_unchanged_by_this_feature() {
+    let schema = read_repo_file("contracts/config.schema.json");
+    assert!(
+        schema.contains("always-loaded"),
+        "frozen config.schema.json context wording must be untouched by this feature"
+    );
+    let engine_version = read_repo_file("engine/VERSION");
+    let version = mochiflow_core::freeze::read_workspace_version(&repo_root()).unwrap();
+    assert_eq!(
+        engine_version.trim(),
+        version,
+        "engine/VERSION must match the workspace version (no bump in this feature)"
+    );
 }

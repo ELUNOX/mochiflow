@@ -6,15 +6,7 @@ description: |
   finalize the living-spec fold, set `accepted` with tracked/local persistence
   behavior, generate the PR title/body, take the approve-PR gate, then push and
   create the PR. The spec stays flat at
-  `{specs_dir}/{slug}/` — there is no `_done/` move and no `done` write. Activate
-  on the explicit command `mochiflow-open`, or natural phrasing like "PR出して" /
-  "PRを作って".
-triggers:
-  - mochiflow-open
-  - PR出して
-  - PRを作って
-trigger_patterns:
-  - "{slug} open"
+  `{specs_dir}/{slug}/` — there is no `_done/` move and no `done` write.
 artifacts:
   - "{install_dir}/state/{slug}/pr-body.md"
   - "{install_dir}/state/{slug}/pr-request.json (pr_driver backend only)"
@@ -22,11 +14,23 @@ artifacts:
 prerequisites:
   - "Implementation and verification complete (AC Matrix exists); `status: approved`"
 execution: inline
-references:
-  - reference/workflow.md
-  - reference/risk.md
-  - reference/git.md
-  - templates/delivery/pr-description.md
+load:
+  required:
+    - reference/lifecycle.md
+    - reference/verification.md
+    - reference/delivery.md
+    - reference/knowledge.md
+    - reference/git.md
+  conditional:
+    - when: risk >= elevated triggers the accept-gate freshness re-review, a review/fix runs, or any bounded-fix judgment is needed
+      files:
+        - reference/review.md
+    - when: the foundational context refresh check finds a coarse structural shift
+      files:
+        - commands/refresh-context.md
+    - when: generating the PR title/body
+      files:
+        - templates/delivery/pr-description.md
 ---
 
 # mochiflow-open
@@ -68,7 +72,7 @@ optional `docs(context)` commit → accept transition → PR title/body → appr
    - 3e. **Rework loop**: if any item is `FAIL`, pause open (status stays
      `approved`). Apply a **bounded inline code fix** on the feature branch using
      the build discipline (read, modify, verify, commit), using the shared
-     bounded-fix judgment in `reference/risk.md`; do not re-run
+     bounded-fix judgment in `reference/review.md`; do not re-run
      build's phase-entry gate (`mochiflow ready`) and do not revert the asserted
      state. The fix is not an open `tasks.md` task (build is already complete):
      there is no checkbox to tick and no `Task:` trailer. Commit per this verb's
@@ -85,7 +89,7 @@ optional `docs(context)` commit → accept transition → PR title/body → appr
 ### (b) Finalize the fold
 
 4. `open` owns authoring the fold (not `accept`). Fold per
-   `reference/git.md ## Living-spec fold`: append the *why* that code cannot
+   `reference/knowledge.md ## Living-spec fold`: append the *why* that code cannot
    reproduce (decision rationale, rejected options) as a **new per-file record**
    under `[adr].decisions` (`{YYYY-MM-DD}-{slug}.md` with front-matter `id` /
    `date` / `area` / `spec: {slug}` / `status: active`), and operational
@@ -114,7 +118,7 @@ optional `docs(context)` commit → accept transition → PR title/body → appr
      nothing and record a post-merge follow-up instead. Staleness discovered only
      **at or after merge** is the fallback case: route it to a post-merge
      follow-up (a `fix` spec or a backlog seed per
-     `reference/git.md ## Living-spec fold`), never a base-branch edit. The
+     `reference/knowledge.md ## Living-spec fold`), never a base-branch edit. The
      context layer is refreshed from code under human confirmation, never folded.
 
 ### (c) Context refresh commit (optional)
@@ -134,7 +138,7 @@ optional `docs(context)` commit → accept transition → PR title/body → appr
 ### (d) Accept transition
 
 6. When the acceptance conditions in
-   `reference/workflow.md ## AC Verification Matrix` all hold (matrix complete,
+   `reference/verification.md ## AC Matrix` all hold (matrix complete,
    every result done-eligible, and the reviewer verdict recorded when
    `risk ≥ elevated`), first enforce the accept-gate freshness check. For
    `risk ≥ elevated`, when any code-changing commit exists beyond the recorded `Reviewed through` sha, re-run `agents/change-reviewer.md` once on the full diff from git, record the fresh verdict and updated `Reviewed through: <sha>`, then proceed to `mochiflow accept`.
@@ -200,7 +204,7 @@ optional `docs(context)` commit → accept transition → PR title/body → appr
    committed accepted spec and `Spec:` trailer; local mode instead checks clean
    tree, source branch, base≠head, head ahead of base, local accepted state, and
    complete verification/review evidence. It then pushes the branch and resolves the backend per
-   `reference/git.md ## PR`. Read its exit code:
+   `reference/delivery.md ## PR`. Read its exit code:
    - `0` — PR created; capture the printed URL. The spec is now derived
      `in_review`. Present the PR URL and the conversational post-merge next
      action (below).
@@ -235,7 +239,7 @@ optional `docs(context)` commit → accept transition → PR title/body → appr
   **Review results** (`review` / `mochiflow-review`) from **Review and fix**
   (`review fix`). Result-only review reports without editing. Review-and-fix
   uses `agents/change-reviewer.md`, applies the shared bounded-fix judgment in
-  `reference/risk.md`, updates the local review-fix ledger, and feeds any
+  `reference/review.md`, updates the local review-fix ledger, and feeds any
   code-changing commit into the accept-gate freshness check rather than pushing
   or accepting by itself.
 - After PR creation, state the next human action conversationally: merge the PR

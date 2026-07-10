@@ -8,30 +8,25 @@ description: |
   hold-by-default for bare feedback: it re-verifies, commits locally, and holds;
   an explicit finalize signal reviews-if-stale once, pushes, updates PR
   metadata, and revises the fold when feedback changes a decision. The spec is
-  never moved and never resurrected — it has stayed flat the whole time. Activate
-  on the explicit command `mochiflow-update`, or natural phrasing like "修正依頼" /
-  "PR feedback" / "PRを直して".
-triggers:
-  - mochiflow-update
-  - 修正依頼
-  - PR feedback
-  - PRを直して
-trigger_patterns:
-  - "{slug} update"
-  - "{slug} feedback"
-  - "{slug} 修正依頼"
-  - "{slug} PR feedback"
+  never moved and never resurrected — it has stayed flat the whole time.
 artifacts:
   - "{install_dir}/state/{slug}/pr-body.md"
   - "{specs_dir}/{slug}/ (flat; never moved)"
 prerequisites:
   - "A PR is open for the spec (derived `in_review`); spec is flat at `{specs_dir}/{slug}/`"
 execution: inline
-references:
-  - reference/workflow.md
-  - reference/risk.md
-  - reference/git.md
-  - templates/delivery/pr-description.md
+load:
+  required:
+    - reference/delivery.md
+    - reference/verification.md
+    - reference/git.md
+  conditional:
+    - when: finalize on risk >= elevated re-reviews a stale verdict, a review/fix runs, or any bounded-fix judgment is needed
+      files:
+        - reference/review.md
+    - when: PR metadata changes and the title/body is regenerated
+      files:
+        - templates/delivery/pr-description.md
 ---
 
 # mochiflow-update
@@ -51,7 +46,7 @@ for its whole life, so there is nothing to restore.
 2. Classify the input as hold-only or finalize:
    - Hold-only feedback signals are the existing bare natural-language triggers
      with no slug qualifier: `修正依頼`, `PR feedback`, `PRを直して`, and
-     equivalent in-scope requests. Use the shared bounded-fix judgment in `reference/risk.md` for whether a request is in scope.
+     equivalent in-scope requests. Use the shared bounded-fix judgment in `reference/review.md` for whether a request is in scope.
      For hold-only input, apply the requested code
      changes as a **bounded inline PR-feedback fix** using build discipline
      (read, edit, TDD where applicable, verify, commit). This is not an open
@@ -62,11 +57,10 @@ for its whole life, so there is nothing to restore.
    reverted to `approved`).
      For hold-only input: apply, commit locally, re-verify, update the touched AC Matrix rows, then stop.
      No push, no `mochiflow accept`, and no mandatory reviewer run happen on a hold-only message.
-   - Finalize signals are the explicit `mochiflow-update` command, any match
-     against this file's own trigger patterns (`{slug} update`, `{slug}
-     feedback`, `{slug} 修正依頼`, `{slug} PR feedback`), or an unambiguous
-     completion statement such as "that's everything / push it / update the
-     PR". A finalize input runs the review-if-stale, push, and PR-metadata
+   - Finalize signals are an explicit finalize invocation, the slug-qualified
+     update event selected by `router.md`, or an unambiguous completion statement
+     such as "that's everything / push it / update the PR". A finalize input
+     runs the review-if-stale, push, and PR-metadata
      steps below over every held commit since the last recorded
      `Reviewed through` sha, not just the latest commit.
    Feedback interpretation and PR-metadata updates stay inline on the main
@@ -84,7 +78,7 @@ for its whole life, so there is nothing to restore.
    `agents/change-reviewer.md` exactly once on the full diff from git and record
    the fresh verdict plus updated `Reviewed through: <sha>` in
    `design.md ## Review Results` before pushing, per
-   `reference/risk.md ## Consequences` (verdict freshness).
+   `reference/review.md ## Verdict freshness`.
 6. On finalize, push the branch so the open PR updates.
 7. Update PR metadata when needed: regenerate the PR title/body into
    `{install_dir}/state/{slug}/pr-body.md` and update the PR via the provider

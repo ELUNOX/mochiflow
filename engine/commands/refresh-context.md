@@ -6,34 +6,35 @@ description: |
   human confirmation. This is the operational counterpart to the emergent fold:
   context is a current-state orientation map derived from code (forward-placed,
   refreshed), never a dated history log (the fold owns that, in `[adr]`).
-  Activate when the user asks to refresh / regenerate project context. If open
-  detects a coarse structural shift, it runs this on the feature branch under
+  If open detects a coarse structural shift, it runs this on the feature branch under
   human confirmation and commits the result as a separate `docs(context)` commit
   before the accept close-out, so the refresh ships inside the PR; this command
   itself never auto-commits (branch / PR / commit handling is open's
   responsibility).
-triggers:
-  - コンテクスト更新して
-  - コンテクストを再生成して
-  - refresh context
-  - refresh-context
-trigger_patterns: []
 execution: inline
-references:
-  - commands/onboard.md
-  - reference/git.md
-  - reference/language.md
-  - templates/context/product.md
-  - templates/context/structure.md
-  - templates/context/tech.md
+load:
+  required:
+    - reference/knowledge.md
+    - reference/presentation.md
+  conditional:
+    - when: regenerating the foundational context layer
+      files:
+        - commands/onboard.md
+        - templates/context/product.md
+        - templates/context/structure.md
+        - templates/context/tech.md
+    - when: user-facing wording needs the rule
+      files:
+        - reference/language.md
 ---
 
 # refresh-context
 
 ## Purpose
 
-Regenerate the always-loaded foundational context (`[context].product` /
-`[context].structure` / `[context].tech`) from the current code so orientation never silently rots.
+Regenerate the foundational context (`[context].product` /
+`[context].structure` / `[context].tech`) from the current code so workflows can
+load current orientation on demand without letting it silently rot.
 Code is the source of truth; this layer is a derived map, not new knowledge.
 
 ## When it runs
@@ -72,7 +73,7 @@ Code is the source of truth; this layer is a derived map, not new knowledge.
 ## Stop conditions
 
 - Refresh-context updates only the current-state context layer.
-- ADR remains the fold target (`reference/git.md ## Living-spec fold`);
+- ADR remains the fold target (`reference/knowledge.md ## Living-spec fold`);
   constitution remains user-authored always-loaded guidance.
 - Dated history and rationale belong to the fold, not context refresh.
 - The human confirms current-state accuracy before any commit.

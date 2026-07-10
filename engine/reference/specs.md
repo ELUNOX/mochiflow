@@ -1,7 +1,68 @@
-# Authoring Reference
+# Specs Reference
 
-How to write `spec.yaml`, `spec.md`, `design.md`, `tasks.md`. Used by `plan` and
-`build`.
+Artifact roles, spec depth, backlog promotion, authoring rules, the consistency
+check, and session recovery. Used by `plan`, `build`, `discuss`, and `onboard`.
+Lifecycle states and gates live in `reference/lifecycle.md`; the AC Matrix and
+verification profiles live in `reference/verification.md`; the `design.md`
+required condition and QA attack coverage live in `reference/risk.md`.
+
+## Spec lane
+
+The spec lane verbs create, approve, implement, accept, and deliver durable spec
+artifacts: discuss / plan / build settle the work, then open / update / close
+handle PR delivery. Specs stay flat at `{specs_dir}/{slug}/` for their whole
+life. Micro is the smallest spec depth for concrete small work; it keeps
+`spec.yaml`, `spec.md`, the AC Matrix, lifecycle state, and PR delivery while
+skipping pitch/design/task documents when they are not needed.
+
+## Depth scaling
+
+A change is always one folder under `{specs_dir}/{slug}/`. Documents grow only
+as far as the change needs:
+
+| Depth | Use case | Documents | Requirements detail | Tasks |
+| --- | --- | --- | --- | --- |
+| Micro spec | Concrete small fix | `spec.yaml` + `spec.md` | problem / change / AC / verify | none |
+| Standard spec | Normal feature/fix | `pitch.md` + `spec.md` + `tasks.md` | AC table + QA examples | checklist |
+| Design spec | Design decision or multiple areas | `pitch.md` + `spec.md` + `design.md` + `tasks.md` | NFR / contract / examples | dependency checklist |
+| Critical spec | migration / security / data loss / external contract | full | traceability / rollback / observability / reviewer | per-task verification checklist |
+
+Let depth increase with risk, integration, surfaces, ambiguity, and external
+contracts. Do not add prose for its own sake; detail should be checkable,
+traceable, and executable.
+
+Micro is inferred from file presence: `spec.yaml` + `spec.md`, with no
+`pitch.md`, `design.md`, or `tasks.md`. It is eligible only for standard-risk,
+single-surface, `integration: none` work with no design-required impact, human
+QA, or ADR fold need. A micro candidate that discovers durable rationale,
+pitfalls, integration, elevated/critical risk, public contract impact, or human
+QA need escalates in place before approval or delivery.
+
+`design.md` necessity is governed by `reference/risk.md ## design.md required
+condition`. `tasks.md` is required for standard-or-larger multi-step work.
+
+## Backlog seeds
+
+`{specs_dir}/_backlog/{slug}.md` is a single-file inbox for raw ideas only. It
+is not a spec and is not a plan-ready handoff.
+
+- Raw seed: `maturity: seed`, created from `templates/backlog/seed.md`, and used
+  as raw input for `discuss`. Body: `## Signal`, `## Why It Matters`,
+  `## Evidence`, `## Open Questions`.
+Shared frontmatter: `slug,title,maturity,source,created,updated` (+ optional
+`module,surface,type_hint,source_spec,source_phase`).
+
+Lifecycle: create raw seed → `discuss` reads it as input → when agreement is
+reached, `discuss` creates `{specs_dir}/{slug}/spec.yaml` (`status: draft`) and
+`{specs_dir}/{slug}/pitch.md`, creates/switches to `{prefix}/{slug}`, deletes the
+raw seed when present, runs pitch-only lint, and commits the promotion. `plan`
+then reads `pitch.md` as the durable input for standard-or-larger specs. For an
+explicit concrete request with no existing draft, `plan` may create a direct
+micro spec without `pitch.md`. Interrupted discuss keeps the raw seed file. Do
+not put AC, QA, design, tasks, or final classification in backlog files.
+
+Legacy `_backlog/{slug}/` spec-format directories are deprecated and no longer
+rendered by tooling; they remain on disk read-only.
 
 ## spec.yaml schema
 
@@ -24,11 +85,11 @@ updated: YYYY-MM-DD
 completed: YYYY-MM-DDTHH:MM:SSZ   # legacy: ordered the Done view for archived specs; the engine no longer writes it
 ```
 
-`status` flow is `draft → approved → accepted` (`workflow.md`); `done` is a
-legacy/derived state for archived specs, not written by the current flow. Whether
-`design.md` / `tasks.md` exist is expressed by file presence, not metadata.
-`completed` is a legacy timestamp tied to `done`; the current flow does not write
-it.
+`status` flow is `draft → approved → accepted` (`reference/lifecycle.md`);
+`done` is a legacy/derived state for archived specs, not written by the current
+flow. Whether `design.md` / `tasks.md` exist is expressed by file presence, not
+metadata. `completed` is a legacy timestamp tied to `done`; the current flow
+does not write it.
 
 ## SSOT discipline
 
@@ -39,22 +100,22 @@ Fix each fact in one place; reference by ID elsewhere.
 | AC (pass/fail criteria) | `spec.md` | task line reference `[AC-01]` (ID only) |
 | surface / risk / type / status | `spec.yaml` | not repeated |
 | QA scenarios | `spec.md` | PR `## Testing` derives from it; no intermediate file |
-| reviewer / git / journal cadence | `risk.md` | not repeated |
+| reviewer / git / journal cadence | `reference/review.md` / `reference/risk.md` | not repeated |
 | user-authored standing rules | `[constitution]` (project / local), written by the user | always-loaded; never generated from code |
-| current-state orientation (purpose / layout / tech) | code/config, mapped into `[context]` (product / structure / tech) via onboard / `refresh-context` | always-loaded; never folded |
+| current-state orientation (purpose / layout / tech) | code/config, mapped into `[context]` (product / structure / tech) via onboard / `refresh-context` | loaded on demand for workflow or repository orientation; never folded |
 | design rationale (*why*) / pitfalls history | `[adr]` (directory-rooted `decisions` / `pitfalls` stores: one immutable per-file record each, plus a generated gitignored `INDEX.md`), grown by open's fold via supersession | on-demand / phase load |
 
 The three durable guidance layers differ by lifecycle: `[constitution]` is
 user-authored standing guidance, `[context]` is a code-derived current-state map
 *refreshed* forward (onboard / `refresh-context`), and `[adr]` is dated history
-*folded* at open (`reference/git.md ## Living-spec fold`). Code is always the
-source of truth for current state; prose is not.
+*folded* at open (`reference/knowledge.md ## Living-spec fold`). Code is always
+the source of truth for current state; prose is not.
 
 ## Durable vs ephemeral artifacts
 
 A spec folder holds only **durable** artifacts; delivery scaffolding is
 **ephemeral** and lives under `{install_dir}/state/{slug}/` (gitignored, swept
-post-merge per `reference/git.md ## Post-merge local cleanup`).
+post-merge per `reference/delivery.md ## Post-merge local cleanup`).
 
 | class | artifacts | home | archived |
 | --- | --- | --- | --- |
@@ -111,7 +172,8 @@ cause / change / verification.
 
 ## design.md
 
-Write only when required (`risk.md ## design.md required condition`). Carries:
+Write only when required (`reference/risk.md ## design.md required condition`).
+Carries:
 
 - Design decisions and rationale
 - Architecture, data model / interface at signature level

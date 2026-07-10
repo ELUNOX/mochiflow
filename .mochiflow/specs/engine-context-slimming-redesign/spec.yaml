@@ -1,0 +1,11 @@
+version: 1
+slug: "engine-context-slimming-redesign"
+title: "Redesign engine context loading and contract layout"
+type: "refactor"
+surfaces:
+  - "cli"
+integration: "none"
+risk: "elevated"
+status: "accepted"
+created: "2026-07-09"
+updated: "2026-07-10"

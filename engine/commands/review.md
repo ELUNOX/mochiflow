@@ -4,30 +4,37 @@ description: |
   mochiflow's ad-hoc review. On an explicit user request, run the read-only
   plan-auditor or change-reviewer against the active spec's latest artifacts via
   the review transport rule, regardless of risk level. Plain review is
-  result-only and reports findings only. `review fix [1-3]` runs bounded
-  automatic fix rounds on the main agent. This is a non-phase command: it
+  result-only and reports findings only. Fix mode runs bounded automatic rounds
+  on the main agent. This is a non-phase command: it
   exposes ad-hoc review as a discoverable entry point and adds no delivery gate.
-  Activate on the explicit command `mochiflow-review`, or natural phrasing like
-  "レビューして". Reports findings only in result-only mode; fix mode may edit
-  in-scope files but never changes status, pushes, or creates PR metadata by
-  itself.
-triggers:
-  - mochiflow-review
-  - レビューして
-trigger_patterns:
-  - "{slug} review"
-  - "{slug} review fix"
-  - "{slug} review fix 1"
-  - "{slug} review fix 2"
-  - "{slug} review fix 3"
-  - "{slug} review {number} (invalid; route to correction)"
-  - "{slug} review fix {number} (invalid outside 1..3; route to correction)"
+  Reports findings only in result-only mode; fix mode may edit in-scope files but
+  never changes status, pushes, or creates PR metadata by itself.
 delegate_to:
   - agents/plan-auditor.md
   - agents/change-reviewer.md
-references:
-  - reference/risk.md
-  - reference/workflow.md
+load:
+  required:
+    - reference/review.md
+    - reference/presentation.md
+  conditional:
+    - when: reviewing a code-less spec before implementation
+      files:
+        - agents/plan-auditor.md
+    - when: reviewing a change once code exists
+      files:
+        - agents/change-reviewer.md
+    - when: fix mode applies a spec-artifact correction before implementation
+      files:
+        - commands/plan.md
+    - when: fix mode applies a post-completion correction before open
+      files:
+        - commands/build.md
+    - when: fix mode applies a correction while open is in progress
+      files:
+        - commands/open.md
+    - when: fix mode applies a correction while a PR is in review
+      files:
+        - commands/update.md
 ---
 
 # spec-review
@@ -55,7 +62,7 @@ or 3.
 
 ## Procedure
 
-Follow `reference/risk.md ## Ad-hoc review`, `## Review-fix loop`, and
+Follow `reference/review.md ## Ad-hoc review`, `## Review-fix loop`, and
 `## Review transport` (the single source of truth for this behavior):
 
 1. Parse the requested mode. If the input is `{slug} review`, select
@@ -81,9 +88,14 @@ Follow `reference/risk.md ## Ad-hoc review`, `## Review-fix loop`, and
    most one bounded fix pass for that round, verifies according to the current
    lifecycle context, updates the local review-fix ledger, and then either
    starts the next fresh independent review cycle or stops when the requested
-   fix-round budget is spent. The number after `fix` is the maximum number of
+   fix-round budget is spent. The number after `fix` is
+   the maximum number of
    fix rounds, not the number of reviewer opinions. End after the final
    requested fix round; do not require a clean post-fix review.
+   Before editing, resolve the lifecycle context and load exactly the matching
+   owner (`commands/plan.md`, `commands/build.md`, `commands/open.md`, or
+   `commands/update.md`) plus its declared load contract; do not load the other
+   lifecycle alternatives.
 6. On `pass` / `pass-with-comments` with no in-scope fix to apply, resume the
    interrupted flow.
 
@@ -109,7 +121,7 @@ Follow `reference/risk.md ## Ad-hoc review`, `## Review-fix loop`, and
 ## Stop conditions
 
 - Do not change `spec.yaml` `status` or create PR metadata — review is
-  non-transitional (`reference/risk.md ## Ad-hoc review`).
+  non-transitional (`reference/review.md ## Ad-hoc review`).
 - Result-only review must not edit files, stage, or commit. It is report-only.
 - In fix mode, staging and commits follow the active lifecycle context
   (`plan` spec-artifact fixes, `build` post-completion bounded fixes, `open`
@@ -118,10 +130,10 @@ Follow `reference/risk.md ## Ad-hoc review`, `## Review-fix loop`, and
 - Do not let fix mode exceed the parsed fix-round budget. Allowed fix rounds
   are 1, 2, or 3.
 - Do not use this in place of the mandatory risk-cadence review during build
-  (`reference/risk.md ## Consequences`); the two are independent.
+  (`reference/review.md ## Reviewer cadence`); the two are independent.
 - Do not pass the conversation history to the reviewer; pass only the spec
   pointers per `router.md` routing principle 5.
 - Do not choose inline while delegated subagent dispatch is available. If
   subagents are unavailable or dispatch fails for a runtime/tooling reason, do
-  not stop; use inline reviewer role per `reference/risk.md ## Review
+  not stop; use inline reviewer role per `reference/review.md ## Review
   transport`.

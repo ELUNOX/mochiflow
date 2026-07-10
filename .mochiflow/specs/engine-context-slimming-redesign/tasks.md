@@ -1,0 +1,158 @@
+# Redesign engine context loading and contract layout — Tasks
+
+Implementation Summary: Replace the broad engine instruction graph with a router-owned route table, responsibility-sized policies, staged command loads, compact reviewers, and deferred project context.
+risk: elevated
+Critical Stop Conditions:
+- Stop if the redesign requires a public CLI/schema/lifecycle behavior change.
+- Stop if a supported adapter cannot express required/conditional file-level loading without a new runtime prompt compiler.
+- Stop if removing duplicated text exposes conflicting safety behavior that the approved design does not resolve.
+
+## Defaults
+
+- Verification: `cargo test --manifest-path cli/Cargo.toml && cargo fmt --manifest-path cli/Cargo.toml --all -- --check && cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings && cargo run --manifest-path cli/Cargo.toml -- freeze --check`
+- Shared stop conditions: out-of-scope change / new design decision needed / verification keeps failing
+
+## Tasks
+
+- [x] T-001 [AC-03, AC-06] Create the responsibility-sized policy graph
+  - Depends on: none
+  - Files:
+    - `engine/reference/lifecycle.md`
+    - `engine/reference/specs.md`
+    - `engine/reference/verification.md`
+    - `engine/reference/risk.md`
+    - `engine/reference/review.md`
+    - `engine/reference/git.md`
+    - `engine/reference/delivery.md`
+    - `engine/reference/knowledge.md`
+    - `engine/reference/language.md`
+    - `engine/reference/presentation.md`
+    - `engine/reference/engineering-standards.md`
+    - `engine/MANIFEST.json`
+  - Done: every existing workflow, authoring, risk/review, git/delivery, knowledge, language, and presentation rule has exactly one target owner from `design.md`; new files are added without deleting old owners yet; differing duplicate behavior is reported rather than silently merged; freeze is refreshed so the intermediate commit is verifiable.
+  - Stop: one rule cannot be assigned to a single owner without changing its behavior or introducing a new public contract.
+- [x] T-002 [AC-01, AC-02, AC-04, AC-06] Make the router self-sufficient and migrate planning/setup commands
+  - Depends on: T-001
+  - Files:
+    - `engine/router.md`
+    - `engine/commands/discuss.md`
+    - `engine/commands/plan.md`
+    - `engine/commands/onboard.md`
+    - `engine/commands/refresh-context.md`
+    - `engine/templates/spec/spec.md`
+    - `engine/templates/spec/spec.standard.md`
+    - `engine/templates/spec/spec.micro.md`
+    - `engine/templates/spec/design.md`
+    - `engine/templates/spec/tasks.md`
+    - `engine/templates/handoff/build-session-prompt.md`
+    - `cli/crates/mochiflow-cli/tests/conformance.rs`
+    - `engine/MANIFEST.json`
+  - Done: router owns the complete compact route table and selects commands without command pre-reads; migrated commands use required/conditional loads and only selected templates; generic presentation and invariant prose points to the new owners; routing and plan/onboard conformance passes with no command trigger metadata dependency; router, hostile source/test-fixture content, ambiguous quoted user text, instruction-priority, and spec-depth rows from the Behavioral Observation Matrix run through Kiro plus AGENTS-style adapters and record selected/declined routes, outcomes, and selected/skipped load sets.
+  - Stop: preserving an existing route requires loading a command before route selection or duplicating route vocabulary outside the router.
+- [x] T-003 [AC-02, AC-04, AC-06] Migrate implementation, delivery, and review commands
+  - Depends on: T-002
+  - Files:
+    - `engine/commands/build.md`
+    - `engine/commands/open.md`
+    - `engine/commands/update.md`
+    - `engine/commands/close.md`
+    - `engine/commands/review.md`
+    - `engine/templates/delivery/pr-description.md`
+    - `cli/crates/mochiflow-cli/tests/conformance.rs`
+    - `engine/MANIFEST.json`
+  - Done: each command loads only its required policy and condition-matched review/delivery/template files; lifecycle, verification, freshness, bounded-fix, staging, PR, fold, and cleanup behavior remains owned and covered; phase-specific mutation guards remain next to their actions without broad restatement; risk/review, persistence/delivery, and context rows from the Behavioral Observation Matrix record selected/skipped load sets and outcomes.
+  - Stop: a command needs a removed monolithic reference because the new owner graph omitted a required safety or delivery rule.
+- [x] T-004 [AC-05, AC-06] Consolidate reviewer contracts and resources
+  - Depends on: T-001, T-003
+  - Files:
+    - `engine/agents/reviewer-core.md`
+    - `engine/agents/plan-auditor.md`
+    - `engine/agents/change-reviewer.md`
+    - deleted: `engine/agents/independent-reviewer.md`
+    - `engine/adapters/kiro/agents/spec-plan-auditor.json.tpl`
+    - `engine/adapters/kiro/agents/spec-change-reviewer.json.tpl`
+    - `cli/crates/mochiflow-cli/tests/conformance.rs`
+    - `cli/crates/mochiflow-core/src/adapter.rs`
+    - `engine/MANIFEST.json`
+  - Done: common grounding, impact search, ADR confrontation, falsification, finding/remediation shape, read-only rules, and completion output exist once in reviewer-core; profiles contain only target-specific rules and inputs; Kiro resources omit unrelated lifecycle/git/authoring files; the legacy engine wrapper is deleted while deprecated generated-target cleanup remains tested.
+  - Stop: Kiro or another supported reviewer surface cannot load a shared core plus profile without restoring duplicated full contracts.
+- [x] T-005 [AC-01, AC-04, AC-07] Slim adapter entrypoints and defer foundational context
+  - Depends on: T-002, T-003, T-004
+  - Files:
+    - `engine/adapters/agents/AGENTS.md.tpl`
+    - `engine/adapters/claude-code/CLAUDE.md.tpl`
+    - `engine/adapters/copilot/copilot-instructions.md.tpl`
+    - `engine/adapters/kiro/steering/mochiflow.md.tpl`
+    - `cli/crates/mochiflow-cli/tests/cli.rs`
+    - `cli/crates/mochiflow-cli/tests/conformance.rs`
+    - `engine/MANIFEST.json`
+    - `AGENTS.md`
+    - `.kiro/steering/mochiflow.md`
+    - `.kiro/agents/spec-plan-auditor.json`
+    - `.kiro/agents/spec-change-reviewer.json`
+  - Done: all adapters identify only constitution and router as standing MochiFlow inputs; config/context/commands/policies/templates/ADR are conditional; Kiro removes eager context file references; managed-block/full-file/model-override/candidate semantics remain unchanged; configured generated outputs are synchronized and deterministic.
+  - Stop: deferring context requires removing constitution, weakening instruction priority, or changing adapter ownership/overwrite behavior.
+- [x] T-006 [AC-01, AC-03, AC-06, AC-07, AC-08] Align non-frozen terminology and remove old owners
+  - Depends on: T-003, T-004, T-005
+  - Files:
+    - deleted: `engine/reference/workflow.md`
+    - deleted: `engine/reference/authoring.md`
+    - `engine/README.md`
+    - `docs/configuration.md`
+    - `cli/crates/mochiflow-core/src/config.rs`
+    - `cli/crates/mochiflow-core/src/init.rs`
+    - `cli/crates/mochiflow-cli/tests/conformance.rs`
+    - `engine/agents/change-reviewer.md`
+    - `engine/commands/build.md`
+    - `engine/commands/close.md`
+    - `engine/commands/open.md`
+    - `engine/commands/plan.md`
+    - `engine/commands/review.md`
+    - `engine/commands/update.md`
+    - `engine/reference/delivery.md`
+    - `engine/reference/git.md`
+    - `engine/reference/knowledge.md`
+    - `engine/reference/language.md`
+    - `engine/reference/review.md`
+    - `engine/reference/risk.md`
+    - `engine/MANIFEST.json`
+  - Done: the complete source-file set intentionally changed by the owner-narrowing commit is enumerated above; shared command/reference files end with their body pointers aligned to the responsibility map, and later tasks may change them only for their separately declared structural guards or review fixes. Rust sources and live non-frozen docs describe foundational context conditionally without changing keys, validation, `schema_version`, or path behavior; all live references use the new ownership graph; every conformance assertion previously pinned to `reference/workflow.md`, `reference/authoring.md`, command `triggers:`, or the Kiro `## Always loaded` block is enumerated and confirmed rehomed to its new owner (not dropped); old monolithic paths and the independent reviewer engine wrapper are absent; no compatibility stub remains; documentation explains upgrade replacement and generated-target cleanup accurately; repository search finds removed paths only in intentional migration fixtures or historical durable records; `contracts/config.schema.json`, version files, CHANGELOG, and release-facing README references are absent from the feature diff and the deferred release follow-up is recorded for open as a durable backlog seed.
+  - Stop: the task would edit a frozen schema/version/release file, or a live adapter/command/reviewer/template/public document still requires an old engine path.
+- [x] T-007 [AC-02, AC-03, AC-04, AC-05, AC-06, AC-07, AC-08] Complete structural coverage, dogfood synchronization, and final verification
+  - Depends on: T-006
+  - Files:
+    - `cli/crates/mochiflow-cli/tests/conformance.rs`
+    - `cli/crates/mochiflow-cli/tests/cli.rs`
+    - `engine/MANIFEST.json`
+    - `.mochiflow/engine/`
+    - `AGENTS.md`
+    - `.kiro/steering/mochiflow.md`
+    - `.kiro/agents/spec-plan-auditor.json`
+    - `.kiro/agents/spec-change-reviewer.json`
+    - `.mochiflow/specs/engine-context-slimming-redesign/spec.md`
+    - `.mochiflow/specs/engine-context-slimming-redesign/design.md`
+    - `.mochiflow/specs/engine-context-slimming-redesign/tasks.md`
+  - Done: structural tests prove declared path existence, required/conditional separation, route ownership, reviewer composition, adapter standing inputs, upgrade removal, frozen-schema/version no-change, and absence of live legacy paths without measuring size; the complete Behavioral Observation Matrix has recorded evidence for every route family and representative conditional-load class through Kiro and AGENTS-style adapters; `mochiflow freeze`, `mochiflow upgrade --source engine`, `mochiflow adapter generate --check`, the full configured CLI verification, lint, and mandatory elevated-risk change review pass; the AC Matrix records final evidence and open has the two ADR supersessions plus deferred release follow-up ready for close-out.
+  - Stop: full verification exposes a behavior regression, generated artifact outside the planned ownership set, or a need for a context-budget/assembly subsystem.
+- [x] T-008 [AC-01, AC-02, AC-03, AC-04, AC-05, AC-06, AC-07, AC-08] Correct adversarial review findings and renew evidence
+  - Depends on: T-007
+  - Files:
+    - `engine/commands/build.md`
+    - `engine/commands/close.md`
+    - `engine/commands/discuss.md`
+    - `engine/commands/onboard.md`
+    - `engine/commands/open.md`
+    - `engine/commands/plan.md`
+    - `engine/commands/refresh-context.md`
+    - `engine/commands/review.md`
+    - `engine/commands/update.md`
+    - `engine/reference/engineering-standards.md`
+    - `engine/reference/specs.md`
+    - `cli/crates/mochiflow-cli/tests/conformance.rs`
+    - `engine/MANIFEST.json`
+    - `.mochiflow/engine/`
+    - `.mochiflow/specs/engine-context-slimming-redesign/spec.md`
+    - `.mochiflow/specs/engine-context-slimming-redesign/design.md`
+    - `.mochiflow/specs/engine-context-slimming-redesign/tasks.md`
+  - Done: shared command files keep their procedure identity and mutation guards while their frontmatter descriptions contain no explicit commands, natural-language hints, or slug/event route patterns; `router.md` remains the sole activation-vocabulary owner and observed routing behavior is unchanged. All live non-frozen engine prose describes foundational context as conditionally loaded, while constitution remains standing and the frozen schema remains unchanged. `engineering-standards.md` points to `reference/specs.md ## Backlog seeds`; conformance detects stale live context claims, route vocabulary in command frontmatter, and removed owner references with or without a `reference/` prefix. The manifest and dogfood engine are synchronized; adapter drift, spec lint, full configured verification, and a fresh delegated change-reviewer run pass; the AC Matrix and latest Review Results record renewed evidence through the corrective commit.
+  - Stop: removing frontmatter activation prose changes router vocabulary or route selection; a stale-path guard cannot distinguish live engine instructions from intentional historical/migration fixtures; the fix would edit `contracts/config.schema.json`, a version/release file, or any public runtime/schema contract.
