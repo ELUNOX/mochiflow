@@ -76,7 +76,7 @@ Critical Stop Conditions:
     - `engine/MANIFEST.json`
   - Done: common grounding, impact search, ADR confrontation, falsification, finding/remediation shape, read-only rules, and completion output exist once in reviewer-core; profiles contain only target-specific rules and inputs; Kiro resources omit unrelated lifecycle/git/authoring files; the legacy engine wrapper is deleted while deprecated generated-target cleanup remains tested.
   - Stop: Kiro or another supported reviewer surface cannot load a shared core plus profile without restoring duplicated full contracts.
-- [ ] T-005 [AC-01, AC-04, AC-07] Slim adapter entrypoints and defer foundational context
+- [x] T-005 [AC-01, AC-04, AC-07] Slim adapter entrypoints and defer foundational context
   - Depends on: T-002, T-003, T-004
   - Files:
     - `engine/adapters/agents/AGENTS.md.tpl`

@@ -378,3 +378,25 @@ design. Do not record ordinary file moves or restate this plan.
   expects the four-resource set and asserts the unrelated files are absent;
   `review_fix_loop_boundaries_are_pinned` splits profile-input vs core
   operating-rule checks.
+
+
+### T-005 (adapter entrypoints slimmed; foundational context deferred)
+
+- All four adapter templates now list only constitution + router as standing
+  MochiFlow inputs. Foundational context (product/structure/tech) and project
+  config moved into the load-on-demand section with an explicit "load when a
+  workflow or repository-specific task needs orientation, not merely to route"
+  condition. Kiro steering dropped the eager `#[[file:{{context.*}}]]`
+  references (keeping only router + constitution `#[[file:]]`) and now describes
+  context as a load-on-demand input. The load-on-demand reference list names the
+  new owner set (lifecycle/specs/verification/risk/review/git/delivery/knowledge/
+  language/presentation/engineering-standards).
+- conformance `adapters_separate_standing_inputs_from_load_on_demand` now slices
+  the standing vs load-on-demand sections and asserts context/config are absent
+  from standing and present in load-on-demand, the new reference list is used,
+  and Kiro carries no eager context `#[[file:]]` refs. cli.rs needed no change
+  (no adapter-output content assertion depends on the moved wording).
+- Regenerated tracked outputs `AGENTS.md` + `.kiro/steering/mochiflow.md` in sync
+  (this repo generates the agents + kiro adapters); `adapter generate --check` =
+  0 drift. Managed-block / full-file / model-override / candidate semantics are
+  unchanged.

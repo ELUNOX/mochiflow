@@ -16,15 +16,17 @@ always-on steering file:
 
 - Router (read this first): #[[file:{{engine}}/router.md]]
 - Constitution (user-authored project / local rules): #[[file:{{constitution.project}}]] · #[[file:{{constitution.local}}]]
-- Project context (current-state orientation): #[[file:{{context.product}}]] · #[[file:{{context.structure}}]] · #[[file:{{context.tech}}]]
 
 ## mochiflow
 
 ### Load on demand
 
+- Project context (current-state orientation): `{{context.product}}`,
+  `{{context.structure}}`, `{{context.tech}}` — load when a selected workflow or
+  repository-specific task needs orientation, not merely to route.
 - Verb procedures: `{{engine}}/commands/{discuss,plan,build,open,update,close}.md`
 - Non-phase commands: `{{engine}}/commands/{review,refresh-context,onboard}.md`
-- Cross-cutting rules: `{{engine}}/reference/{workflow,risk,authoring,git,language,engineering-standards}.md`
+- Cross-cutting rules: `{{engine}}/reference/{lifecycle,specs,verification,risk,review,git,delivery,knowledge,language,presentation,engineering-standards}.md`
 - Decision history / pitfalls — **on-demand** (*why*, not current state):
   per-file records under `{{adr.decisions}}` / `{{adr.pitfalls}}` (each store has
   a generated, gitignored `INDEX.md`). Load the `INDEX.md` first, then open only

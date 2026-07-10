@@ -12,17 +12,18 @@ workflow.
 
 - Constitution — **always loaded**: `.mochiflow/constitution.md` and
   `.mochiflow/constitution.local.md` (user-authored project / local rules).
-- Project context — **read before any work**: `.mochiflow/context/product.md`,
-  `.mochiflow/context/structure.md`, and `.mochiflow/context/tech.md`. This is the always-loaded
-  current-state orientation; load it first.
 - Router (read this first): `.mochiflow/engine/router.md`
-- Project config (surfaces / verify commands / git): run `mochiflow config show`
 
 ### Load on demand
 
+- Project context (current-state orientation): `.mochiflow/context/product.md`,
+  `.mochiflow/context/structure.md`, `.mochiflow/context/tech.md` — load when a selected workflow or
+  repository-specific task needs orientation, not merely to route.
+- Project config (surfaces / verify commands / git): run `mochiflow config show`
+  when route resolution, verification, git, or adapter paths need it.
 - Verb procedures: `.mochiflow/engine/commands/{discuss,plan,build,open,update,close}.md`
 - Non-phase commands: `.mochiflow/engine/commands/{review,refresh-context,onboard}.md`
-- Cross-cutting rules: `.mochiflow/engine/reference/{workflow,risk,authoring,git,language,engineering-standards}.md`
+- Cross-cutting rules: `.mochiflow/engine/reference/{lifecycle,specs,verification,risk,review,git,delivery,knowledge,language,presentation,engineering-standards}.md`
 - Decision history / pitfalls — **on-demand** (*why*, not current state):
   per-file records under `.mochiflow/adr/decisions` / `.mochiflow/adr/pitfalls` (each store has
   a generated, gitignored `INDEX.md`). Load the `INDEX.md` first, then open only

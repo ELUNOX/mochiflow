@@ -11,17 +11,18 @@ only the command-specific details needed for the selected workflow.
 
 - Constitution — **always loaded**: `{{constitution.project}}` and
   `{{constitution.local}}` (user-authored project / local rules).
-- Project context — **read before any work**: `{{context.product}}`,
-  `{{context.structure}}`, and `{{context.tech}}`. Always-loaded current-state
-  orientation; load it first.
 - Router (read first): `{{engine}}/router.md`
-- Project config: `mochiflow config show`
 
 ### Load on demand
 
+- Project context (current-state orientation): `{{context.product}}`,
+  `{{context.structure}}`, `{{context.tech}}` — load when a selected workflow or
+  repository-specific task needs orientation, not merely to route.
+- Project config: `mochiflow config show` when route resolution, verification,
+  git, or adapter paths need it.
 - Verb procedures: `{{engine}}/commands/{discuss,plan,build,open,update,close}.md`
 - Non-phase commands: `{{engine}}/commands/{review,refresh-context,onboard}.md`
-- Cross-cutting rules: `{{engine}}/reference/{workflow,risk,authoring,git,language,engineering-standards}.md`
+- Cross-cutting rules: `{{engine}}/reference/{lifecycle,specs,verification,risk,review,git,delivery,knowledge,language,presentation,engineering-standards}.md`
 - Decision history / pitfalls — **on-demand** (*why*): per-file records under `{{adr.decisions}}` / `{{adr.pitfalls}}` (generated gitignored `INDEX.md` per store; `mochiflow adr list | show | search`).
 
 ### Artifact roles

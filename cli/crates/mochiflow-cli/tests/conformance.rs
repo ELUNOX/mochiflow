@@ -542,44 +542,70 @@ fn router_defines_lazy_load_contract_without_second_card() {
 
 #[test]
 fn adapters_separate_standing_inputs_from_load_on_demand() {
+    let reference_list = "reference/{lifecycle,specs,verification,risk,review,git,delivery,knowledge,language,presentation,engineering-standards}.md";
     for path in [
         "engine/adapters/agents/AGENTS.md.tpl",
         "engine/adapters/claude-code/CLAUDE.md.tpl",
         "engine/adapters/copilot/copilot-instructions.md.tpl",
     ] {
         let body = read_repo_file(path);
-        assert!(body.contains("### Standing inputs"), "{path}");
-        assert!(body.contains("### Load on demand"), "{path}");
-        assert!(body.contains("### Artifact roles"), "{path}");
+        let standing = body.find("### Standing inputs").expect("standing section");
+        let load = body.find("### Load on demand").expect("load section");
+        let roles = body.find("### Artifact roles").expect("roles section");
         assert!(
-            body.find("### Standing inputs") < body.find("### Load on demand"),
-            "{path} must present standing inputs before lazy-loaded files"
+            standing < load && load < roles,
+            "{path} must order standing inputs, load-on-demand, then artifact roles"
+        );
+        // Standing layer is constitution + router only; context/config are deferred.
+        let standing_section = &body[standing..load];
+        assert!(
+            standing_section.contains("Constitution") && standing_section.contains("router.md"),
+            "{path} standing inputs must keep constitution + router"
         );
         assert!(
-            body.find("### Load on demand") < body.find("### Artifact roles"),
-            "{path} must keep artifact-role descriptions outside load-on-demand files"
+            !standing_section.contains("{{context.")
+                && !standing_section.contains("read before any work"),
+            "{path} must not keep foundational context in the standing layer"
+        );
+        let load_section = &body[load..roles];
+        assert!(
+            load_section.contains("{{context.product}}") && load_section.contains("config show"),
+            "{path} must defer foundational context and config to load-on-demand"
         );
         assert!(
-            body.contains("commands/{discuss,plan,build,open,update,close}.md")
-                && body.contains(
-                    "reference/{workflow,risk,authoring,git,language,engineering-standards}.md"
-                ),
+            load_section.contains("commands/{discuss,plan,build,open,update,close}.md")
+                && load_section.contains(reference_list),
             "{path} must keep command/reference files in the load-on-demand section"
         );
     }
 
     let kiro = read_repo_file("engine/adapters/kiro/steering/mochiflow.md.tpl");
-    assert!(kiro.contains("## Always loaded"), "{kiro}");
-    assert!(kiro.contains("### Load on demand"), "{kiro}");
-    assert!(kiro.contains("### Artifact roles"), "{kiro}");
+    let always = kiro
+        .find("## Always loaded")
+        .expect("always-loaded section");
+    let load = kiro.find("### Load on demand").expect("load section");
+    let roles = kiro.find("### Artifact roles").expect("roles section");
     assert!(
-        kiro.find("### Load on demand") < kiro.find("### Artifact roles"),
-        "Kiro must keep artifact-role descriptions outside load-on-demand files"
+        always < load && load < roles,
+        "Kiro must order always-loaded, load-on-demand, then artifact roles"
+    );
+    let always_section = &kiro[always..load];
+    assert!(
+        always_section.contains("router.md") && always_section.contains("{{constitution.project}}"),
+        "Kiro always-loaded must keep router + constitution"
+    );
+    assert!(
+        !always_section.contains("#[[file:{{context."),
+        "Kiro must not eagerly reference foundational context files"
     );
     assert!(
         !kiro.contains("#[[file:{{engine}}/commands")
             && !kiro.contains("#[[file:{{engine}}/reference"),
         "Kiro file references must stay limited to standing inputs:\n{kiro}"
+    );
+    assert!(
+        kiro[load..roles].contains("{{context.product}}"),
+        "Kiro must describe foundational context as a load-on-demand input"
     );
 }
 
