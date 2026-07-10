@@ -23,6 +23,18 @@ load:
     - when: reviewing a change once code exists
       files:
         - agents/change-reviewer.md
+    - when: fix mode applies a spec-artifact correction before implementation
+      files:
+        - commands/plan.md
+    - when: fix mode applies a post-completion correction before open
+      files:
+        - commands/build.md
+    - when: fix mode applies a correction while open is in progress
+      files:
+        - commands/open.md
+    - when: fix mode applies a correction while a PR is in review
+      files:
+        - commands/update.md
 ---
 
 # spec-review
@@ -76,9 +88,14 @@ Follow `reference/review.md ## Ad-hoc review`, `## Review-fix loop`, and
    most one bounded fix pass for that round, verifies according to the current
    lifecycle context, updates the local review-fix ledger, and then either
    starts the next fresh independent review cycle or stops when the requested
-   fix-round budget is spent. The number after `fix` is the maximum number of
+   fix-round budget is spent. The number after `fix` is
+   the maximum number of
    fix rounds, not the number of reviewer opinions. End after the final
    requested fix round; do not require a clean post-fix review.
+   Before editing, resolve the lifecycle context and load exactly the matching
+   owner (`commands/plan.md`, `commands/build.md`, `commands/open.md`, or
+   `commands/update.md`) plus its declared load contract; do not load the other
+   lifecycle alternatives.
 6. On `pass` / `pass-with-comments` with no in-scope fix to apply, resume the
    interrupted flow.
 

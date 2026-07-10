@@ -25,6 +25,9 @@ load:
     - when: risk >= elevated triggers the accept-gate freshness re-review, a review/fix runs, or any bounded-fix judgment is needed
       files:
         - reference/review.md
+    - when: the foundational context refresh check finds a coarse structural shift
+      files:
+        - commands/refresh-context.md
     - when: generating the PR title/body
       files:
         - templates/delivery/pr-description.md

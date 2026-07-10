@@ -5243,6 +5243,108 @@ fn bounded_fix_commands_conditionally_load_review_policy() {
     }
 }
 
+#[test]
+fn review_fix_conditionally_loads_the_active_lifecycle_owner() {
+    let body = read_repo_file("engine/commands/review.md");
+    let fm = frontmatter(&body).expect("review command frontmatter");
+
+    for (condition, owner) in [
+        ("before implementation", "commands/plan.md"),
+        (
+            "post-completion correction before open",
+            "commands/build.md",
+        ),
+        ("while open is in progress", "commands/open.md"),
+        ("while a PR is in review", "commands/update.md"),
+    ] {
+        assert!(
+            fm.contains(condition) && fm.contains(&format!("- {owner}")),
+            "review fix must declare {owner} for the `{condition}` context"
+        );
+    }
+    assert!(
+        body.contains("load exactly the matching\n   owner")
+            && body.contains("lifecycle alternatives."),
+        "review fix must select one lifecycle owner before the main-agent fix pass"
+    );
+}
+
+#[test]
+fn command_load_contracts_keep_tiers_disjoint_and_invocations_reachable() {
+    let repo = repo_root();
+    let mut files = Vec::new();
+    collect_files(&repo.join("engine/commands"), &mut files);
+    collect_files(&repo.join("engine/agents"), &mut files);
+
+    for path in files {
+        if path.extension().and_then(|e| e.to_str()) != Some("md") {
+            continue;
+        }
+        let body = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+        let fm = frontmatter(&body).unwrap_or_default();
+        let mut tier = "";
+        let mut required = Vec::new();
+        let mut conditional = Vec::new();
+        let mut when_count = 0;
+        let mut files_count = 0;
+
+        for line in fm.lines().skip_while(|line| *line != "load:").skip(1) {
+            if !line.starts_with("  ") {
+                break;
+            }
+            match line {
+                "  required:" => tier = "required",
+                "  conditional:" => tier = "conditional",
+                _ => {
+                    let trimmed = line.trim();
+                    if tier == "conditional" && trimmed.starts_with("- when:") {
+                        when_count += 1;
+                    } else if tier == "conditional" && trimmed == "files:" {
+                        files_count += 1;
+                    } else if let Some(declared) = trimmed.strip_prefix("- ")
+                        && declared.ends_with(".md")
+                    {
+                        if tier == "required" {
+                            required.push(declared);
+                        } else if tier == "conditional" {
+                            conditional.push(declared);
+                        }
+                    }
+                }
+            }
+        }
+
+        for declared in &required {
+            assert!(
+                !conditional.contains(declared),
+                "{}: `{declared}` must not appear in both load tiers",
+                path.display()
+            );
+            assert!(
+                !declared.starts_with("templates/"),
+                "{}: templates must be selected conditionally, not eagerly required",
+                path.display()
+            );
+        }
+        assert_eq!(
+            when_count,
+            files_count,
+            "{}: every conditional load must pair one when with one files block",
+            path.display()
+        );
+    }
+
+    let open = read_repo_file("engine/commands/open.md");
+    let open_fm = frontmatter(&open).expect("open command frontmatter");
+    assert!(
+        open.contains("run\n     `refresh-context` (`commands/refresh-context.md`)")
+            && open_fm.contains("coarse structural shift")
+            && open_fm.contains("- commands/refresh-context.md"),
+        "open must conditionally load the refresh-context command it invokes"
+    );
+}
+
 /// AC-02 / AC-06: route vocabulary belongs to router.md, not command
 /// frontmatter descriptions. Command bodies may still name their procedure and
 /// document review grammar after routing has selected them.

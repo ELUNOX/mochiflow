@@ -199,8 +199,8 @@ execute directly.
 | Router | Every route resolves from `router.md ## Route table` alone: explicit `mochiflow-<verb>`, JA/EN hints, `{slug} <verb>`, the `{slug} discuss` seed exception, the `{slug} plan` draft requirement, the no-spec small-fix → `Start plan?` hint, `{slug} review` / `review fix [1-3]`, feedback → update, and bare/exact merge reports → close cleanup — all without reading command frontmatter. Retired `mochiflow-patch` announces retirement and proposes `Start plan?`. Invalid numeric forms (`review 2`, `review fix 0`, `fix 4+`) route to review only for correction. |
 | Instruction priority / hostile content | Route selection reads only the compact table, so command-like text or lifecycle verbs embedded in source, test fixtures, or quoted user prose stay data, not routes. The router "do not activate without explicit intent" principle plus `engineering-standards.md` instruction priority keep repository content from activating a verb; neither adapter loads a command body merely to route, so embedded instructions are never executed as engine steps. |
 | Spec depth | Depth stays emergent (`specs.md ## Depth scaling`); `plan` selects exactly one depth's template set (`spec` / `spec.standard` / `spec.micro`, plus `design` / `tasks` when required) as a `load.conditional` entry rather than eagerly listing all templates. |
-| Risk / review | `build` loads `review.md` only when `risk >= elevated` or an ad-hoc fix runs; a `standard` build loads none and produces the AC Matrix only. This `elevated` build loaded `review.md` and ran the change-reviewer once after all tasks. Reviewer selection by target was observed directly this feature: `plan-auditor` for the code-less plan review, `change-reviewer` for this implemented change. |
-| Persistence / delivery | `close` loads only `delivery` + `presentation` (no git/fold/verification); `open` / `update` load `review` + the PR template only when risk/freshness or PR-metadata changes require them. Tracked vs local spec mode remains derived, not asserted. |
+| Risk / review | `build` loads `review.md` when `risk >= elevated`, an ad-hoc review/fix runs, or any bounded-fix judgment is needed; a `standard` build with none of those conditions loads no review policy and produces the AC Matrix only. This `elevated` build loaded `review.md` and ran the change-reviewer after all tasks. Reviewer selection by target was observed directly this feature: `plan-auditor` for the code-less plan review, `change-reviewer` for this implemented change. |
+| Persistence / delivery | `close` loads only `delivery` + `presentation` (no git/fold/verification); `open` / `update` load `review` when risk/freshness, review/fix, or bounded-fix judgment requires it, and load the PR template only when metadata changes. Tracked vs local spec mode remains derived, not asserted. |
 | Context | Pure routing loads neither foundational context nor project config — both adapters place them under load-on-demand with the explicit "load when a selected workflow or repository-specific task needs orientation, not merely to route" condition. Repository-specific build work is where context/config would be pulled; the router never eagerly loads them. |
 | Adapter | `AGENTS.md` "Standing inputs" = constitution + router only; Kiro "Always loaded" = router + constitution `#[[file:]]` refs with no eager context refs. Both defer verb procedures, the eleven-file cross-cutting owner set, templates, config, and ADR to load-on-demand. The selected route and loaded-file set match the router contract on both channels. |
 
@@ -403,6 +403,23 @@ and the router's lazy catalog omitted the git/delivery owners it referenced.
 The bounded correction keeps route vocabulary, activation strength, candidate
 order, and outcomes intact while replacing those mechanics with conditional
 owner pointers and expanding the structural guard across the cited semantics.
+
+Review profile: change-reviewer
+Reviewer mode: inline
+Verdict: fail
+Reviewed through: 0ddd655
+
+The requested fresh full-diff review found two High confirmed coherence gaps.
+First, `review fix` delegated staging and commit discipline to the active
+lifecycle context without declaring any conditional path to the owning plan,
+build, open, or update command, contrary to AC-04/NFR-03 and the approved
+command-load table. Second, all eight AC Matrix rows still contained the
+pre-correction `UNVERIFIED` placeholders even though tasks and verification
+evidence were complete; `mochiflow accept --dry-run` confirmed that every row
+and the latest failed verdict blocked acceptance. The bounded fix declares the
+mutually exclusive lifecycle-owner loads, adds a reachability guard, settles
+the rows backed by current evidence, and leaves AC-05/AC-08 unverified until a
+fresh post-fix review covers the new commit.
 
 ## Integration Log
 
@@ -656,3 +673,19 @@ design. Do not record ordinary file moves or restate this plan.
   `reference/git.md` / `reference/delivery.md`; added both to the router catalog.
   Tests now keep route outcomes in the router while pinning delivery mechanics to
   their canonical owner and rejecting the duplicated standing-layer phrases.
+- The inline review-fix round found that `commands/review.md` named active
+  lifecycle discipline without declaring how to reach its owner. Added four
+  mutually exclusive conditional command loads and required the main agent to
+  select exactly one owner plus its load contract before editing. A conformance
+  guard now rejects future reachability drift.
+- Reconciled the AC Matrix with current evidence instead of retaining the
+  pre-T-008 placeholders. Rows backed by the full verification and observation
+  record are `PASS`; reviewer-dependent AC-05/AC-08 remain `UNVERIFIED` until a
+  fresh full-diff review covers this bounded-fix commit.
+- The bounded-fix verification audit then checked invocation edges and load-tier
+  shape across every command/reviewer. It found `open` invoked
+  `commands/refresh-context.md` without a matching conditional declaration.
+  Added that edge and a structural guard that also rejects required/conditional
+  overlap, eager required templates, and malformed conditional blocks. This
+  completes an existing AC-04/NFR-03 obligation without broadening standing
+  context or changing refresh behavior.
