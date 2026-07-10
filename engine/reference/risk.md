@@ -123,9 +123,7 @@ This section defines reviewer transport — the selection discipline "prefer a
 delegated subagent when the adapter/runtime exposes one, else run inline
 reviewer role". It applies only to the read-only reviewer contracts:
 `agents/plan-auditor.md` and `agents/change-reviewer.md`. Build implementation
-itself is inline and does not use this transport. The legacy
-`agents/independent-reviewer.md` file is only a compatibility wrapper that maps
-old invocations to one of these canonical contracts.
+itself is inline and does not use this transport.
 
 Both canonical reviewers preserve S0 repository grounding and S2 whole-tree
 impact / regression search. The profile split changes the review target, not the

@@ -1697,133 +1697,98 @@ fn session_recoverability_is_authoring_rule_not_lint() {
 
 #[test]
 fn canonical_reviewers_grounded_adversary_contract_is_pinned() {
+    let core = read_repo_file("engine/agents/reviewer-core.md");
     let plan_auditor = read_repo_file("engine/agents/plan-auditor.md");
     let change_reviewer = read_repo_file("engine/agents/change-reviewer.md");
-    let legacy = read_repo_file("engine/agents/independent-reviewer.md");
     let risk = read_repo_file("engine/reference/risk.md");
     let plan = read_repo_file("engine/commands/plan.md");
     let review = read_repo_file("engine/commands/review.md");
-    let authoring = read_repo_file("engine/reference/authoring.md");
-
+    let specs = read_repo_file("engine/reference/specs.md");
     assert!(
-        plan_auditor.contains("## S0 Grounding")
-            && plan_auditor.contains("## S1 Internal Coherence")
-            && plan_auditor.contains("## S2 Impact & Regression")
-            && plan_auditor.contains("## S3 Code Quality")
-            && plan_auditor.contains("## S4 Knowledge Confrontation")
-            && plan_auditor.contains("## Falsification"),
-        "plan-auditor must keep the grounded stage vocabulary"
-    );
-    assert!(
-        change_reviewer.contains("## S0 Grounding")
-            && change_reviewer.contains("## S1 Spec And Evidence Coherence")
-            && change_reviewer.contains("## S2 Impact & Regression")
-            && change_reviewer.contains("## S3 Code Quality")
-            && change_reviewer.contains("## S4 Knowledge Confrontation")
-            && change_reviewer.contains("## Falsification"),
-        "change-reviewer must keep the grounded stage vocabulary"
-    );
-    assert!(
-        legacy.contains("`plan-quality mode` -> `plan-auditor`")
-            && legacy.contains("`post-implementation mode` -> `change-reviewer`"),
-        "legacy independent-reviewer wrapper must map old modes to canonical profiles"
-    );
-    assert!(
-        plan_auditor.contains("new or relocated responsibilities")
-            && plan_auditor.contains("lifecycle vocabulary")
-            && plan_auditor.contains("distinctive nouns / identifiers")
-            && change_reviewer.contains("new or relocated responsibilities")
-            && change_reviewer.contains("lifecycle vocabulary"),
-        "reviewers S2 must define non-rename target derivation"
-    );
-    assert!(
-        plan_auditor.contains("generated `INDEX.md` is absent")
-            && plan_auditor.contains("unverified knowledge-unavailable note")
-            && change_reviewer.contains("generated `INDEX.md` is absent")
-            && change_reviewer.contains("unverified knowledge-unavailable note"),
-        "reviewers S4 must define absent-index behavior"
-    );
-    assert!(
-        plan_auditor.contains("Confidence: confirmed | predicted")
-            && plan_auditor.contains("A `predicted` finding is capped at Medium")
-            && change_reviewer.contains("Confidence: confirmed | predicted")
-            && change_reviewer.contains("A `predicted` finding is capped at Medium"),
-        "reviewers must pin Confidence field and predicted severity cap"
-    );
-    assert!(
-        plan_auditor.contains("Every finding, including Medium and Low")
-            && plan_auditor.contains("Remediation guidance")
-            && plan_auditor.contains("Minimal change:")
-            && plan_auditor.contains("Files to edit:")
-            && plan_auditor.contains("Suggested shape:")
-            && plan_auditor.contains("Verification:")
-            && plan_auditor.contains("Do not change:")
-            && change_reviewer.contains("Every finding, including Medium and Low")
-            && change_reviewer.contains("Remediation guidance")
-            && change_reviewer.contains("Minimal change:")
-            && change_reviewer.contains("Files to edit:")
-            && change_reviewer.contains("Suggested shape:")
-            && change_reviewer.contains("Verification:")
-            && change_reviewer.contains("Do not change:"),
-        "reviewers must require actionable remediation guidance for all severities"
-    );
-    assert!(
-        plan_auditor.contains("S3 Code Quality")
-            && plan_auditor.contains("N/A (no implementation yet)"),
-        "plan-auditor output must report S3 as N/A"
-    );
-    assert!(
-        change_reviewer.contains("behavior-preservation evidence")
-            && change_reviewer.contains("mechanical rename / move")
-            && change_reviewer.contains("semantic")
-            && change_reviewer.contains("refactor"),
-        "change-reviewer must cover refactor safety"
-    );
-    assert!(
-        plan_auditor.contains("Verdict is `fail` for any Critical or High confirmed finding")
-            && plan_auditor
-                .contains("Verdict is `pass-with-comments` for Medium or Low findings only")
-            && plan_auditor.contains("Verdict is `pass` when clean")
-            && change_reviewer
-                .contains("Verdict is `fail` for any Critical or High confirmed finding")
-            && change_reviewer
-                .contains("Verdict is `pass-with-comments` for Medium or Low findings only")
-            && change_reviewer.contains("Verdict is `pass` when clean"),
-        "reviewer verdict rule must be preserved"
-    );
-    assert!(
-        plan_auditor
-            .contains("QA attack coverage against `reference/risk.md ## QA attack coverage`")
-            && plan_auditor.contains("session-recoverability")
-            && change_reviewer
-                .contains("QA attack coverage against `reference/risk.md ## QA attack coverage`"),
-        "S1 must preserve QA attack coverage and session-recoverability duties"
+        !repo_root()
+            .join("engine/agents/independent-reviewer.md")
+            .exists(),
+        "legacy independent-reviewer wrapper must be deleted"
     );
 
-    let fm = frontmatter(&plan_auditor).expect("plan-auditor frontmatter");
-    for reference in [
-        "reference/language.md",
-        "reference/workflow.md",
-        "reference/risk.md",
-        "reference/authoring.md",
-        "reference/git.md",
-    ] {
+    assert!(
+        core.contains("## S0 Grounding")
+            && core.contains("## S2 Impact & Regression")
+            && core.contains("## S4 Knowledge Confrontation")
+            && core.contains("## Falsification"),
+        "reviewer-core must own the shared grounded stages"
+    );
+    for profile in [&plan_auditor, &change_reviewer] {
         assert!(
-            fm.contains(reference),
-            "plan-auditor frontmatter must include {reference}"
+            profile.contains("agents/reviewer-core.md"),
+            "each reviewer profile must compose reviewer-core"
         );
     }
-    let fm = frontmatter(&change_reviewer).expect("change-reviewer frontmatter");
-    for reference in [
-        "reference/language.md",
-        "reference/workflow.md",
-        "reference/risk.md",
-        "reference/authoring.md",
-        "reference/git.md",
+    assert!(
+        core.contains("new or relocated responsibilities")
+            && core.contains("lifecycle vocabulary")
+            && core.contains("distinctive nouns / identifiers"),
+        "reviewer-core S2 must define non-rename target derivation"
+    );
+    assert!(
+        core.contains("generated `INDEX.md` is absent")
+            && core.contains("unverified knowledge-unavailable note"),
+        "reviewer-core S4 must define absent-index behavior"
+    );
+    assert!(
+        core.contains("Confidence: confirmed | predicted")
+            && core.contains("A `predicted` finding is capped at Medium"),
+        "reviewer-core must pin Confidence field and predicted severity cap"
+    );
+    assert!(
+        core.contains("Every finding, including Medium and Low")
+            && core.contains("Remediation guidance")
+            && core.contains("Minimal change:")
+            && core.contains("Files to edit:")
+            && core.contains("Suggested shape:")
+            && core.contains("Verification:")
+            && core.contains("Do not change:"),
+        "reviewer-core must require actionable remediation guidance for all severities"
+    );
+    assert!(
+        core.contains("Verdict is `fail` for any Critical or High confirmed finding")
+            && core.contains("Verdict is `pass-with-comments` for Medium or Low findings only")
+            && core.contains("Verdict is `pass` when clean"),
+        "reviewer-core must pin the verdict rule"
+    );
+    assert!(
+        plan_auditor.contains("## S1 Internal Coherence")
+            && plan_auditor.contains("S3 Code Quality")
+            && plan_auditor.contains("N/A (no implementation yet)")
+            && plan_auditor
+                .contains("QA attack coverage against `reference/risk.md ## QA attack coverage`")
+            && plan_auditor.contains("session-recoverability"),
+        "plan-auditor must keep its S1 duties and S3 N/A"
+    );
+    assert!(
+        change_reviewer.contains("## S1 Spec And Evidence Coherence")
+            && change_reviewer.contains("## S3 Code Quality")
+            && change_reviewer.contains("behavior-preservation evidence")
+            && change_reviewer.contains("mechanical rename / move")
+            && change_reviewer.contains("semantic")
+            && change_reviewer.contains("refactor")
+            && change_reviewer
+                .contains("QA attack coverage against `reference/risk.md ## QA attack coverage`"),
+        "change-reviewer must keep its S1/S3 duties and refactor safety"
+    );
+
+    for (name, body) in [
+        ("plan-auditor", &plan_auditor),
+        ("change-reviewer", &change_reviewer),
     ] {
+        let fm = frontmatter(body).unwrap_or_else(|| panic!("{name} frontmatter"));
         assert!(
-            fm.contains(reference),
-            "change-reviewer frontmatter must include {reference}"
+            fm.contains("agents/reviewer-core.md") && fm.contains("reference/risk.md"),
+            "{name} frontmatter must load reviewer-core and risk"
+        );
+        assert!(
+            !fm.contains("reference/workflow.md") && !fm.contains("reference/authoring.md"),
+            "{name} frontmatter must not load the retired monoliths"
         );
     }
 
@@ -1839,6 +1804,10 @@ fn canonical_reviewers_grounded_adversary_contract_is_pinned() {
         "risk.md must name canonical profiles and preserve impact scope"
     );
     assert!(
+        !risk.contains("independent-reviewer"),
+        "risk.md must not reference the deleted legacy wrapper"
+    );
+    assert!(
         plan.contains("agents/plan-auditor.md") && plan.contains("S0"),
         "plan.md must use plan-auditor vocabulary"
     );
@@ -1849,14 +1818,14 @@ fn canonical_reviewers_grounded_adversary_contract_is_pinned() {
         "review.md must describe canonical profiles"
     );
     assert!(
-        authoring.contains("`plan-auditor` S1 Internal Coherence"),
-        "authoring.md must use the plan-auditor stage vocabulary"
+        specs.contains("`plan-auditor` S1 Internal Coherence"),
+        "specs.md must use the plan-auditor stage vocabulary"
     );
     for body in [
         risk.as_str(),
         plan.as_str(),
         review.as_str(),
-        authoring.as_str(),
+        specs.as_str(),
     ] {
         assert!(
             !body.contains("Stage 1") && !body.contains("Stage 2"),
@@ -1896,21 +1865,29 @@ fn kiro_reviewer_template_resources_are_grounded_and_read_only() {
             "{path} must include {agent_resource}"
         );
         for resource in [
-            "file://{{engine}}/reference/workflow.md",
-            "file://{{engine}}/reference/language.md",
+            "file://{{engine}}/agents/reviewer-core.md",
             "file://{{engine}}/reference/risk.md",
-            "file://{{engine}}/reference/authoring.md",
-            "file://{{engine}}/reference/git.md",
+            "file://{{engine}}/reference/language.md",
         ] {
             assert!(
                 resource_strings.contains(&resource),
                 "{path} must include {resource}"
             );
         }
+        for absent in [
+            "file://{{engine}}/reference/workflow.md",
+            "file://{{engine}}/reference/authoring.md",
+            "file://{{engine}}/reference/git.md",
+        ] {
+            assert!(
+                !resource_strings.contains(&absent),
+                "{path} must omit unrelated resource {absent}"
+            );
+        }
         assert_eq!(
             resource_strings.len(),
-            6,
-            "{path} must list exactly the six engine resources"
+            4,
+            "{path} must list exactly reviewer-core + profile + risk + language"
         );
         assert!(
             resource_strings
@@ -2097,6 +2074,7 @@ fn review_fix_budget_grammar_is_pinned() {
 #[test]
 fn review_fix_loop_boundaries_are_pinned() {
     let risk = read_repo_file("engine/reference/risk.md");
+    let reviewer_core = read_repo_file("engine/agents/reviewer-core.md");
     let plan_auditor = read_repo_file("engine/agents/plan-auditor.md");
     let change_reviewer = read_repo_file("engine/agents/change-reviewer.md");
 
@@ -2142,12 +2120,15 @@ fn review_fix_loop_boundaries_are_pinned() {
                 && body.contains("verdicts")
                 && body.contains("previous reviewer summaries")
                 && body.contains("review-fix ledger")
-                && body.contains("conversation history")
-                && body.contains("Do not review prior reviewer")
-                && body.contains("do not use the local review-fix ledger as input"),
-            "reviewer contracts must accept only cycle-local focus and reject prior review context"
+                && body.contains("conversation history"),
+            "reviewer profiles must accept only cycle-local focus and reject prior review context"
         );
     }
+    assert!(
+        reviewer_core.contains("Do not review prior reviewer")
+            && reviewer_core.contains("do not use the local review-fix ledger as input"),
+        "reviewer-core must forbid reusing prior reviewer output or the ledger as input"
+    );
 }
 
 #[test]

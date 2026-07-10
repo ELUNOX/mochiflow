@@ -5,12 +5,10 @@
   "name": "spec-plan-auditor",
   "prompt": "file://../../.mochiflow/engine/agents/plan-auditor.md",
   "resources": [
+    "file://.mochiflow/engine/agents/reviewer-core.md",
     "file://.mochiflow/engine/agents/plan-auditor.md",
-    "file://.mochiflow/engine/reference/workflow.md",
-    "file://.mochiflow/engine/reference/language.md",
     "file://.mochiflow/engine/reference/risk.md",
-    "file://.mochiflow/engine/reference/authoring.md",
-    "file://.mochiflow/engine/reference/git.md"
+    "file://.mochiflow/engine/reference/language.md"
   ],
   "tools": [
     "read"

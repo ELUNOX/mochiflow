@@ -62,7 +62,7 @@ Critical Stop Conditions:
     - `engine/MANIFEST.json`
   - Done: each command loads only its required policy and condition-matched review/delivery/template files; lifecycle, verification, freshness, bounded-fix, staging, PR, fold, and cleanup behavior remains owned and covered; phase-specific mutation guards remain next to their actions without broad restatement; risk/review, persistence/delivery, and context rows from the Behavioral Observation Matrix record selected/skipped load sets and outcomes.
   - Stop: a command needs a removed monolithic reference because the new owner graph omitted a required safety or delivery rule.
-- [ ] T-004 [AC-05, AC-06] Consolidate reviewer contracts and resources
+- [x] T-004 [AC-05, AC-06] Consolidate reviewer contracts and resources
   - Depends on: T-001, T-003
   - Files:
     - `engine/agents/reviewer-core.md`

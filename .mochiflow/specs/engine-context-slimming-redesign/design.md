@@ -351,3 +351,30 @@ design. Do not record ordinary file moves or restate this plan.
   but no task `Files:` list enumerates those three files. It is folded into T-006
   ("remove old owners / all live references use the new ownership graph") rather
   than re-planning, since the design already specifies it.
+
+
+### T-004 (reviewer contracts consolidated)
+
+- Created `engine/agents/reviewer-core.md` owning the shared review method once
+  (S0 Grounding, S2 Impact & Regression, S4 Knowledge Confrontation,
+  Falsification, operating rules, finding shape, completion output). Slimmed
+  `plan-auditor.md` / `change-reviewer.md` to compose the core and carry only
+  their target-specific S1/S3 stages and inputs; both use `load.required`
+  (reviewer-core + risk) with language conditional.
+- Deleted `engine/agents/independent-reviewer.md` and removed its only live
+  reference (the compatibility-wrapper sentence in `risk.md ## Review
+  transport`). The historical ADR / `_done` records that mention the old name are
+  immutable and untouched. `adapter.rs` `DEPRECATED_KIRO_PATHS` still lists the
+  generated `.kiro/agents/spec-independent-reviewer.json` target, so upgrade
+  cleanup of that old generated file is unchanged (no adapter.rs edit needed).
+- Kiro reviewer templates now resource only reviewer-core + the profile + risk +
+  language (four), dropping workflow/authoring/git; the regenerated
+  `.kiro/agents/spec-{plan-auditor,change-reviewer}.json` outputs are committed
+  in sync so `adapter generate --check` stays at 0 drift.
+- conformance: `canonical_reviewers_grounded_adversary_contract_is_pinned` now
+  checks the shared method in reviewer-core and only S1/S3 in the profiles, drops
+  the deleted-wrapper read, and repoints the session-recoverability assertion to
+  `specs.md`; `kiro_reviewer_template_resources_are_grounded_and_read_only`
+  expects the four-resource set and asserts the unrelated files are absent;
+  `review_fix_loop_boundaries_are_pinned` splits profile-input vs core
+  operating-rule checks.
