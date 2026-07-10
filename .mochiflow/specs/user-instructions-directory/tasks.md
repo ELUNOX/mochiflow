@@ -14,7 +14,7 @@ Critical Stop Conditions:
 
 ## Tasks
 
-- [ ] T-001 [AC-01, AC-02, AC-03, AC-04] Add idempotent init scaffolding and ignore safety
+- [x] T-001 [AC-01, AC-02, AC-03, AC-04] Add idempotent init scaffolding and ignore safety
   - Depends on: none
   - Files:
     - `cli/crates/mochiflow-cli/src/main.rs`

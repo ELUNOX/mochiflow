@@ -7,6 +7,7 @@
 
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command as StdCommand;
 
 use assert_cmd::Command;
 
@@ -50,6 +51,16 @@ fn count_occurrences(haystack: &str, needle: &str) -> usize {
     haystack.match_indices(needle).count()
 }
 
+fn assert_instructions_readme_contract(readme: &str) {
+    assert!(
+        readme.contains("explicitly provide its file path"),
+        "{readme}"
+    );
+    assert!(readme.contains("does not automatically load"), "{readme}");
+    assert!(readme.contains("does not parse frontmatter"), "{readme}");
+    assert!(readme.contains("detach --purge"), "{readme}");
+}
+
 /// Deterministic init: no flags, piped stdin (non-TTY) → exit 0, scaffolds
 /// config from machine detection. A bare temp dir detects nothing concrete, so
 /// the verify command stays a TODO sentinel and confirm markers are attached
@@ -57,7 +68,7 @@ fn count_occurrences(haystack: &str, needle: &str) -> usize {
 #[test]
 fn init_scaffolds_deterministically() {
     let dir = tempfile::tempdir().unwrap();
-    bin()
+    let result = bin()
         .args(["init", "--target", dir.path().to_str().unwrap()])
         .write_stdin("")
         .assert()
@@ -79,6 +90,18 @@ fn init_scaffolds_deterministically() {
         "non-interactive default should be agents, got:\n{cfg}"
     );
     assert!(dir.path().join(".mochiflow/engine/VERSION").exists());
+    assert!(dir.path().join(".mochiflow/instructions").is_dir());
+    assert!(dir.path().join(".mochiflow/instructions.local").is_dir());
+    let readme = fs::read_to_string(dir.path().join(".mochiflow/instructions/README.md")).unwrap();
+    assert_instructions_readme_contract(&readme);
+    let ignore = fs::read_to_string(dir.path().join(".mochiflow/.gitignore")).unwrap();
+    assert!(ignore.contains("\ninstructions.local/\n"), "{ignore}");
+    assert!(!ignore.contains("\ninstructions/\n"), "{ignore}");
+    let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
+    assert!(
+        out.contains("prepared user instructions: .mochiflow/instructions/ (shareable), .mochiflow/instructions.local/ (local-only)"),
+        "{out}"
+    );
 }
 
 #[test]
@@ -153,7 +176,7 @@ fn init_uses_artifact_language_flag_without_prompting() {
 }
 
 #[test]
-fn init_existing_config_runs_join_style_local_setup() {
+fn init_existing_config_preserves_config_but_still_scaffolds_init_paths() {
     let dir = tempfile::tempdir().unwrap();
     bin()
         .args([
@@ -186,6 +209,8 @@ fn init_existing_config_runs_join_style_local_setup() {
         .args(["--config", config.to_str().unwrap(), "index"])
         .assert()
         .success();
+    fs::remove_dir_all(dir.path().join(".mochiflow/instructions")).unwrap();
+    fs::remove_dir_all(dir.path().join(".mochiflow/instructions.local")).unwrap();
 
     let result = bin()
         .args([
@@ -202,18 +227,27 @@ fn init_existing_config_runs_join_style_local_setup() {
         .assert()
         .success();
     let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
-    assert!(
-        out.contains("MochiFlow is already initialized; running join-style local setup"),
-        "{out}"
-    );
+    assert!(!out.contains("running join-style local setup"), "{out}");
     assert!(
         out.contains(
             "Ignoring --adapter kiro because existing config is kept; configured adapters: agents"
         ),
         "{out}"
     );
-    assert!(out.contains("Join: 0 fail"), "{out}");
-    assert!(!out.contains("Paste this into your AI agent"), "{out}");
+    assert!(!out.contains("Join: 0 fail"), "{out}");
+    assert!(out.contains("generated adapters: agents"), "{out}");
+    assert!(
+        out.contains("prepared user instructions: .mochiflow/instructions/ (shareable), .mochiflow/instructions.local/ (local-only)"),
+        "{out}"
+    );
+    assert!(
+        dir.path()
+            .join(".mochiflow/instructions/README.md")
+            .exists()
+    );
+    assert!(dir.path().join(".mochiflow/instructions.local").is_dir());
+    assert!(dir.path().join("AGENTS.md").exists());
+    assert!(!dir.path().join(".kiro/steering/mochiflow.md").exists());
 }
 
 /// Idempotent/non-destructive: running init twice preserves hand-edited config.
@@ -234,7 +268,7 @@ fn init_is_idempotent_nondestructive() {
     let edited = original.replace("artifact_language = \"en\"", "artifact_language = \"ja\"");
     fs::write(&config_path, &edited).unwrap();
 
-    // Second run without --force preserves config and follows join-style setup.
+    // Second run without --force preserves config and still follows init setup.
     bin()
         .args(["init", "--target", dir.path().to_str().unwrap()])
         .write_stdin("")
@@ -247,6 +281,141 @@ fn init_is_idempotent_nondestructive() {
         after.contains("artifact_language = \"ja\""),
         "hand-edited value should be preserved, got:\n{after}"
     );
+}
+
+#[test]
+fn init_preserves_user_instruction_files_even_with_force() {
+    let dir = tempfile::tempdir().unwrap();
+    bin()
+        .args(["init", "--target", dir.path().to_str().unwrap()])
+        .write_stdin("")
+        .assert()
+        .success();
+
+    let readme = dir.path().join(".mochiflow/instructions/README.md");
+    let shared_note = dir.path().join(".mochiflow/instructions/release.md");
+    let local_note = dir.path().join(".mochiflow/instructions.local/private.md");
+    fs::write(&readme, "# Custom\n\nKeep me.\n").unwrap();
+    fs::write(&shared_note, "# Release\n").unwrap();
+    fs::write(&local_note, "# Private\n").unwrap();
+
+    for args in [
+        ["init", "--target", dir.path().to_str().unwrap()].as_slice(),
+        ["init", "--force", "--target", dir.path().to_str().unwrap()].as_slice(),
+    ] {
+        bin().args(args).write_stdin("").assert().success();
+        assert_eq!(
+            fs::read_to_string(&readme).unwrap(),
+            "# Custom\n\nKeep me.\n"
+        );
+        assert_eq!(fs::read_to_string(&shared_note).unwrap(), "# Release\n");
+        assert_eq!(fs::read_to_string(&local_note).unwrap(), "# Private\n");
+    }
+}
+
+#[test]
+fn init_appends_local_instructions_ignore_rule_without_hiding_shared_files() {
+    let dir = tempfile::tempdir().unwrap();
+    let install = dir.path().join(".mochiflow");
+    fs::create_dir_all(&install).unwrap();
+    fs::write(
+        install.join(".gitignore"),
+        "state/\n# custom\ninstructions.local/\n",
+    )
+    .unwrap();
+
+    bin()
+        .args(["init", "--target", dir.path().to_str().unwrap()])
+        .write_stdin("")
+        .assert()
+        .success();
+
+    let ignore = fs::read_to_string(install.join(".gitignore")).unwrap();
+    assert!(ignore.contains("# custom"), "{ignore}");
+    assert_eq!(
+        count_occurrences(&ignore, "instructions.local/"),
+        1,
+        "{ignore}"
+    );
+    assert_eq!(count_occurrences(&ignore, "instructions/"), 0, "{ignore}");
+
+    fs::write(
+        dir.path().join(".mochiflow/instructions/shared.md"),
+        "# Shared\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.path().join(".mochiflow/instructions.local/private.md"),
+        "# Private\n",
+    )
+    .unwrap();
+    StdCommand::new("git")
+        .args(["init", "-q"])
+        .current_dir(dir.path())
+        .status()
+        .unwrap();
+    let status = StdCommand::new("git")
+        .args(["status", "--short", "--untracked-files=all"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&status.stdout).into_owned();
+    assert!(
+        stdout.contains(".mochiflow/instructions/shared.md"),
+        "{stdout}"
+    );
+    assert!(
+        !stdout.contains(".mochiflow/instructions.local/private.md"),
+        "{stdout}"
+    );
+}
+
+#[test]
+fn init_appends_missing_local_instructions_ignore_rule_to_custom_file() {
+    let dir = tempfile::tempdir().unwrap();
+    let install = dir.path().join(".mochiflow");
+    fs::create_dir_all(&install).unwrap();
+    fs::write(
+        install.join(".gitignore"),
+        "state/\n# custom without local rule\n",
+    )
+    .unwrap();
+
+    bin()
+        .args(["init", "--target", dir.path().to_str().unwrap()])
+        .write_stdin("")
+        .assert()
+        .success();
+
+    let ignore = fs::read_to_string(install.join(".gitignore")).unwrap();
+    assert!(ignore.contains("# custom without local rule"), "{ignore}");
+    assert!(ignore.ends_with("instructions.local/\n"), "{ignore}");
+    assert_eq!(
+        count_occurrences(&ignore, "instructions.local/"),
+        1,
+        "{ignore}"
+    );
+    assert_eq!(count_occurrences(&ignore, "instructions/"), 0, "{ignore}");
+}
+
+#[test]
+fn init_fails_when_instruction_paths_are_files() {
+    for rel in [".mochiflow/instructions", ".mochiflow/instructions.local"] {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(rel);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(&path, "not a directory\n").unwrap();
+
+        let result = bin()
+            .args(["init", "--target", dir.path().to_str().unwrap()])
+            .write_stdin("")
+            .assert()
+            .failure()
+            .code(1);
+        let out = String::from_utf8_lossy(&result.get_output().stdout).into_owned();
+        assert!(out.contains("FAIL: could not create"), "{out}");
+        assert_eq!(fs::read_to_string(&path).unwrap(), "not a directory\n");
+    }
 }
 
 #[test]
@@ -321,6 +490,28 @@ fn join_restores_local_engine_without_touching_shared_files() {
     assert!(dir.path().join(".mochiflow/state/doctor.json").exists());
     assert_eq!(fs::read_to_string(&agents).unwrap(), agents_before);
     assert_eq!(fs::read_to_string(&index).unwrap(), index_before);
+}
+
+#[test]
+fn join_and_upgrade_do_not_backfill_user_instruction_dirs() {
+    let dir = tempfile::tempdir().unwrap();
+    let config = prepare_join_project(&dir);
+    fs::remove_dir_all(dir.path().join(".mochiflow/instructions")).unwrap();
+    fs::remove_dir_all(dir.path().join(".mochiflow/instructions.local")).unwrap();
+
+    bin()
+        .args(["join", "--target", dir.path().to_str().unwrap()])
+        .assert()
+        .success();
+    assert!(!dir.path().join(".mochiflow/instructions").exists());
+    assert!(!dir.path().join(".mochiflow/instructions.local").exists());
+
+    bin()
+        .args(["--config", config.to_str().unwrap(), "upgrade"])
+        .assert()
+        .success();
+    assert!(!dir.path().join(".mochiflow/instructions").exists());
+    assert!(!dir.path().join(".mochiflow/instructions.local").exists());
 }
 
 #[test]
@@ -2230,7 +2421,7 @@ fn init_dry_run_json_writes_nothing_and_marks_dry_run() {
     assert!(!dir.path().join(".mochiflow/.gitignore").exists());
 }
 
-/// AC-04: init writes {install_dir}/.gitignore with state/ only, and
+/// AC-04: init writes {install_dir}/.gitignore with local/runtime rules, and
 /// never touches the project's top-level .gitignore.
 #[test]
 fn init_writes_install_gitignore() {
@@ -2246,6 +2437,8 @@ fn init_writes_install_gitignore() {
     assert!(body.contains("state/"), "got:\n{body}");
     assert!(body.contains("INDEX.md"), "got:\n{body}");
     assert!(body.contains("constitution.local.md"), "got:\n{body}");
+    assert!(body.contains("instructions.local/"), "got:\n{body}");
+    assert!(!body.contains("instructions/\n"), "got:\n{body}");
     assert!(!body.contains("engine/"), "got:\n{body}");
     assert!(
         !dir.path().join(".gitignore").exists(),
@@ -2309,8 +2502,9 @@ fn index_is_untracked_after_state_changing_command() {
     );
 }
 
-/// AC-05: an existing {install_dir}/.gitignore is preserved without --force and
-/// regenerated with --force.
+/// AC-05: an existing {install_dir}/.gitignore keeps custom content without
+/// --force while guaranteeing the local instruction rule, and is regenerated
+/// with --force.
 #[test]
 fn init_gitignore_preserve_then_force() {
     let dir = tempfile::tempdir().unwrap();
@@ -2319,13 +2513,16 @@ fn init_gitignore_preserve_then_force() {
     let gi = mf.join(".gitignore");
     fs::write(&gi, "CUSTOM\n").unwrap();
 
-    // without --force: preserved
+    // without --force: custom content preserved and the local rule appended.
     bin()
         .args(["init", "--target", dir.path().to_str().unwrap()])
         .write_stdin("")
         .assert()
         .success();
-    assert_eq!(fs::read_to_string(&gi).unwrap(), "CUSTOM\n");
+    assert_eq!(
+        fs::read_to_string(&gi).unwrap(),
+        "CUSTOM\ninstructions.local/\n"
+    );
 
     // with --force: regenerated to managed content
     bin()
@@ -2336,6 +2533,8 @@ fn init_gitignore_preserve_then_force() {
     let body = fs::read_to_string(&gi).unwrap();
     assert!(body.contains("state/"), "got:\n{body}");
     assert!(body.contains("constitution.local.md"), "got:\n{body}");
+    assert!(body.contains("instructions.local/"), "got:\n{body}");
+    assert!(!body.contains("instructions/\n"), "got:\n{body}");
     assert!(!body.contains("engine/"), "got:\n{body}");
 }
 

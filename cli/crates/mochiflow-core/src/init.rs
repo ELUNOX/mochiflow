@@ -15,6 +15,28 @@ use crate::doctor;
 use crate::upgrade::{install_engine_staged, stage_source_engine};
 
 const DEFAULT_INSTALL: &str = ".mochiflow";
+const USER_INSTRUCTIONS_DIR: &str = "instructions";
+const USER_INSTRUCTIONS_LOCAL_DIR: &str = "instructions.local";
+const USER_INSTRUCTIONS_LOCAL_IGNORE_RULE: &str = "instructions.local/";
+const USER_INSTRUCTIONS_SUMMARY_EN: &str = "prepared user instructions: .mochiflow/instructions/ (shareable), .mochiflow/instructions.local/ (local-only)";
+const USER_INSTRUCTIONS_SUMMARY_JA: &str = "user instructions を準備: .mochiflow/instructions/ (共有用), .mochiflow/instructions.local/ (ローカル専用)";
+const USER_INSTRUCTIONS_README: &str = r#"# User Instructions
+
+This directory is for user-owned Markdown that you want to keep near MochiFlow.
+
+MochiFlow does not automatically load these files, does not parse frontmatter,
+does not index them, and does not validate or drift-check their contents.
+
+When you want an AI agent to use a file here, explicitly provide its file path in
+your request, for example `.mochiflow/instructions/release.md`.
+
+Use `.mochiflow/instructions/` for shareable notes that may be tracked by Git.
+Use `.mochiflow/instructions.local/` for local-only notes; MochiFlow ignores that
+directory by default.
+
+Normal `mochiflow detach` preserves both instruction directories. `mochiflow
+detach --purge` deletes them with the rest of `.mochiflow/`.
+"#;
 
 /// Boilerplate body of an unmodified `constitution` stub.
 pub const CONSTITUTION_STUB_BODY: &str =
@@ -534,21 +556,54 @@ fn find_engine_source() -> Option<PathBuf> {
     None
 }
 
-/// Write `{install_dir}/.gitignore` so local runtime state is never tracked.
-/// The vendored engine is project state and is tracked by default. Returns
-/// `Ok(true)` when written, `Ok(false)` when an existing file is kept (no
-/// `--force`). Never touches the project's top-level `.gitignore` (init's
+enum InstallGitignoreOutcome {
+    Written,
+    Updated,
+    Kept,
+}
+
+/// Write `{install_dir}/.gitignore` so local runtime and local instruction
+/// state are never tracked. The vendored engine is project state and is tracked
+/// by default. Never touches the project's top-level `.gitignore` (init's
 /// source-tree-inviolable rule).
-fn write_install_gitignore(install_dir: &Path, force: bool) -> std::io::Result<bool> {
+fn write_install_gitignore(
+    install_dir: &Path,
+    force: bool,
+) -> std::io::Result<InstallGitignoreOutcome> {
     let path = install_dir.join(".gitignore");
     if path.exists() && !force {
-        return Ok(false);
+        let mut content = std::fs::read_to_string(&path)?;
+        if content
+            .lines()
+            .any(|line| line.trim() == USER_INSTRUCTIONS_LOCAL_IGNORE_RULE)
+        {
+            return Ok(InstallGitignoreOutcome::Kept);
+        }
+        if !content.is_empty() && !content.ends_with('\n') {
+            content.push('\n');
+        }
+        content.push_str(USER_INSTRUCTIONS_LOCAL_IGNORE_RULE);
+        content.push('\n');
+        std::fs::write(&path, content)?;
+        return Ok(InstallGitignoreOutcome::Updated);
     }
     std::fs::write(
         &path,
-        "# Managed by mochiflow init. Local runtime-derived files — do not track.\nstate/\nINDEX.md\nconstitution.local.md\n",
+        "# Managed by mochiflow init. Local runtime-derived files — do not track.\nstate/\nINDEX.md\nconstitution.local.md\ninstructions.local/\n",
     )?;
-    Ok(true)
+    Ok(InstallGitignoreOutcome::Written)
+}
+
+fn scaffold_user_instructions(install_abs: &Path) -> std::io::Result<()> {
+    let instructions_dir = install_abs.join(USER_INSTRUCTIONS_DIR);
+    let local_dir = install_abs.join(USER_INSTRUCTIONS_LOCAL_DIR);
+    std::fs::create_dir_all(&instructions_dir)?;
+    std::fs::create_dir_all(&local_dir)?;
+    let readme = instructions_dir.join("README.md");
+    if !readme.exists() {
+        std::fs::write(readme, USER_INSTRUCTIONS_README)?;
+    }
+    Ok(())
 }
 
 /// Run init. Returns the process exit code.
@@ -580,6 +635,13 @@ pub fn run_init(
     let config_path = install_abs.join("config.toml");
 
     let adapter_tools = resolve_adapters(adapter_flags, yes);
+    let display_adapter_tools = if config_path.exists() && !force {
+        load_config(&config_path)
+            .map(|cfg| cfg.adapter_tools())
+            .unwrap_or_else(|_| adapter_tools.clone())
+    } else {
+        adapter_tools.clone()
+    };
     let resolved_i18n = match resolve_i18n(
         &root,
         &config_path,
@@ -606,7 +668,7 @@ pub fn run_init(
 
     log!("target       : {}", root.display());
     log!("install_dir  : {install_dir}");
-    log!("adapters     : {}", adapter_tools.join(", "));
+    log!("adapters     : {}", display_adapter_tools.join(", "));
     log!("artifact_language     : {artifact_language}");
     log!("conversation_language : {conversation_language}");
     log!("config exists: {}", config_path.exists());
@@ -667,7 +729,7 @@ pub fn run_init(
     // Guarantee runtime state is gitignored (required for the safety guarantee —
     // a write failure fails init).
     match write_install_gitignore(&install_abs, force) {
-        Ok(true) => {
+        Ok(InstallGitignoreOutcome::Written) => {
             let path = install_abs.join(".gitignore");
             log!("wrote {}", path.display());
             done_items.push(done_item(
@@ -676,7 +738,16 @@ pub fn run_init(
                 &format!("{} を作成", path.display()),
             ));
         }
-        Ok(false) => {
+        Ok(InstallGitignoreOutcome::Updated) => {
+            let path = install_abs.join(".gitignore");
+            log!("updated {}", path.display());
+            done_items.push(done_item(
+                language,
+                &format!("updated {}", path.display()),
+                &format!("{} を更新", path.display()),
+            ));
+        }
+        Ok(InstallGitignoreOutcome::Kept) => {
             log!(".gitignore exists; keeping it (use --force to overwrite).");
             done_items.push(done_item(
                 language,
@@ -797,6 +868,18 @@ pub fn run_init(
                     return 1;
                 }
             }
+            if let Err(e) = scaffold_user_instructions(&install_abs) {
+                log!(
+                    "FAIL: could not create user instructions in {}: {e}",
+                    install_abs.display()
+                );
+                return 1;
+            }
+            done_items.push(done_item(
+                language,
+                USER_INSTRUCTIONS_SUMMARY_EN,
+                USER_INSTRUCTIONS_SUMMARY_JA,
+            ));
             let adapter_result = adapter::generate(&cfg, false, force);
             for error in &adapter_result.errors {
                 log!("FAIL: {error}");
@@ -807,8 +890,8 @@ pub fn run_init(
             if adapter_result.blocked.is_empty() {
                 done_items.push(done_item(
                     language,
-                    &format!("generated adapters: {}", adapter_tools.join(", ")),
-                    &format!("adapter を生成: {}", adapter_tools.join(", ")),
+                    &format!("generated adapters: {}", cfg.adapter_tools().join(", ")),
+                    &format!("adapter を生成: {}", cfg.adapter_tools().join(", ")),
                 ));
             } else {
                 if !adapter_result.wrote.is_empty() {
@@ -893,6 +976,11 @@ fn dry_run_done_items(language: &str) -> Vec<String> {
             language,
             "(dry-run) would install engine, scaffold constitution/context/adr/specs, write MANIFEST.json, and generate adapters",
             "(dry-run) engine 配置、constitution/context/adr/specs 作成、MANIFEST.json 作成、adapter 生成を実行予定",
+        ),
+        done_item(
+            language,
+            USER_INSTRUCTIONS_SUMMARY_EN,
+            USER_INSTRUCTIONS_SUMMARY_JA,
         ),
     ]
 }
