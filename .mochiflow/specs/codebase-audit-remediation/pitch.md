@@ -13,10 +13,12 @@ known failure modes.
 
 The work should land as one coherent remediation because the findings share the
 same Rust CLI surface, verification gate, release workflow, and filesystem
-safety model. The change is intentionally classified as elevated rather than
-critical at the maintainer's direction; planning must still give the security
-and destructive-operation work explicit negative tests, stop conditions, and
-rollback or recovery behavior.
+safety model. The maintainer selected one spec for all thirteen findings and,
+after plan review, approved `risk: critical` because the scope includes security,
+release-publication permissions, and destructive filesystem boundaries. Every
+task therefore requires strong evidence, independent change review, and an
+integration-log entry in addition to explicit negative tests, stop conditions,
+and rollback or recovery behavior.
 
 ## Appetite
 
@@ -30,10 +32,12 @@ can proceed without weakening the final integrated verification gate.
 
 Address all thirteen audited findings in one spec:
 
-1. Validate every configured project path as non-empty, relative, and free of
-   parent traversal. Before mutation, resolve existing ancestors and require the
-   effective destination to remain within the repository. Permit symlinks only
-   when their resolved target remains inside the repository.
+1. Validate every configured repository-owned artifact or directory path as
+   non-empty, relative, and free of parent traversal. Before mutation, resolve
+   existing ancestors and require the effective destination to remain within
+   the repository. Permit symlinks only when their resolved target remains
+   inside the repository. Preserve separate contracts for executable/process
+   configuration such as `pr_driver` and explicit caller-supplied paths.
 2. Enforce the supported adapter allowlist and validate every adapter manifest
    template and output mapping. Templates must remain under their adapter
    directory; generated, candidate, and detach targets must remain under the
