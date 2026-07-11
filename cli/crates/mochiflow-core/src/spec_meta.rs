@@ -168,7 +168,7 @@ fn parse_map(
         let value_part = line[colon_pos + 1..].trim();
 
         if !value_part.is_empty() {
-            map.insert(key, parse_scalar(value_part));
+            map.insert(key, parse_scalar(value_part, lineno)?);
             *pos += 1;
         } else {
             // Check next line to decide: list or nested map
@@ -199,7 +199,7 @@ fn parse_list(
     list: &mut Vec<YamlValue>,
 ) -> Result<(), SpecMetaError> {
     while *pos < lines.len() {
-        let (_lineno, indent, line) = lines[*pos];
+        let (lineno, indent, line) = lines[*pos];
         if indent < min_indent {
             break;
         }
@@ -207,14 +207,14 @@ fn parse_list(
             break;
         }
         let item = line[2..].trim();
-        list.push(parse_scalar(item));
+        list.push(parse_scalar(item, lineno)?);
         *pos += 1;
     }
     Ok(())
 }
 
-fn parse_scalar(value: &str) -> YamlValue {
-    match value {
+fn parse_scalar(value: &str, line: usize) -> Result<YamlValue, SpecMetaError> {
+    let parsed = match value {
         "true" => YamlValue::Bool(true),
         "false" => YamlValue::Bool(false),
         "null" => YamlValue::Null,
@@ -226,30 +226,36 @@ fn parse_scalar(value: &str) -> YamlValue {
                 value
             };
             // Quoted string
-            if (v.starts_with('"') && v.ends_with('"'))
-                || (v.starts_with('\'') && v.ends_with('\''))
-            {
-                return YamlValue::Str(v[1..v.len() - 1].to_string());
+            if v.starts_with(['"', '\'']) || v.ends_with(['"', '\'']) {
+                let quote = v.as_bytes().first().copied();
+                if v.len() < 2 || quote != v.as_bytes().last().copied() {
+                    return Err(SpecMetaError::Parse {
+                        line,
+                        message: "unterminated quoted scalar".to_string(),
+                    });
+                }
+                return Ok(YamlValue::Str(v[1..v.len() - 1].to_string()));
             }
             // Inline list
             if v.starts_with('[') && v.ends_with(']') {
                 let inner = v[1..v.len() - 1].trim();
                 if inner.is_empty() {
-                    return YamlValue::List(Vec::new());
+                    return Ok(YamlValue::List(Vec::new()));
                 }
                 let items: Vec<YamlValue> = inner
                     .split(',')
-                    .map(|part| parse_scalar(part.trim()))
-                    .collect();
-                return YamlValue::List(items);
+                    .map(|part| parse_scalar(part.trim(), line))
+                    .collect::<Result<_, _>>()?;
+                return Ok(YamlValue::List(items));
             }
             // Integer
             if let Ok(n) = v.parse::<i64>() {
-                return YamlValue::Int(n);
+                return Ok(YamlValue::Int(n));
             }
             YamlValue::Str(v.to_string())
         }
-    }
+    };
+    Ok(parsed)
 }
 
 #[cfg(test)]
@@ -315,5 +321,25 @@ status: done
             data: parse_yaml_subset(without).unwrap(),
         };
         assert_eq!(meta.completed(), None);
+    }
+
+    #[test]
+    fn malformed_quoted_scalars_return_errors_without_panicking() {
+        for value in ["'", "\"", "'unterminated", "\"unterminated", "value'"] {
+            let yaml = format!("title: {value}\n");
+            let result = std::panic::catch_unwind(|| parse_yaml_subset(&yaml));
+            assert!(result.is_ok(), "parser panicked for {value:?}");
+            assert!(result.unwrap().is_err(), "accepted {value:?}");
+        }
+        for value in ["''", "\"\""] {
+            let yaml = format!("title: {value}\n");
+            assert_eq!(
+                parse_yaml_subset(&yaml)
+                    .unwrap()
+                    .get("title")
+                    .and_then(YamlValue::as_str),
+                Some("")
+            );
+        }
     }
 }

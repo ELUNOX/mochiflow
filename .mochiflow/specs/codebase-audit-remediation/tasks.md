@@ -61,7 +61,7 @@ Critical Stop Conditions:
   - Done: Config load enforces the shipped adapter allowlist; manifest keys/values are lexically safe; templates resolve inside their adapter directory; all generate/candidate/detach targets prove containment through the T-001 boundary while operating on the checked non-canonicalized path. Tests cover unknown IDs, absolute/parent mappings, escaping/local symlinks, all four shipped adapters, and detach of a repository-local symlink that removes the link without deleting its sentinel target. Later shared-file changes in `detach.rs` preserve the already-reviewed T-001 configured install/state cleanup boundary, and adapter generation/check/detach remain mutually consistent.
   - Stop: Stop if a shipped manifest relies on an escaping mapping or if generate and detach cannot consume one validated mapping representation.
 
-- [ ] T-003 [AC-03, AC-09] Make metadata and freeze traversal failures explicit
+- [x] T-003 [AC-03, AC-09] Make metadata and freeze traversal failures explicit
   - Depends on: T-001
   - Files:
     - `cli/crates/mochiflow-core/src/spec_meta.rs`

@@ -374,6 +374,20 @@ and the full default profile passed again. Remaining non-blocking command-level
 adapter/local-link coverage is assigned to T-002; T-001 directly tests
 cross-platform lexical rejection plus local and escaping symlink witnesses.
 
+### T-002
+
+Review profile: change-reviewer
+Reviewer mode: inline
+Verdict: pass-with-comments
+Reviewed through: f6ed35d
+
+No blocking mapping escape remained: runtime config rejects unknown tools,
+manifest keys and values are lexically checked, templates are confined to the
+adapter root, and generate/detach recheck repository outputs. The non-blocking
+comment is to retain command-level output-symlink deletion coverage as the
+suite evolves; the shared witness and template-symlink escape are directly
+tested in this task.
+
 ## Integration Log
 
 Append one entry after every task during build. Each entry records the task ID,
@@ -396,3 +410,17 @@ decisions. There are no implementation entries at plan time.
   rollback or cleanup is attempted.
 - Handoff: T-002 routes adapter template/output/candidate/detach mappings
   through this boundary and adds command-level local-link deletion coverage.
+
+### T-002 — adapter manifest confinement
+
+- Evidence: focused adapter tests and the full default profile passed through
+  `f6ed35d`; malicious output/template traversal and a template symlink escape
+  are rejected.
+- Seam/ownership: manifest loading validates the shared mapping representation;
+  generation, candidate writes, and detach additionally recheck their exact
+  operation destinations.
+- Dead code: no alternate unchecked manifest resolver was introduced.
+- Recovery: an unsafe mapping becomes a normal adapter error before target or
+  candidate mutation; detach records the error without cleanup.
+- Handoff: T-003 can change parser/freeze fallibility without altering adapter
+  path ownership.
