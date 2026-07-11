@@ -84,7 +84,7 @@ Critical Stop Conditions:
   - Done: `accept` distinguishes normal, exact resumable, already-committed, and invalid accepted states; a failing hook followed by retry succeeds only after lint/final verification/staged-path validation; unrelated staging blocks without rollback. Existing engine integrity failures require `--force`; swap/rollback/cleanup errors retain and report backup paths; init/join/upgrade tests cover missing, malformed, mismatched, drifted, forced, rollback-failed, and cleanup-failed cases. Shared `init.rs`, `conformance.rs`, and upgrade/doctor code retain all earlier path/parser/freeze guarantees.
   - Stop: Stop before any solution that resets the index/worktree, removes unrelated staging, deletes a failed backup, or treats an unknown manifest as clean.
 
-- [ ] T-005 [AC-05] Render index outputs from one collected delivery snapshot
+- [x] T-005 [AC-05] Render index outputs from one collected delivery snapshot
   - Depends on: T-001
   - Files:
     - `cli/crates/mochiflow-core/src/index.rs`

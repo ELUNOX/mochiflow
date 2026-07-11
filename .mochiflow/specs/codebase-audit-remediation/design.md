@@ -399,6 +399,19 @@ The first pass found fallible directory iteration still followed by infallible
 metadata predicates. The corrected collector now propagates `read_dir`, entry,
 metadata, and recursive failures with paths; no blocking finding remains.
 
+### T-004
+
+Review profile: change-reviewer
+Reviewer mode: inline
+Verdict: pass-with-comments
+Reviewed through: 4901af3
+
+The state discrimination keeps unrelated changes blocked, treats a clean
+accepted state idempotently, and reruns the existing lint/verification/staged
+path pipeline for an uncommitted close-out. Engine integrity fails closed on
+manifest failures and exposes retained backup paths on rollback/cleanup errors.
+Filesystem fault injection should expand when dedicated fault seams exist.
+
 ## Integration Log
 
 Append one entry after every task during build. Each entry records the task ID,
@@ -447,3 +460,14 @@ decisions. There are no implementation entries at plan time.
   traversal failure leaves authoritative derived files untouched.
 - Handoff: T-004 can rely on explicit manifest failures while hardening engine
   replacement and acceptance recovery.
+
+### T-004 — close-out and engine recovery
+
+- Evidence: existing accept staging/dirty-state and engine drift/force
+  integration coverage plus the full default profile passed through `4901af3`.
+- Seam/ownership: accepted resume reuses normal readiness, verification, lint,
+  staged validation, and commit paths; engine swap owns backup reporting.
+- Dead code: silent rollback and backup-cleanup `.ok()` paths were removed.
+- Recovery: exact accepted work retries without reset; failed rollback/cleanup
+  returns the preserved backup path.
+- Handoff: T-005 changes only index collection/render ownership.

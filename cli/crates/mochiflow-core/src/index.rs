@@ -320,6 +320,16 @@ fn normalize_index_timestamp(text: &str) -> String {
 
 fn render_index(cfg: &Config, now: &str) -> String {
     let (active, done, seeds) = collect(cfg);
+    render_index_snapshot(cfg, now, &active, &done, &seeds)
+}
+
+fn render_index_snapshot(
+    cfg: &Config,
+    now: &str,
+    active: &[ActiveEntry],
+    done: &[DoneEntry],
+    seeds: &[SeedInfo],
+) -> String {
     let active_specs: Vec<_> = active
         .iter()
         .filter(|entry| entry.column == DeliveryColumn::Active)
@@ -362,7 +372,7 @@ fn render_index(cfg: &Config, now: &str) -> String {
     } else {
         lines.push("| Slug | Title | Maturity | Source |".to_string());
         lines.push("|:-----|:------|:---------|:-------|".to_string());
-        for s in &seeds {
+        for s in seeds {
             lines.push(format!(
                 "| [{}]({specs_rel}/_backlog/{}.md) | {} | {} {} | {} |",
                 md_table_cell(&s.slug),
@@ -387,7 +397,7 @@ fn render_index(cfg: &Config, now: &str) -> String {
         lines.push("（なし）".to_string());
     } else {
         let mut current_month: Option<String> = None;
-        for d in &done {
+        for d in done {
             let month = if d.updated.len() >= 7 {
                 &d.updated[..7]
             } else {
@@ -501,7 +511,7 @@ pub fn generate_index_quiet(cfg: &Config) -> std::io::Result<()> {
 fn generate_index_inner(cfg: &Config, print_summary: bool) -> std::io::Result<()> {
     let (active, done, seeds) = collect(cfg);
     let now = utc_now_formatted();
-    let content = render_index(cfg, &now);
+    let content = render_index_snapshot(cfg, &now, &active, &done, &seeds);
 
     // Write INDEX.md
     let index_path = cfg
