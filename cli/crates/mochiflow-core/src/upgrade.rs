@@ -10,13 +10,26 @@ use crate::manifest::read_engine_version;
 #[derive(Debug)]
 pub enum EngineInstallError {
     Validation(String),
-    Dirty { entries: Vec<String> },
+    Dirty {
+        entries: Vec<String>,
+    },
     Staging(std::io::Error),
     Copy(std::io::Error),
-    MissingVersion { source_label: String },
+    MissingVersion {
+        source_label: String,
+    },
     SamePath,
     Rename(std::io::Error),
     Manifest(std::io::Error),
+    Rollback {
+        install: std::io::Error,
+        rollback: std::io::Error,
+        backup: std::path::PathBuf,
+    },
+    Cleanup {
+        error: std::io::Error,
+        backup: std::path::PathBuf,
+    },
 }
 
 impl EngineInstallError {
@@ -44,6 +57,18 @@ impl EngineInstallError {
             Self::SamePath => vec!["FAIL: source and target engine are the same path".into()],
             Self::Rename(e) => vec![format!("FAIL: rename error: {e}")],
             Self::Manifest(e) => vec![format!("FAIL: could not write MANIFEST.json: {e}")],
+            Self::Rollback {
+                install,
+                rollback,
+                backup,
+            } => vec![format!(
+                "FAIL: engine install failed ({install}) and rollback failed ({rollback}); recover backup from {}",
+                backup.display()
+            )],
+            Self::Cleanup { error, backup } => vec![format!(
+                "FAIL: engine installed but backup cleanup failed ({error}); remove preserved backup after inspection: {}",
+                backup.display()
+            )],
         }
     }
 }
@@ -139,10 +164,10 @@ where
         .map_err(|error| EngineInstallError::Validation(error.to_string()))?;
     let target_engine = cfg.engine_dir();
 
-    if target_engine.join("MANIFEST.json").exists() {
+    if target_engine.exists() {
         let dirty: Vec<String> = check_engine(cfg)
             .into_iter()
-            .filter(|i| i.severity == "FAIL" && i.message.contains("MANIFEST drift"))
+            .filter(|i| i.severity == "FAIL")
             .map(|i| {
                 i.message
                     .strip_prefix("engine MANIFEST drift: ")
@@ -186,13 +211,21 @@ where
         std::fs::rename(&target_engine, &backup).map_err(EngineInstallError::Rename)?;
     }
     if let Err(e) = std::fs::rename(&staging, &target_engine) {
-        if backup.exists() {
-            std::fs::rename(&backup, &target_engine).ok();
+        if backup.exists()
+            && let Err(rollback) = std::fs::rename(&backup, &target_engine)
+        {
+            return Err(EngineInstallError::Rollback {
+                install: e,
+                rollback,
+                backup,
+            });
         }
         return Err(EngineInstallError::Rename(e));
     }
-    if backup.exists() {
-        std::fs::remove_dir_all(&backup).ok();
+    if backup.exists()
+        && let Err(error) = std::fs::remove_dir_all(&backup)
+    {
+        return Err(EngineInstallError::Cleanup { error, backup });
     }
 
     Ok(())

@@ -388,6 +388,17 @@ comment is to retain command-level output-symlink deletion coverage as the
 suite evolves; the shared witness and template-symlink escape are directly
 tested in this task.
 
+### T-003
+
+Review profile: change-reviewer
+Reviewer mode: inline
+Verdict: pass
+Reviewed through: d0fec7e
+
+The first pass found fallible directory iteration still followed by infallible
+metadata predicates. The corrected collector now propagates `read_dir`, entry,
+metadata, and recursive failures with paths; no blocking finding remains.
+
 ## Integration Log
 
 Append one entry after every task during build. Each entry records the task ID,
@@ -424,3 +435,15 @@ decisions. There are no implementation entries at plan time.
   candidate mutation; detach records the error without cleanup.
 - Handoff: T-003 can change parser/freeze fallibility without altering adapter
   path ownership.
+
+### T-003 — fallible metadata and freeze traversal
+
+- Evidence: malformed/lone quoted scalar tests, path-bearing recursive failure
+  coverage, and the full default profile passed through `d0fec7e`.
+- Seam/ownership: scalar parsing is fallible at map/list call sites; recursive
+  file collection owns all traversal and metadata error propagation.
+- Dead code: the silent `flatten`/early-return traversal path was removed.
+- Recovery: freeze constructs every desired artifact before its write loop, so
+  traversal failure leaves authoritative derived files untouched.
+- Handoff: T-004 can rely on explicit manifest failures while hardening engine
+  replacement and acceptance recovery.

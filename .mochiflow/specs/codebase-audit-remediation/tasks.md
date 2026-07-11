@@ -71,7 +71,7 @@ Critical Stop Conditions:
   - Done: Scalar parsing is fallible and returns a metadata parse error for lone/unterminated quotes while accepting valid empty quoted strings. Recursive manifest collection propagates directory and entry failures with paths; every caller propagates the error; successful manifest bytes/order are unchanged; failure tests prove freeze writes no incomplete authoritative artifact. Shared upgrade/doctor call sites compile with the new fallible manifest boundary and retain their pre-existing successful behavior for T-004.
   - Stop: Stop if preserving the successful manifest byte format would require swallowing traversal errors or if a platform cannot create a deterministic failure fixture without privileged filesystem mutation; use an injected iterator seam instead.
 
-- [ ] T-004 [AC-07, AC-10] Add exact acceptance resume and recoverable engine replacement
+- [x] T-004 [AC-07, AC-10] Add exact acceptance resume and recoverable engine replacement
   - Depends on: T-001, T-003
   - Files:
     - `cli/crates/mochiflow-core/src/accept.rs`
