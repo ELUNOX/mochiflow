@@ -95,10 +95,21 @@ pub fn checked_repo_path(
     })?;
     let operation_path = repo_root.join(relative.trim());
     let mut ancestor = operation_path.as_path();
-    while std::fs::symlink_metadata(ancestor).is_err() {
-        ancestor = ancestor.parent().ok_or_else(|| {
-            ConfigError::Invalid(format!("cannot resolve existing ancestor for {field}"))
-        })?;
+    loop {
+        match std::fs::symlink_metadata(ancestor) {
+            Ok(_) => break,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                ancestor = ancestor.parent().ok_or_else(|| {
+                    ConfigError::Invalid(format!("cannot resolve existing ancestor for {field}"))
+                })?;
+            }
+            Err(error) => {
+                return Err(ConfigError::Invalid(format!(
+                    "cannot inspect {field} ancestor {}: {error}",
+                    ancestor.display()
+                )));
+            }
+        }
     }
     let canonical_ancestor = ancestor.canonicalize().map_err(|error| {
         ConfigError::Invalid(format!(
@@ -352,6 +363,30 @@ impl Config {
 
     pub fn checked_pitfalls_dir(&self) -> Result<CheckedRepoPath, ConfigError> {
         self.checked_path("adr.pitfalls", &self.adr.pitfalls)
+    }
+
+    /// Recheck every configured repository-owned path immediately before a
+    /// command performs a group of mutations.
+    pub fn validate_repository_paths_now(&self) -> Result<(), ConfigError> {
+        for (field, value) in self.repository_path_fields() {
+            self.checked_path(field, value)?;
+        }
+        Ok(())
+    }
+
+    fn repository_path_fields(&self) -> [(&'static str, &str); 10] {
+        [
+            ("install_dir", self.install_dir.as_str()),
+            ("specs_dir", self.specs_dir.as_str()),
+            ("index", self.index.as_str()),
+            ("constitution.project", self.constitution.project.as_str()),
+            ("constitution.local", self.constitution.local.as_str()),
+            ("context.product", self.context.product.as_str()),
+            ("context.structure", self.context.structure.as_str()),
+            ("context.tech", self.context.tech.as_str()),
+            ("adr.decisions", self.adr.decisions.as_str()),
+            ("adr.pitfalls", self.adr.pitfalls.as_str()),
+        ]
     }
 
     pub fn install_dir_path(&self) -> PathBuf {

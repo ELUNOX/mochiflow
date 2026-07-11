@@ -9,6 +9,7 @@ use crate::manifest::read_engine_version;
 
 #[derive(Debug)]
 pub enum EngineInstallError {
+    Validation(String),
     Dirty { entries: Vec<String> },
     Staging(std::io::Error),
     Copy(std::io::Error),
@@ -21,6 +22,7 @@ pub enum EngineInstallError {
 impl EngineInstallError {
     pub fn report_lines(&self) -> Vec<String> {
         match self {
+            Self::Validation(error) => vec![format!("FAIL: {error}")],
             Self::Dirty { entries } => {
                 let mut lines: Vec<String> = entries
                     .iter()
@@ -133,6 +135,8 @@ pub fn install_engine_staged<F>(
 where
     F: FnOnce(&Path) -> std::io::Result<()>,
 {
+    cfg.checked_engine_dir()
+        .map_err(|error| EngineInstallError::Validation(error.to_string()))?;
     let target_engine = cfg.engine_dir();
 
     if target_engine.join("MANIFEST.json").exists() {

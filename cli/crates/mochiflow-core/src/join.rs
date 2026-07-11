@@ -223,6 +223,15 @@ pub fn run_join(
             return report.exit_code();
         }
     };
+    if let Err(error) = cfg.validate_repository_paths_now() {
+        report.errors.push(error.to_string());
+        if json {
+            print!("{}", render_json(&report));
+        } else {
+            print_human(&report);
+        }
+        return report.exit_code();
+    }
 
     for entry in required_gitignore_entries_missing(&cfg) {
         report.warnings.push(format!(

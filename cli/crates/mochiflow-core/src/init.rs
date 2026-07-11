@@ -799,6 +799,10 @@ pub fn run_init(
 
     match load_config(&config_path) {
         Ok(cfg) => {
+            if let Err(error) = cfg.validate_repository_paths_now() {
+                log!("FAIL: {error}");
+                return 1;
+            }
             // Install the vendored engine via the same staged path used by
             // `upgrade`, so dirty installed engines require --force.
             let engine_result = if let Some(extract_fn) = embedded_engine_extract {

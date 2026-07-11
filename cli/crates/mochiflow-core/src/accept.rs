@@ -51,7 +51,7 @@ struct AcceptPaths {
 
 /// Entry point for `mochiflow accept`. Returns the process exit code.
 pub fn run_accept(cfg: &Config, slug_arg: Option<&str>, dry_run: bool) -> i32 {
-    if let Err(error) = cfg.checked_specs_dir() {
+    if let Err(error) = cfg.validate_repository_paths_now() {
         eprintln!("FAIL: {error}");
         return EXIT_FAIL;
     }
