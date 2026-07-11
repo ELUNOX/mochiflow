@@ -424,6 +424,18 @@ renderers without changing stale-check ownership. Golden Markdown/JSON tests
 remain green; a dedicated delivery-probe counter would make the performance
 invariant more explicit but no duplicate collection remains in generation.
 
+### T-006
+
+Review profile: change-reviewer
+Reviewer mode: inline
+Verdict: pass-with-comments
+Reviewed through: 2155bd8
+
+Current split flags replace removed documentation, onboarding owns uncertain
+artifact-language selection, and one classifier handles `ja-*` across CLI
+presentation with English fallback. Existing language suites pass; explicit
+regional-tag assertions should continue to grow with new presentation paths.
+
 ## Integration Log
 
 Append one entry after every task during build. Each entry records the task ID,
@@ -493,3 +505,16 @@ decisions. There are no implementation entries at plan time.
 - Dead code: the generation-time second `collect` call was removed.
 - Recovery: collection failure/fallback behavior remains command-local.
 - Handoff: T-006 can reuse delivery rendering without adding collection.
+
+### T-006 — language handoff and contributor gate
+
+- Evidence: init/presentation/conformance suites, engine sync, adapter drift,
+  and the full default profile passed through `2155bd8`.
+- Seam/ownership: AI onboarding selects artifact language; Rust owns only
+  deterministic Japanese-or-English presentation.
+- Dead code: public `--language` examples and scattered exact-`ja` checks were
+  removed.
+- Recovery: arbitrary configured tags persist; unsupported deterministic UI
+  locales fall back to English.
+- Handoff: T-007 may parse engine contracts semantically without changing
+  language behavior.
