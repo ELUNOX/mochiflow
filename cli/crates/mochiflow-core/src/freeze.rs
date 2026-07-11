@@ -129,9 +129,11 @@ fn collect_files_recursive(dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), Str
     for entry in entries {
         let entry = entry.map_err(|error| format!("read entry in {}: {error}", dir.display()))?;
         let path = entry.path();
-        if path.is_dir() {
+        let metadata = std::fs::metadata(&path)
+            .map_err(|error| format!("read metadata {}: {error}", path.display()))?;
+        if metadata.is_dir() {
             collect_files_recursive(&path, out)?;
-        } else if path.is_file() {
+        } else if metadata.is_file() {
             out.push(path);
         }
     }
