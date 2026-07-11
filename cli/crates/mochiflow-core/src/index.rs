@@ -467,8 +467,11 @@ fn url_path(value: &str) -> String {
 }
 
 pub fn is_index_stale(cfg: &Config) -> bool {
-    let index_path = cfg.index_path();
-    let actual = match std::fs::read_to_string(&index_path) {
+    let Ok(index_path) = cfg.checked_index_path() else {
+        return true;
+    };
+    let index_path = index_path.operation_path();
+    let actual = match std::fs::read_to_string(index_path) {
         Ok(content) => content,
         Err(_) => return true,
     };
@@ -501,14 +504,20 @@ fn generate_index_inner(cfg: &Config, print_summary: bool) -> std::io::Result<()
     let content = render_index(cfg, &now);
 
     // Write INDEX.md
-    let index_path = cfg.index_path();
+    let index_path = cfg
+        .checked_index_path()
+        .map_err(std::io::Error::other)?
+        .into_operation_path();
     if let Some(parent) = index_path.parent() {
         std::fs::create_dir_all(parent)?;
     }
     std::fs::write(&index_path, &content)?;
 
     // Write state/index.json
-    let state_dir = cfg.state_dir();
+    let state_dir = cfg
+        .checked_state_dir()
+        .map_err(std::io::Error::other)?
+        .into_operation_path();
     std::fs::create_dir_all(&state_dir)?;
     let json_data = build_json(
         &now,

@@ -631,7 +631,10 @@ fn doctor_json(
 }
 
 fn write_doctor_state(cfg: &Config, doc: &serde_json::Value) -> std::io::Result<()> {
-    let state_dir = cfg.state_dir();
+    let state_dir = cfg
+        .checked_state_dir()
+        .map_err(std::io::Error::other)?
+        .into_operation_path();
     std::fs::create_dir_all(&state_dir)?;
     let body = serde_json::to_string_pretty(doc).map_err(std::io::Error::other)?;
     std::fs::write(state_dir.join("doctor.json"), body)

@@ -48,6 +48,10 @@ impl EngineInstallError {
 
 /// Run upgrade command.
 pub fn run_upgrade(cfg: &Config, source: &str, force: bool) -> i32 {
+    if let Err(error) = cfg.checked_engine_dir() {
+        println!("FAIL: {error}");
+        return 1;
+    }
     let mut src = std::path::PathBuf::from(source);
     if !src.is_absolute() {
         src = std::env::current_dir().unwrap_or_default().join(&src);
@@ -72,6 +76,10 @@ pub fn run_upgrade_embedded<F>(cfg: &Config, source_label: &str, force: bool, ex
 where
     F: FnOnce(&Path) -> std::io::Result<()>,
 {
+    if let Err(error) = cfg.checked_engine_dir() {
+        println!("FAIL: {error}");
+        return 1;
+    }
     run_upgrade_with_stager(cfg, source_label, force, extract)
 }
 

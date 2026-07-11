@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "install_dir": ".sf",
+  "specs_dir": ".sf/specs",
+  "index": ".sf/../outside.md",
+  "constitution": { "project": ".sf/constitution.md", "local": ".sf/constitution.local.md" },
+  "context": { "product": ".sf/context/product.md", "structure": ".sf/context/structure.md", "tech": ".sf/context/tech.md" },
+  "adr": { "decisions": ".sf/adr/decisions", "pitfalls": ".sf/adr/pitfalls" },
+  "surfaces": { "app": { "description": "app", "verify": { "default": "echo ok" } } }
+}

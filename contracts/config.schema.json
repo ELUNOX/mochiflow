@@ -3,6 +3,14 @@
   "$id": "https://mochiflow.dev/schemas/config.schema.json",
   "title": "MochiFlow config.toml",
   "description": "Project-owned configuration. All project paths are relative to repo root.",
+  "$defs": {
+    "repoPath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?![\\\\/])(?![A-Za-z]:)(?!.*(?:^|[\\\\/])\\.\\.(?:[\\\\/]|$)).+$",
+      "description": "Non-empty repository-relative path without parent traversal. Runtime validation additionally resolves symlinks."
+    }
+  },
   "type": "object",
   "required": ["schema_version", "install_dir", "specs_dir", "index", "constitution", "context", "adr"],
   "properties": {
@@ -35,16 +43,16 @@
         }
       }
     },
-    "install_dir": { "type": "string", "minLength": 1 },
-    "specs_dir": { "type": "string", "minLength": 1 },
-    "index": { "type": "string", "minLength": 1 },
+    "install_dir": { "$ref": "#/$defs/repoPath" },
+    "specs_dir": { "$ref": "#/$defs/repoPath" },
+    "index": { "$ref": "#/$defs/repoPath" },
     "constitution": {
       "type": "object",
       "description": "Always-loaded user-authored project and local rules.",
       "required": ["project", "local"],
       "properties": {
-        "project": { "type": "string", "minLength": 1 },
-        "local": { "type": "string", "minLength": 1 }
+        "project": { "$ref": "#/$defs/repoPath" },
+        "local": { "$ref": "#/$defs/repoPath" }
       }
     },
     "context": {
@@ -52,9 +60,9 @@
       "description": "Foundational living-spec layer (refresh targets, always-loaded).",
       "required": ["product", "structure", "tech"],
       "properties": {
-        "product": { "type": "string", "minLength": 1 },
-        "structure": { "type": "string", "minLength": 1 },
-        "tech": { "type": "string", "minLength": 1 }
+        "product": { "$ref": "#/$defs/repoPath" },
+        "structure": { "$ref": "#/$defs/repoPath" },
+        "tech": { "$ref": "#/$defs/repoPath" }
       }
     },
     "adr": {
@@ -62,8 +70,8 @@
       "description": "Decision and pitfall record stores. `decisions` and `pitfalls` are directory roots, each holding one immutable record per entry plus a generated, gitignored INDEX.md. The JSON schema only constrains presence and non-empty strings; the file-vs-directory rejection is runtime config validation in config.rs.",
       "required": ["decisions", "pitfalls"],
       "properties": {
-        "decisions": { "type": "string", "minLength": 1, "description": "Directory root for decision records." },
-        "pitfalls": { "type": "string", "minLength": 1, "description": "Directory root for pitfall records." }
+        "decisions": { "$ref": "#/$defs/repoPath", "description": "Directory root for decision records." },
+        "pitfalls": { "$ref": "#/$defs/repoPath", "description": "Directory root for pitfall records." }
       }
     },
     "git": {

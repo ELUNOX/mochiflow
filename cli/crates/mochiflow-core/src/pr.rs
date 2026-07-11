@@ -119,6 +119,12 @@ pub fn run_pr(
     dry_run: bool,
 ) -> i32 {
     let root = &cfg.repo_root;
+    if spec.is_none_or(|value| !crate::accept::is_path_like_spec_arg(value))
+        && let Err(error) = cfg.checked_state_dir()
+    {
+        eprintln!("FAIL: {error}");
+        return EXIT_BACKEND_FAIL;
+    }
     let request_dir = resolve_request_dir(cfg, spec);
     let body_file_path = match body_file {
         Some(bf) => match std::fs::canonicalize(bf) {

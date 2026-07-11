@@ -76,6 +76,23 @@ pub fn run_detach(
         dry_run,
         ..DetachReport::default()
     };
+    for checked in [
+        cfg.checked_install_dir(),
+        cfg.checked_state_dir(),
+        cfg.checked_specs_dir(),
+        cfg.checked_index_path(),
+        cfg.checked_decisions_dir(),
+        cfg.checked_pitfalls_dir(),
+    ] {
+        if let Err(error) = checked {
+            report.errors.push(error.to_string());
+        }
+    }
+    if !report.errors.is_empty() {
+        report.exit_code = 1;
+        present_report(&report, json);
+        return report.exit_code;
+    }
     if purge {
         report
             .warnings

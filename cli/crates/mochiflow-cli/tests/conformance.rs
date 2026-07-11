@@ -123,6 +123,17 @@ fn schema_config_accepts_good() {
 }
 
 #[test]
+fn schema_config_rejects_repository_path_escapes() {
+    let v = load_schema("config.schema.json");
+    for fixture in [
+        "config_bad_absolute_path.json",
+        "config_bad_parent_path.json",
+    ] {
+        assert!(!v.is_valid(&load_fixture(fixture)), "accepted {fixture}");
+    }
+}
+
+#[test]
 fn schema_config_i18n_rules() {
     let v = load_schema("config.schema.json");
     let mut good = load_fixture("config_good.json");

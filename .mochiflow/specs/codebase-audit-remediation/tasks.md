@@ -17,7 +17,7 @@ Critical Stop Conditions:
 
 ## Tasks
 
-- [ ] T-001 [AC-01] Enforce the repository-relative config path contract
+- [x] T-001 [AC-01] Enforce the repository-relative config path contract
   - Depends on: none
   - Files:
     - `cli/crates/mochiflow-core/src/config.rs`
