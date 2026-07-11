@@ -576,6 +576,14 @@ fn validate_adapter_config(adapter: &RawAdapter) -> Result<(), ConfigError> {
             "adapter tools must not be empty strings".into(),
         ));
     }
+    const SUPPORTED: [&str; 4] = ["kiro", "agents", "copilot", "claude-code"];
+    for tool in adapter.resolved_tools() {
+        if !SUPPORTED.contains(&tool.as_str()) {
+            return Err(ConfigError::Invalid(format!(
+                "unsupported adapter tool: {tool}"
+            )));
+        }
+    }
     Ok(())
 }
 

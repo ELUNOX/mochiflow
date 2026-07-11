@@ -361,6 +361,19 @@ task. Append one result per task with `Review profile: change-reviewer`,
 stale and requires a fresh result through the corrected task commit before the
 next task starts.
 
+### T-001
+
+Review profile: change-reviewer
+Reviewer mode: inline
+Verdict: pass-with-comments
+Reviewed through: e451d90
+
+The first inline pass found incomplete mutation-time rechecks and an ancestor
+walk that conflated permission errors with missing paths. Both were corrected
+and the full default profile passed again. Remaining non-blocking command-level
+adapter/local-link coverage is assigned to T-002; T-001 directly tests
+cross-platform lexical rejection plus local and escaping symlink witnesses.
+
 ## Integration Log
 
 Append one entry after every task during build. Each entry records the task ID,
@@ -368,3 +381,18 @@ verification evidence location, seam drift from this design, ownership-boundary
 changes, dead-code handling, recovery behavior exercised, and next-session
 handoff notes. Do not duplicate the commit log or restate unchanged plan
 decisions. There are no implementation entries at plan time.
+
+### T-001 — repository path boundary
+
+- Evidence: the default profile passed after commit `e451d90`; focused config
+  tests cover Unix/Windows spellings, missing tails, repository-local symlinks,
+  and escaping symlinks; schema conformance covers absolute and parent paths.
+- Seam/ownership: `config.rs` owns lexical validation and the canonical
+  containment witness. Commands retain the non-canonical operation path and
+  recheck configured path families at mutation boundaries.
+- Dead code: the install-only validator was replaced by the shared
+  repository-path inventory.
+- Recovery: inspection/canonicalization failures stop before mutation; no
+  rollback or cleanup is attempted.
+- Handoff: T-002 routes adapter template/output/candidate/detach mappings
+  through this boundary and adds command-level local-link deletion coverage.
