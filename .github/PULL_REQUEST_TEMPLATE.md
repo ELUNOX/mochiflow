@@ -17,6 +17,7 @@
 - [ ] `cargo test --manifest-path cli/Cargo.toml` passes
 - [ ] `cargo fmt --manifest-path cli/Cargo.toml --all -- --check` passes
 - [ ] `cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings` passes
+- [ ] `cargo run --manifest-path cli/Cargo.toml -- freeze --check` passes
 
 ## Risk / impact
 

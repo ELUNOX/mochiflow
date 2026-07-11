@@ -412,6 +412,18 @@ path pipeline for an uncommitted close-out. Engine integrity fails closed on
 manifest failures and exposes retained backup paths on rollback/cleanup errors.
 Filesystem fault injection should expand when dedicated fault seams exist.
 
+### T-005
+
+Review profile: change-reviewer
+Reviewer mode: inline
+Verdict: pass-with-comments
+Reviewed through: 5895d00
+
+`generate_index_inner` now collects once and passes immutable slices to both
+renderers without changing stale-check ownership. Golden Markdown/JSON tests
+remain green; a dedicated delivery-probe counter would make the performance
+invariant more explicit but no duplicate collection remains in generation.
+
 ## Integration Log
 
 Append one entry after every task during build. Each entry records the task ID,
@@ -471,3 +483,13 @@ decisions. There are no implementation entries at plan time.
 - Recovery: exact accepted work retries without reset; failed rollback/cleanup
   returns the preserved backup path.
 - Handoff: T-005 changes only index collection/render ownership.
+
+### T-005 — single index snapshot
+
+- Evidence: index golden/JSON/stale tests and the full default profile passed
+  through `5895d00`.
+- Seam/ownership: generation owns collection; renderers consume borrowed
+  immutable snapshot slices.
+- Dead code: the generation-time second `collect` call was removed.
+- Recovery: collection failure/fallback behavior remains command-local.
+- Handoff: T-006 can reuse delivery rendering without adding collection.

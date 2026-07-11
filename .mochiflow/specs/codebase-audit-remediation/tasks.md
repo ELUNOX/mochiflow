@@ -92,7 +92,7 @@ Critical Stop Conditions:
   - Done: One `generate_index_inner` call performs one delivery collection and passes the same immutable snapshot to Markdown and JSON renderers; a deterministic probe seam asserts one provider/Git signal pass per spec; golden Markdown, JSON next-action, stale-check, and ordering tests remain unchanged. Shared `index.rs` retains T-001 checked output paths and leaves those checks applied before both writes.
   - Stop: Stop if avoiding double collection would make Markdown and JSON use different filtering/order rules or introduce a cache that survives one command invocation.
 
-- [ ] T-006 [AC-04, AC-08, AC-11] Complete the AI language handoff and align public verification guidance
+- [x] T-006 [AC-04, AC-08, AC-11] Complete the AI language handoff and align public verification guidance
   - Depends on: T-001
   - Files:
     - `cli/crates/mochiflow-core/src/init.rs`

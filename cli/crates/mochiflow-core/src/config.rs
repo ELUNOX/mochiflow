@@ -531,6 +531,10 @@ pub fn is_valid_language_tag(value: &str) -> bool {
         .unwrap_or(false)
 }
 
+pub fn is_japanese_language(value: &str) -> bool {
+    value.eq_ignore_ascii_case("ja") || value.to_ascii_lowercase().starts_with("ja-")
+}
+
 pub fn is_valid_artifact_language(value: &str) -> bool {
     value != "auto" && is_valid_language_tag(value)
 }

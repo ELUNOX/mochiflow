@@ -324,7 +324,7 @@ fn backend_label(b: &Backend) -> String {
 /// tag). The next action is local workflow guidance and is never written into
 /// the PR body, which stays artifact-language.
 fn pr_next_action(language: &str) -> String {
-    if language == "ja" {
+    if crate::config::is_japanese_language(language) {
         "次の一手: プロバイダ上で PR をマージし、完了したらチャットで「マージした」と教えてください。ローカルの後片付け（ブランチと一時ファイルの整理）を行います。".to_string()
     } else {
         "Next: merge the PR in your provider, then come back and tell me it merged so I can run local cleanup.".to_string()
