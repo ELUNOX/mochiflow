@@ -22,6 +22,7 @@ Developers using AI coding tools (Kiro, Claude Code, Copilot, and generic
 | foundational context | Code/config-derived orientation loaded only when a selected workflow or repository task needs it. | `engine/router.md` |
 | AC Matrix | The table in `spec.md` that traces acceptance criteria to implementation and verification evidence. | `engine/reference/verification.md` |
 | ADR | Per-file decision and pitfall records folded during `open`; current state remains code-derived. | `engine/reference/knowledge.md` |
+| Agent Context API | Versioned, read-only JSON projection of repository/spec facts and lifecycle eligibility for coding agents. | `contracts/agent-context.schema.json` |
 
 ## Core Invariants
 
@@ -33,6 +34,8 @@ Developers using AI coding tools (Kiro, Claude Code, Copilot, and generic
   approve-PR. `accepted` is set by open; merged/done is derived from VCS/provider state.
 - Engine source, adapter templates, schemas, and frozen contract artifacts are
   verified through the Rust CLI and dogfood synchronization.
+- Natural-language routing remains engine-owned; the CLI exposes only
+  deterministic lifecycle eligibility and observation quality.
 
 ## Non-goals
 
@@ -47,5 +50,5 @@ Developers using AI coding tools (Kiro, Claude Code, Copilot, and generic
 
 ## Last refreshed
 
-- Date: 2026-07-10
-- Source commit: fe9a752
+- Date: 2026-07-12
+- Source commit: ebb0097

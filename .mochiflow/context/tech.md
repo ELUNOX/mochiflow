@@ -3,7 +3,7 @@
 ## Stack
 
 - Rust 2024 workspace under `cli/`, with `mochiflow-cli` and `mochiflow-core`.
-- Workspace package version 1.2.3 and MSRV 1.96.
+- Workspace package version 1.3.0 and MSRV 1.96.
 - CLI dependencies include Clap, Serde, TOML, Regex, SHA-2, ThisError, Anyhow,
   and `include_dir` for embedding the engine.
 - Engine Markdown and adapter templates are source artifacts; the vendored engine
@@ -23,6 +23,8 @@ Additional project integrity checks include `mochiflow lint`, `mochiflow adr lin
 - `engine/MANIFEST.json` is generated from repo-root `engine/`.
 - `contracts/contracts.lock` freezes contract schemas, conformance fixtures, and
   engine manifest files.
+- `contracts/agent-context.schema.json` freezes the Draft 2020-12 read-only
+  repository/spec response contract (`schema_version: 1`).
 - `engine/adapters/**` generates `AGENTS.md`, Kiro steering, and the Kiro
   plan-auditor/change-reviewer resources.
 - `.mochiflow/engine/` is refreshed from source with `mochiflow upgrade --source engine`.
@@ -40,5 +42,5 @@ Additional project integrity checks include `mochiflow lint`, `mochiflow adr lin
 
 ## Last refreshed
 
-- Date: 2026-07-10
-- Source commit: fe9a752
+- Date: 2026-07-12
+- Source commit: ebb0097

@@ -15,6 +15,8 @@
 - `cli/crates/mochiflow-cli` — Clap binary and CLI/conformance tests.
 - `cli/crates/mochiflow-core` — workflow, adapter, ADR, verification, delivery,
   and engine-installation library modules.
+- `cli/crates/mochiflow-core/src/inspect.rs` — shared read-only repository/spec
+  snapshot, observation quality, and lifecycle eligibility.
 - `engine/router.md` — the single route table and standing route contract.
 - `engine/commands/` — selected workflow procedures with required and
   conditional load declarations.
@@ -30,13 +32,14 @@
 ## Entry Points
 
 - `mochiflow <command>` — CLI commands including `accept`, `adapter`, `adr`,
-  `freeze`, `lint`, `pr`, `ready`, `status`, and `upgrade`.
+  `freeze`, `inspect`, `lint`, `pr`, `ready`, `status`, and `upgrade`.
 - `AGENTS.md` and `.kiro/steering/mochiflow.md` — generated adapter entrypoints
   that keep constitution plus router standing and defer the rest of the graph.
 
 ## Data / Artifact Locations
 
 - `contracts/` — frozen schemas and `contracts.lock`.
+- `contracts/agent-context.schema.json` — public Agent Context API contract.
 - `engine/MANIFEST.json` — frozen source-engine manifest.
 - `.mochiflow/context/` — regenerated current-state orientation.
 - `.mochiflow/state/` — gitignored local review and delivery scratch.
@@ -49,5 +52,5 @@
 
 ## Last refreshed
 
-- Date: 2026-07-10
-- Source commit: fe9a752
+- Date: 2026-07-12
+- Source commit: ebb0097
