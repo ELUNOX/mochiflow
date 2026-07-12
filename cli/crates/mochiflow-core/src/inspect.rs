@@ -134,12 +134,12 @@ impl From<&SpecMeta> for Metadata {
 fn safe_metadata(value: &str) -> String {
     let lower = value.to_ascii_lowercase();
     if [
-        "token",
-        "secret",
-        "password",
-        "credential",
+        "token_",
+        "secret_",
+        "password=",
+        "credential=",
         "api_key",
-        "apikey",
+        "apikey=",
     ]
     .iter()
     .any(|needle| lower.contains(needle))
@@ -1191,17 +1191,20 @@ mod tests {
         assert_eq!(diagnostic.paths, vec![".mochiflow/specs/x/spec.yaml"]);
         assert_eq!(safe_metadata(secret), "[redacted]");
         assert_eq!(safe_metadata("Normal title"), "Normal title");
+        assert_eq!(safe_metadata("Password reset flow"), "Password reset flow");
+        assert_eq!(safe_metadata("Token refresh"), "Token refresh");
+        assert_eq!(safe_metadata("credential-manager"), "credential-manager");
         let spec_dir = root.join(".mochiflow/specs/malicious");
         std::fs::create_dir_all(&spec_dir).unwrap();
-        std::fs::write(spec_dir.join("spec.yaml"), format!("version: 1\nslug: malicious\ntitle: {secret}\ntype: feature\nsurfaces: [credential_value]\nintegration: none\nrisk: standard\nstatus: draft\n")).unwrap();
+        std::fs::write(spec_dir.join("spec.yaml"), format!("version: 1\nslug: malicious\ntitle: {secret}\ntype: feature\nsurfaces: [token_super_secret]\nintegration: none\nrisk: standard\nstatus: draft\n")).unwrap();
         let repository_json =
             serde_json::to_string(&inspect_repository(&cfg, &FailedRunner)).unwrap();
         let detail_json =
             serde_json::to_string(&inspect_spec(&cfg, "malicious", &FailedRunner)).unwrap();
         assert!(!repository_json.contains(secret));
-        assert!(!repository_json.contains("credential_value"));
+        assert!(!repository_json.contains("token_super_secret"));
         assert!(!detail_json.contains(secret));
-        assert!(!detail_json.contains("credential_value"));
+        assert!(!detail_json.contains("token_super_secret"));
     }
 
     struct CountingRunner {
