@@ -1,5 +1,9 @@
 # Configuration
 
+## Agent Context API
+
+`mochiflow inspect --json` returns a repository snapshot without writing files or refreshing refs. Add a spec slug for detailed health and lifecycle eligibility. `--fetch` explicitly performs one fail-soft origin refresh. The versioned Draft 2020-12 contract is `contracts/agent-context.schema.json`. Results `ok` and `degraded` exit 0; `partial` and `error` exit 1. Stable codes are portable; display messages may be localized.
+
 `mochiflow init` writes project configuration under `.mochiflow/`, creates
 optional user instruction directories, and generates adapter entrypoints for the
 AI tools you use.

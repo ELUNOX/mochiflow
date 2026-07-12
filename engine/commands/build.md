@@ -31,6 +31,8 @@ load:
 
 # mochiflow-build
 
+After route selection, consult the `build` action from `mochiflow inspect <slug> --json`; `ready` remains the compatibility entry gate and this procedure owns execution.
+
 ## Purpose
 
 Implement the approved spec and produce verification and the AC Verification Matrix. Do not create the PR or move the spec.

@@ -19,6 +19,17 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Read-only repository or spec context for coding agents
+    Inspect {
+        /// Optional spec slug for detailed context
+        slug: Option<String>,
+        /// Emit the versioned JSON contract
+        #[arg(long)]
+        json: bool,
+        /// Fetch origin once before observing repository state
+        #[arg(long)]
+        fetch: bool,
+    },
     /// Inspect / validate config.toml
     Config {
         #[command(subcommand)]
@@ -290,6 +301,45 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
 
     let exit_code = match cli.command {
+        Commands::Inspect { slug, json, fetch } => {
+            let cfg = match load_cfg(cli.config.as_deref()) {
+                Ok(cfg) => cfg,
+                Err(error) => {
+                    if json {
+                        let document = serde_json::json!({
+                            "schema_version": 1, "scope": if slug.is_some() { "spec" } else { "repository" },
+                            "result": "error", "observed_at": "1970-01-01T00:00:00Z", "degraded": false,
+                            "warnings": [], "errors": [{ "code": "config_invalid", "message": "Configuration is invalid", "paths": [] }]
+                        });
+                        println!("{}", serde_json::to_string_pretty(&document)?);
+                    } else {
+                        eprintln!("inspect failed: {error}");
+                    }
+                    std::process::exit(1);
+                }
+            };
+            let runner = mochiflow_core::inspect::ProcessRunner;
+            let fetch_warning = fetch
+                .then(|| mochiflow_core::inspect::fetch(&cfg, &runner))
+                .flatten();
+            let mut document = slug.as_deref().map_or_else(
+                || mochiflow_core::inspect::inspect_repository(&cfg, &runner),
+                |slug| mochiflow_core::inspect::inspect_spec(&cfg, slug, &runner),
+            );
+            if let Some(warning) = fetch_warning {
+                document.warnings.push(warning);
+                document.degraded = true;
+                if document.result == mochiflow_core::inspect::ResultKind::Ok {
+                    document.result = mochiflow_core::inspect::ResultKind::Degraded;
+                }
+            }
+            if json {
+                println!("{}", serde_json::to_string_pretty(&document)?);
+            } else {
+                render_inspect(&document, cfg.conversation_output_language());
+            }
+            document.exit_code()
+        }
         Commands::Config { command } => match command {
             ConfigCommand::Show => {
                 let cfg = load_cfg(cli.config.as_deref())?;
@@ -612,6 +662,75 @@ fn main() -> Result<()> {
     std::process::exit(exit_code);
 }
 
+fn render_inspect(document: &mochiflow_core::inspect::Document, language: &str) {
+    use mochiflow_core::inspect::{Observation, ResultKind};
+    let ja = mochiflow_core::config::is_japanese_language(language);
+    println!(
+        "{}: {:?} ({:?})",
+        if ja {
+            "エージェントコンテキスト"
+        } else {
+            "Agent context"
+        },
+        document.scope,
+        document.result
+    );
+    if let Some(repository) = &document.repository {
+        let branch = match &repository.branch {
+            Observation::Known { value } => value.as_str(),
+            _ => "unknown",
+        };
+        println!(
+            "{}: {branch} | {}: {}",
+            if ja { "ブランチ" } else { "Branch" },
+            if ja { "ベース" } else { "Base" },
+            repository.base_branch
+        );
+        println!(
+            "{}: {}",
+            if ja { "項目" } else { "Entries" },
+            repository.entries.len()
+        );
+    }
+    if let Some(spec) = &document.spec {
+        println!("{} — {}", spec.metadata.slug, spec.metadata.title);
+        println!(
+            "{}: {} | {}: {}",
+            if ja { "状態" } else { "Status" },
+            spec.metadata.status,
+            if ja { "保存方式" } else { "Persistence" },
+            spec.persistence
+        );
+        if let Some(action) = spec.suggested_workflow {
+            println!(
+                "{}: {action:?}",
+                if ja {
+                    "推奨ワークフロー"
+                } else {
+                    "Suggested workflow"
+                }
+            );
+        }
+    }
+    if document.result == ResultKind::Error {
+        println!(
+            "{}",
+            if ja {
+                "検査を完了できませんでした。"
+            } else {
+                "Inspection could not be completed."
+            }
+        );
+    }
+    for warning in &document.warnings {
+        println!(
+            "{}: {:?}",
+            if ja { "警告" } else { "Warning" },
+            warning.code
+        );
+    }
+}
+
 /// Regenerate the gitignored board (`INDEX.md` + state index) after a
 /// state-changing CLI command. Best-effort: failures are ignored, and the file
 /// is never staged or committed. Callers gate this on a successful, non-dry-run
@@ -702,7 +821,8 @@ fn cmd_ready(cfg: &mochiflow_core::config::Config, spec_arg: &str) -> i32 {
     }
     match mochiflow_core::spec_meta::read_spec_metadata(&spec_dir) {
         Ok(meta) => {
-            if meta.status() != "approved" {
+            let readiness = mochiflow_core::inspect::readiness_codes(cfg, &meta);
+            if readiness.contains(&mochiflow_core::inspect::Code::StatusNotApproved) {
                 println!(
                     "FAIL: {}: status must be approved to enter build, got {}",
                     meta.path.display(),

@@ -1,0 +1,1 @@
+{"schema_version":1,"scope":"spec","result":"error","observed_at":"2026-07-12T12:00:00Z","degraded":false,"warnings":[],"errors":[{"code":"spec_missing","message":"Spec not found","paths":[]}]}

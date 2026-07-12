@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.0
+
+- Add the versioned, read-only Agent Context API and `inspect` command.
+
 ## [1.2.4] - 2026-07-11
 
 - Reject repository-owned configuration paths that are empty, absolute,

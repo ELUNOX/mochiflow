@@ -1,0 +1,11 @@
+version: 1
+slug: "agent-context-api"
+title: "Agent Context API"
+type: "feature"
+surfaces:
+  - "cli"
+integration: "contract"
+risk: "elevated"
+status: "accepted"
+created: "2026-07-12"
+updated: "2026-07-12"

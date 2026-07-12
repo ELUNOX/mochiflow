@@ -21,6 +21,7 @@ references:
   - reference/git.md
   - reference/delivery.md
   - reference/language.md
+  - reference/agent-context.md
 ---
 
 # spec

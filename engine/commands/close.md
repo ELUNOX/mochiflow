@@ -19,6 +19,8 @@ load:
 
 # mochiflow-close
 
+After merge intent selects this route, consult the `close` action from `mochiflow inspect <slug> --json`; eligibility never replaces merge-report routing.
+
 ## Purpose
 
 Local hygiene after a merge. `close` writes nothing to the base branch: the

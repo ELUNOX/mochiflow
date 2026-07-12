@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ELUNOX/mochiflow/contracts/agent-context.schema.json",
+  "title": "MochiFlow Agent Context",
+  "oneOf": [
+    { "$ref": "#/$defs/repositoryDocument" },
+    { "$ref": "#/$defs/specDocument" },
+    { "$ref": "#/$defs/errorDocument" }
+  ],
+  "$defs": {
+    "path": { "type": "string", "minLength": 1, "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$)).+$" },
+    "code": {
+      "enum": [
+        "config_invalid", "spec_missing", "spec_invalid", "spec_ambiguous", "target_archived",
+        "intent_confirmation_required", "status_not_draft", "status_not_approved", "status_not_accepted",
+        "plan_input_missing", "lint_failed", "verification_missing", "verification_todo", "branch_missing",
+        "worktree_dirty", "tasks_incomplete", "matrix_missing", "automated_checks_unsettled",
+        "automated_checks_failed", "review_result_missing", "review_result_stale", "delivery_not_in_review",
+        "delivery_not_merged", "cleanup_not_pending", "delivery_unknown", "git_unavailable",
+        "provider_unavailable", "provider_result_truncated", "fetch_failed", "path_unsafe", "internal_error"
+      ]
+    },
+    "diagnostic": {
+      "type": "object", "additionalProperties": false, "required": ["code", "paths"],
+      "properties": { "code": { "$ref": "#/$defs/code" }, "message": { "type": "string" }, "paths": { "type": "array", "items": { "$ref": "#/$defs/path" }, "uniqueItems": true } }
+    },
+    "stringObservation": {
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["quality", "value"], "properties": { "quality": { "const": "known" }, "value": { "type": "string" } } },
+        { "type": "object", "additionalProperties": false, "required": ["quality", "reason"], "properties": { "quality": { "enum": ["unknown", "not_applicable"] }, "reason": { "$ref": "#/$defs/code" } } }
+      ]
+    },
+    "boolObservation": {
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["quality", "value"], "properties": { "quality": { "const": "known" }, "value": { "type": "boolean" } } },
+        { "type": "object", "additionalProperties": false, "required": ["quality", "reason"], "properties": { "quality": { "enum": ["unknown", "not_applicable"] }, "reason": { "$ref": "#/$defs/code" } } }
+      ]
+    },
+    "action": {
+      "type": "object", "additionalProperties": false, "required": ["action", "result", "blockers"],
+      "properties": {
+        "action": { "enum": ["discuss", "plan", "build", "open", "update", "close"] },
+        "result": { "enum": ["eligible", "ineligible", "unknown"] },
+        "blockers": { "type": "array", "items": { "$ref": "#/$defs/diagnostic" } }
+      }
+    },
+    "metadata": {
+      "type": "object", "additionalProperties": false, "required": ["slug", "title", "type", "risk", "status", "surfaces"],
+      "properties": {
+        "slug": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" }, "title": { "type": "string" },
+        "type": { "enum": ["feature", "fix", "refactor", "docs", "chore"] }, "risk": { "enum": ["standard", "elevated", "critical"] },
+        "status": { "enum": ["draft", "approved", "accepted", "done"] }, "surfaces": { "type": "array", "items": { "type": "string" }, "minItems": 1, "uniqueItems": true }
+      }
+    },
+    "summary": {
+      "type": "object", "additionalProperties": false, "required": ["kind", "path"],
+      "properties": { "kind": { "enum": ["spec", "backlog", "error"] }, "path": { "$ref": "#/$defs/path" }, "metadata": { "$ref": "#/$defs/metadata" }, "error": { "$ref": "#/$defs/diagnostic" }, "next_candidate": { "enum": ["discuss", "plan", "build", "open", "close"] } },
+      "allOf": [
+        { "if": { "properties": { "kind": { "const": "spec" } } }, "then": { "required": ["metadata"] } },
+        { "if": { "properties": { "kind": { "const": "error" } } }, "then": { "required": ["error"] } }
+      ]
+    },
+    "base": {
+      "type": "object", "required": ["schema_version", "scope", "result", "observed_at", "degraded", "warnings"],
+      "properties": {
+        "schema_version": { "const": 1 }, "scope": { "enum": ["repository", "spec"] }, "result": { "enum": ["ok", "degraded", "partial", "error"] },
+        "observed_at": { "type": "string", "format": "date-time" }, "degraded": { "type": "boolean" },
+        "warnings": { "type": "array", "items": { "$ref": "#/$defs/diagnostic" } }
+      }
+    },
+    "repositoryDocument": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        { "type": "object", "unevaluatedProperties": false, "required": ["schema_version", "scope", "result", "observed_at", "degraded", "warnings", "repository"],
+          "properties": {
+            "schema_version": {}, "scope": { "const": "repository" }, "result": { "enum": ["ok", "degraded", "partial"] }, "observed_at": {}, "degraded": {}, "warnings": {},
+            "repository": { "type": "object", "additionalProperties": false, "required": ["branch", "base_branch", "active", "entries"], "properties": {
+              "branch": { "$ref": "#/$defs/stringObservation" }, "base_branch": { "type": "string" }, "active": { "$ref": "#/$defs/stringObservation" },
+              "entries": { "type": "array", "items": { "$ref": "#/$defs/summary" } }
+            } }
+          } }
+      ]
+    },
+    "specDocument": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        { "type": "object", "unevaluatedProperties": false, "required": ["schema_version", "scope", "result", "observed_at", "degraded", "warnings", "spec"],
+          "properties": {
+            "schema_version": {}, "scope": { "const": "spec" }, "result": { "enum": ["ok", "degraded"] }, "observed_at": {}, "degraded": {}, "warnings": {},
+            "spec": { "type": "object", "additionalProperties": false, "required": ["metadata", "persistence", "paths", "worktree_clean", "lint_ok", "health", "signals", "delivery", "actions", "suggested_workflow", "human_next_action"], "properties": {
+              "metadata": { "$ref": "#/$defs/metadata" }, "persistence": { "enum": ["tracked", "local"] }, "paths": { "type": "array", "items": { "$ref": "#/$defs/path" }, "uniqueItems": true },
+              "worktree_clean": { "$ref": "#/$defs/boolObservation" }, "lint_ok": { "type": "boolean" },
+              "health": { "type": "array", "items": { "$ref": "#/$defs/diagnostic" } },
+              "signals": { "type": "object", "additionalProperties": false, "required": ["provider_open", "provider_merged", "trailer_in_base", "branch_pushed"], "properties": { "provider_open": { "$ref": "#/$defs/boolObservation" }, "provider_merged": { "$ref": "#/$defs/boolObservation" }, "trailer_in_base": { "$ref": "#/$defs/boolObservation" }, "branch_pushed": { "$ref": "#/$defs/boolObservation" } } },
+              "delivery": { "$ref": "#/$defs/stringObservation" },
+              "actions": { "type": "array", "items": { "$ref": "#/$defs/action" }, "minItems": 6, "maxItems": 6 },
+              "suggested_workflow": { "type": ["string", "null"], "enum": ["plan", "build", "open", "close", null] },
+              "human_next_action": { "type": ["string", "null"], "enum": ["report_merge", "cleanup", null] }
+            } }
+          } }
+      ]
+    },
+    "errorDocument": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        { "type": "object", "unevaluatedProperties": false, "required": ["schema_version", "scope", "result", "observed_at", "degraded", "warnings", "errors"],
+          "properties": { "schema_version": {}, "scope": { "enum": ["repository", "spec"] }, "result": { "const": "error" }, "observed_at": {}, "degraded": {}, "warnings": {}, "errors": { "type": "array", "items": { "$ref": "#/$defs/diagnostic" }, "minItems": 1 } } }
+      ]
+    }
+  }
+}

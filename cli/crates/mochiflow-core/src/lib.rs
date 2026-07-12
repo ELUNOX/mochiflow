@@ -10,6 +10,7 @@ pub mod doctor;
 pub mod freeze;
 pub mod index;
 pub mod init;
+pub mod inspect;
 pub mod join;
 pub mod lint;
 pub mod manifest;
