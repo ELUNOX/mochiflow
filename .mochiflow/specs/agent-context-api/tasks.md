@@ -41,7 +41,7 @@ Critical Stop Conditions:
     The configured `agents` and `kiro` targets are regenerated immediately after the version bump and `mochiflow adapter generate --check` passes, so every task boundary is version-coherent; T-006 intentionally regenerates the same shared targets again after engine guidance changes and verifies that no additional adapter target changed.
   - Stop: If the response variants cannot be expressed as one closed additive schema without changing the existing index JSON or consumer config/spec schemas, stop and return to plan.
 
-- [ ] T-002 [AC-01, AC-02, AC-04, AC-09] Build the shared snapshot and batched observation core
+- [x] T-002 [AC-01, AC-02, AC-04, AC-09] Build the shared snapshot and batched observation core
   - Depends on: T-001
   - Files:
     - `cli/crates/mochiflow-core/src/inspect.rs`
