@@ -24,6 +24,7 @@ const TERMINAL_CLI_COMMAND_REFERENCES: &[&str] = &[
     "guide",
     "index",
     "init",
+    "inspect",
     "join",
     "lint",
     "pr",

@@ -61,6 +61,40 @@ fn assert_instructions_readme_contract(readme: &str) {
     assert!(readme.contains("detach --purge"), "{readme}");
 }
 
+#[test]
+fn inspect_json_is_one_schema_valid_document() {
+    let output = bin()
+        .current_dir(repo_root())
+        .args(["inspect", "agent-context-api", "--json"])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let document: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    let schema: serde_json::Value = serde_json::from_str(
+        &fs::read_to_string(repo_root().join("contracts/agent-context.schema.json")).unwrap(),
+    )
+    .unwrap();
+    let validator = jsonschema::validator_for(&schema).unwrap();
+    assert!(validator.is_valid(&document));
+}
+
+#[test]
+fn inspect_missing_slug_returns_structured_error() {
+    let output = bin()
+        .current_dir(repo_root())
+        .args(["inspect", "missing-agent-context-spec", "--json"])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    let document: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(document["result"], "error");
+    assert_eq!(document["errors"][0]["code"], "spec_missing");
+}
+
 /// Deterministic init: no flags, piped stdin (non-TTY) → exit 0, scaffolds
 /// config from machine detection. A bare temp dir detects nothing concrete, so
 /// the verify command stays a TODO sentinel and confirm markers are attached

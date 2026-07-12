@@ -61,7 +61,7 @@ Critical Stop Conditions:
   - Done: Lint exposes a pure structured report while retaining its presenter; table-driven tests enumerate every row and blocker in `design.md`'s closed six-action eligibility table, including discuss state/intent confirmation, both plan input shapes, unknown propagation, stable blocker order, and suggestion precedence; `ready` and detailed build eligibility share the lint/status/verification readiness core, while branch/worktree entry blockers remain outside the legacy `ready` projection; dirty-worktree and missing-expected-branch regressions prove `ready` retains its current output/exit behavior while inspect reports the full build action result; shared `inspect.rs` remains a complete compiling boundary after the task.
   - Stop: If a prerequisite depends on user intent, hidden conversation state, or non-deterministic prose judgment, represent it as unknown/not auto-suggested rather than inventing a deterministic rule; stop if this prevents the agreed six-action contract.
 
-- [ ] T-004 [AC-01, AC-02, AC-05, AC-06, AC-07, AC-10] Expose the inspect CLI and safe presenters
+- [x] T-004 [AC-01, AC-02, AC-05, AC-06, AC-07, AC-10] Expose the inspect CLI and safe presenters
   - Depends on: T-003
   - Files:
     - `cli/crates/mochiflow-core/src/inspect.rs`
