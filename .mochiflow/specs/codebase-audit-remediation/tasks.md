@@ -117,7 +117,7 @@ Critical Stop Conditions:
   - Done: Explicit/existing languages remain authoritative; otherwise config carries a concrete provisional artifact language plus a confirmation marker and init reports AI review. Onboard selects any valid concrete BCP 47-style artifact language from repository evidence, removes the marker, and preserves conversation `auto` by default. Deterministic CLI rendering recognizes `ja-*`, otherwise falls back consistently to English with no mixed status output. The shared classifier covers both delivery next-action variants as rendered through status and index JSON; `ja-JP` and unsupported fixed tags have regression assertions without changing `next_action.kind`, and shared `delivery.rs` preserves T-005's single-snapshot/probe behavior. Public docs use only current split flags. Focused conformance assertions inspect both contributor guides and the pull-request template for the complete default test/format/Clippy/freeze gate; both guides separately label the test-only command as a fast loop. Engine source is frozen/re-vendored, shared README version references from T-001 remain correct, and shared conformance tests retain all prior guarantees.
   - Stop: Stop if the design requires storing `artifact_language = "auto"`, calling an AI from Rust, or adding translations beyond the agreed Japanese/English deterministic CLI boundary.
 
-- [ ] T-007 [AC-12] Migrate structural engine conformance to semantic parsing
+- [x] T-007 [AC-12] Migrate structural engine conformance to semantic parsing
   - Depends on: T-001, T-006
   - Files:
     - `cli/Cargo.toml`
