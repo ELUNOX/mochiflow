@@ -133,16 +133,25 @@ impl From<&SpecMeta> for Metadata {
 
 fn safe_metadata(value: &str) -> String {
     let lower = value.to_ascii_lowercase();
+    let aws_key = value
+        .split(|c: char| !c.is_ascii_alphanumeric())
+        .any(|part| part.starts_with("AKIA") && part.len() >= 16);
     if [
         "token_",
         "secret_",
         "password=",
+        "password:",
         "credential=",
         "api_key",
         "apikey=",
+        "bearer ",
+        "ghp_",
+        "github_pat_",
+        "sk-",
     ]
     .iter()
     .any(|needle| lower.contains(needle))
+        || aws_key
         || value.starts_with('/')
         || value.contains("/Users/")
         || value.contains("\\Users\\")
@@ -1194,6 +1203,15 @@ mod tests {
         assert_eq!(safe_metadata("Password reset flow"), "Password reset flow");
         assert_eq!(safe_metadata("Token refresh"), "Token refresh");
         assert_eq!(safe_metadata("credential-manager"), "credential-manager");
+        for secret_shape in [
+            "ghp_abcdefghijklmnopqrstuvwxyz123456",
+            "Bearer abcdefghijklmnop",
+            "sk-abcdefghijklmnop",
+            "AKIA1234567890ABCDEF",
+            "password: hunter2",
+        ] {
+            assert_eq!(safe_metadata(secret_shape), "[redacted]");
+        }
         let spec_dir = root.join(".mochiflow/specs/malicious");
         std::fs::create_dir_all(&spec_dir).unwrap();
         std::fs::write(spec_dir.join("spec.yaml"), format!("version: 1\nslug: malicious\ntitle: {secret}\ntype: feature\nsurfaces: [token_super_secret]\nintegration: none\nrisk: standard\nstatus: draft\n")).unwrap();
