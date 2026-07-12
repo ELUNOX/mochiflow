@@ -108,6 +108,42 @@ fn inspect_human_output_uses_configured_japanese() {
     assert!(stdout.contains("状態"), "{stdout}");
 }
 
+#[test]
+fn inspect_does_not_change_worktree_or_refs() {
+    let before_status = StdCommand::new("git")
+        .args(["status", "--porcelain=v1"])
+        .current_dir(repo_root())
+        .output()
+        .unwrap()
+        .stdout;
+    let before_refs = StdCommand::new("git")
+        .args(["show-ref"])
+        .current_dir(repo_root())
+        .output()
+        .unwrap()
+        .stdout;
+    let output = bin()
+        .current_dir(repo_root())
+        .args(["inspect", "agent-context-api", "--json"])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let after_status = StdCommand::new("git")
+        .args(["status", "--porcelain=v1"])
+        .current_dir(repo_root())
+        .output()
+        .unwrap()
+        .stdout;
+    let after_refs = StdCommand::new("git")
+        .args(["show-ref"])
+        .current_dir(repo_root())
+        .output()
+        .unwrap()
+        .stdout;
+    assert_eq!(before_status, after_status);
+    assert_eq!(before_refs, after_refs);
+}
+
 /// Deterministic init: no flags, piped stdin (non-TTY) → exit 0, scaffolds
 /// config from machine detection. A bare temp dir detects nothing concrete, so
 /// the verify command stays a TODO sentinel and confirm markers are attached

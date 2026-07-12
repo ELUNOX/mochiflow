@@ -709,7 +709,9 @@ fn signal_observations(
             Observation::NotApplicable {
                 reason: Code::ProviderUnavailable,
             }
-        } else if facts.provider_unknown || facts.provider_truncated {
+        } else if facts.provider_unknown
+            || (facts.provider_truncated && !facts.prs.contains_key(expected))
+        {
             Observation::Unknown {
                 reason: if facts.provider_truncated {
                     Code::ProviderResultTruncated
@@ -769,7 +771,11 @@ fn delivery_observation(
             reason: Code::GitUnavailable,
         }
     } else if cfg.git.provider == "github"
-        && (facts.provider_unknown || facts.provider_truncated)
+        && (facts.provider_unknown
+            || (facts.provider_truncated
+                && !facts
+                    .prs
+                    .contains_key(&branch_name(meta.spec_type(), meta.slug()))))
         && !signals.trailer_in_base
         && meta.status() == "accepted"
     {
@@ -1024,6 +1030,7 @@ mod tests {
 
     struct CountingRunner {
         calls: Cell<usize>,
+        branch: &'static str,
     }
     impl Runner for CountingRunner {
         fn run(
@@ -1035,7 +1042,9 @@ mod tests {
         ) -> Result<String, ()> {
             self.calls.set(self.calls.get() + 1);
             match (program, args.first().copied()) {
-                ("git", Some("branch")) if args.contains(&"--show-current") => Ok("main\n".into()),
+                ("git", Some("branch")) if args.contains(&"--show-current") => {
+                    Ok(format!("{}\n", self.branch))
+                }
                 ("git", Some("status")) => Ok(String::new()),
                 ("git", _) => Ok(String::new()),
                 ("gh", _) => Ok("[]".into()),
@@ -1054,6 +1063,7 @@ mod tests {
         let cfg = crate::config::load_config(&root.join(".mochiflow/config.toml")).unwrap();
         let runner = CountingRunner {
             calls: Cell::new(0),
+            branch: "main",
         };
         let _ = inspect_repository(&cfg, &runner);
         let baseline = runner.calls.get();
@@ -1063,8 +1073,34 @@ mod tests {
             std::fs::write(dir.join("spec.yaml"), format!("version: 1\nslug: spec-{n}\ntitle: S{n}\ntype: feature\nsurfaces: [cli]\nintegration: none\nrisk: standard\nstatus: draft\n")).unwrap();
         }
         runner.calls.set(0);
-        let _ = inspect_repository(&cfg, &runner);
+        let document = inspect_repository(&cfg, &runner);
         assert_eq!(runner.calls.get(), baseline);
+        assert_eq!(document.result, ResultKind::Ok);
+        let unrelated = CountingRunner {
+            calls: Cell::new(0),
+            branch: "scratch/spec-0",
+        };
+        assert!(matches!(
+            inspect_repository(&cfg, &unrelated)
+                .repository
+                .unwrap()
+                .active,
+            Observation::NotApplicable { .. }
+        ));
+        let expected = CountingRunner {
+            calls: Cell::new(0),
+            branch: "feat/spec-0",
+        };
+        assert!(
+            matches!(inspect_repository(&cfg, &expected).repository.unwrap().active, Observation::Known { value } if value == "spec-0")
+        );
+        let malformed = root.join(".mochiflow/specs/broken");
+        std::fs::create_dir_all(&malformed).unwrap();
+        std::fs::write(malformed.join("spec.yaml"), "not yaml").unwrap();
+        assert_eq!(
+            inspect_repository(&cfg, &runner).result,
+            ResultKind::Partial
+        );
     }
 
     struct FailedRunner;
@@ -1111,7 +1147,7 @@ mod tests {
         std::fs::create_dir_all(root.join(".mochiflow/adr")).unwrap();
         std::fs::write(root.join(".mochiflow/config.toml"), "schema_version = 1\ninstall_dir = \".mochiflow\"\nspecs_dir = \".mochiflow/specs\"\nindex = \".mochiflow/INDEX.md\"\n[constitution]\nproject = \".mochiflow/constitution.md\"\nlocal = \".mochiflow/constitution.local.md\"\n[context]\nproduct = \".mochiflow/context/product.md\"\nstructure = \".mochiflow/context/structure.md\"\ntech = \".mochiflow/context/tech.md\"\n[adr]\ndecisions = \".mochiflow/adr/decisions\"\npitfalls = \".mochiflow/adr/pitfalls\"\n[git]\nprovider = \"github\"\nbase_branch = \"main\"\n[adapter]\ntool = \"agents\"\n").unwrap();
         let cfg = crate::config::load_config(&root.join(".mochiflow/config.toml")).unwrap();
-        let facts = BatchFacts {
+        let mut facts = BatchFacts {
             provider_truncated: true,
             refs_available: true,
             ..BatchFacts::default()
@@ -1127,6 +1163,20 @@ mod tests {
         assert!(matches!(
             observed.branch_pushed,
             Observation::Known { value: false }
+        ));
+        facts.prs.insert("feat/sample".into(), "open".into());
+        let matched = signal_observations(
+            &cfg,
+            &facts,
+            &DeliverySignals {
+                provider_open_pr: true,
+                ..DeliverySignals::default()
+            },
+            "feat/sample",
+        );
+        assert!(matches!(
+            matched.provider_open,
+            Observation::Known { value: true }
         ));
     }
 }

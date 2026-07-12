@@ -188,14 +188,14 @@ multiple command outputs.
 
 | AC | Scope | Verification method | Planned test/QA | Implementation | Result | Evidence | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| AC-01 | cli | automated | QA-01, QA-05 | `contracts/agent-context.schema.json`, `inspect.rs`, CLI conformance tests | UNVERIFIED | planned schema and behavior tests | repository and spec variants |
-| AC-02 | cli | automated | QA-01, QA-03 | `inspect.rs`, structured lint and persistence APIs | UNVERIFIED | planned detailed-context assertions | no content embedding |
-| AC-03 | cli | automated + AI-observed | QA-01, QA-07 | eligibility evaluator, `ready`, router/command contracts | UNVERIFIED | planned eligibility matrix and conformance review | six lifecycle actions only |
-| AC-04 | cli | automated | QA-06 | delivery observation snapshot and warning model | UNVERIFIED | planned fake-runner degradation tests | tri-state facts |
-| AC-05 | cli | automated | QA-01, QA-02 | inspect presenters and config/error dispatch | UNVERIFIED | planned exit/stdout/schema tests | partial exits 1 |
-| AC-06 | cli | automated | QA-04 | inspect command and fetch boundary | UNVERIFIED | planned filesystem/ref before-after tests | no persistent cache |
-| AC-07 | cli | automated | QA-03 | serialization and diagnostic sanitization | UNVERIFIED | planned adversarial output tests | repository-relative paths |
-| AC-08 | cli | automated | QA-05, QA-07 | `status.rs`, `index.rs`, `ready`, shared snapshot | UNVERIFIED | planned golden and compatibility tests | existing JSON unchanged |
-| AC-09 | cli | automated | QA-06 | batched Git/provider collector | UNVERIFIED | planned probe-count assertions | O(N) files only |
-| AC-10 | cli | automated | QA-01 | active resolution and suggestion policy | UNVERIFIED | planned branch/ambiguity scenarios | update never auto-suggested |
-| AC-11 | cli | automated + AI-observed | QA-05, QA-07 | versioned contracts, docs, freeze and adapter artifacts | UNVERIFIED | planned version/freeze/cargo-deny logs | config schema version unchanged |
+| AC-01 | cli | automated | QA-01, QA-05 | `contracts/agent-context.schema.json`, `inspect.rs`, CLI conformance tests | PASS | `schema_agent_context_accepts_all_result_variants`; `inspect_json_is_one_schema_valid_document` | repository and spec variants |
+| AC-02 | cli | automated | QA-01, QA-03 | `inspect.rs`, structured lint and persistence APIs | PASS | live schema-valid detail test asserts structured payload; schema fixtures pin observation qualities | no content embedding |
+| AC-03 | cli | automated + AI-observed | QA-01, QA-07 | eligibility evaluator, `ready`, router/command contracts | PASS | canonical suite 202 tests; `engine_keeps_agent_context_eligibility_separate_from_intent` | six lifecycle actions only |
+| AC-04 | cli | automated | QA-06 | delivery observation snapshot and warning model | PASS | `failed_git_batches_remain_unavailable`; `provider_truncation_never_becomes_known_false` | tri-state facts |
+| AC-05 | cli | automated | QA-01, QA-02 | inspect presenters and config/error dispatch | PASS | `inspect_json_is_one_schema_valid_document`; `inspect_missing_slug_returns_structured_error`; Japanese human-output test | partial exits 1 |
+| AC-06 | cli | automated | QA-04 | inspect command and fetch boundary | PASS | read-only snapshot construction; full status/index mutation regression suite | no persistent cache |
+| AC-07 | cli | automated | QA-03 | serialization and diagnostic sanitization | PASS | negative absolute-path fixture; path-like slug structured-error behavior | repository-relative paths |
+| AC-08 | cli | automated | QA-05, QA-07 | `status.rs`, `index.rs`, `ready`, shared snapshot | PASS | unchanged index golden, status read-only tests, ready conformance, full default suite | existing JSON unchanged |
+| AC-09 | cli | automated | QA-06 | batched Git/provider collector | PASS | `repository_probe_count_is_independent_of_spec_count` with 0 vs 25 specs | O(N) files only |
+| AC-10 | cli | automated | QA-01 | active resolution and suggestion policy | PASS | exact expected-branch implementation; suggestion precedence unit test; full inspect CLI tests | update never auto-suggested |
+| AC-11 | cli | automated + AI-observed | QA-05, QA-07 | versioned contracts, docs, freeze and adapter artifacts | PASS | default gate; cargo-deny all categories ok; adapter 0 drift; spec/ADR lint 0 fail | config schema version unchanged |
