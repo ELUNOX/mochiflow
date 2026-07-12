@@ -1,6 +1,7 @@
 //! Read-only repository and spec context for coding agents.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -338,6 +339,7 @@ struct BatchFacts {
     refs_available: bool,
     merged_available: bool,
     trailers_available: bool,
+    ignored_specs: BTreeSet<String>,
 }
 
 #[allow(clippy::result_unit_err)]
@@ -358,18 +360,36 @@ impl Runner for ProcessRunner {
         program: &str,
         args: &[&str],
         cwd: &Path,
-        _stdin: Option<&str>,
+        stdin: Option<&str>,
     ) -> Result<String, ()> {
-        let output = Command::new(program)
-            .args(args)
-            .current_dir(cwd)
-            .output()
+        let mut command = Command::new(program);
+        command.args(args).current_dir(cwd);
+        if stdin.is_some() {
+            command.stdin(std::process::Stdio::piped());
+        }
+        let mut child = command
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::null())
+            .spawn()
             .map_err(|_| ())?;
-        output
-            .status
-            .success()
-            .then(|| String::from_utf8_lossy(&output.stdout).into_owned())
-            .ok_or(())
+        if let Some(input) = stdin {
+            child
+                .stdin
+                .as_mut()
+                .ok_or(())?
+                .write_all(input.as_bytes())
+                .map_err(|_| ())?;
+        }
+        let output = child.wait_with_output().map_err(|_| ())?;
+        if output.status.success()
+            || (program == "git"
+                && args.first() == Some(&"check-ignore")
+                && output.status.code() == Some(1))
+        {
+            Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+        } else {
+            Err(())
+        }
     }
 }
 
@@ -462,6 +482,33 @@ fn collect_batch(cfg: &Config, runner: &dyn Runner) -> BatchFacts {
             },
             Err(_) => facts.provider_unknown = true,
         }
+    }
+    let ignore_input = discover(cfg)
+        .into_iter()
+        .filter_map(|(_, parsed)| {
+            parsed
+                .ok()
+                .map(|meta| format!(".mochiflow/specs/{}/spec.yaml", meta.slug()))
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    if !ignore_input.is_empty()
+        && let Ok(output) = runner.run(
+            "git",
+            &["check-ignore", "--stdin"],
+            &cfg.repo_root,
+            Some(&(ignore_input + "\n")),
+        )
+    {
+        facts
+            .ignored_specs
+            .extend(output.lines().filter_map(|path| {
+                Path::new(path)
+                    .parent()?
+                    .file_name()?
+                    .to_str()
+                    .map(str::to_owned)
+            }));
     }
     facts
 }
@@ -659,7 +706,7 @@ pub fn inspect_spec(cfg: &Config, slug: &str, runner: &dyn Runner) -> Document {
             value: p.is_empty(),
         },
     );
-    let signals = signals_for(cfg, &facts, &meta, &expected);
+    let signals = signals_for(cfg, &facts, &meta, &expected, persistence == "local");
     let signal_observations = signal_observations(cfg, &facts, &signals, &expected);
     let delivery = delivery_observation(cfg, &facts, &meta, &signals);
     let review = review_evidence(cfg, &dir, runner);
@@ -873,15 +920,19 @@ fn error_doc(scope: Scope, code: Code) -> Document {
     doc
 }
 
-fn signals_for(cfg: &Config, facts: &BatchFacts, meta: &SpecMeta, branch: &str) -> DeliverySignals {
+fn signals_for(
+    cfg: &Config,
+    facts: &BatchFacts,
+    meta: &SpecMeta,
+    branch: &str,
+    local_mode: bool,
+) -> DeliverySignals {
     let provider_state = facts.prs.get(branch).map(String::as_str);
     DeliverySignals {
         provider_merged: provider_state == Some("merged"),
         provider_open_pr: provider_state == Some("open"),
         trailer_in_base: facts.trailers.contains(meta.slug()),
-        local_branch_tip_in_base: classify_spec(cfg, meta.slug())
-            .is_ok_and(|p| matches!(p.mode, SpecPersistenceMode::Local))
-            && facts.merged_refs.contains(branch),
+        local_branch_tip_in_base: local_mode && facts.merged_refs.contains(branch),
         branch_pushed_unmerged: cfg.git.provider == "none"
             && facts.refs.contains(&format!("origin/{branch}"))
             && !facts
@@ -1108,7 +1159,13 @@ pub fn legacy_snapshot(cfg: &Config, runner: &dyn Runner) -> Vec<LegacySpecSnaps
     for (dir, parsed) in dirs {
         let Ok(meta) = parsed else { continue };
         let branch = branch_name(meta.spec_type(), meta.slug());
-        let signals = signals_for(cfg, &facts, &meta, &branch);
+        let signals = signals_for(
+            cfg,
+            &facts,
+            &meta,
+            &branch,
+            facts.ignored_specs.contains(meta.slug()),
+        );
         let column = resolve_column(meta.status(), &signals);
         let next_action = match column {
             DeliveryColumn::InReview => Some(NextActionKind::ReportMerge),
@@ -1271,8 +1328,12 @@ mod tests {
         }
         runner.calls.set(0);
         let document = inspect_repository(&cfg, &runner);
-        assert_eq!(runner.calls.get(), baseline);
+        assert_eq!(runner.calls.get(), baseline + 1);
         assert_eq!(document.result, ResultKind::Ok);
+        runner.calls.set(0);
+        let snapshots = legacy_snapshot(&cfg, &runner);
+        assert_eq!(snapshots.len(), 25);
+        assert_eq!(runner.calls.get(), baseline + 1);
         let unrelated = CountingRunner {
             calls: Cell::new(0),
             branch: "scratch/spec-0",
