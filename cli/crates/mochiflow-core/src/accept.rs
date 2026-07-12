@@ -51,6 +51,10 @@ struct AcceptPaths {
 
 /// Entry point for `mochiflow accept`. Returns the process exit code.
 pub fn run_accept(cfg: &Config, slug_arg: Option<&str>, dry_run: bool) -> i32 {
+    if let Err(error) = cfg.validate_repository_paths_now() {
+        eprintln!("FAIL: {error}");
+        return EXIT_FAIL;
+    }
     let target = match resolve_target(cfg, slug_arg) {
         Ok(target) => target,
         Err(message) => {
@@ -109,6 +113,26 @@ pub fn run_accept(cfg: &Config, slug_arg: Option<&str>, dry_run: bool) -> i32 {
         }
     };
     blockers.extend(unexpected_status_paths(&status_entries, &accept_paths));
+    let resume = meta.status() == "accepted";
+    if resume
+        && blockers.is_empty()
+        && unexpected_status_paths(&status_entries, &accept_paths).is_empty()
+    {
+        let spec_prefix = path_to_string(&rel_path(&cfg.repo_root, &target.active_dir));
+        let has_closeout_changes = status_entries.iter().any(|entry| {
+            entry
+                .paths
+                .iter()
+                .any(|path| path == &spec_prefix || path.starts_with(&format!("{spec_prefix}/")))
+        });
+        if !has_closeout_changes {
+            println!(
+                "accept: `{}` is already accepted; no uncommitted close-out remains.",
+                target.slug
+            );
+            return EXIT_OK;
+        }
+    }
     let readiness = readiness_blockers(cfg, &target, &meta);
 
     if dry_run {
@@ -393,9 +417,9 @@ fn readiness_blockers(cfg: &Config, target: &Target, meta: &SpecMeta) -> Vec<Str
     // accept operates only on active flat specs (the archived path is rejected
     // earlier in run_accept), so readiness always targets the active spec dir.
     let spec_dir = &target.active_dir;
-    if meta.status() != "approved" {
+    if !matches!(meta.status(), "approved" | "accepted") {
         blockers.push(format!(
-            "active spec status is `{}`; expected `approved`",
+            "active spec status is `{}`; expected `approved` or an exact uncommitted `accepted` close-out",
             meta.status()
         ));
     }

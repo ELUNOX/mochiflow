@@ -50,6 +50,54 @@ fn frontmatter(body: &str) -> Option<&str> {
     Some(&body[..end])
 }
 
+fn frontmatter_yaml(body: &str) -> Option<yaml_rust2::Yaml> {
+    let source = frontmatter(body)?;
+    yaml_rust2::YamlLoader::load_from_str(source)
+        .unwrap_or_else(|error| panic!("parse YAML frontmatter: {error}"))
+        .into_iter()
+        .next()
+}
+
+fn yaml_key<'a>(value: &'a yaml_rust2::Yaml, key: &str) -> Option<&'a yaml_rust2::Yaml> {
+    value
+        .as_hash()?
+        .get(&yaml_rust2::Yaml::String(key.to_string()))
+}
+
+fn yaml_strings(value: &yaml_rust2::Yaml, out: &mut Vec<String>) {
+    match value {
+        yaml_rust2::Yaml::String(value) => out.push(value.clone()),
+        yaml_rust2::Yaml::Array(values) => values.iter().for_each(|value| yaml_strings(value, out)),
+        yaml_rust2::Yaml::Hash(values) => {
+            values.values().for_each(|value| yaml_strings(value, out))
+        }
+        _ => {}
+    }
+}
+
+fn markdown_table_rows(body: &str, heading: &str) -> Vec<Vec<String>> {
+    let Some(section) = body.split_once(heading).map(|(_, section)| section) else {
+        return Vec::new();
+    };
+    section
+        .lines()
+        .skip_while(|line| !line.trim_start().starts_with('|'))
+        .take_while(|line| line.trim_start().starts_with('|'))
+        .filter_map(|line| {
+            let cells: Vec<String> = line
+                .trim()
+                .trim_matches('|')
+                .split('|')
+                .map(|cell| cell.split_whitespace().collect::<Vec<_>>().join(" "))
+                .collect();
+            (!cells
+                .iter()
+                .all(|cell| cell.chars().all(|c| matches!(c, '-' | ':'))))
+            .then_some(cells)
+        })
+        .collect()
+}
+
 fn collect_files(dir: &Path, out: &mut Vec<PathBuf>) {
     for entry in std::fs::read_dir(dir).unwrap_or_else(|e| panic!("read {}: {e}", dir.display())) {
         let entry = entry.unwrap();
@@ -120,6 +168,17 @@ fn schema_spec_rejects_missing_required() {
 fn schema_config_accepts_good() {
     let v = load_schema("config.schema.json");
     assert!(v.is_valid(&load_fixture("config_good.json")));
+}
+
+#[test]
+fn schema_config_rejects_repository_path_escapes() {
+    let v = load_schema("config.schema.json");
+    for fixture in [
+        "config_bad_absolute_path.json",
+        "config_bad_parent_path.json",
+    ] {
+        assert!(!v.is_valid(&load_fixture(fixture)), "accepted {fixture}");
+    }
 }
 
 #[test]
@@ -664,6 +723,79 @@ fn router_preserves_named_routing_branches() {
         assert!(
             router.contains(required),
             "router must preserve routing branch: {required}"
+        );
+    }
+}
+
+#[test]
+fn router_table_semantically_maps_every_command() {
+    let rows = markdown_table_rows(&read_repo_file("engine/router.md"), "## Route table");
+    for (target, command) in [
+        ("commands/discuss.md", "mochiflow-discuss"),
+        ("commands/plan.md", "mochiflow-plan"),
+        ("commands/build.md", "mochiflow-build"),
+        ("commands/open.md", "mochiflow-open"),
+        ("commands/update.md", "mochiflow-update"),
+        ("commands/close.md", "mochiflow-close"),
+        ("commands/review.md", "mochiflow-review"),
+    ] {
+        assert!(
+            rows.iter()
+                .any(|row| row.first().is_some_and(|cell| cell.contains(target))
+                    && row.get(1).is_some_and(|cell| cell.contains(command))),
+            "missing {command} -> {target}"
+        );
+    }
+}
+
+#[test]
+fn release_workflows_pin_security_and_event_contracts() {
+    let release = read_repo_file(".github/workflows/release.yml");
+    let plan = read_repo_file(".github/workflows/release-plan.yml");
+    let provenance = read_repo_file(".github/scripts/validate-release-provenance.sh");
+    assert!(!release.contains("pull_request:"));
+    assert!(release.contains("\"contents\": \"read\"") && release.contains("contents: write"));
+    assert!(release.contains("cargo install --locked cargo-dist --version 0.32.0"));
+    assert!(release.contains("Validate release provenance"));
+    assert!(
+        plan.contains("pull_request:")
+            && plan.contains("paths:")
+            && plan.contains("workflow_dispatch:")
+    );
+    assert!(!plan.contains("secrets.") && plan.contains("permissions:\n  contents: read"));
+    for workflow in [&release, &plan] {
+        for line in workflow.lines().filter(|line| line.contains("uses:")) {
+            let reference = line
+                .split('@')
+                .nth(1)
+                .expect("action must have reference")
+                .trim();
+            assert_eq!(reference.len(), 40, "action must use full SHA: {line}");
+        }
+    }
+    assert!(
+        provenance.contains("merge-base --is-ancestor")
+            && provenance.contains("cargo metadata")
+            && provenance.contains("does not match workspace version")
+    );
+}
+
+#[test]
+fn macos_workflow_is_post_merge_and_cost_bounded() {
+    let workflow = read_repo_file(".github/workflows/macos.yml");
+    assert!(workflow.contains("branches: [main]") && workflow.contains("paths:"));
+    assert!(workflow.contains("workflow_dispatch:") && workflow.contains("macos-latest"));
+    assert!(workflow.contains("cargo test --manifest-path cli/Cargo.toml"));
+    assert!(workflow.contains("contents: read") && workflow.contains("cancel-in-progress: true"));
+    assert!(
+        !workflow.contains("pull_request:")
+            && !workflow.contains("schedule:")
+            && !workflow.contains("matrix:")
+    );
+    for line in workflow.lines().filter(|line| line.contains("uses:")) {
+        assert_eq!(
+            line.split('@').nth(1).expect("pinned action").trim().len(),
+            40
         );
     }
 }
@@ -5193,21 +5325,19 @@ fn engine_frontmatter_declared_paths_exist() {
     for path in engine_markdown_files() {
         let body = std::fs::read_to_string(&path)
             .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
-        let Some(fm) = frontmatter(&body) else {
+        let Some(fm) = frontmatter_yaml(&body) else {
             continue;
         };
-        for line in fm.lines() {
-            let Some(rel) = line.trim().strip_prefix("- ") else {
-                continue;
-            };
-            let rel = rel.trim();
+        let mut declared = Vec::new();
+        yaml_strings(&fm, &mut declared);
+        for rel in declared {
             let engine_relative = rel.starts_with("reference/")
                 || rel.starts_with("templates/")
                 || rel.starts_with("commands/")
                 || rel.starts_with("agents/");
             if engine_relative && rel.ends_with(".md") && !rel.contains('{') {
                 assert!(
-                    repo.join("engine").join(rel).exists(),
+                    repo.join("engine").join(&rel).exists(),
                     "{}: declared frontmatter path engine/{rel} is missing",
                     path.display()
                 );
@@ -5230,19 +5360,20 @@ fn commands_and_reviewers_use_the_load_contract() {
         }
         let body = std::fs::read_to_string(&path)
             .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
-        let fm = frontmatter(&body).unwrap_or_default();
+        let fm = frontmatter_yaml(&body).expect("typed engine frontmatter");
+        let load = yaml_key(&fm, "load");
         assert!(
-            fm.contains("load:") && fm.contains("required:"),
+            load.and_then(|load| yaml_key(load, "required")).is_some(),
             "{}: must declare a load.required contract",
             path.display()
         );
         assert!(
-            !fm.contains("triggers:") && !fm.contains("trigger_patterns:"),
+            yaml_key(&fm, "triggers").is_none() && yaml_key(&fm, "trigger_patterns").is_none(),
             "{}: trigger metadata must live only in the router route table",
             path.display()
         );
         assert!(
-            !fm.contains("\nreferences:"),
+            yaml_key(&fm, "references").is_none(),
             "{}: the flat references catalog must be replaced by the load contract",
             path.display()
         );

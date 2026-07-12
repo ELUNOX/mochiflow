@@ -9,18 +9,33 @@ use crate::manifest::read_engine_version;
 
 #[derive(Debug)]
 pub enum EngineInstallError {
-    Dirty { entries: Vec<String> },
+    Validation(String),
+    Dirty {
+        entries: Vec<String>,
+    },
     Staging(std::io::Error),
     Copy(std::io::Error),
-    MissingVersion { source_label: String },
+    MissingVersion {
+        source_label: String,
+    },
     SamePath,
     Rename(std::io::Error),
     Manifest(std::io::Error),
+    Rollback {
+        install: std::io::Error,
+        rollback: std::io::Error,
+        backup: std::path::PathBuf,
+    },
+    Cleanup {
+        error: std::io::Error,
+        backup: std::path::PathBuf,
+    },
 }
 
 impl EngineInstallError {
     pub fn report_lines(&self) -> Vec<String> {
         match self {
+            Self::Validation(error) => vec![format!("FAIL: {error}")],
             Self::Dirty { entries } => {
                 let mut lines: Vec<String> = entries
                     .iter()
@@ -42,12 +57,28 @@ impl EngineInstallError {
             Self::SamePath => vec!["FAIL: source and target engine are the same path".into()],
             Self::Rename(e) => vec![format!("FAIL: rename error: {e}")],
             Self::Manifest(e) => vec![format!("FAIL: could not write MANIFEST.json: {e}")],
+            Self::Rollback {
+                install,
+                rollback,
+                backup,
+            } => vec![format!(
+                "FAIL: engine install failed ({install}) and rollback failed ({rollback}); recover backup from {}",
+                backup.display()
+            )],
+            Self::Cleanup { error, backup } => vec![format!(
+                "FAIL: engine installed but backup cleanup failed ({error}); remove preserved backup after inspection: {}",
+                backup.display()
+            )],
         }
     }
 }
 
 /// Run upgrade command.
 pub fn run_upgrade(cfg: &Config, source: &str, force: bool) -> i32 {
+    if let Err(error) = cfg.checked_engine_dir() {
+        println!("FAIL: {error}");
+        return 1;
+    }
     let mut src = std::path::PathBuf::from(source);
     if !src.is_absolute() {
         src = std::env::current_dir().unwrap_or_default().join(&src);
@@ -72,6 +103,10 @@ pub fn run_upgrade_embedded<F>(cfg: &Config, source_label: &str, force: bool, ex
 where
     F: FnOnce(&Path) -> std::io::Result<()>,
 {
+    if let Err(error) = cfg.checked_engine_dir() {
+        println!("FAIL: {error}");
+        return 1;
+    }
     run_upgrade_with_stager(cfg, source_label, force, extract)
 }
 
@@ -125,12 +160,14 @@ pub fn install_engine_staged<F>(
 where
     F: FnOnce(&Path) -> std::io::Result<()>,
 {
+    cfg.checked_engine_dir()
+        .map_err(|error| EngineInstallError::Validation(error.to_string()))?;
     let target_engine = cfg.engine_dir();
 
-    if target_engine.join("MANIFEST.json").exists() {
+    if target_engine.exists() {
         let dirty: Vec<String> = check_engine(cfg)
             .into_iter()
-            .filter(|i| i.severity == "FAIL" && i.message.contains("MANIFEST drift"))
+            .filter(|i| i.severity == "FAIL")
             .map(|i| {
                 i.message
                     .strip_prefix("engine MANIFEST drift: ")
@@ -174,13 +211,21 @@ where
         std::fs::rename(&target_engine, &backup).map_err(EngineInstallError::Rename)?;
     }
     if let Err(e) = std::fs::rename(&staging, &target_engine) {
-        if backup.exists() {
-            std::fs::rename(&backup, &target_engine).ok();
+        if backup.exists()
+            && let Err(rollback) = std::fs::rename(&backup, &target_engine)
+        {
+            return Err(EngineInstallError::Rollback {
+                install: e,
+                rollback,
+                backup,
+            });
         }
         return Err(EngineInstallError::Rename(e));
     }
-    if backup.exists() {
-        std::fs::remove_dir_all(&backup).ok();
+    if backup.exists()
+        && let Err(error) = std::fs::remove_dir_all(&backup)
+    {
+        return Err(EngineInstallError::Cleanup { error, backup });
     }
 
     Ok(())

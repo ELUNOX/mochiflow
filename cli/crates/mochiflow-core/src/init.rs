@@ -799,6 +799,10 @@ pub fn run_init(
 
     match load_config(&config_path) {
         Ok(cfg) => {
+            if let Err(error) = cfg.validate_repository_paths_now() {
+                log!("FAIL: {error}");
+                return 1;
+            }
             // Install the vendored engine via the same staged path used by
             // `upgrade`, so dirty installed engines require --force.
             let engine_result = if let Some(extract_fn) = embedded_engine_extract {
@@ -913,7 +917,7 @@ pub fn run_init(
                     ));
                 }
                 for blocked in &adapter_result.blocked {
-                    let message = if language == "ja" {
+                    let message = if crate::config::is_japanese_language(language) {
                         format!(
                             "{} は既に存在する構造化 adapter ファイルのため上書きしませんでした。{} を確認して手動で統合してください。置き換える場合は --force で再実行できます。",
                             blocked.target, blocked.candidate
@@ -1082,7 +1086,7 @@ fn run_init_doctor(cfg: &crate::config::Config, json: bool, skip_adapter: bool) 
 }
 
 fn done_item(language: &str, en: &str, ja: &str) -> String {
-    if language == "ja" {
+    if crate::config::is_japanese_language(language) {
         ja.to_string()
     } else {
         en.to_string()
@@ -1090,7 +1094,7 @@ fn done_item(language: &str, en: &str, ja: &str) -> String {
 }
 
 fn confirmation_item(language: &str, en: &str, ja: &str) -> String {
-    if language == "ja" {
+    if crate::config::is_japanese_language(language) {
         ja.to_string()
     } else {
         en.to_string()

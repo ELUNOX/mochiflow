@@ -45,11 +45,11 @@ For CI or scripts:
 mochiflow init --yes
 ```
 
-To pin the language explicitly:
+To pin artifact and conversation language responsibilities explicitly:
 
 ```bash
-mochiflow init --language ja
-mochiflow init --language en
+mochiflow init --artifact-language ja --conversation-language auto
+mochiflow init --artifact-language en --conversation-language en
 ```
 
 ## Understand the result

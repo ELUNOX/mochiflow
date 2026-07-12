@@ -1,0 +1,11 @@
+version: 1
+slug: "codebase-audit-remediation"
+title: "Codebase Audit Remediation"
+type: "fix"
+surfaces:
+  - "cli"
+integration: "workflow"
+risk: "critical"
+status: "accepted"
+created: "2026-07-10"
+updated: "2026-07-12"

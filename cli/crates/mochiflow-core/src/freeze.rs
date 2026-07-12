@@ -76,7 +76,7 @@ pub fn compute_contracts_hash(repo_root: &Path) -> Result<String, String> {
     }
 
     let mut golden_files: Vec<PathBuf> = Vec::new();
-    collect_files_recursive(&golden, &mut golden_files);
+    collect_files_recursive(&golden, &mut golden_files)?;
     golden_files.sort();
     for f in &golden_files {
         let bytes = std::fs::read(f).map_err(|e| format!("read {}: {e}", f.display()))?;
@@ -99,7 +99,7 @@ fn build_manifest_with_overrides(
 ) -> Result<String, String> {
     let mut files = BTreeMap::new();
     let mut all_files = Vec::new();
-    collect_files_recursive(engine_dir, &mut all_files);
+    collect_files_recursive(engine_dir, &mut all_files)?;
     all_files.sort();
     for entry in all_files {
         let rel = entry.strip_prefix(engine_dir).unwrap_or(&entry);
@@ -123,18 +123,21 @@ fn build_manifest_with_overrides(
         .map_err(|e| format!("serialize manifest: {e}"))
 }
 
-fn collect_files_recursive(dir: &Path, out: &mut Vec<PathBuf>) {
-    let Ok(entries) = std::fs::read_dir(dir) else {
-        return;
-    };
-    for entry in entries.flatten() {
+fn collect_files_recursive(dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), String> {
+    let entries = std::fs::read_dir(dir)
+        .map_err(|error| format!("read directory {}: {error}", dir.display()))?;
+    for entry in entries {
+        let entry = entry.map_err(|error| format!("read entry in {}: {error}", dir.display()))?;
         let path = entry.path();
-        if path.is_dir() {
-            collect_files_recursive(&path, out);
-        } else if path.is_file() {
+        let metadata = std::fs::metadata(&path)
+            .map_err(|error| format!("read metadata {}: {error}", path.display()))?;
+        if metadata.is_dir() {
+            collect_files_recursive(&path, out)?;
+        } else if metadata.is_file() {
             out.push(path);
         }
     }
+    Ok(())
 }
 
 /// Derived file staleness report entry.
@@ -270,6 +273,14 @@ mod tests {
         let parsed: serde_json::Value = serde_json::from_str(&content).unwrap();
         assert_eq!(parsed["version"].as_str().unwrap(), version);
         assert!(!parsed["files"].as_object().unwrap().is_empty());
+    }
+
+    #[test]
+    fn recursive_collection_reports_the_failing_directory_path() {
+        let tmp = tempfile::tempdir().unwrap();
+        let missing = tmp.path().join("missing");
+        let error = collect_files_recursive(&missing, &mut Vec::new()).unwrap_err();
+        assert!(error.contains(&missing.display().to_string()), "{error}");
     }
 
     #[test]

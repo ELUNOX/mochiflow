@@ -18,8 +18,14 @@ Rust toolchain pinned by `rust-toolchain.toml` (edition 2024, Rust 1.96.0).
 # Build
 cargo build --manifest-path cli/Cargo.toml
 
-# Run the full test + conformance suite (this is the canonical verify command)
+# Fast feedback loop
 cargo test --manifest-path cli/Cargo.toml
+
+# Complete default verification gate
+cargo test --manifest-path cli/Cargo.toml
+cargo fmt --manifest-path cli/Cargo.toml --all -- --check
+cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings
+cargo run --manifest-path cli/Cargo.toml -- freeze --check
 
 # Supply-chain / license checks
 cargo deny --manifest-path cli/Cargo.toml check --config cli/deny.toml
@@ -30,7 +36,7 @@ source of truth for behavior: JSON-schema accept/reject, `index` golden
 equivalence, MANIFEST drift detection, the frozen-surface version gate, and
 behavioral assertions for lint / doctor / config / adapter / upgrade. The
 committed golden fixtures and schemas under `tests/` and `contracts/` back it.
-A change is not done until `cargo test` passes.
+A change is not done until the complete default gate above passes.
 
 ## Where to make changes
 
@@ -73,7 +79,7 @@ see [contracts/VERSIONING.md](contracts/VERSIONING.md).
 - Use [Conventional Commits](https://www.conventionalcommits.org/) for commit
   messages (`feat:`, `fix:`, `docs:`, `refactor:`, `chore:`, etc.).
 - Keep changes focused; stage files explicitly rather than `git add .`.
-- Make sure `cargo test --manifest-path cli/Cargo.toml` passes before opening a PR.
+- Run the complete default verification gate above before opening a PR; use the test-only command as the fast loop.
 - Keep PR titles concise and describe what changed and why in the body. The PR
   template will prompt you for the details.
 - Do not commit secrets (`.env`, credentials).

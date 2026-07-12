@@ -140,7 +140,7 @@ impl NextActionKind {
     /// Conversation-language message for this next action. `language` is already
     /// resolved for CLI-only output (so `auto` has become a concrete tag).
     pub fn message(self, language: &str) -> String {
-        let ja = language == "ja";
+        let ja = crate::config::is_japanese_language(language);
         match (self, ja) {
             (NextActionKind::ReportMerge, false) => {
                 "Merge the PR in your provider, then report the merge here so local cleanup can run."

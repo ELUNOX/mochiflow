@@ -20,8 +20,14 @@ MochiFlow の唯一の実装は `cli/` 配下の Rust CLI です。`rust-toolcha
 # ビルド
 cargo build --manifest-path cli/Cargo.toml
 
-# テスト + コンフォーマンス一式を実行（これが正規の検証コマンド）
+# 高速フィードバックループ
 cargo test --manifest-path cli/Cargo.toml
+
+# 完全なデフォルト検証ゲート
+cargo test --manifest-path cli/Cargo.toml
+cargo fmt --manifest-path cli/Cargo.toml --all -- --check
+cargo clippy --manifest-path cli/Cargo.toml --all-targets -- -D warnings
+cargo run --manifest-path cli/Cargo.toml -- freeze --check
 
 # supply-chain / license チェック
 cargo deny --manifest-path cli/Cargo.toml check --config cli/deny.toml
@@ -31,7 +37,7 @@ cargo deny --manifest-path cli/Cargo.toml check --config cli/deny.toml
 挙動の真実のソースです: JSONスキーマの受理/拒否、`index` の golden 一致、MANIFEST
 ドリフト検出、凍結面のバージョンゲート、lint / doctor / config / adapter / upgrade
 の挙動アサーション。`tests/` と `contracts/` 配下のコミット済み golden fixtures と
-スキーマが裏付けます。`cargo test` が通るまで変更は完了ではありません。
+スキーマが裏付けます。上記の完全なデフォルトゲートが通るまで変更は完了ではありません。
 
 ## どこを編集するか
 
@@ -72,7 +78,7 @@ cargo deny --manifest-path cli/Cargo.toml check --config cli/deny.toml
 - コミットメッセージは [Conventional Commits](https://www.conventionalcommits.org/)
   を使用（`feat:`・`fix:`・`docs:`・`refactor:`・`chore:` など）。
 - 変更は焦点を絞り、`git add .` ではなくファイルを明示的にステージング。
-- PR を出す前に `cargo test --manifest-path cli/Cargo.toml` が通ることを確認。
+- PR 前に上記の完全なデフォルト検証ゲートを実行。テストのみのコマンドは高速ループとして使用。
 - PR タイトルは簡潔に。本文で「何を・なぜ」変えたかを説明（PR テンプレートが項目を促します）。
 - シークレット（`.env`・認証情報）はコミットしない。
 

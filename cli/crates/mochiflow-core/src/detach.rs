@@ -76,6 +76,12 @@ pub fn run_detach(
         dry_run,
         ..DetachReport::default()
     };
+    if let Err(error) = cfg.validate_repository_paths_now() {
+        report.errors.push(error.to_string());
+        report.exit_code = 1;
+        present_report(&report, json);
+        return report.exit_code;
+    }
     if purge {
         report
             .warnings
@@ -150,7 +156,16 @@ fn plan_adapter_cleanup(cfg: &Config) -> AdapterPlan {
             }
         };
         for (out_rel, _tpl_rel) in files {
-            let target = cfg.repo_root.join(&out_rel);
+            let target = match cfg.checked_path("adapter detach output", &out_rel) {
+                Ok(path) => path.into_operation_path(),
+                Err(error) => {
+                    actions.push(AdapterAction::Error {
+                        label: out_rel,
+                        message: error.to_string(),
+                    });
+                    continue;
+                }
+            };
             if let Some(parent) = target.parent() {
                 known_parents.push(parent.to_path_buf());
             }

@@ -194,7 +194,7 @@ pub fn render_report(
     }
 
     let mut out = String::new();
-    let ja = language == "ja";
+    let ja = crate::config::is_japanese_language(language);
     out.push_str(if ja {
         "MochiFlow が検出した内容:\n\n"
     } else {
@@ -259,7 +259,7 @@ pub fn render_init_summary(
     artifact_language_source: InitLanguageSource,
     conversation_language_source: InitLanguageSource,
 ) -> String {
-    let ja = display_language == "ja";
+    let ja = crate::config::is_japanese_language(display_language);
     let mut out = String::new();
     out.push_str("Detected:\n");
     out.push_str(&line(
@@ -382,7 +382,7 @@ pub fn render_init_summary(
 }
 
 fn confirmation_items(report: &DetectionReport, language: &str) -> Vec<String> {
-    let ja = language == "ja";
+    let ja = crate::config::is_japanese_language(language);
     let mut items = Vec::new();
 
     for s in &report.surfaces {
@@ -433,7 +433,7 @@ fn confirmation_items(report: &DetectionReport, language: &str) -> Vec<String> {
 
 /// The single next-step trigger line (AC-04).
 pub fn render_next_step(language: &str) -> String {
-    if language == "ja" {
+    if crate::config::is_japanese_language(language) {
         "次の一手: 問題なければ mochiflow init を実行してください。".to_string()
     } else {
         "Next: run mochiflow init if this setup looks right.".to_string()
@@ -443,7 +443,7 @@ pub fn render_next_step(language: &str) -> String {
 /// Copy-paste prompt shown after init. This is intentionally more specific than
 /// `render_next_step` because it is the first-run setup prompt from CLI to AI.
 pub fn render_ai_review_prompt(language: &str) -> String {
-    if language == "ja" {
+    if crate::config::is_japanese_language(language) {
         "AI アシスタントにこの文を貼ってください:\n\n\
          MochiFlow の初期設定を完成させてください。.mochiflow/config.toml を読み、\
          \"# mochiflow: confirm\" と TODO は検出が不確かな値を確認するための質問として扱い、\
@@ -467,7 +467,7 @@ pub fn render_ai_review_prompt(language: &str) -> String {
 }
 
 pub fn render_ready_next(language: &str) -> String {
-    if language == "ja" {
+    if crate::config::is_japanese_language(language) {
         "AI アシスタントに実装したい内容を伝えてください。".to_string()
     } else {
         "Tell your AI agent what you want to build.".to_string()
@@ -475,7 +475,7 @@ pub fn render_ready_next(language: &str) -> String {
 }
 
 pub fn render_blocked_next(language: &str) -> String {
-    if language == "ja" {
+    if crate::config::is_japanese_language(language) {
         "構造化 adapter の candidate ファイルを確認して手動で統合するか、置き換える場合は --force で再実行してください。".to_string()
     } else {
         "Review the structured adapter candidate files and merge them manually, or re-run with --force to replace existing files.".to_string()
@@ -583,7 +583,7 @@ fn detected_json(report: &DetectionReport) -> serde_json::Value {
 /// trigger + explicit command) and the two delivery approval gates. Content is fixed
 /// and project-independent; only the language of the framing text varies.
 pub fn render_guide(language: &str) -> String {
-    if language == "ja" {
+    if crate::config::is_japanese_language(language) {
         "MochiFlow の使い方\n\
          \n\
          動詞 — AI に自然文で伝えるか、明示コマンドを使う:\n\

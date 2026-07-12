@@ -223,6 +223,15 @@ pub fn run_join(
             return report.exit_code();
         }
     };
+    if let Err(error) = cfg.validate_repository_paths_now() {
+        report.errors.push(error.to_string());
+        if json {
+            print!("{}", render_json(&report));
+        } else {
+            print_human(&report);
+        }
+        return report.exit_code();
+    }
 
     for entry in required_gitignore_entries_missing(&cfg) {
         report.warnings.push(format!(
@@ -245,15 +254,22 @@ pub fn run_join(
     }
 
     if !dry_run {
-        if let Err(e) = std::fs::create_dir_all(cfg.state_dir()) {
-            report.errors.push(format!(
-                "could not create {}: {e}",
-                cfg.state_dir().display()
-            ));
-        } else {
-            report
-                .actions
-                .push(format!("ensured {}", cfg.state_dir().display()));
+        match cfg.checked_state_dir() {
+            Err(e) => report
+                .errors
+                .push(format!("could not validate state directory: {e}")),
+            Ok(state) => {
+                if let Err(e) = std::fs::create_dir_all(state.operation_path()) {
+                    report.errors.push(format!(
+                        "could not create {}: {e}",
+                        state.operation_path().display()
+                    ));
+                } else {
+                    report
+                        .actions
+                        .push(format!("ensured {}", state.operation_path().display()));
+                }
+            }
         }
     } else {
         report

@@ -356,6 +356,10 @@ impl AdrStore {
 /// configured path resolves to a file where a directory is expected (AC-10);
 /// an absent or empty directory is simply zero records (AC-02).
 pub fn load_store(cfg: &Config, kind: AdrKind) -> Result<AdrStore, crate::config::ConfigError> {
+    match kind {
+        AdrKind::Decisions => cfg.checked_decisions_dir()?,
+        AdrKind::Pitfalls => cfg.checked_pitfalls_dir()?,
+    };
     cfg.validate_adr_dirs()?;
     let dir = kind.dir(cfg);
     let mut records = Vec::new();

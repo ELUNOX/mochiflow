@@ -1,0 +1,27 @@
+name: Release plan
+
+on:
+  pull_request:
+    paths:
+      - dist-workspace.toml
+      - cli/Cargo.toml
+      - cli/Cargo.lock
+      - rust-toolchain.toml
+      - .github/workflows/release.yml
+      - .github/workflows/release-plan.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+      - name: Install cargo-dist
+        run: cargo install --locked cargo-dist --version 0.32.0
+      - name: Validate release plan
+        run: dist plan

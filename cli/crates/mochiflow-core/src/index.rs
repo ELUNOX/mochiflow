@@ -320,6 +320,16 @@ fn normalize_index_timestamp(text: &str) -> String {
 
 fn render_index(cfg: &Config, now: &str) -> String {
     let (active, done, seeds) = collect(cfg);
+    render_index_snapshot(cfg, now, &active, &done, &seeds)
+}
+
+fn render_index_snapshot(
+    cfg: &Config,
+    now: &str,
+    active: &[ActiveEntry],
+    done: &[DoneEntry],
+    seeds: &[SeedInfo],
+) -> String {
     let active_specs: Vec<_> = active
         .iter()
         .filter(|entry| entry.column == DeliveryColumn::Active)
@@ -362,7 +372,7 @@ fn render_index(cfg: &Config, now: &str) -> String {
     } else {
         lines.push("| Slug | Title | Maturity | Source |".to_string());
         lines.push("|:-----|:------|:---------|:-------|".to_string());
-        for s in &seeds {
+        for s in seeds {
             lines.push(format!(
                 "| [{}]({specs_rel}/_backlog/{}.md) | {} | {} {} | {} |",
                 md_table_cell(&s.slug),
@@ -387,7 +397,7 @@ fn render_index(cfg: &Config, now: &str) -> String {
         lines.push("（なし）".to_string());
     } else {
         let mut current_month: Option<String> = None;
-        for d in &done {
+        for d in done {
             let month = if d.updated.len() >= 7 {
                 &d.updated[..7]
             } else {
@@ -467,8 +477,11 @@ fn url_path(value: &str) -> String {
 }
 
 pub fn is_index_stale(cfg: &Config) -> bool {
-    let index_path = cfg.index_path();
-    let actual = match std::fs::read_to_string(&index_path) {
+    let Ok(index_path) = cfg.checked_index_path() else {
+        return true;
+    };
+    let index_path = index_path.operation_path();
+    let actual = match std::fs::read_to_string(index_path) {
         Ok(content) => content,
         Err(_) => return true,
     };
@@ -498,17 +511,23 @@ pub fn generate_index_quiet(cfg: &Config) -> std::io::Result<()> {
 fn generate_index_inner(cfg: &Config, print_summary: bool) -> std::io::Result<()> {
     let (active, done, seeds) = collect(cfg);
     let now = utc_now_formatted();
-    let content = render_index(cfg, &now);
+    let content = render_index_snapshot(cfg, &now, &active, &done, &seeds);
 
     // Write INDEX.md
-    let index_path = cfg.index_path();
+    let index_path = cfg
+        .checked_index_path()
+        .map_err(std::io::Error::other)?
+        .into_operation_path();
     if let Some(parent) = index_path.parent() {
         std::fs::create_dir_all(parent)?;
     }
     std::fs::write(&index_path, &content)?;
 
     // Write state/index.json
-    let state_dir = cfg.state_dir();
+    let state_dir = cfg
+        .checked_state_dir()
+        .map_err(std::io::Error::other)?
+        .into_operation_path();
     std::fs::create_dir_all(&state_dir)?;
     let json_data = build_json(
         &now,

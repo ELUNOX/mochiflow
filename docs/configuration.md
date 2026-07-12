@@ -77,12 +77,14 @@ mochiflow data"`.
 
 ## Language
 
-Project language controls generated user-facing artifacts and defaults from your
-locale during `init`. Pin it explicitly when needed:
+Artifact language controls AI-authored specs, PR text, and QA evidence;
+conversation language controls agent replies and may remain dynamic with
+`auto`. Deterministic CLI text supports Japanese tags and otherwise falls back
+to English without runtime AI translation:
 
 ```bash
-mochiflow init --language ja
-mochiflow init --language en
+mochiflow init --artifact-language ja-JP --conversation-language auto
+mochiflow init --artifact-language en --conversation-language en
 ```
 
 ## Surfaces and verification

@@ -18,6 +18,120 @@ pub enum ConfigError {
     Invalid(String),
 }
 
+/// A repository-owned path proven to remain below the canonical repository
+/// root. `operation_path` deliberately preserves symlink semantics; the
+/// canonical path is only a containment witness.
+#[derive(Debug, Clone)]
+pub struct CheckedRepoPath {
+    operation_path: PathBuf,
+    witness: PathBuf,
+}
+
+impl CheckedRepoPath {
+    pub fn operation_path(&self) -> &Path {
+        &self.operation_path
+    }
+
+    pub fn witness(&self) -> &Path {
+        &self.witness
+    }
+
+    pub fn into_operation_path(self) -> PathBuf {
+        self.operation_path
+    }
+}
+
+/// Validate the lexical part of a repository-owned path contract on every
+/// platform. Backslashes are treated as separators even on Unix so a checked-in
+/// Windows traversal cannot become valid merely because validation ran on Linux.
+pub fn validate_repo_relative_path(field: &str, value: &str) -> Result<(), ConfigError> {
+    use std::path::Component;
+
+    let value = value.trim();
+    if value.is_empty() {
+        return Err(ConfigError::Invalid(format!("{field} must not be empty")));
+    }
+    if Path::new(value).is_absolute()
+        || value.starts_with(['/', '\\'])
+        || value.as_bytes().get(1).is_some_and(|byte| *byte == b':')
+    {
+        return Err(ConfigError::Invalid(format!(
+            "{field} must be a relative path: {value}"
+        )));
+    }
+    for spelling in [value.to_string(), value.replace('\\', "/")] {
+        for component in Path::new(&spelling).components() {
+            match component {
+                Component::ParentDir => {
+                    return Err(ConfigError::Invalid(format!(
+                        "{field} must not contain `..`: {value}"
+                    )));
+                }
+                Component::Prefix(_) | Component::RootDir => {
+                    return Err(ConfigError::Invalid(format!(
+                        "{field} must be a relative path: {value}"
+                    )));
+                }
+                Component::Normal(_) | Component::CurDir => {}
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Resolve the deepest existing ancestor and prove that its canonical target is
+/// contained by `repo_root`. Missing tails remain lexical operation paths.
+pub fn checked_repo_path(
+    repo_root: &Path,
+    field: &str,
+    relative: &str,
+) -> Result<CheckedRepoPath, ConfigError> {
+    validate_repo_relative_path(field, relative)?;
+    let canonical_root = repo_root.canonicalize().map_err(|error| {
+        ConfigError::Invalid(format!(
+            "cannot resolve repository root {}: {error}",
+            repo_root.display()
+        ))
+    })?;
+    let operation_path = repo_root.join(relative.trim());
+    let mut ancestor = operation_path.as_path();
+    loop {
+        match std::fs::symlink_metadata(ancestor) {
+            Ok(_) => break,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                ancestor = ancestor.parent().ok_or_else(|| {
+                    ConfigError::Invalid(format!("cannot resolve existing ancestor for {field}"))
+                })?;
+            }
+            Err(error) => {
+                return Err(ConfigError::Invalid(format!(
+                    "cannot inspect {field} ancestor {}: {error}",
+                    ancestor.display()
+                )));
+            }
+        }
+    }
+    let canonical_ancestor = ancestor.canonicalize().map_err(|error| {
+        ConfigError::Invalid(format!(
+            "cannot resolve {field} ancestor {}: {error}",
+            ancestor.display()
+        ))
+    })?;
+    if !canonical_ancestor.starts_with(&canonical_root) {
+        return Err(ConfigError::Invalid(format!(
+            "{field} escapes repository root: {relative}"
+        )));
+    }
+    let tail = operation_path
+        .strip_prefix(ancestor)
+        .map_err(|_| ConfigError::Invalid(format!("cannot resolve repository path for {field}")))?
+        .to_path_buf();
+    Ok(CheckedRepoPath {
+        operation_path,
+        witness: canonical_ancestor.join(tail),
+    })
+}
+
 /// Raw deserialized config.toml.
 #[derive(Debug, Deserialize)]
 pub struct RawConfig {
@@ -212,6 +326,69 @@ pub struct I18nMeta {
 }
 
 impl Config {
+    pub fn checked_path(
+        &self,
+        field: &str,
+        relative: &str,
+    ) -> Result<CheckedRepoPath, ConfigError> {
+        checked_repo_path(&self.repo_root, field, relative)
+    }
+
+    pub fn checked_install_dir(&self) -> Result<CheckedRepoPath, ConfigError> {
+        self.checked_path("install_dir", &self.install_dir)
+    }
+
+    pub fn checked_engine_dir(&self) -> Result<CheckedRepoPath, ConfigError> {
+        self.checked_path(
+            "install_dir.engine",
+            &format!("{}/engine", self.install_dir),
+        )
+    }
+
+    pub fn checked_state_dir(&self) -> Result<CheckedRepoPath, ConfigError> {
+        self.checked_path("install_dir.state", &format!("{}/state", self.install_dir))
+    }
+
+    pub fn checked_specs_dir(&self) -> Result<CheckedRepoPath, ConfigError> {
+        self.checked_path("specs_dir", &self.specs_dir)
+    }
+
+    pub fn checked_index_path(&self) -> Result<CheckedRepoPath, ConfigError> {
+        self.checked_path("index", &self.index)
+    }
+
+    pub fn checked_decisions_dir(&self) -> Result<CheckedRepoPath, ConfigError> {
+        self.checked_path("adr.decisions", &self.adr.decisions)
+    }
+
+    pub fn checked_pitfalls_dir(&self) -> Result<CheckedRepoPath, ConfigError> {
+        self.checked_path("adr.pitfalls", &self.adr.pitfalls)
+    }
+
+    /// Recheck every configured repository-owned path immediately before a
+    /// command performs a group of mutations.
+    pub fn validate_repository_paths_now(&self) -> Result<(), ConfigError> {
+        for (field, value) in self.repository_path_fields() {
+            self.checked_path(field, value)?;
+        }
+        Ok(())
+    }
+
+    fn repository_path_fields(&self) -> [(&'static str, &str); 10] {
+        [
+            ("install_dir", self.install_dir.as_str()),
+            ("specs_dir", self.specs_dir.as_str()),
+            ("index", self.index.as_str()),
+            ("constitution.project", self.constitution.project.as_str()),
+            ("constitution.local", self.constitution.local.as_str()),
+            ("context.product", self.context.product.as_str()),
+            ("context.structure", self.context.structure.as_str()),
+            ("context.tech", self.context.tech.as_str()),
+            ("adr.decisions", self.adr.decisions.as_str()),
+            ("adr.pitfalls", self.adr.pitfalls.as_str()),
+        ]
+    }
+
     pub fn install_dir_path(&self) -> PathBuf {
         self.repo_root.join(&self.install_dir)
     }
@@ -354,6 +531,10 @@ pub fn is_valid_language_tag(value: &str) -> bool {
         .unwrap_or(false)
 }
 
+pub fn is_japanese_language(value: &str) -> bool {
+    value.eq_ignore_ascii_case("ja") || value.to_ascii_lowercase().starts_with("ja-")
+}
+
 pub fn is_valid_artifact_language(value: &str) -> bool {
     value != "auto" && is_valid_language_tag(value)
 }
@@ -362,33 +543,20 @@ pub fn is_valid_conversation_language(value: &str) -> bool {
     value == "auto" || is_valid_language_tag(value)
 }
 
-fn validate_install_dir(install_dir: &str) -> Result<(), ConfigError> {
-    use std::path::Component;
-
-    let trimmed = install_dir.trim();
-    if trimmed.is_empty() {
-        return Err(ConfigError::Invalid("install_dir must not be empty".into()));
-    }
-    let path = Path::new(trimmed);
-    if path.is_absolute() {
-        return Err(ConfigError::Invalid(
-            "install_dir must be a relative path".into(),
-        ));
-    }
-    for component in path.components() {
-        match component {
-            Component::ParentDir => {
-                return Err(ConfigError::Invalid(
-                    "install_dir must not contain `..`".into(),
-                ));
-            }
-            Component::Normal(_) | Component::CurDir => {}
-            Component::Prefix(_) | Component::RootDir => {
-                return Err(ConfigError::Invalid(
-                    "install_dir must be a relative path".into(),
-                ));
-            }
-        }
+fn validate_config_paths(raw: &RawConfig) -> Result<(), ConfigError> {
+    for (field, value) in [
+        ("install_dir", raw.install_dir.as_str()),
+        ("specs_dir", raw.specs_dir.as_str()),
+        ("index", raw.index.as_str()),
+        ("constitution.project", raw.constitution.project.as_str()),
+        ("constitution.local", raw.constitution.local.as_str()),
+        ("context.product", raw.context.product.as_str()),
+        ("context.structure", raw.context.structure.as_str()),
+        ("context.tech", raw.context.tech.as_str()),
+        ("adr.decisions", raw.adr.decisions.as_str()),
+        ("adr.pitfalls", raw.adr.pitfalls.as_str()),
+    ] {
+        validate_repo_relative_path(field, value)?;
     }
     Ok(())
 }
@@ -412,6 +580,14 @@ fn validate_adapter_config(adapter: &RawAdapter) -> Result<(), ConfigError> {
             "adapter tools must not be empty strings".into(),
         ));
     }
+    const SUPPORTED: [&str; 4] = ["kiro", "agents", "copilot", "claude-code"];
+    for tool in adapter.resolved_tools() {
+        if !SUPPORTED.contains(&tool.as_str()) {
+            return Err(ConfigError::Invalid(format!(
+                "unsupported adapter tool: {tool}"
+            )));
+        }
+    }
     Ok(())
 }
 
@@ -428,7 +604,7 @@ pub fn load_config(config_path: &Path) -> Result<Config, ConfigError> {
 
 /// Derive repo_root from config_path and install_dir (matches Python logic).
 fn resolve(raw: RawConfig, config_path: &Path) -> Result<Config, ConfigError> {
-    validate_install_dir(&raw.install_dir)?;
+    validate_config_paths(&raw)?;
     validate_adapter_config(&raw.adapter)?;
 
     let config_abs = config_path
@@ -475,6 +651,21 @@ fn resolve(raw: RawConfig, config_path: &Path) -> Result<Config, ConfigError> {
     } else {
         ("auto".to_string(), I18nValueSource::Default)
     };
+
+    for (field, value) in [
+        ("install_dir", raw.install_dir.as_str()),
+        ("specs_dir", raw.specs_dir.as_str()),
+        ("index", raw.index.as_str()),
+        ("constitution.project", raw.constitution.project.as_str()),
+        ("constitution.local", raw.constitution.local.as_str()),
+        ("context.product", raw.context.product.as_str()),
+        ("context.structure", raw.context.structure.as_str()),
+        ("context.tech", raw.context.tech.as_str()),
+        ("adr.decisions", raw.adr.decisions.as_str()),
+        ("adr.pitfalls", raw.adr.pitfalls.as_str()),
+    ] {
+        checked_repo_path(&repo_root, field, value)?;
+    }
 
     Ok(Config {
         schema_version: raw.schema_version,
@@ -534,6 +725,57 @@ mod tests {
         assert!(is_valid_conversation_language("pt-BR"));
         assert!(!is_valid_conversation_language(""));
         assert!(!is_valid_conversation_language("../ja"));
+    }
+
+    #[test]
+    fn repository_paths_reject_cross_platform_escapes() {
+        for value in [
+            "",
+            " ",
+            "/tmp/out",
+            "../out",
+            "a/../out",
+            r"a\..\out",
+            r"C:\out",
+            r"\\server\share",
+        ] {
+            assert!(
+                validate_repo_relative_path("test.path", value).is_err(),
+                "{value:?}"
+            );
+        }
+        for value in [".mochiflow", "a/b", "./a", r"a\b"] {
+            assert!(
+                validate_repo_relative_path("test.path", value).is_ok(),
+                "{value:?}"
+            );
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn checked_repository_path_allows_local_symlink_and_rejects_escape() {
+        use std::os::unix::fs::symlink;
+
+        let repo = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(repo.path().join("inside")).unwrap();
+        symlink(repo.path().join("inside"), repo.path().join("local-link")).unwrap();
+        symlink(outside.path(), repo.path().join("outside-link")).unwrap();
+
+        let local = checked_repo_path(repo.path(), "test.path", "local-link/new/file").unwrap();
+        assert_eq!(
+            local.operation_path(),
+            repo.path().join("local-link/new/file")
+        );
+        assert!(
+            local
+                .witness()
+                .starts_with(repo.path().canonicalize().unwrap())
+        );
+
+        let error = checked_repo_path(repo.path(), "test.path", "outside-link/file").unwrap_err();
+        assert!(error.to_string().contains("escapes repository root"));
     }
 
     fn write_min_config(repo: &Path, decisions: &str, pitfalls: &str) -> PathBuf {

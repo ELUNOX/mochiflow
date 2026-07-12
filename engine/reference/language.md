@@ -38,6 +38,11 @@ Do not infer artifact language from the current chat turn unless onboarding has
 no better signal. During setup, prefer explicit config / CLI options and
 repository human-facing docs over the current conversation.
 
+The deterministic Rust CLI recognizes Japanese (`ja` and `ja-*`) for its
+built-in Japanese presentation and otherwise falls back to English. It never
+invokes AI or a translation service at runtime; arbitrary configured BCP
+47-style tags remain valid for AI-authored artifacts.
+
 ## Conversation Language
 
 Conversation should use `[i18n].conversation_language`.

@@ -93,8 +93,11 @@ defensible choices for surfaces, verification, and git.
 7. **Fill config.toml**: update `.mochiflow/config.toml` with the confirmed
    surfaces, verify commands, git config, adapter, and `[i18n]`.
    Set `[i18n].artifact_language` to the language used for durable project
-   artifacts. Set `[i18n].conversation_language` to `auto` unless the user wants
-   a fixed conversation language.
+   artifacts. When init marked that value for confirmation, inspect repository
+   human-facing documentation and persist the best concrete BCP 47-style tag;
+   this language selection is an AI onboarding responsibility, not a Rust CLI
+   runtime translation. Set `[i18n].conversation_language` to `auto` unless the
+   user wants a fixed conversation language.
    Remove a `# mochiflow: confirm` marker once its value is settled; keep the
    marker for anything still genuinely open.
 
