@@ -95,6 +95,19 @@ fn inspect_missing_slug_returns_structured_error() {
     assert_eq!(document["errors"][0]["code"], "spec_missing");
 }
 
+#[test]
+fn inspect_human_output_uses_configured_japanese() {
+    let output = bin()
+        .current_dir(repo_root())
+        .args(["inspect", "agent-context-api"])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    assert!(stdout.contains("エージェントコンテキスト"), "{stdout}");
+    assert!(stdout.contains("状態"), "{stdout}");
+}
+
 /// Deterministic init: no flags, piped stdin (non-TTY) → exit 0, scaffolds
 /// config from machine detection. A bare temp dir detects nothing concrete, so
 /// the verify command stays a TODO sentinel and confirm markers are attached

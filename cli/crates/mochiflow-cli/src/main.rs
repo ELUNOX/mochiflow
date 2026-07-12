@@ -336,7 +336,7 @@ fn main() -> Result<()> {
             if json {
                 println!("{}", serde_json::to_string_pretty(&document)?);
             } else {
-                render_inspect(&document);
+                render_inspect(&document, cfg.conversation_output_language());
             }
             document.exit_code()
         }
@@ -662,35 +662,72 @@ fn main() -> Result<()> {
     std::process::exit(exit_code);
 }
 
-fn render_inspect(document: &mochiflow_core::inspect::Document) {
+fn render_inspect(document: &mochiflow_core::inspect::Document, language: &str) {
     use mochiflow_core::inspect::{Observation, ResultKind};
+    let ja = mochiflow_core::config::is_japanese_language(language);
     println!(
-        "Agent context: {:?} ({:?})",
-        document.scope, document.result
+        "{}: {:?} ({:?})",
+        if ja {
+            "エージェントコンテキスト"
+        } else {
+            "Agent context"
+        },
+        document.scope,
+        document.result
     );
     if let Some(repository) = &document.repository {
         let branch = match &repository.branch {
             Observation::Known { value } => value.as_str(),
             _ => "unknown",
         };
-        println!("Branch: {branch} | Base: {}", repository.base_branch);
-        println!("Entries: {}", repository.entries.len());
+        println!(
+            "{}: {branch} | {}: {}",
+            if ja { "ブランチ" } else { "Branch" },
+            if ja { "ベース" } else { "Base" },
+            repository.base_branch
+        );
+        println!(
+            "{}: {}",
+            if ja { "項目" } else { "Entries" },
+            repository.entries.len()
+        );
     }
     if let Some(spec) = &document.spec {
         println!("{} — {}", spec.metadata.slug, spec.metadata.title);
         println!(
-            "Status: {} | Persistence: {}",
-            spec.metadata.status, spec.persistence
+            "{}: {} | {}: {}",
+            if ja { "状態" } else { "Status" },
+            spec.metadata.status,
+            if ja { "保存方式" } else { "Persistence" },
+            spec.persistence
         );
         if let Some(action) = spec.suggested_workflow {
-            println!("Suggested workflow: {action:?}");
+            println!(
+                "{}: {action:?}",
+                if ja {
+                    "推奨ワークフロー"
+                } else {
+                    "Suggested workflow"
+                }
+            );
         }
     }
     if document.result == ResultKind::Error {
-        println!("Inspection could not be completed.");
+        println!(
+            "{}",
+            if ja {
+                "検査を完了できませんでした。"
+            } else {
+                "Inspection could not be completed."
+            }
+        );
     }
     for warning in &document.warnings {
-        println!("Warning: {:?}", warning.code);
+        println!(
+            "{}: {:?}",
+            if ja { "警告" } else { "Warning" },
+            warning.code
+        );
     }
 }
 

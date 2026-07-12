@@ -532,14 +532,22 @@ pub fn inspect_repository(cfg: &Config, runner: &dyn Runner) -> Document {
             reason: Code::SpecAmbiguous,
         },
     };
+    let git_degraded = facts.branch.is_none()
+        || facts.dirty.is_none()
+        || !facts.refs_available
+        || !facts.merged_available
+        || !facts.trailers_available;
     doc.result = if partial {
         ResultKind::Partial
-    } else if facts.provider_unknown {
+    } else if facts.provider_unknown || git_degraded {
         ResultKind::Degraded
     } else {
         ResultKind::Ok
     };
-    doc.degraded = facts.provider_unknown;
+    doc.degraded = facts.provider_unknown || git_degraded;
+    if git_degraded {
+        doc.warnings.push(Diagnostic::new(Code::GitUnavailable));
+    }
     if facts.provider_unknown {
         doc.warnings
             .push(Diagnostic::new(Code::ProviderUnavailable));
@@ -619,7 +627,7 @@ pub fn inspect_spec(cfg: &Config, slug: &str, runner: &dyn Runner) -> Document {
         },
     );
     let signals = signals_for(cfg, &facts, &meta, &expected);
-    let signal_observations = signal_observations(cfg, &facts, &signals);
+    let signal_observations = signal_observations(cfg, &facts, &signals, &expected);
     let delivery = delivery_observation(cfg, &facts, &meta, &signals);
     let actions = evaluate_actions(
         cfg,
@@ -643,7 +651,12 @@ pub fn inspect_spec(cfg: &Config, slug: &str, runner: &dyn Runner) -> Document {
         _ => None,
     };
     let mut doc = Document::base(Scope::Spec);
-    doc.degraded = facts.provider_unknown || facts.provider_truncated;
+    let git_degraded = facts.branch.is_none()
+        || facts.dirty.is_none()
+        || !facts.refs_available
+        || !facts.merged_available
+        || !facts.trailers_available;
+    doc.degraded = facts.provider_unknown || facts.provider_truncated || git_degraded;
     doc.result = if doc.degraded {
         ResultKind::Degraded
     } else {
@@ -652,6 +665,9 @@ pub fn inspect_spec(cfg: &Config, slug: &str, runner: &dyn Runner) -> Document {
     if facts.provider_unknown {
         doc.warnings
             .push(Diagnostic::new(Code::ProviderUnavailable));
+    }
+    if git_degraded {
+        doc.warnings.push(Diagnostic::new(Code::GitUnavailable));
     }
     if facts.provider_truncated {
         doc.warnings
@@ -677,6 +693,7 @@ fn signal_observations(
     cfg: &Config,
     facts: &BatchFacts,
     signals: &DeliverySignals,
+    expected: &str,
 ) -> DeliveryObservations {
     let local = |available: bool, value| {
         if available {
@@ -692,9 +709,13 @@ fn signal_observations(
             Observation::NotApplicable {
                 reason: Code::ProviderUnavailable,
             }
-        } else if facts.provider_unknown {
+        } else if facts.provider_unknown || facts.provider_truncated {
             Observation::Unknown {
-                reason: Code::ProviderUnavailable,
+                reason: if facts.provider_truncated {
+                    Code::ProviderResultTruncated
+                } else {
+                    Code::ProviderUnavailable
+                },
             }
         } else {
             Observation::Known { value }
@@ -706,7 +727,7 @@ fn signal_observations(
         trailer_in_base: local(facts.trailers_available, signals.trailer_in_base),
         branch_pushed: local(
             facts.refs_available,
-            facts.refs.iter().any(|r| r.starts_with("origin/")),
+            facts.refs.contains(&format!("origin/{expected}")),
         ),
     }
 }
@@ -748,7 +769,7 @@ fn delivery_observation(
             reason: Code::GitUnavailable,
         }
     } else if cfg.git.provider == "github"
-        && facts.provider_unknown
+        && (facts.provider_unknown || facts.provider_truncated)
         && !signals.trailer_in_base
         && meta.status() == "accepted"
     {
@@ -1072,5 +1093,40 @@ mod tests {
         assert!(!facts.merged_available);
         assert!(!facts.trailers_available);
         assert!(facts.provider_unknown);
+        let document = inspect_repository(&cfg, &FailedRunner);
+        assert_eq!(document.result, ResultKind::Degraded);
+        assert!(
+            document
+                .warnings
+                .iter()
+                .any(|warning| warning.code == Code::GitUnavailable)
+        );
+    }
+
+    #[test]
+    fn provider_truncation_never_becomes_known_false() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        std::fs::create_dir_all(root.join(".mochiflow/specs")).unwrap();
+        std::fs::create_dir_all(root.join(".mochiflow/adr")).unwrap();
+        std::fs::write(root.join(".mochiflow/config.toml"), "schema_version = 1\ninstall_dir = \".mochiflow\"\nspecs_dir = \".mochiflow/specs\"\nindex = \".mochiflow/INDEX.md\"\n[constitution]\nproject = \".mochiflow/constitution.md\"\nlocal = \".mochiflow/constitution.local.md\"\n[context]\nproduct = \".mochiflow/context/product.md\"\nstructure = \".mochiflow/context/structure.md\"\ntech = \".mochiflow/context/tech.md\"\n[adr]\ndecisions = \".mochiflow/adr/decisions\"\npitfalls = \".mochiflow/adr/pitfalls\"\n[git]\nprovider = \"github\"\nbase_branch = \"main\"\n[adapter]\ntool = \"agents\"\n").unwrap();
+        let cfg = crate::config::load_config(&root.join(".mochiflow/config.toml")).unwrap();
+        let facts = BatchFacts {
+            provider_truncated: true,
+            refs_available: true,
+            ..BatchFacts::default()
+        };
+        let observed =
+            signal_observations(&cfg, &facts, &DeliverySignals::default(), "feat/sample");
+        assert!(matches!(
+            observed.provider_open,
+            Observation::Unknown {
+                reason: Code::ProviderResultTruncated
+            }
+        ));
+        assert!(matches!(
+            observed.branch_pushed,
+            Observation::Known { value: false }
+        ));
     }
 }
