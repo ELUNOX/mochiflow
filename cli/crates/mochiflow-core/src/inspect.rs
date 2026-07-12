@@ -554,7 +554,9 @@ pub fn inspect_repository(cfg: &Config, runner: &dyn Runner) -> Document {
     }
     if facts.provider_truncated {
         doc.degraded = true;
-        doc.result = ResultKind::Degraded;
+        if doc.result != ResultKind::Partial {
+            doc.result = ResultKind::Degraded;
+        }
         doc.warnings
             .push(Diagnostic::new(Code::ProviderResultTruncated));
     }
@@ -1209,6 +1211,16 @@ mod tests {
             inspect_repository(&cfg, &runner).result,
             ResultKind::Partial
         );
+        let combined = inspect_repository(&cfg, &TruncatedRunner);
+        assert_eq!(combined.result, ResultKind::Partial);
+        assert!(combined.degraded);
+        assert_eq!(combined.exit_code(), 1);
+        assert!(
+            combined
+                .warnings
+                .iter()
+                .any(|warning| warning.code == Code::ProviderResultTruncated)
+        );
     }
 
     struct FailedRunner;
@@ -1221,6 +1233,26 @@ mod tests {
             _stdin: Option<&str>,
         ) -> Result<String, ()> {
             Err(())
+        }
+    }
+
+    struct TruncatedRunner;
+    impl Runner for TruncatedRunner {
+        fn run(
+            &self,
+            program: &str,
+            args: &[&str],
+            _cwd: &Path,
+            _stdin: Option<&str>,
+        ) -> Result<String, ()> {
+            if program == "gh" {
+                return serde_json::to_string(&(0..PROVIDER_LIMIT).map(|n| serde_json::json!({"headRefName": format!("feat/other-{n}"), "state": "OPEN"})).collect::<Vec<_>>()).map_err(|_| ());
+            }
+            match args.first().copied() {
+                Some("branch") if args.contains(&"--show-current") => Ok("main\n".into()),
+                Some("status") => Ok(String::new()),
+                _ => Ok(String::new()),
+            }
         }
     }
 
