@@ -122,12 +122,38 @@ impl From<&SpecMeta> for Metadata {
     fn from(meta: &SpecMeta) -> Self {
         Self {
             slug: meta.slug().into(),
-            title: meta.title().into(),
+            title: safe_metadata(meta.title()),
             spec_type: meta.spec_type().into(),
             risk: meta.risk().into(),
             status: meta.status().into(),
-            surfaces: meta.surfaces().into_iter().map(str::to_owned).collect(),
+            surfaces: meta.surfaces().into_iter().map(safe_metadata).collect(),
         }
+    }
+}
+
+fn safe_metadata(value: &str) -> String {
+    let lower = value.to_ascii_lowercase();
+    if [
+        "token",
+        "secret",
+        "password",
+        "credential",
+        "api_key",
+        "apikey",
+    ]
+    .iter()
+    .any(|needle| lower.contains(needle))
+        || value.starts_with('/')
+        || value.contains("/Users/")
+        || value.contains("\\Users\\")
+    {
+        "[redacted]".into()
+    } else {
+        value
+            .chars()
+            .filter(|c| !c.is_control())
+            .take(200)
+            .collect()
     }
 }
 
@@ -1163,6 +1189,19 @@ mod tests {
         assert!(!json.contains(secret));
         assert!(!json.contains("/Users/private"));
         assert_eq!(diagnostic.paths, vec![".mochiflow/specs/x/spec.yaml"]);
+        assert_eq!(safe_metadata(secret), "[redacted]");
+        assert_eq!(safe_metadata("Normal title"), "Normal title");
+        let spec_dir = root.join(".mochiflow/specs/malicious");
+        std::fs::create_dir_all(&spec_dir).unwrap();
+        std::fs::write(spec_dir.join("spec.yaml"), format!("version: 1\nslug: malicious\ntitle: {secret}\ntype: feature\nsurfaces: [credential_value]\nintegration: none\nrisk: standard\nstatus: draft\n")).unwrap();
+        let repository_json =
+            serde_json::to_string(&inspect_repository(&cfg, &FailedRunner)).unwrap();
+        let detail_json =
+            serde_json::to_string(&inspect_spec(&cfg, "malicious", &FailedRunner)).unwrap();
+        assert!(!repository_json.contains(secret));
+        assert!(!repository_json.contains("credential_value"));
+        assert!(!detail_json.contains(secret));
+        assert!(!detail_json.contains("credential_value"));
     }
 
     struct CountingRunner {
