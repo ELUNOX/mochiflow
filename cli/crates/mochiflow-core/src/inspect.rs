@@ -192,10 +192,20 @@ pub struct SpecPayload {
     pub paths: Vec<String>,
     pub worktree_clean: Observation<bool>,
     pub lint_ok: bool,
+    pub health: Vec<Diagnostic>,
+    pub signals: DeliveryObservations,
     pub delivery: Observation<String>,
     pub actions: Vec<ActionEvaluation>,
     pub suggested_workflow: Option<ActionName>,
     pub human_next_action: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct DeliveryObservations {
+    pub provider_open: Observation<bool>,
+    pub provider_merged: Observation<bool>,
+    pub trailer_in_base: Observation<bool>,
+    pub branch_pushed: Observation<bool>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
@@ -236,7 +246,7 @@ impl Document {
             schema_version: SCHEMA_VERSION,
             scope,
             result: ResultKind::Ok,
-            observed_at: "1970-01-01T00:00:00Z".into(),
+            observed_at: observed_at_now(),
             degraded: false,
             warnings: vec![],
             repository: None,
@@ -253,6 +263,33 @@ impl Document {
     }
 }
 
+fn observed_at_now() -> String {
+    let seconds = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+    let days = seconds / 86_400;
+    let clock = seconds % 86_400;
+    let z = days + 719_468;
+    let era = z / 146_097;
+    let doe = z - era * 146_097;
+    let yoe = (doe - doe / 1_460 + doe / 36_524 - doe / 146_096) / 365;
+    let mut year = yoe + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let day = doy - (153 * mp + 2) / 5 + 1;
+    let month = if mp < 10 { mp + 3 } else { mp - 9 };
+    if month <= 2 {
+        year += 1;
+    }
+    format!(
+        "{year:04}-{month:02}-{day:02}T{:02}:{:02}:{:02}Z",
+        clock / 3600,
+        clock % 3600 / 60,
+        clock % 60
+    )
+}
+
 #[derive(Debug, Clone, Default)]
 struct BatchFacts {
     branch: Option<String>,
@@ -263,6 +300,9 @@ struct BatchFacts {
     prs: BTreeMap<String, String>,
     provider_unknown: bool,
     provider_truncated: bool,
+    refs_available: bool,
+    merged_available: bool,
+    trailers_available: bool,
 }
 
 #[allow(clippy::result_unit_err)]
@@ -323,6 +363,7 @@ fn collect_batch(cfg: &Config, runner: &dyn Runner) -> BatchFacts {
             "refs/remotes/origin",
         ],
     ) {
+        facts.refs_available = true;
         facts.refs.extend(out.lines().map(str::to_owned));
     }
     let base = format!("origin/{}", cfg.git.base_branch);
@@ -337,6 +378,7 @@ fn collect_batch(cfg: &Config, runner: &dyn Runner) -> BatchFacts {
             "--format=%(refname:short)",
         ],
     ) {
+        facts.merged_available = true;
         facts
             .merged_refs
             .extend(out.lines().map(|s| s.trim().to_owned()));
@@ -346,6 +388,7 @@ fn collect_batch(cfg: &Config, runner: &dyn Runner) -> BatchFacts {
         cfg,
         &["log", &base, "--format=%(trailers:key=Spec,valueonly)"],
     ) {
+        facts.trailers_available = true;
         facts.trailers.extend(
             out.lines()
                 .map(str::trim)
@@ -412,13 +455,11 @@ pub fn inspect_repository(cfg: &Config, runner: &dyn Runner) -> Document {
     let facts = collect_batch(cfg, runner);
     let mut doc = Document::base(Scope::Repository);
     let mut entries = Vec::new();
-    let mut slugs = Vec::new();
     let mut partial = false;
     for (path, parsed) in discover(cfg) {
         let rel = relative(cfg, &path).unwrap_or_else(|| ".mochiflow/specs".into());
         match parsed {
             Ok(meta) => {
-                slugs.push(meta.slug().to_owned());
                 let next = coarse_next(&meta);
                 entries.push(Summary {
                     kind: EntryKind::Spec,
@@ -470,8 +511,15 @@ pub fn inspect_repository(cfg: &Config, runner: &dyn Runner) -> Document {
         .branch
         .as_deref()
         .into_iter()
-        .flat_map(|b| b.split_once('/').map(|(_, s)| s))
-        .filter(|s| slugs.iter().any(|x| x == s))
+        .flat_map(|branch| {
+            entries.iter().filter_map(move |entry| {
+                entry
+                    .metadata
+                    .as_ref()
+                    .filter(|meta| branch_name(&meta.spec_type, &meta.slug) == branch)
+                    .map(|meta| meta.slug.as_str())
+            })
+        })
         .collect();
     let active = match candidates.as_slice() {
         [slug] => Observation::Known {
@@ -537,9 +585,16 @@ pub fn inspect_spec(cfg: &Config, slug: &str, runner: &dyn Runner) -> Document {
     let facts = collect_batch(cfg, runner);
     let metadata = Metadata::from(&meta);
     let expected = branch_name(meta.spec_type(), slug);
-    let lint_ok = !crate::lint::report(cfg, slug)
-        .iter()
-        .any(|issue| issue.severity == "FAIL");
+    let lint_report = crate::lint::report(cfg, slug);
+    let lint_ok = !lint_report.iter().any(|issue| issue.severity == "FAIL");
+    let health = lint_report
+        .into_iter()
+        .map(|issue| Diagnostic {
+            code: Code::LintFailed,
+            message: Some(issue.message),
+            paths: relative(cfg, &issue.path).into_iter().collect(),
+        })
+        .collect();
     let paths = related_paths(cfg, &dir);
     let persistence = classify_spec(cfg, slug)
         .map(|p| match p.mode {
@@ -564,6 +619,7 @@ pub fn inspect_spec(cfg: &Config, slug: &str, runner: &dyn Runner) -> Document {
         },
     );
     let signals = signals_for(cfg, &facts, &meta, &expected);
+    let signal_observations = signal_observations(cfg, &facts, &signals);
     let delivery = delivery_observation(cfg, &facts, &meta, &signals);
     let actions = evaluate_actions(
         cfg,
@@ -607,12 +663,52 @@ pub fn inspect_spec(cfg: &Config, slug: &str, runner: &dyn Runner) -> Document {
         paths,
         worktree_clean,
         lint_ok,
+        health,
+        signals: signal_observations,
         delivery,
         actions,
         suggested_workflow,
         human_next_action,
     });
     doc
+}
+
+fn signal_observations(
+    cfg: &Config,
+    facts: &BatchFacts,
+    signals: &DeliverySignals,
+) -> DeliveryObservations {
+    let local = |available: bool, value| {
+        if available {
+            Observation::Known { value }
+        } else {
+            Observation::Unknown {
+                reason: Code::GitUnavailable,
+            }
+        }
+    };
+    let provider = |value| {
+        if cfg.git.provider == "none" {
+            Observation::NotApplicable {
+                reason: Code::ProviderUnavailable,
+            }
+        } else if facts.provider_unknown {
+            Observation::Unknown {
+                reason: Code::ProviderUnavailable,
+            }
+        } else {
+            Observation::Known { value }
+        }
+    };
+    DeliveryObservations {
+        provider_open: provider(signals.provider_open_pr),
+        provider_merged: provider(signals.provider_merged),
+        trailer_in_base: local(facts.trailers_available, signals.trailer_in_base),
+        branch_pushed: local(
+            facts.refs_available,
+            facts.refs.iter().any(|r| r.starts_with("origin/")),
+        ),
+    }
 }
 
 fn error_doc(scope: Scope, code: Code) -> Document {
@@ -645,7 +741,13 @@ fn delivery_observation(
     meta: &SpecMeta,
     signals: &DeliverySignals,
 ) -> Observation<String> {
-    if cfg.git.provider == "github"
+    if (!facts.trailers_available || !facts.refs_available || !facts.merged_available)
+        && meta.status() == "accepted"
+    {
+        Observation::Unknown {
+            reason: Code::GitUnavailable,
+        }
+    } else if cfg.git.provider == "github"
         && facts.provider_unknown
         && !signals.trailer_in_base
         && meta.status() == "accepted"
@@ -706,13 +808,19 @@ fn evaluate_actions(
     if !lint_ok {
         build.push(Code::LintFailed);
     }
-    if !facts.refs.contains(expected) {
+    if !facts.refs_available {
+        build.push(Code::GitUnavailable);
+    } else if !facts.refs.contains(expected) {
         build.push(Code::BranchMissing);
     }
     if dirty.is_some_and(|d| !d.is_empty()) {
         build.push(Code::WorktreeDirty);
     }
-    out.push(eval(ActionName::Build, build, facts.dirty.is_none()));
+    out.push(eval(
+        ActionName::Build,
+        build,
+        facts.dirty.is_none() || !facts.refs_available,
+    ));
     let mut open = vec![];
     if status != "approved" {
         open.push(Code::StatusNotApproved);
@@ -766,7 +874,9 @@ fn evaluate_actions(
         Observation::Known { .. } => close.push(Code::DeliveryNotMerged),
         _ => close.push(Code::DeliveryUnknown),
     }
-    if !facts.refs.contains(expected) && !cfg.state_dir().join(meta.slug()).exists() {
+    if !facts.refs_available {
+        close.push(Code::GitUnavailable);
+    } else if !facts.refs.contains(expected) && !cfg.state_dir().join(meta.slug()).exists() {
         close.push(Code::CleanupNotPending);
     }
     if dirty.is_some_and(|d| !d.is_empty()) {
@@ -775,7 +885,9 @@ fn evaluate_actions(
     out.push(eval(
         ActionName::Close,
         close,
-        matches!(delivery, Observation::Unknown { .. }) || facts.dirty.is_none(),
+        matches!(delivery, Observation::Unknown { .. })
+            || facts.dirty.is_none()
+            || !facts.refs_available,
     ));
     out
 }
@@ -867,8 +979,10 @@ pub fn legacy_snapshot(cfg: &Config, runner: &dyn Runner) -> Vec<LegacySpecSnaps
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+    use std::cell::Cell;
     #[test]
     fn suggestion_precedence_is_closed() {
         let actions = vec![
@@ -880,5 +994,83 @@ mod tests {
     #[test]
     fn unsafe_slug_is_an_error_document() {
         assert!("../x".contains(['/', '\\']));
+    }
+
+    #[test]
+    fn live_timestamp_is_not_the_epoch_placeholder() {
+        assert_ne!(observed_at_now(), "1970-01-01T00:00:00Z");
+    }
+
+    struct CountingRunner {
+        calls: Cell<usize>,
+    }
+    impl Runner for CountingRunner {
+        fn run(
+            &self,
+            program: &str,
+            args: &[&str],
+            _cwd: &Path,
+            _stdin: Option<&str>,
+        ) -> Result<String, ()> {
+            self.calls.set(self.calls.get() + 1);
+            match (program, args.first().copied()) {
+                ("git", Some("branch")) if args.contains(&"--show-current") => Ok("main\n".into()),
+                ("git", Some("status")) => Ok(String::new()),
+                ("git", _) => Ok(String::new()),
+                ("gh", _) => Ok("[]".into()),
+                _ => Err(()),
+            }
+        }
+    }
+
+    #[test]
+    fn repository_probe_count_is_independent_of_spec_count() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        std::fs::create_dir_all(root.join(".mochiflow/specs")).unwrap();
+        std::fs::create_dir_all(root.join(".mochiflow/adr")).unwrap();
+        std::fs::write(root.join(".mochiflow/config.toml"), "schema_version = 1\ninstall_dir = \".mochiflow\"\nspecs_dir = \".mochiflow/specs\"\nindex = \".mochiflow/INDEX.md\"\n[constitution]\nproject = \".mochiflow/constitution.md\"\nlocal = \".mochiflow/constitution.local.md\"\n[context]\nproduct = \".mochiflow/context/product.md\"\nstructure = \".mochiflow/context/structure.md\"\ntech = \".mochiflow/context/tech.md\"\n[adr]\ndecisions = \".mochiflow/adr/decisions\"\npitfalls = \".mochiflow/adr/pitfalls\"\n[git]\nprovider = \"github\"\nbase_branch = \"main\"\n[adapter]\ntool = \"agents\"\n").unwrap();
+        let cfg = crate::config::load_config(&root.join(".mochiflow/config.toml")).unwrap();
+        let runner = CountingRunner {
+            calls: Cell::new(0),
+        };
+        let _ = inspect_repository(&cfg, &runner);
+        let baseline = runner.calls.get();
+        for n in 0..25 {
+            let dir = root.join(format!(".mochiflow/specs/spec-{n}"));
+            std::fs::create_dir_all(&dir).unwrap();
+            std::fs::write(dir.join("spec.yaml"), format!("version: 1\nslug: spec-{n}\ntitle: S{n}\ntype: feature\nsurfaces: [cli]\nintegration: none\nrisk: standard\nstatus: draft\n")).unwrap();
+        }
+        runner.calls.set(0);
+        let _ = inspect_repository(&cfg, &runner);
+        assert_eq!(runner.calls.get(), baseline);
+    }
+
+    struct FailedRunner;
+    impl Runner for FailedRunner {
+        fn run(
+            &self,
+            _program: &str,
+            _args: &[&str],
+            _cwd: &Path,
+            _stdin: Option<&str>,
+        ) -> Result<String, ()> {
+            Err(())
+        }
+    }
+
+    #[test]
+    fn failed_git_batches_remain_unavailable() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        std::fs::create_dir_all(root.join(".mochiflow/specs")).unwrap();
+        std::fs::create_dir_all(root.join(".mochiflow/adr")).unwrap();
+        std::fs::write(root.join(".mochiflow/config.toml"), "schema_version = 1\ninstall_dir = \".mochiflow\"\nspecs_dir = \".mochiflow/specs\"\nindex = \".mochiflow/INDEX.md\"\n[constitution]\nproject = \".mochiflow/constitution.md\"\nlocal = \".mochiflow/constitution.local.md\"\n[context]\nproduct = \".mochiflow/context/product.md\"\nstructure = \".mochiflow/context/structure.md\"\ntech = \".mochiflow/context/tech.md\"\n[adr]\ndecisions = \".mochiflow/adr/decisions\"\npitfalls = \".mochiflow/adr/pitfalls\"\n[git]\nprovider = \"github\"\nbase_branch = \"main\"\n[adapter]\ntool = \"agents\"\n").unwrap();
+        let cfg = crate::config::load_config(&root.join(".mochiflow/config.toml")).unwrap();
+        let facts = collect_batch(&cfg, &FailedRunner);
+        assert!(!facts.refs_available);
+        assert!(!facts.merged_available);
+        assert!(!facts.trailers_available);
+        assert!(facts.provider_unknown);
     }
 }

@@ -87,9 +87,12 @@
         { "type": "object", "unevaluatedProperties": false, "required": ["schema_version", "scope", "result", "observed_at", "degraded", "warnings", "spec"],
           "properties": {
             "schema_version": {}, "scope": { "const": "spec" }, "result": { "enum": ["ok", "degraded"] }, "observed_at": {}, "degraded": {}, "warnings": {},
-            "spec": { "type": "object", "additionalProperties": false, "required": ["metadata", "persistence", "paths", "worktree_clean", "lint_ok", "delivery", "actions", "suggested_workflow", "human_next_action"], "properties": {
+            "spec": { "type": "object", "additionalProperties": false, "required": ["metadata", "persistence", "paths", "worktree_clean", "lint_ok", "health", "signals", "delivery", "actions", "suggested_workflow", "human_next_action"], "properties": {
               "metadata": { "$ref": "#/$defs/metadata" }, "persistence": { "enum": ["tracked", "local"] }, "paths": { "type": "array", "items": { "$ref": "#/$defs/path" }, "uniqueItems": true },
-              "worktree_clean": { "$ref": "#/$defs/boolObservation" }, "lint_ok": { "type": "boolean" }, "delivery": { "$ref": "#/$defs/stringObservation" },
+              "worktree_clean": { "$ref": "#/$defs/boolObservation" }, "lint_ok": { "type": "boolean" },
+              "health": { "type": "array", "items": { "$ref": "#/$defs/diagnostic" } },
+              "signals": { "type": "object", "additionalProperties": false, "required": ["provider_open", "provider_merged", "trailer_in_base", "branch_pushed"], "properties": { "provider_open": { "$ref": "#/$defs/boolObservation" }, "provider_merged": { "$ref": "#/$defs/boolObservation" }, "trailer_in_base": { "$ref": "#/$defs/boolObservation" }, "branch_pushed": { "$ref": "#/$defs/boolObservation" } } },
+              "delivery": { "$ref": "#/$defs/stringObservation" },
               "actions": { "type": "array", "items": { "$ref": "#/$defs/action" }, "minItems": 6, "maxItems": 6 },
               "suggested_workflow": { "type": ["string", "null"], "enum": ["plan", "build", "open", "close", null] },
               "human_next_action": { "type": ["string", "null"], "enum": ["report_merge", "cleanup", null] }
