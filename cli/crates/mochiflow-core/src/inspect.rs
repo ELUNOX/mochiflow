@@ -7,6 +7,7 @@ use std::process::Command;
 use serde::Serialize;
 
 use crate::config::Config;
+use crate::delivery::{DeliveryColumn, NextActionKind};
 use crate::delivery::{DeliverySignals, branch_name, resolve_column};
 use crate::spec_meta::{SpecMeta, read_spec_metadata};
 use crate::spec_mode::{SpecPersistenceMode, classify_spec};
@@ -813,6 +814,56 @@ pub fn fetch(cfg: &Config, runner: &dyn Runner) -> Option<Diagnostic> {
         .run("git", &["fetch", "origin"], &cfg.repo_root, None)
         .err()
         .map(|()| Diagnostic::new(Code::FetchFailed))
+}
+
+/// Compatibility projection for existing board consumers, collected with the
+/// same constant-bounded external observations as Agent Context.
+pub struct LegacySpecSnapshot {
+    pub dir: PathBuf,
+    pub meta: SpecMeta,
+    pub column: DeliveryColumn,
+    pub next_action: Option<NextActionKind>,
+}
+
+pub fn legacy_snapshot(cfg: &Config, runner: &dyn Runner) -> Vec<LegacySpecSnapshot> {
+    let mut dirs = discover(cfg);
+    let archived = cfg.specs_dir_path().join("_done");
+    if let Ok(entries) = std::fs::read_dir(archived) {
+        for entry in entries.flatten().filter(|entry| entry.path().is_dir()) {
+            let dir = entry.path();
+            dirs.push((dir.clone(), read_spec_metadata(&dir).map_err(|_| ())));
+        }
+    }
+    if dirs.is_empty() {
+        return Vec::new();
+    }
+    let facts = collect_batch(cfg, runner);
+    let mut snapshots = Vec::new();
+    for (dir, parsed) in dirs {
+        let Ok(meta) = parsed else { continue };
+        let branch = branch_name(meta.spec_type(), meta.slug());
+        let signals = signals_for(cfg, &facts, &meta, &branch);
+        let column = resolve_column(meta.status(), &signals);
+        let next_action = match column {
+            DeliveryColumn::InReview => Some(NextActionKind::ReportMerge),
+            DeliveryColumn::Done
+                if meta.status() != "done"
+                    && (facts.refs.contains(&branch)
+                        || cfg.state_dir().join(meta.slug()).is_dir()) =>
+            {
+                Some(NextActionKind::LocalCleanupPending)
+            }
+            _ => None,
+        };
+        snapshots.push(LegacySpecSnapshot {
+            dir,
+            meta,
+            column,
+            next_action,
+        });
+    }
+    snapshots.sort_by(|a, b| a.dir.cmp(&b.dir));
+    snapshots
 }
 
 #[cfg(test)]

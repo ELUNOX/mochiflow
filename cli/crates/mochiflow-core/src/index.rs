@@ -3,8 +3,9 @@
 use std::path::Path;
 
 use crate::config::Config;
-use crate::delivery::{self, DeliveryColumn, NextActionKind};
-use crate::spec_meta::{SpecMeta, parse_yaml_subset, read_spec_metadata};
+use crate::delivery::{DeliveryColumn, NextActionKind};
+use crate::inspect::{ProcessRunner, legacy_snapshot};
+use crate::spec_meta::{SpecMeta, parse_yaml_subset};
 
 /// Backlog seed metadata (from markdown frontmatter).
 pub struct SeedInfo {
@@ -108,6 +109,7 @@ fn collect(cfg: &Config) -> (Vec<ActiveEntry>, Vec<DoneEntry>, Vec<SeedInfo>) {
     if !specs_dir.exists() {
         return (active, done, seeds);
     }
+    let snapshot = legacy_snapshot(cfg, &ProcessRunner);
 
     // Active specs (direct children excluding . and _ prefixed)
     let mut dirs: Vec<_> = std::fs::read_dir(&specs_dir)
@@ -124,16 +126,16 @@ fn collect(cfg: &Config) -> (Vec<ActiveEntry>, Vec<DoneEntry>, Vec<SeedInfo>) {
 
     for entry in &dirs {
         let d = entry.path();
-        if let Ok(m) = read_spec_metadata(&d) {
+        if let Some(observed) = snapshot.iter().find(|item| item.dir == d) {
+            let m = &observed.meta;
             let slug = entry.file_name().to_string_lossy().to_string();
             // Column membership comes from the same derivation the board uses
             // (asserted ∪ derived), not from directory location: a flat spec
             // whose PR has merged renders in Done even though it is not in _done.
-            let column = delivery::derive_column(cfg, &slug, m.status(), m.spec_type());
-            let next_action =
-                delivery::derive_next_action(cfg, &slug, m.status(), m.spec_type(), column);
+            let column = observed.column;
+            let next_action = observed.next_action;
             if column == DeliveryColumn::Done {
-                done.push(make_done_entry(&d, &slug, &slug, &m, next_action));
+                done.push(make_done_entry(&d, &slug, &slug, m, next_action));
                 continue;
             }
             let mut docs_parts = vec!["spec".to_string()];
@@ -170,16 +172,15 @@ fn collect(cfg: &Config) -> (Vec<ActiveEntry>, Vec<DoneEntry>, Vec<SeedInfo>) {
 
         for entry in &done_dirs {
             let d = entry.path();
-            if let Ok(m) = read_spec_metadata(&d) {
+            if let Some(observed) = snapshot.iter().find(|item| item.dir == d) {
+                let m = &observed.meta;
                 let slug = entry.file_name().to_string_lossy().to_string();
-                let column = delivery::derive_column(cfg, &slug, m.status(), m.spec_type());
-                let next_action =
-                    delivery::derive_next_action(cfg, &slug, m.status(), m.spec_type(), column);
+                let next_action = observed.next_action;
                 done.push(make_done_entry(
                     &d,
                     &slug,
                     &format!("_done/{slug}"),
-                    &m,
+                    m,
                     next_action,
                 ));
             }

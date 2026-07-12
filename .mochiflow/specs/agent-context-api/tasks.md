@@ -71,7 +71,7 @@ Critical Stop Conditions:
   - Done: `inspect [slug] [--json] [--fetch]` emits concise localized human output or exactly one schema-valid JSON document; result/exit semantics match the contract even for pre-dispatch config errors; ordinary execution is proven read-only; explicit fetch is bounded and fail-soft; paths and diagnostics are sanitized; repository and detail payloads pass every positive/negative behavior scenario; shared `inspect.rs` finishes with no presentation side effect inside snapshot construction.
   - Stop: If JSON error output requires raw stderr, absolute paths, command bodies, or a second config parser, stop and redesign the safe error boundary instead of weakening the contract.
 
-- [ ] T-005 [AC-08, AC-09] Migrate board consumers to the shared snapshot without drift
+- [x] T-005 [AC-08, AC-09] Migrate board consumers to the shared snapshot without drift
   - Depends on: T-004
   - Files:
     - `cli/crates/mochiflow-core/src/inspect.rs`

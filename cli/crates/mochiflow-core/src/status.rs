@@ -6,13 +6,14 @@
 //! file (it never regenerates `INDEX.md`) and exits 0 even when derivation
 //! degrades (offline / `provider = none` / detached HEAD).
 
+#[cfg(test)]
 use std::path::Path;
 use std::process::Command;
 
 use crate::config::Config;
-use crate::delivery::{self, DeliveryColumn, NextActionKind};
+use crate::delivery::{DeliveryColumn, NextActionKind};
 use crate::index::read_seed_public;
-use crate::spec_meta::read_spec_metadata;
+use crate::inspect::{ProcessRunner, legacy_snapshot};
 
 /// One board row.
 #[derive(Debug, Clone)]
@@ -61,42 +62,14 @@ pub fn compute_board(cfg: &Config) -> Board {
         return board;
     }
 
-    // Active specs: direct children that are not dot/underscore prefixed.
-    let mut active_dirs = child_dirs(&specs_dir, |name| {
-        !name.starts_with('.') && !name.starts_with('_')
-    });
-    active_dirs.sort();
-    for dir in &active_dirs {
-        if let Ok(meta) = read_spec_metadata(dir) {
-            let column = delivery::derive_column(cfg, meta.slug(), meta.status(), meta.spec_type());
-            let next_action = delivery::derive_next_action(
-                cfg,
-                meta.slug(),
-                meta.status(),
-                meta.spec_type(),
-                column,
-            );
-            push_entry(&mut board, column, meta.slug(), meta.title(), next_action);
-        }
-    }
-
-    // Legacy archived specs under `_done/` always render in Done (status `done`
-    // resolves to Done in delivery derivation).
-    let done_dir = specs_dir.join("_done");
-    let mut done_dirs = child_dirs(&done_dir, |_| true);
-    done_dirs.sort();
-    for dir in &done_dirs {
-        if let Ok(meta) = read_spec_metadata(dir) {
-            let column = delivery::derive_column(cfg, meta.slug(), meta.status(), meta.spec_type());
-            let next_action = delivery::derive_next_action(
-                cfg,
-                meta.slug(),
-                meta.status(),
-                meta.spec_type(),
-                column,
-            );
-            push_entry(&mut board, column, meta.slug(), meta.title(), next_action);
-        }
+    for snapshot in legacy_snapshot(cfg, &ProcessRunner) {
+        push_entry(
+            &mut board,
+            snapshot.column,
+            snapshot.meta.slug(),
+            snapshot.meta.title(),
+            snapshot.next_action,
+        );
     }
 
     // Backlog seeds (`_backlog/*.md`).
@@ -145,21 +118,6 @@ fn push_entry(
         DeliveryColumn::Ready => board.ready.push(entry),
         DeliveryColumn::Active => board.active.push(entry),
     }
-}
-
-fn child_dirs(dir: &Path, keep: impl Fn(&str) -> bool) -> Vec<std::path::PathBuf> {
-    let Ok(entries) = std::fs::read_dir(dir) else {
-        return Vec::new();
-    };
-    entries
-        .flatten()
-        .filter(|e| e.path().is_dir())
-        .filter(|e| {
-            let name = e.file_name();
-            keep(&name.to_string_lossy())
-        })
-        .map(|e| e.path())
-        .collect()
 }
 
 fn render_board(board: &Board, language: &str) -> String {
