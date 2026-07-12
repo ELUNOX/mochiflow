@@ -460,6 +460,17 @@ repository-owned hardening delta is explicitly protected with cargo-dist's
 official `allow-dirty = ["ci"]` boundary. Temporary-Git provenance fixtures can
 further deepen the existing static/script validation.
 
+### T-009
+
+Review profile: change-reviewer
+Reviewer mode: inline
+Verdict: pass
+Reviewed through: 21cffa1
+
+The workflow is read-only, SHA-pinned, single-runner, and restricted to relevant
+paths on `main` plus manual dispatch. It contains no pull-request, schedule,
+matrix, secret, or publication path.
+
 ## Integration Log
 
 Append one entry after every task during build. Each entry records the task ID,
@@ -562,3 +573,13 @@ decisions. There are no implementation entries at plan time.
 - Dead code: built-in PR release trigger and curl-pipe installer were removed.
 - Recovery: invalid/unreachable/version-mismatched tags stop before publication.
 - Handoff: T-009 adds an independent read-only post-merge macOS test workflow.
+
+### T-009 — cost-bounded macOS coverage
+
+- Evidence: workflow event-policy conformance, default profile, spec lint, and
+  doctor passed through `21cffa1`.
+- Seam/ownership: Linux retains the complete gate; macOS owns only post-merge
+  Rust tests for relevant paths and manual dispatch.
+- Dead code: no prior macOS workflow or matrix remained.
+- Recovery: concurrency cancellation supersedes stale runs without affecting CI.
+- Handoff: all tasks are complete; settle the AC Matrix and final build record.

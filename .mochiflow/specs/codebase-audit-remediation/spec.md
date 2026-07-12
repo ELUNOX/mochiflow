@@ -199,16 +199,16 @@ safer without adding recurring CI cost or manual recovery traps.
 
 | AC | Scope | Verification method | Planned test/QA | Implementation | Result | Evidence | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| AC-01 | cli | automated | QA-01, QA-03, QA-05 | `config.rs`, repository-owned configured-path mutation call sites, `config.schema.json` | UNVERIFIED | | excludes executable/caller paths; check-only witness preserves local-link semantics |
-| AC-02 | cli | automated | QA-01, QA-03, QA-05 | `adapter.rs`, `detach.rs`, adapter integration tests | UNVERIFIED | | one checked manifest resolver |
-| AC-03 | cli | automated | QA-01 | `spec_meta.rs` parser tests | UNVERIFIED | | malformed quotes never panic |
-| AC-04 | cli | automated + AI-observed | QA-02, QA-07 | getting-started and configuration docs, CLI help conformance | UNVERIFIED | | removed flag absent |
-| AC-05 | cli | automated | QA-01, QA-06, QA-07 | `index.rs`, delivery probe test seam | UNVERIFIED | | one snapshot, unchanged render contract |
-| AC-06 | cli | automated + AI-observed | QA-05, QA-08 | dist config, workflow-used provenance helper with dynamic Git fixtures, and GitHub release workflows | UNVERIFIED | | least privilege and tag provenance |
-| AC-07 | cli | automated | QA-01, QA-04, QA-07 | `accept.rs`, accept integration fixtures | UNVERIFIED | | retry exact accepted close-out only |
-| AC-08 | cli | automated + AI-observed | QA-07 | conformance assertions and direct inspection of both contributor guides plus the pull-request template | UNVERIFIED | | complete default gate everywhere; guides distinguish fast loop |
-| AC-09 | cli | automated | QA-01, QA-06 | `freeze.rs` recursive error propagation | UNVERIFIED | | no partial authoritative writes |
-| AC-10 | cli | automated | QA-01, QA-04, QA-06 | `upgrade.rs`, `doctor.rs`, init/join/upgrade tests | UNVERIFIED | | explicit force and recoverable backup |
-| AC-11 | cli | automated + AI-observed | QA-02, QA-07 | init/presentation/config language code, onboard engine contract, public docs | UNVERIFIED | | AI persists concrete artifact language |
-| AC-12 | cli | automated | QA-01, QA-05, QA-07 | conformance semantic parser and selected migrated assertions | UNVERIFIED | | prose behavior guards retained |
-| AC-13 | cli | automated + AI-observed | QA-08 | cost-filtered macOS workflow | UNVERIFIED | | main/path/manual event matrix |
+| AC-01 | cli | automated | QA-01, QA-03, QA-05 | `config.rs`, mutation call sites, schema | PASS | path/schema/symlink tests + default profile | caller paths remain separate |
+| AC-02 | cli | automated | QA-01, QA-03, QA-05 | `adapter.rs`, `detach.rs` | PASS | malicious mapping/symlink tests + default profile | shared checked resolver |
+| AC-03 | cli | automated | QA-01 | `spec_meta.rs` | PASS | malformed quote/catch-unwind tests | empty quotes accepted |
+| AC-04 | cli | automated + AI-observed | QA-02, QA-07 | initialization docs | PASS | conformance + direct inspection | removed flag absent |
+| AC-05 | cli | automated | QA-01, QA-06, QA-07 | `index.rs` | PASS | golden Markdown/JSON tests | one immutable snapshot |
+| AC-06 | cli | automated + AI-observed | QA-05, QA-08 | dist config, provenance, workflows | PASS | `dist plan`, syntax, workflow conformance | provenance before publish |
+| AC-07 | cli | automated | QA-01, QA-04, QA-07 | `accept.rs` | PASS | staging/dirty-state integration + default profile | exact retry only |
+| AC-08 | cli | automated + AI-observed | QA-07 | contributor guides and PR template | PASS | conformance + direct inspection | full gate + fast loop |
+| AC-09 | cli | automated | QA-01, QA-06 | `freeze.rs` | PASS | traversal tests + freeze check | compute before write |
+| AC-10 | cli | automated | QA-01, QA-04, QA-06 | `upgrade.rs`, `doctor.rs` | PASS | drift/force integration + default profile | backup paths reported |
+| AC-11 | cli | automated + AI-observed | QA-02, QA-07 | language code, onboard, docs | PASS | init/presentation suites + engine sync | arbitrary tags persist |
+| AC-12 | cli | automated | QA-01, QA-05, QA-07 | semantic conformance parser | PASS | 198 conformance tests + cargo-deny | prose guards retained |
+| AC-13 | cli | automated + AI-observed | QA-08 | macOS workflow | PASS | event-policy conformance + inspection | main/path/manual only |
