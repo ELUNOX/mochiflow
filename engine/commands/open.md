@@ -35,6 +35,8 @@ load:
 
 # mochiflow-open
 
+After route selection, consult the `open` action from `mochiflow inspect <slug> --json`; stop on deterministic ineligible or unknown blockers before delivery work.
+
 ## Purpose
 
 Take a built spec from `approved` to an open PR: final acceptance, the

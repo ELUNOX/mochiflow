@@ -90,6 +90,8 @@ mochiflow init      # Set up MochiFlow in a new project
 mochiflow join      # Repair local state for an existing MochiFlow project
 mochiflow doctor    # Check project health
 mochiflow status    # Show the current delivery board
+mochiflow inspect --json              # Read-only repository context for agents
+mochiflow inspect my-feature --json   # Detailed spec context and eligibility
 ```
 
 Most day-to-day development happens in your AI coding tool, not in the terminal.

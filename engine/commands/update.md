@@ -31,6 +31,8 @@ load:
 
 # mochiflow-update
 
+After feedback intent selects this route, consult the `update` action from `mochiflow inspect <slug> --json`; eligibility never invents feedback intent.
+
 ## Purpose
 
 Address PR feedback, CI failures, and reviewer comments on an open PR without

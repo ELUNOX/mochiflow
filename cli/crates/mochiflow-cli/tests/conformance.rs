@@ -266,6 +266,16 @@ fn schema_agent_context_rejects_unsafe_or_incomplete_documents() {
     assert!(!v.is_valid(&load_fixture("agent-context-invalid.json")));
 }
 
+#[test]
+fn engine_keeps_agent_context_eligibility_separate_from_intent() {
+    let reference = read_repo_file("engine/reference/agent-context.md");
+    assert!(reference.contains("router remains the sole owner of natural-language intent"));
+    for command in ["discuss", "plan", "build", "open", "update", "close"] {
+        let body = read_repo_file(&format!("engine/commands/{command}.md"));
+        assert!(body.contains("mochiflow inspect <slug>"), "{command}");
+    }
+}
+
 // --- (b) Golden equivalence: `index` output == committed golden ---------------
 
 /// Recursively copy a directory tree (fixtures have no symlinks).

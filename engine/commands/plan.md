@@ -56,6 +56,8 @@ load:
 
 # mochiflow-plan
 
+After route selection, consult the `plan` action from `mochiflow inspect <slug> --json`; stop on deterministic ineligible or unknown blockers before mutation.
+
 ## Purpose
 
 From the agreement, create `spec.yaml` and the spec documents the change needs,

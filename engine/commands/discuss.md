@@ -31,6 +31,8 @@ load:
 
 # spec-discuss
 
+After route selection, `mochiflow inspect <slug> --json` may be consulted for deterministic `discuss` eligibility; intent and seed selection remain owned here.
+
 ## Purpose
 
 Reach agreement on the why / what / key design decisions through investigation

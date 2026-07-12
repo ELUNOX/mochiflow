@@ -85,6 +85,8 @@ mochiflow init      # 新しいプロジェクトに導入
 mochiflow join      # 既存プロジェクトのローカル状態を整える
 mochiflow doctor    # 設定や生成物を確認
 mochiflow status    # 現在の作業状況を見る
+mochiflow inspect --json              # エージェント向けの読み取り専用リポジトリ情報
+mochiflow inspect my-feature --json   # 仕様の詳細情報と実行可否
 ```
 
 日々の開発は、ターミナルではなくAIコーディングツールとの会話で進めます。

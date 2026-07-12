@@ -83,7 +83,7 @@ Critical Stop Conditions:
   - Done: `status` and `index` project their existing board and next-action contracts from one snapshot; the committed index golden remains unchanged unless a separately justified compatibility correction is approved; `state/index.json` fields and ready behavior remain compatible; counted many-spec tests prove board and inspection paths use constant-bounded external probes; shared `inspect.rs` no longer has a parallel legacy collector left beside it.
   - Stop: If migration changes existing human output, next-action precedence, archived-spec behavior, or index JSON semantics, stop and preserve the compatibility adapter before proceeding.
 
-- [ ] T-006 [AC-03, AC-08, AC-11] Integrate engine guidance, document the API, and close verification
+- [x] T-006 [AC-03, AC-08, AC-11] Integrate engine guidance, document the API, and close verification
   - Depends on: T-005
   - Files:
     - `engine/reference/agent-context.md`
