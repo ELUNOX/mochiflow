@@ -749,6 +749,38 @@ fn router_table_semantically_maps_every_command() {
 }
 
 #[test]
+fn release_workflows_pin_security_and_event_contracts() {
+    let release = read_repo_file(".github/workflows/release.yml");
+    let plan = read_repo_file(".github/workflows/release-plan.yml");
+    let provenance = read_repo_file(".github/scripts/validate-release-provenance.sh");
+    assert!(!release.contains("pull_request:"));
+    assert!(release.contains("\"contents\": \"read\"") && release.contains("contents: write"));
+    assert!(release.contains("cargo install --locked cargo-dist --version 0.32.0"));
+    assert!(release.contains("Validate release provenance"));
+    assert!(
+        plan.contains("pull_request:")
+            && plan.contains("paths:")
+            && plan.contains("workflow_dispatch:")
+    );
+    assert!(!plan.contains("secrets.") && plan.contains("permissions:\n  contents: read"));
+    for workflow in [&release, &plan] {
+        for line in workflow.lines().filter(|line| line.contains("uses:")) {
+            let reference = line
+                .split('@')
+                .nth(1)
+                .expect("action must have reference")
+                .trim();
+            assert_eq!(reference.len(), 40, "action must use full SHA: {line}");
+        }
+    }
+    assert!(
+        provenance.contains("merge-base --is-ancestor")
+            && provenance.contains("cargo metadata")
+            && provenance.contains("does not match workspace version")
+    );
+}
+
+#[test]
 fn branch_placeholders_use_prefix_slug() {
     let delivery = read_repo_file("engine/reference/delivery.md");
 

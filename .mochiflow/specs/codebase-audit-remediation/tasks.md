@@ -128,7 +128,7 @@ Critical Stop Conditions:
   - Done: `yaml-rust2` 0.11 is dev-only and passes cargo-deny; helpers parse typed frontmatter references/load contracts and normalized router rows with source-bearing failures; structural tests no longer depend on line wrapping; intentionally behavioral prose assertions remain short and explicit. The shared `conformance.rs` still covers every prior contract and all T-001/T-004/T-006 additions, while a reflow fixture proves structural checks survive harmless wrapping.
   - Stop: Stop if the dependency violates MSRV/license policy, if migration weakens a user-visible behavior assertion, or if a general-purpose Markdown/YAML rewrite is needed beyond the selected structural checks.
 
-- [ ] T-008 [AC-06] Harden and cost-filter release planning and publication
+- [x] T-008 [AC-06] Harden and cost-filter release planning and publication
   - Depends on: T-007
   - Files:
     - `dist-workspace.toml`

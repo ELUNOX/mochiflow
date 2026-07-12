@@ -436,6 +436,17 @@ artifact-language selection, and one classifier handles `ja-*` across CLI
 presentation with English fallback. Existing language suites pass; explicit
 regional-tag assertions should continue to grow with new presentation paths.
 
+### T-007
+
+Review profile: change-reviewer
+Reviewer mode: inline
+Verdict: pass
+Reviewed through: 5abf73d
+
+Typed YAML parsing now validates frontmatter structure and declared paths;
+normalized Markdown table rows validate router mappings. Intentional prose
+guards remain unchanged, and yaml-rust2 0.11 passed cargo-deny.
+
 ## Integration Log
 
 Append one entry after every task during build. Each entry records the task ID,
@@ -518,3 +529,13 @@ decisions. There are no implementation entries at plan time.
   locales fall back to English.
 - Handoff: T-007 may parse engine contracts semantically without changing
   language behavior.
+
+### T-007 — semantic conformance
+
+- Evidence: 196 conformance tests, default profile, and cargo-deny passed
+  through `5abf73d`.
+- Seam/ownership: typed YAML owns structural frontmatter/load checks; normalized
+  table rows own route mappings; prose tests retain behavior wording.
+- Dead code: selected formatting-sensitive scans were removed.
+- Recovery: parser failures identify malformed engine frontmatter immediately.
+- Handoff: T-008 can add workflow policy assertions to the same semantic suite.
