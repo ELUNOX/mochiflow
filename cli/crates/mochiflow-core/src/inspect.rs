@@ -485,11 +485,7 @@ fn collect_batch(cfg: &Config, runner: &dyn Runner) -> BatchFacts {
     }
     let ignore_input = discover(cfg)
         .into_iter()
-        .filter_map(|(_, parsed)| {
-            parsed
-                .ok()
-                .map(|meta| format!(".mochiflow/specs/{}/spec.yaml", meta.slug()))
-        })
+        .filter_map(|(_, parsed)| parsed.ok().and_then(|meta| relative(cfg, &meta.path)))
         .collect::<Vec<_>>()
         .join("\n");
     if !ignore_input.is_empty()
@@ -1466,5 +1462,34 @@ mod tests {
             matched.provider_open,
             Observation::Known { value: true }
         ));
+    }
+
+    #[test]
+    fn batched_persistence_uses_custom_specs_path() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        std::fs::create_dir_all(root.join("plans/local-one")).unwrap();
+        std::fs::create_dir_all(root.join("plans/tracked-one")).unwrap();
+        std::fs::create_dir_all(root.join(".mochiflow/adr")).unwrap();
+        for (slug, dir) in [
+            ("local-one", "plans/local-one"),
+            ("tracked-one", "plans/tracked-one"),
+        ] {
+            std::fs::write(root.join(dir).join("spec.yaml"), format!("version: 1\nslug: {slug}\ntitle: {slug}\ntype: feature\nsurfaces: [cli]\nintegration: none\nrisk: standard\nstatus: draft\n")).unwrap();
+        }
+        std::fs::write(root.join(".gitignore"), "plans/local-one/spec.yaml\n").unwrap();
+        std::fs::write(root.join(".mochiflow/config.toml"), "schema_version = 1\ninstall_dir = \".mochiflow\"\nspecs_dir = \"plans\"\nindex = \".mochiflow/INDEX.md\"\n[constitution]\nproject = \".mochiflow/constitution.md\"\nlocal = \".mochiflow/constitution.local.md\"\n[context]\nproduct = \".mochiflow/context/product.md\"\nstructure = \".mochiflow/context/structure.md\"\ntech = \".mochiflow/context/tech.md\"\n[adr]\ndecisions = \".mochiflow/adr/decisions\"\npitfalls = \".mochiflow/adr/pitfalls\"\n[git]\nprovider = \"none\"\nbase_branch = \"main\"\n[adapter]\ntool = \"agents\"\n").unwrap();
+        assert!(
+            Command::new("git")
+                .args(["init", "-q"])
+                .current_dir(root)
+                .status()
+                .unwrap()
+                .success()
+        );
+        let cfg = crate::config::load_config(&root.join(".mochiflow/config.toml")).unwrap();
+        let facts = collect_batch(&cfg, &ProcessRunner);
+        assert!(facts.ignored_specs.contains("local-one"));
+        assert!(!facts.ignored_specs.contains("tracked-one"));
     }
 }
