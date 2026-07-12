@@ -198,4 +198,4 @@ multiple command outputs.
 | AC-08 | cli | automated | QA-05, QA-07 | `status.rs`, `index.rs`, `ready`, shared snapshot | PASS | unchanged index golden, status read-only tests, ready conformance, full default suite | existing JSON unchanged |
 | AC-09 | cli | automated | QA-06 | batched Git/provider collector | PASS | `repository_probe_count_is_independent_of_spec_count` with 0 vs 25 specs | O(N) files only |
 | AC-10 | cli | automated | QA-01 | active resolution and suggestion policy | PASS | exact expected-branch implementation; suggestion precedence unit test; full inspect CLI tests | update never auto-suggested |
-| AC-11 | cli | automated + AI-observed | QA-05, QA-07 | versioned contracts, docs, freeze and adapter artifacts | PASS | default gate; cargo-deny all categories ok; adapter 0 drift; spec/ADR lint 0 fail | config schema version unchanged |
+| AC-11 | cli | automated + AI-observed | QA-05, QA-07 | versioned contracts, docs, freeze and adapter artifacts | PASS | default gate; cargo-deny all categories ok; adapter 0 drift; spec/ADR lint 0 fail; delegated change-reviewer PASS through `11026ec` | config schema version unchanged |
