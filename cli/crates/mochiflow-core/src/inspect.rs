@@ -599,11 +599,7 @@ pub fn inspect_spec(cfg: &Config, slug: &str, runner: &dyn Runner) -> Document {
     let lint_ok = !lint_report.iter().any(|issue| issue.severity == "FAIL");
     let health = lint_report
         .into_iter()
-        .map(|issue| Diagnostic {
-            code: Code::LintFailed,
-            message: Some(issue.message),
-            paths: relative(cfg, &issue.path).into_iter().collect(),
-        })
+        .map(|issue| health_diagnostic(cfg, issue))
         .collect();
     let paths = related_paths(cfg, &dir);
     let persistence = classify_spec(cfg, slug)
@@ -691,6 +687,14 @@ pub fn inspect_spec(cfg: &Config, slug: &str, runner: &dyn Runner) -> Document {
         human_next_action,
     });
     doc
+}
+
+fn health_diagnostic(cfg: &Config, issue: crate::lint::Issue) -> Diagnostic {
+    Diagnostic {
+        code: Code::LintFailed,
+        message: None,
+        paths: relative(cfg, &issue.path).into_iter().collect(),
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -1136,6 +1140,29 @@ mod tests {
             vec![Code::AutomatedChecksFailed]
         );
         assert_eq!(matrix_blockers("# no matrix"), vec![Code::MatrixMissing]);
+    }
+
+    #[test]
+    fn health_diagnostics_do_not_echo_untrusted_lint_prose() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        std::fs::create_dir_all(root.join(".mochiflow/specs")).unwrap();
+        std::fs::create_dir_all(root.join(".mochiflow/adr")).unwrap();
+        std::fs::write(root.join(".mochiflow/config.toml"), "schema_version = 1\ninstall_dir = \".mochiflow\"\nspecs_dir = \".mochiflow/specs\"\nindex = \".mochiflow/INDEX.md\"\n[constitution]\nproject = \".mochiflow/constitution.md\"\nlocal = \".mochiflow/constitution.local.md\"\n[context]\nproduct = \".mochiflow/context/product.md\"\nstructure = \".mochiflow/context/structure.md\"\ntech = \".mochiflow/context/tech.md\"\n[adr]\ndecisions = \".mochiflow/adr/decisions\"\npitfalls = \".mochiflow/adr/pitfalls\"\n[adapter]\ntool = \"agents\"\n").unwrap();
+        let cfg = crate::config::load_config(&root.join(".mochiflow/config.toml")).unwrap();
+        let secret = "TOKEN_super_secret_/Users/private";
+        let diagnostic = health_diagnostic(
+            &cfg,
+            crate::lint::Issue {
+                severity: "FAIL".into(),
+                path: cfg.repo_root.join(".mochiflow/specs/x/spec.yaml"),
+                message: secret.into(),
+            },
+        );
+        let json = serde_json::to_string(&diagnostic).unwrap();
+        assert!(!json.contains(secret));
+        assert!(!json.contains("/Users/private"));
+        assert_eq!(diagnostic.paths, vec![".mochiflow/specs/x/spec.yaml"]);
     }
 
     struct CountingRunner {
