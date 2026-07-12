@@ -246,6 +246,26 @@ fn schema_pr_request_rejects_missing_head() {
     );
 }
 
+#[test]
+fn schema_agent_context_accepts_all_result_variants() {
+    let v = load_schema("agent-context.schema.json");
+    for fixture in [
+        "agent-context-repository-good.json",
+        "agent-context-spec-good.json",
+        "agent-context-degraded-good.json",
+        "agent-context-partial-good.json",
+        "agent-context-error-good.json",
+    ] {
+        assert!(v.is_valid(&load_fixture(fixture)), "rejected {fixture}");
+    }
+}
+
+#[test]
+fn schema_agent_context_rejects_unsafe_or_incomplete_documents() {
+    let v = load_schema("agent-context.schema.json");
+    assert!(!v.is_valid(&load_fixture("agent-context-invalid.json")));
+}
+
 // --- (b) Golden equivalence: `index` output == committed golden ---------------
 
 /// Recursively copy a directory tree (fixtures have no symlinks).

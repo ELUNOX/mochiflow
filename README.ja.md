@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="#ライセンス"><img src="https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg" alt="License: MIT OR Apache-2.0"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-1.2.4-informational.svg" alt="Version 1.2.4"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-1.3.0-informational.svg" alt="Version 1.3.0"></a>
   <a href="cli/Cargo.toml"><img src="https://img.shields.io/badge/rust-2024%20edition-orange.svg" alt="Rust 2024 edition"></a>
 </p>
 
@@ -51,7 +51,7 @@ brew install ELUNOX/tap/mochiflow
 
 # シェルインストーラ
 curl --proto '=https' --tlsv1.2 -LsSf \
-  https://github.com/ELUNOX/mochiflow/releases/download/v1.2.4/mochiflow-cli-installer.sh | sh
+  https://github.com/ELUNOX/mochiflow/releases/download/v1.3.0/mochiflow-cli-installer.sh | sh
 
 # ソースから
 git clone https://github.com/ELUNOX/mochiflow.git

@@ -14,7 +14,7 @@ Critical Stop Conditions:
 
 ## Tasks
 
-- [ ] T-001 [AC-01, AC-05, AC-11] Freeze the Agent Context contract and release baseline
+- [x] T-001 [AC-01, AC-05, AC-11] Freeze the Agent Context contract and release baseline
   - Depends on: none
   - Files:
     - `contracts/agent-context.schema.json`
