@@ -781,6 +781,26 @@ fn release_workflows_pin_security_and_event_contracts() {
 }
 
 #[test]
+fn macos_workflow_is_post_merge_and_cost_bounded() {
+    let workflow = read_repo_file(".github/workflows/macos.yml");
+    assert!(workflow.contains("branches: [main]") && workflow.contains("paths:"));
+    assert!(workflow.contains("workflow_dispatch:") && workflow.contains("macos-latest"));
+    assert!(workflow.contains("cargo test --manifest-path cli/Cargo.toml"));
+    assert!(workflow.contains("contents: read") && workflow.contains("cancel-in-progress: true"));
+    assert!(
+        !workflow.contains("pull_request:")
+            && !workflow.contains("schedule:")
+            && !workflow.contains("matrix:")
+    );
+    for line in workflow.lines().filter(|line| line.contains("uses:")) {
+        assert_eq!(
+            line.split('@').nth(1).expect("pinned action").trim().len(),
+            40
+        );
+    }
+}
+
+#[test]
 fn branch_placeholders_use_prefix_slug() {
     let delivery = read_repo_file("engine/reference/delivery.md");
 

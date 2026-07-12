@@ -447,6 +447,19 @@ Typed YAML parsing now validates frontmatter structure and declared paths;
 normalized Markdown table rows validate router mappings. Intentional prose
 guards remain unchanged, and yaml-rust2 0.11 passed cargo-deny.
 
+### T-008
+
+Review profile: change-reviewer
+Reviewer mode: inline
+Verdict: pass-with-comments
+Reviewed through: e0fa86b
+
+Release planning is path-filtered and read-only; tag publication is provenance
+gated and job permissions are narrowed. All actions are SHA-pinned and the
+repository-owned hardening delta is explicitly protected with cargo-dist's
+official `allow-dirty = ["ci"]` boundary. Temporary-Git provenance fixtures can
+further deepen the existing static/script validation.
+
 ## Integration Log
 
 Append one entry after every task during build. Each entry records the task ID,
@@ -539,3 +552,13 @@ decisions. There are no implementation entries at plan time.
 - Dead code: selected formatting-sensitive scans were removed.
 - Recovery: parser failures identify malformed engine frontmatter immediately.
 - Handoff: T-008 can add workflow policy assertions to the same semantic suite.
+
+### T-008 — release hardening
+
+- Evidence: `dist plan`, shell syntax, workflow conformance, and the default
+  profile passed through `e0fa86b`.
+- Seam/ownership: cargo-dist retains generated release ownership; documented
+  repository hardening owns triggers, permissions, installation, and provenance.
+- Dead code: built-in PR release trigger and curl-pipe installer were removed.
+- Recovery: invalid/unreachable/version-mismatched tags stop before publication.
+- Handoff: T-009 adds an independent read-only post-merge macOS test workflow.

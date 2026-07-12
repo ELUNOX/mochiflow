@@ -9,6 +9,11 @@ matches the Cargo workspace. The generated release workflow is retained from
 cargo-dist 0.32.0; repository-owned hardening is limited to the trigger,
 least-privilege permissions, locked installation, and provenance preflight.
 
+Linux CI remains the complete pre-merge gate for tests, formatting, Clippy,
+freeze, and cargo-deny. A separate read-only macOS job runs the Rust tests only
+after relevant CLI, Cargo, or toolchain changes reach `main`, or by manual
+dispatch; it does not run for pull requests or on a schedule.
+
 ## Check the archive
 
 Verify the SHA256 checksum for the archive you downloaded:

@@ -140,7 +140,7 @@ Critical Stop Conditions:
   - Done: cargo-dist config skips its built-in PR trigger and regenerates a tag-oriented baseline; the separate plan workflow runs only for release/package/toolchain metadata paths or manual dispatch; both workflows install exactly cargo-dist 0.32.0 through locked Cargo sources rather than piping a downloaded script. Default permissions are read-only, write/OIDC scopes are job-minimal, actions use full SHAs, and no PR job receives release secrets. The release workflow calls the checked-in provenance helper before any side effect; it derives the workspace version from Cargo metadata and rejects missing refs, unreachable tag commits, mismatched versions, and malformed tags. Temporary-Git conformance fixtures prove reachable/matching passes plus unreachable, version-mismatched, and malformed cases fail without credentials or publication; static checks prove every publishing job depends on validation. `dist plan`, dynamic provenance tests, workflow conformance, and the full default profile pass; shared conformance tests retain semantic and earlier remediation coverage. Any manual hardening delta from generated output is explicitly documented and test-pinned.
   - Stop: Stop if a write-scoped token/secret must reach PR code, provenance cannot be checked before publication, or regeneration silently removes an unguarded hardening delta.
 
-- [ ] T-009 [AC-13] Add the cost-bounded post-merge macOS test workflow
+- [x] T-009 [AC-13] Add the cost-bounded post-merge macOS test workflow
   - Depends on: T-008
   - Files:
     - `.github/workflows/macos.yml`
