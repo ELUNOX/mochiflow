@@ -68,6 +68,20 @@ pub struct Issue {
     pub message: String,
 }
 
+/// Pure structured lint report used by machine-facing state consumers.
+pub fn report(cfg: &Config, target: &str) -> Vec<Issue> {
+    let allowed: HashSet<String> = cfg.surface_names().into_iter().collect();
+    let dirty_paths = dirty_worktree_paths(&cfg.repo_root);
+    match resolve_lint_targets(cfg, target) {
+        Ok(paths) => paths
+            .iter()
+            .flat_map(|root| discover_spec_dirs(root))
+            .flat_map(|dir| lint_spec_dir(&dir, &allowed, dirty_paths.as_ref()))
+            .collect(),
+        Err(issue) => vec![issue],
+    }
+}
+
 fn section<'a>(text: &'a str, heading: &str) -> Option<&'a str> {
     let pattern = format!("## {heading}");
     let matches_heading = |line: &str| {

@@ -83,6 +83,29 @@ impl Diagnostic {
     }
 }
 
+/// Shared status and verification-profile readiness core. Detailed inspection
+/// composes branch and worktree entry blockers on top of these codes.
+pub fn readiness_codes(cfg: &Config, meta: &SpecMeta) -> Vec<Code> {
+    let mut codes = Vec::new();
+    if meta.status() != "approved" {
+        codes.push(Code::StatusNotApproved);
+    }
+    for surface in meta.surfaces() {
+        match cfg
+            .surfaces
+            .get(surface)
+            .and_then(|s| s.verify.get("default"))
+        {
+            None => codes.push(Code::VerificationMissing),
+            Some(command) if command.trim_start().starts_with("TODO:") => {
+                codes.push(Code::VerificationTodo);
+            }
+            Some(_) => {}
+        }
+    }
+    codes
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct Metadata {
     pub slug: String,
@@ -513,7 +536,9 @@ pub fn inspect_spec(cfg: &Config, slug: &str, runner: &dyn Runner) -> Document {
     let facts = collect_batch(cfg, runner);
     let metadata = Metadata::from(&meta);
     let expected = branch_name(meta.spec_type(), slug);
-    let lint_ok = structural_health(cfg, &meta, &dir);
+    let lint_ok = !crate::lint::report(cfg, slug)
+        .iter()
+        .any(|issue| issue.severity == "FAIL");
     let paths = related_paths(cfg, &dir);
     let persistence = classify_spec(cfg, slug)
         .map(|p| match p.mode {
@@ -634,14 +659,6 @@ fn delivery_observation(
     }
 }
 
-fn structural_health(cfg: &Config, meta: &SpecMeta, dir: &Path) -> bool {
-    !meta.slug().is_empty()
-        && (meta.status() == "draft" || dir.join("spec.md").is_file())
-        && meta
-            .surfaces()
-            .iter()
-            .all(|s| cfg.surfaces.contains_key(*s))
-}
 fn related_paths(cfg: &Config, dir: &Path) -> Vec<String> {
     ["spec.yaml", "pitch.md", "spec.md", "design.md", "tasks.md"]
         .iter()
@@ -684,23 +701,9 @@ fn evaluate_actions(
         plan.push(Code::LintFailed);
     }
     out.push(eval(ActionName::Plan, plan, false));
-    let mut build = vec![];
-    if status != "approved" {
-        build.push(Code::StatusNotApproved);
-    }
+    let mut build = readiness_codes(cfg, meta);
     if !lint_ok {
         build.push(Code::LintFailed);
-    }
-    for surface in meta.surfaces() {
-        match cfg
-            .surfaces
-            .get(surface)
-            .and_then(|s| s.verify.get("default"))
-        {
-            None => build.push(Code::VerificationMissing),
-            Some(c) if c.trim_start().starts_with("TODO:") => build.push(Code::VerificationTodo),
-            _ => {}
-        }
     }
     if !facts.refs.contains(expected) {
         build.push(Code::BranchMissing);

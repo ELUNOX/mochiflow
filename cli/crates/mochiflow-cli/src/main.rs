@@ -702,7 +702,8 @@ fn cmd_ready(cfg: &mochiflow_core::config::Config, spec_arg: &str) -> i32 {
     }
     match mochiflow_core::spec_meta::read_spec_metadata(&spec_dir) {
         Ok(meta) => {
-            if meta.status() != "approved" {
+            let readiness = mochiflow_core::inspect::readiness_codes(cfg, &meta);
+            if readiness.contains(&mochiflow_core::inspect::Code::StatusNotApproved) {
                 println!(
                     "FAIL: {}: status must be approved to enter build, got {}",
                     meta.path.display(),

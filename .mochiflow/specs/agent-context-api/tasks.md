@@ -51,7 +51,7 @@ Critical Stop Conditions:
   - Done: The shared immutable snapshot discovers valid and malformed specs, obtains current branch/worktree/ref/trailer/ignore/provider facts through an injected constant-bounded collector, preserves known/unknown/not-applicable quality, detects provider truncation, and leaves `inspect.rs` compiling with focused unit tests; `delivery.rs` keeps one pure precedence rule and no new per-spec I/O path is introduced.
   - Stop: If provider batching cannot distinguish unavailable/truncated results from a complete negative result, or if local-only persistence requires one process per spec rather than one batch, stop and report the unsupported observation.
 
-- [ ] T-003 [AC-02, AC-03, AC-10] Centralize structured health and lifecycle eligibility
+- [x] T-003 [AC-02, AC-03, AC-10] Centralize structured health and lifecycle eligibility
   - Depends on: T-002
   - Files:
     - `cli/crates/mochiflow-core/src/inspect.rs`
