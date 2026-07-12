@@ -629,6 +629,7 @@ pub fn inspect_spec(cfg: &Config, slug: &str, runner: &dyn Runner) -> Document {
     let signals = signals_for(cfg, &facts, &meta, &expected);
     let signal_observations = signal_observations(cfg, &facts, &signals, &expected);
     let delivery = delivery_observation(cfg, &facts, &meta, &signals);
+    let review = review_evidence(cfg, &dir, runner);
     let actions = evaluate_actions(
         cfg,
         &meta,
@@ -638,6 +639,7 @@ pub fn inspect_spec(cfg: &Config, slug: &str, runner: &dyn Runner) -> Document {
         &expected,
         dirty.as_deref(),
         &delivery,
+        review,
     );
     let suggested_workflow = suggested(&actions);
     let human_next_action = match &delivery {
@@ -687,6 +689,95 @@ pub fn inspect_spec(cfg: &Config, slug: &str, runner: &dyn Runner) -> Document {
         human_next_action,
     });
     doc
+}
+
+#[derive(Clone, Copy)]
+enum ReviewEvidence {
+    Fresh,
+    Missing,
+    Stale,
+}
+
+fn review_evidence(cfg: &Config, dir: &Path, runner: &dyn Runner) -> ReviewEvidence {
+    let text = std::fs::read_to_string(dir.join("design.md")).unwrap_or_default();
+    let mut verdict = None;
+    let mut reviewed = None;
+    for line in text.lines() {
+        if let Some(value) = line.trim().strip_prefix("Verdict:") {
+            verdict = Some(value.trim());
+        }
+        if let Some(value) = line.trim().strip_prefix("Reviewed through:") {
+            reviewed = Some(value.trim());
+        }
+    }
+    if !verdict.is_some_and(|value| value == "pass" || value == "pass-with-comments") {
+        return ReviewEvidence::Missing;
+    }
+    let Some(sha) = reviewed.filter(|value| !value.is_empty()) else {
+        return ReviewEvidence::Missing;
+    };
+    let range = format!("{sha}..HEAD");
+    match runner.run(
+        "git",
+        &["diff", "--name-only", &range],
+        &cfg.repo_root,
+        None,
+    ) {
+        Ok(paths)
+            if paths
+                .lines()
+                .all(|path| path.starts_with(".mochiflow/specs/")) =>
+        {
+            ReviewEvidence::Fresh
+        }
+        Ok(_) | Err(_) => ReviewEvidence::Stale,
+    }
+}
+
+fn matrix_blockers(spec: &str) -> Vec<Code> {
+    let Some(section) = spec
+        .split_once("## Verification Plan / AC Matrix")
+        .map(|(_, body)| body)
+    else {
+        return vec![Code::MatrixMissing];
+    };
+    let mut unsettled = false;
+    let mut failed = false;
+    for line in section
+        .lines()
+        .filter(|line| line.trim_start().starts_with("| AC-"))
+    {
+        let cells: Vec<_> = line
+            .trim()
+            .trim_matches('|')
+            .split('|')
+            .map(str::trim)
+            .collect();
+        if cells.len() < 7 {
+            unsettled = true;
+            continue;
+        }
+        let method = cells[2].to_ascii_lowercase();
+        let result = cells[5];
+        if result == "FAIL" {
+            failed = true;
+        }
+        let human_only = method.contains("human") && !method.contains("automated");
+        let settled = matches!(result, "PASS" | "CONFIRMED" | "FAIL")
+            || result.starts_with("N/A: ")
+            || (human_only && result == "PENDING_HUMAN");
+        if !settled {
+            unsettled = true;
+        }
+    }
+    let mut blockers = Vec::new();
+    if unsettled {
+        blockers.push(Code::AutomatedChecksUnsettled);
+    }
+    if failed {
+        blockers.push(Code::AutomatedChecksFailed);
+    }
+    blockers
 }
 
 fn signal_observations(
@@ -808,6 +899,7 @@ fn evaluate_actions(
     expected: &str,
     dirty: Option<&[String]>,
     delivery: &Observation<String>,
+    review: ReviewEvidence,
 ) -> Vec<ActionEvaluation> {
     let status = meta.status();
     let mut out = Vec::new();
@@ -860,19 +952,13 @@ fn evaluate_actions(
         open.push(Code::TasksIncomplete);
     }
     let spec = std::fs::read_to_string(dir.join("spec.md")).unwrap_or_default();
-    if !spec.contains("## Verification Plan / AC Matrix") {
-        open.push(Code::MatrixMissing);
-    } else if spec.contains("| UNVERIFIED |") {
-        open.push(Code::AutomatedChecksUnsettled);
-    }
-    if spec.contains("| FAIL |") {
-        open.push(Code::AutomatedChecksFailed);
-    }
-    if matches!(meta.risk(), "elevated" | "critical")
-        && !std::fs::read_to_string(dir.join("design.md"))
-            .is_ok_and(|s| s.contains("Verdict: pass"))
-    {
-        open.push(Code::ReviewResultMissing);
+    open.extend(matrix_blockers(&spec));
+    if matches!(meta.risk(), "elevated" | "critical") {
+        match review {
+            ReviewEvidence::Fresh => {}
+            ReviewEvidence::Missing => open.push(Code::ReviewResultMissing),
+            ReviewEvidence::Stale => open.push(Code::ReviewResultStale),
+        }
     }
     if dirty.is_some_and(|d| !d.is_empty()) {
         open.push(Code::WorktreeDirty);
@@ -1026,6 +1112,28 @@ mod tests {
     #[test]
     fn live_timestamp_is_not_the_epoch_placeholder() {
         assert_ne!(observed_at_now(), "1970-01-01T00:00:00Z");
+    }
+
+    #[test]
+    fn matrix_results_enforce_automated_settlement() {
+        let matrix = |method: &str, result: &str| {
+            format!(
+                "## Verification Plan / AC Matrix\n| AC | Scope | Verification method | Planned | Implementation | Result | Evidence |\n| --- | --- | --- | --- | --- | --- | --- |\n| AC-01 | cli | {method} | QA | x | {result} | e |\n"
+            )
+        };
+        assert!(matrix_blockers(&matrix("automated", "PASS")).is_empty());
+        assert!(matrix_blockers(&matrix("human", "PENDING_HUMAN")).is_empty());
+        for result in ["", "UNVERIFIED", "PENDING_HUMAN", "anything"] {
+            assert_eq!(
+                matrix_blockers(&matrix("automated", result)),
+                vec![Code::AutomatedChecksUnsettled]
+            );
+        }
+        assert_eq!(
+            matrix_blockers(&matrix("automated", "FAIL")),
+            vec![Code::AutomatedChecksFailed]
+        );
+        assert_eq!(matrix_blockers("# no matrix"), vec![Code::MatrixMissing]);
     }
 
     struct CountingRunner {
